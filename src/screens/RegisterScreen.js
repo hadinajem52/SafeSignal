@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,16 +11,65 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
 import { useAuth } from '../context/AuthContext';
 
+// Complete auth session for web browser redirect
+WebBrowser.maybeCompleteAuthSession();
+
 const RegisterScreen = ({ navigation }) => {
-  const { register } = useAuth();
+  const { register, googleSignIn } = useAuth();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [errors, setErrors] = useState({});
+
+  // Google Auth configuration
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    clientId: '148707906240-89fv5lp1aikj89h9pioihipd8m9hej7n.apps.googleusercontent.com',
+    androidClientId: '148707906240-g25bk9eiiec29k9dt807hebmbqa64v2b.apps.googleusercontent.com',
+  });
+
+  // Handle Google Sign-In response
+  useEffect(() => {
+    if (response?.type === 'success') {
+      handleGoogleResponse(response);
+    } else if (response?.type === 'error') {
+      setIsGoogleLoading(false);
+      Alert.alert('Google Sign-Up Failed', 'Please try again');
+    }
+  }, [response]);
+
+  const handleGoogleResponse = async (response) => {
+    try {
+      const { id_token } = response.params;
+      
+      if (id_token) {
+        const result = await googleSignIn(id_token);
+        if (!result.success) {
+          Alert.alert('Sign-Up Failed', result.error || 'Google authentication failed');
+        }
+      }
+    } catch (error) {
+      Alert.alert('Error', 'An unexpected error occurred during Google sign-up');
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
+  const handleGoogleSignUp = async () => {
+    setIsGoogleLoading(true);
+    try {
+      await promptAsync();
+    } catch (error) {
+      setIsGoogleLoading(false);
+      Alert.alert('Error', 'Failed to start Google sign-up');
+    }
+  };
 
   const validateForm = () => {
     const newErrors = {};
@@ -192,7 +241,7 @@ const RegisterScreen = ({ navigation }) => {
           <TouchableOpacity
             style={[styles.button, isLoading && styles.buttonDisabled]}
             onPress={handleRegister}
-            disabled={isLoading}
+            disabled={isLoading || isGoogleLoading}
           >
             {isLoading ? (
               <ActivityIndicator color="#fff" />
@@ -201,11 +250,32 @@ const RegisterScreen = ({ navigation }) => {
             )}
           </TouchableOpacity>
 
+          <View style={styles.dividerContainer}>
+            <View style={styles.divider} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.divider} />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.googleButton, (isGoogleLoading || !request) && styles.googleButtonDisabled]}
+            onPress={handleGoogleSignUp}
+            disabled={isLoading || isGoogleLoading || !request}
+          >
+            {isGoogleLoading ? (
+              <ActivityIndicator color="#333" />
+            ) : (
+              <>
+                <Text style={styles.googleIcon}>G</Text>
+                <Text style={styles.googleButtonText}>Sign up with Google</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
           <View style={styles.footerContainer}>
             <Text style={styles.footerText}>Already have an account? </Text>
             <TouchableOpacity
               onPress={() => navigation.navigate('Login')}
-              disabled={isLoading}
+              disabled={isLoading || isGoogleLoading}
             >
               <Text style={styles.linkText}>Sign In</Text>
             </TouchableOpacity>
@@ -334,6 +404,47 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 20,
     paddingHorizontal: 20,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 16,
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#e0e0e0',
+  },
+  dividerText: {
+    color: '#999',
+    paddingHorizontal: 16,
+    fontSize: 14,
+  },
+  googleButton: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    marginBottom: 8,
+  },
+  googleButtonDisabled: {
+    backgroundColor: '#f5f5f5',
+    borderColor: '#e0e0e0',
+  },
+  googleIcon: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#4285F4',
+    marginRight: 12,
+  },
+  googleButtonText: {
+    color: '#333',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

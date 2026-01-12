@@ -253,6 +253,27 @@ export const authAPI = {
   async getStoredUser() {
     return await tokenStorage.getUser();
   },
+
+  /**
+   * Sign in with Google
+   */
+  async googleSignIn(idToken) {
+    try {
+      const response = await api.post('/auth/google', { idToken });
+
+      if (response.data.status === 'OK') {
+        const { token, user } = response.data.data;
+        await tokenStorage.setToken(token);
+        await tokenStorage.setUser(user);
+        return { success: true, user, token };
+      }
+
+      return { success: false, error: response.data.message };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Google sign-in failed';
+      return { success: false, error: message };
+    }
+  },
 };
 
 export default api;

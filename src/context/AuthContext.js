@@ -74,6 +74,18 @@ export const AuthProvider = ({ children }) => {
   };
 
   /**
+   * Sign in with Google
+   */
+  const googleSignIn = async (idToken) => {
+    const result = await authAPI.googleSignIn(idToken);
+    if (result.success) {
+      setUser(result.user);
+      setIsAuthenticated(true);
+    }
+    return result;
+  };
+
+  /**
    * Logout user
    */
   const logout = async () => {
@@ -100,6 +112,7 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     register,
     login,
+    googleSignIn,
     logout,
     refreshProfile,
     checkAuthStatus,
