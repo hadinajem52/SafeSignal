@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -11,12 +11,17 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import * as Google from 'expo-auth-session/providers/google';
-import * as WebBrowser from 'expo-web-browser';
+import {
+  GoogleSignin,
+  statusCodes,
+} from '@react-native-google-signin/google-signin';
 import { useAuth } from '../context/AuthContext';
 
-// Complete auth session for web browser redirect
-WebBrowser.maybeCompleteAuthSession();
+// Configure Google Sign-In
+GoogleSignin.configure({
+  webClientId: '148707906240-89fv5lp1aikj89h9pioihipd8m9hej7n.apps.googleusercontent.com',
+  offlineAccess: true,
+});
 
 const RegisterScreen = ({ navigation }) => {
   const { register, googleSignIn } = useAuth();
@@ -27,52 +32,36 @@ const RegisterScreen = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const googleAndroidClientId = '148707906240-g25bk9eiiec29k9dt807hebmbqa64v2b.apps.googleusercontent.com';
-  const googleRedirectUri = Platform.OS === 'android'
-    ? `com.googleusercontent.apps.${googleAndroidClientId.replace('.apps.googleusercontent.com', '')}:/oauthredirect`
-    : undefined;
-
-  // Google Auth configuration
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    clientId: '148707906240-89fv5lp1aikj89h9pioihipd8m9hej7n.apps.googleusercontent.com',
-    androidClientId: googleAndroidClientId,
-    ...(Platform.OS === 'android' ? { redirectUri: googleRedirectUri } : {}),
-  });
-
-  // Handle Google Sign-In response
-  useEffect(() => {
-    if (response?.type === 'success') {
-      handleGoogleResponse(response);
-    } else if (response?.type === 'error') {
-      setIsGoogleLoading(false);
-      Alert.alert('Google Sign-Up Failed', 'Please try again');
-    }
-  }, [response]);
-
-  const handleGoogleResponse = async (response) => {
-    try {
-      const { id_token } = response.params;
-      
-      if (id_token) {
-        const result = await googleSignIn(id_token);
-        if (!result.success) {
-          Alert.alert('Sign-Up Failed', result.error || 'Google authentication failed');
-        }
-      }
-    } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred during Google sign-up');
-    } finally {
-      setIsGoogleLoading(false);
-    }
-  };
 
   const handleGoogleSignUp = async () => {
     setIsGoogleLoading(true);
     try {
-      await promptAsync();
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      
+      const idToken = userInfo.data?.idToken;
+      
+      if (idToken) {
+        const result = await googleSignIn(idToken);
+        if (!result.success) {
+          Alert.alert('Sign-Up Failed', result.error || 'Google authentication failed');
+        }
+      } else {
+        Alert.alert('Error', 'Failed to get authentication token');
+      }
     } catch (error) {
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        // User cancelled
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        Alert.alert('Sign-Up', 'Sign-up is already in progress');
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        Alert.alert('Error', 'Google Play Services is not available');
+      } else {
+        console.error('Google Sign-Up Error:', error);
+        Alert.alert('Error', 'An error occurred during Google sign-up');
+      }
+    } finally {
       setIsGoogleLoading(false);
-      Alert.alert('Error', 'Failed to start Google sign-up');
     }
   };
 
@@ -122,7 +111,12 @@ const RegisterScreen = ({ navigation }) => {
     try {
       const result = await register(username.trim(), email.trim().toLowerCase(), password);
 
-      if (!result.success) {
+      if (result.success) {
+        // Navigate to verification screen
+        if (result.requiresVerification) {
+          navigation.navigate('Verification', { email: result.email || email.trim().toLowerCase() });
+        }
+      } else {
         if (result.validationErrors) {
           // Handle server-side validation errors
           const serverErrors = {};
@@ -136,7 +130,6 @@ const RegisterScreen = ({ navigation }) => {
           Alert.alert('Registration Failed', result.error || 'Please try again');
         }
       }
-      // Navigation will happen automatically through auth state change
     } catch (error) {
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
     } finally {
@@ -262,9 +255,9 @@ const RegisterScreen = ({ navigation }) => {
           </View>
 
           <TouchableOpacity
-            style={[styles.googleButton, (isGoogleLoading || !request) && styles.googleButtonDisabled]}
+            style={[styles.googleButton, isGoogleLoading && styles.googleButtonDisabled]}
             onPress={handleGoogleSignUp}
-            disabled={isLoading || isGoogleLoading || !request}
+            disabled={isLoading || isGoogleLoading}
           >
             {isGoogleLoading ? (
               <ActivityIndicator color="#333" />

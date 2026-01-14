@@ -7,6 +7,7 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 // Screens
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
+import VerificationScreen from '../screens/VerificationScreen';
 import HomeScreen from '../screens/HomeScreen';
 
 const Stack = createNativeStackNavigator();
@@ -23,6 +24,7 @@ const AuthStack = () => (
   >
     <Stack.Screen name="Login" component={LoginScreen} />
     <Stack.Screen name="Register" component={RegisterScreen} />
+    <Stack.Screen name="Verification" component={VerificationScreen} />
   </Stack.Navigator>
 );
 

@@ -50,14 +50,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   /**
-   * Register a new user
+   * Register a new user (now requires verification)
    */
   const register = async (username, email, password) => {
     const result = await authAPI.register(username, email, password);
-    if (result.success) {
-      setUser(result.user);
-      setIsAuthenticated(true);
-    }
+    // Don't set authenticated here - user needs to verify email first
     return result;
   };
 

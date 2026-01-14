@@ -2,12 +2,14 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
 // API base URL - change this to your backend URL
+// For physical device, use your computer's IP address on the same network
 const API_BASE_URL = __DEV__ 
-  ? 'http://10.0.2.2:3000/api'  // Android emulator localhost
+  ? 'http://192.168.1.9:3000/api'  // Your computer's WiFi IP
   : 'https://your-production-api.com/api';
 
-// For iOS simulator, use: http://localhost:3000/api
-// For physical device, use your computer's IP address
+// For Android emulator: http://10.0.2.2:3000/api
+// For iOS simulator: http://localhost:3000/api
+// For physical device: http://YOUR_COMPUTER_IP:3000/api
 
 // Create axios instance
 const api = axios.create({
@@ -148,7 +150,7 @@ api.interceptors.response.use(
  */
 export const authAPI = {
   /**
-   * Register a new user
+   * Register a new user (sends verification code)
    */
   async register(username, email, password) {
     try {
@@ -159,6 +161,32 @@ export const authAPI = {
       });
 
       if (response.data.status === 'OK') {
+        // Registration now requires verification
+        const { requiresVerification, email: userEmail } = response.data.data;
+        return { 
+          success: true, 
+          requiresVerification: requiresVerification || false,
+          email: userEmail,
+          message: response.data.message,
+        };
+      }
+
+      return { success: false, error: response.data.message };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Registration failed';
+      const errors = error.response?.data?.errors;
+      return { success: false, error: message, validationErrors: errors };
+    }
+  },
+
+  /**
+   * Verify email with code
+   */
+  async verifyEmail(email, code) {
+    try {
+      const response = await api.post('/auth/verify', { email, code });
+
+      if (response.data.status === 'OK') {
         const { token, user } = response.data.data;
         await tokenStorage.setToken(token);
         await tokenStorage.setUser(user);
@@ -167,9 +195,26 @@ export const authAPI = {
 
       return { success: false, error: response.data.message };
     } catch (error) {
-      const message = error.response?.data?.message || 'Registration failed';
-      const errors = error.response?.data?.errors;
-      return { success: false, error: message, validationErrors: errors };
+      const message = error.response?.data?.message || 'Verification failed';
+      return { success: false, error: message };
+    }
+  },
+
+  /**
+   * Resend verification code
+   */
+  async resendVerificationCode(email) {
+    try {
+      const response = await api.post('/auth/resend-code', { email });
+
+      if (response.data.status === 'OK') {
+        return { success: true, message: response.data.message };
+      }
+
+      return { success: false, error: response.data.message };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to resend code';
+      return { success: false, error: message };
     }
   },
 
@@ -193,7 +238,9 @@ export const authAPI = {
       return { success: false, error: response.data.message };
     } catch (error) {
       const message = error.response?.data?.message || 'Login failed';
-      return { success: false, error: message };
+      const requiresVerification = error.response?.data?.requiresVerification;
+      const userEmail = error.response?.data?.email;
+      return { success: false, error: message, requiresVerification, email: userEmail };
     }
   },
 
