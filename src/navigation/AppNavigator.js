@@ -4,13 +4,10 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 
-// Screens
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import VerificationScreen from '../screens/VerificationScreen';
-import HomeScreen from '../screens/HomeScreen';
-import ReportIncidentScreen from '../screens/ReportIncidentScreen';
-import MyReportsScreen from '../screens/MyReportsScreen';
+import TabNavigator from './TabNavigator';
 
 const Stack = createNativeStackNavigator();
 
@@ -39,12 +36,7 @@ const AppStack = () => (
       headerShown: false,
     }}
   >
-    <Stack.Screen name="Home" component={HomeScreen} />
-    <Stack.Screen name="ReportIncident" component={ReportIncidentScreen} />
-    <Stack.Screen name="MyReports" component={MyReportsScreen} />
-    {/* Add more authenticated screens here */}
-    {/* <Stack.Screen name="MapView" component={MapViewScreen} /> */}
-    {/* <Stack.Screen name="Profile" component={ProfileScreen} /> */}
+    <Stack.Screen name="MainTabs" component={TabNavigator} />
   </Stack.Navigator>
 );
 

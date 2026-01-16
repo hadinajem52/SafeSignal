@@ -52,7 +52,10 @@ const HomeScreen = ({ navigation }) => {
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionButton}>
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => navigation.navigate('Map')}
+        >
           <Text style={styles.actionIcon}>🗺️</Text>
           <View style={styles.actionTextContainer}>
             <Text style={styles.actionTitle}>View Map</Text>
