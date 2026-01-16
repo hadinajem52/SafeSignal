@@ -21,13 +21,38 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.hhhhjjj.FinalProject"
+      "package": "com.hhhhjjj.FinalProject",
+      "config": {
+        "googleMaps": {
+          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY"
+        }
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "SafeSignal needs access to your location to report incidents accurately."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "SafeSignal needs access to your photos to attach images to incident reports.",
+          "cameraPermission": "SafeSignal needs access to your camera to take photos of incidents."
+        }
+      ]
     ],
     "scheme": [
       "safesignal",

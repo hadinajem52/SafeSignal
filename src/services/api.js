@@ -376,11 +376,55 @@ export const incidentAPI = {
   },
 
   /**
+   * Update an existing incident (primarily for drafts)
+   */
+  async updateIncident(incidentId, incidentData) {
+    try {
+      const response = await api.put(`/incidents/${incidentId}`, incidentData);
+
+      if (response.data.status === 'SUCCESS') {
+        return { 
+          success: true, 
+          incident: response.data.data.incident,
+          message: response.data.message 
+        };
+      }
+
+      return { success: false, error: response.data.message };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to update incident';
+      const errors = error.response?.data?.errors;
+      return { success: false, error: message, validationErrors: errors };
+    }
+  },
+
+  /**
+   * Delete an incident (only drafts)
+   */
+  async deleteIncident(incidentId) {
+    try {
+      const response = await api.delete(`/incidents/${incidentId}`);
+
+      if (response.data.status === 'SUCCESS') {
+        return { 
+          success: true, 
+          message: response.data.message 
+        };
+      }
+
+      return { success: false, error: response.data.message };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to delete incident';
+      return { success: false, error: message };
+    }
+  },
+
+  /**
    * Get list of user's incidents
    */
   async getMyIncidents(params = {}) {
     try {
-      const { status, limit = 50, offset = 0 } = params;
+      const { status, isDraft, limit = 50, offset = 0 } = params;
       const queryParams = new URLSearchParams({
         limit: limit.toString(),
         offset: offset.toString(),
@@ -388,6 +432,10 @@ export const incidentAPI = {
 
       if (status) {
         queryParams.append('status', status);
+      }
+
+      if (isDraft !== undefined) {
+        queryParams.append('isDraft', isDraft.toString());
       }
 
       const response = await api.get(`/incidents/list?${queryParams.toString()}`);
@@ -403,6 +451,28 @@ export const incidentAPI = {
       return { success: false, error: response.data.message };
     } catch (error) {
       const message = error.response?.data?.message || 'Failed to fetch incidents';
+      return { success: false, error: message };
+    }
+  },
+
+  /**
+   * Get user's draft incidents
+   */
+  async getDrafts() {
+    try {
+      const response = await api.get('/incidents/list?isDraft=true');
+
+      if (response.data.status === 'SUCCESS') {
+        return {
+          success: true,
+          drafts: response.data.data.incidents,
+          pagination: response.data.data.pagination,
+        };
+      }
+
+      return { success: false, error: response.data.message };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to fetch drafts';
       return { success: false, error: message };
     }
   },
