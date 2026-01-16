@@ -9,6 +9,8 @@ import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import VerificationScreen from '../screens/VerificationScreen';
 import HomeScreen from '../screens/HomeScreen';
+import ReportIncidentScreen from '../screens/ReportIncidentScreen';
+import MyReportsScreen from '../screens/MyReportsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -38,8 +40,9 @@ const AppStack = () => (
     }}
   >
     <Stack.Screen name="Home" component={HomeScreen} />
+    <Stack.Screen name="ReportIncident" component={ReportIncidentScreen} />
+    <Stack.Screen name="MyReports" component={MyReportsScreen} />
     {/* Add more authenticated screens here */}
-    {/* <Stack.Screen name="ReportIncident" component={ReportIncidentScreen} /> */}
     {/* <Stack.Screen name="MapView" component={MapViewScreen} /> */}
     {/* <Stack.Screen name="Profile" component={ProfileScreen} /> */}
   </Stack.Navigator>

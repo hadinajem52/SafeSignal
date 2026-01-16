@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 
-const HomeScreen = () => {
+const HomeScreen = ({ navigation }) => {
   const { user, logout } = useAuth();
 
   const handleLogout = () => {
@@ -41,7 +41,10 @@ const HomeScreen = () => {
       <View style={styles.actionsContainer}>
         <Text style={styles.sectionTitle}>Quick Actions</Text>
         
-        <TouchableOpacity style={styles.actionButton}>
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => navigation.navigate('ReportIncident')}
+        >
           <Text style={styles.actionIcon}>📝</Text>
           <View style={styles.actionTextContainer}>
             <Text style={styles.actionTitle}>Report Incident</Text>
@@ -57,7 +60,10 @@ const HomeScreen = () => {
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionButton}>
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => navigation.navigate('MyReports')}
+        >
           <Text style={styles.actionIcon}>📊</Text>
           <View style={styles.actionTextContainer}>
             <Text style={styles.actionTitle}>My Reports</Text>

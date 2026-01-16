@@ -1,15 +1,36 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
-// API base URL - change this to your backend URL
-// For physical device, use your computer's IP address on the same network
-const API_BASE_URL = __DEV__ 
-  ? 'http://192.168.1.9:3000/api'  // Your computer's WiFi IP
-  : 'https://your-production-api.com/api';
+// API base URL - automatically handles different environments
+// For Android physical device with ADB reverse: adb reverse tcp:3000 tcp:3000
+// For Android emulator: uses 10.0.2.2
+// For iOS simulator: uses localhost
+const getApiBaseUrl = () => {
+  if (!__DEV__) {
+    return 'https://your-production-api.com/api';
+  }
+  
+  // Try to get the debugger host from Expo (works when using Expo Go or dev client)
+  const debuggerHost = Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost;
+  if (debuggerHost) {
+    const host = debuggerHost.split(':')[0];
+    return `http://${host}:3000/api`;
+  }
+  
+  // Fallback based on platform
+  if (Platform.OS === 'android') {
+    // Use localhost with ADB reverse (run: adb reverse tcp:3000 tcp:3000)
+    // Or use 10.0.2.2 for emulator
+    return 'http://localhost:3000/api';
+  }
+  
+  // iOS simulator
+  return 'http://localhost:3000/api';
+};
 
-// For Android emulator: http://10.0.2.2:3000/api
-// For iOS simulator: http://localhost:3000/api
-// For physical device: http://YOUR_COMPUTER_IP:3000/api
+const API_BASE_URL = getApiBaseUrl();
 
 // Create axios instance
 const api = axios.create({
@@ -306,7 +327,10 @@ export const authAPI = {
    */
   async googleSignIn(idToken) {
     try {
-      const response = await api.post('/auth/google', { idToken });
+      const response = await api.post('/auth/google', { 
+        idToken,
+        accessToken: idToken // Send as both in case backend needs accessToken
+      });
 
       if (response.data.status === 'OK') {
         const { token, user } = response.data.data;
@@ -317,7 +341,150 @@ export const authAPI = {
 
       return { success: false, error: response.data.message };
     } catch (error) {
+      console.error('Google sign-in API error:', error.response?.data || error.message);
       const message = error.response?.data?.message || 'Google sign-in failed';
+      return { success: false, error: message };
+    }
+  },
+};
+
+/**
+ * Incident API functions
+ */
+export const incidentAPI = {
+  /**
+   * Submit a new incident report
+   */
+  async submitIncident(incidentData) {
+    try {
+      const response = await api.post('/incidents/submit', incidentData);
+
+      if (response.data.status === 'SUCCESS') {
+        return { 
+          success: true, 
+          incident: response.data.data.incident,
+          message: response.data.message 
+        };
+      }
+
+      return { success: false, error: response.data.message };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to submit incident';
+      const errors = error.response?.data?.errors;
+      return { success: false, error: message, validationErrors: errors };
+    }
+  },
+
+  /**
+   * Get list of user's incidents
+   */
+  async getMyIncidents(params = {}) {
+    try {
+      const { status, limit = 50, offset = 0 } = params;
+      const queryParams = new URLSearchParams({
+        limit: limit.toString(),
+        offset: offset.toString(),
+      });
+
+      if (status) {
+        queryParams.append('status', status);
+      }
+
+      const response = await api.get(`/incidents/list?${queryParams.toString()}`);
+
+      if (response.data.status === 'SUCCESS') {
+        return {
+          success: true,
+          incidents: response.data.data.incidents,
+          pagination: response.data.data.pagination,
+        };
+      }
+
+      return { success: false, error: response.data.message };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to fetch incidents';
+      return { success: false, error: message };
+    }
+  },
+
+  /**
+   * Get a specific incident by ID
+   */
+  async getIncidentById(incidentId) {
+    try {
+      const response = await api.get(`/incidents/${incidentId}`);
+
+      if (response.data.status === 'SUCCESS') {
+        return {
+          success: true,
+          incident: response.data.data.incident,
+        };
+      }
+
+      return { success: false, error: response.data.message };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to fetch incident';
+      return { success: false, error: message };
+    }
+  },
+
+  /**
+   * Update incident status (moderators only)
+   */
+  async updateIncidentStatus(incidentId, status, notes = '') {
+    try {
+      const response = await api.put(`/incidents/${incidentId}/status`, {
+        status,
+        notes,
+      });
+
+      if (response.data.status === 'SUCCESS') {
+        return {
+          success: true,
+          incident: response.data.data.incident,
+          message: response.data.message,
+        };
+      }
+
+      return { success: false, error: response.data.message };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to update incident status';
+      return { success: false, error: message };
+    }
+  },
+
+  /**
+   * Get incidents for map display (public)
+   */
+  async getMapIncidents(params = {}) {
+    try {
+      const { ne_lat, ne_lng, sw_lat, sw_lng, category, timeframe = '30d' } = params;
+      const queryParams = new URLSearchParams({ timeframe });
+
+      if (ne_lat && ne_lng && sw_lat && sw_lng) {
+        queryParams.append('ne_lat', ne_lat.toString());
+        queryParams.append('ne_lng', ne_lng.toString());
+        queryParams.append('sw_lat', sw_lat.toString());
+        queryParams.append('sw_lng', sw_lng.toString());
+      }
+
+      if (category) {
+        queryParams.append('category', category);
+      }
+
+      const response = await api.get(`/map/incidents?${queryParams.toString()}`);
+
+      if (response.data.status === 'SUCCESS') {
+        return {
+          success: true,
+          incidents: response.data.data.incidents,
+          count: response.data.data.count,
+        };
+      }
+
+      return { success: false, error: response.data.message };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to fetch map incidents';
       return { success: false, error: message };
     }
   },

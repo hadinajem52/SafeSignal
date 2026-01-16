@@ -45,19 +45,28 @@ const LoginScreen = ({ navigation }) => {
       
       // Get the ID token
       const idToken = userInfo.data?.idToken;
-      console.log('Google Sign-In success, idToken received:', !!idToken);
+      console.log('Google Sign-In success');
+      console.log('- idToken received:', !!idToken);
+      console.log('- idToken length:', idToken?.length);
+      console.log('- userInfo keys:', Object.keys(userInfo.data || {}));
       
       if (idToken) {
+        console.log('Sending idToken to backend...');
         const result = await googleSignIn(idToken);
         console.log('Backend response:', result);
+        
         if (!result.success) {
+          console.error('Backend error:', result.error);
           Alert.alert('Sign-In Failed', result.error || 'Google authentication failed');
+        } else {
+          console.log('Google sign-in successful!');
         }
       } else {
-        console.log('No idToken in userInfo:', JSON.stringify(userInfo));
-        Alert.alert('Error', 'Failed to get authentication token');
+        console.error('No idToken in userInfo:', JSON.stringify(userInfo, null, 2));
+        Alert.alert('Error', 'Failed to get authentication token from Google');
       }
     } catch (error) {
+      console.error('Google Sign-In Error:', error);
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
         // User cancelled the sign-in
       } else if (error.code === statusCodes.IN_PROGRESS) {
@@ -65,8 +74,7 @@ const LoginScreen = ({ navigation }) => {
       } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
         Alert.alert('Error', 'Google Play Services is not available');
       } else {
-        console.error('Google Sign-In Error:', error);
-        Alert.alert('Error', 'An error occurred during Google sign-in');
+        Alert.alert('Error', `An error occurred: ${error.message || 'Unknown error'}`);
       }
     } finally {
       setIsGoogleLoading(false);
