@@ -10,7 +10,10 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { incidentAPI } from '../services/api';
+
+const DRAFT_STORAGE_KEY = 'safesignal_incident_draft';
 
 // Status badge colors
 const STATUS_COLORS = {
@@ -25,6 +28,7 @@ const STATUS_COLORS = {
   archived: '#6c757d',
   auto_flagged: '#e83e8c',
   merged: '#6610f2',
+  draft: '#6f42c1',
 };
 
 const STATUS_LABELS = {
@@ -39,6 +43,7 @@ const STATUS_LABELS = {
   archived: 'Archived',
   auto_flagged: 'Flagged',
   merged: 'Merged',
+  draft: 'Draft',
 };
 
 const CATEGORY_ICONS = {
@@ -69,15 +74,58 @@ const MyReportsScreen = ({ navigation }) => {
     }
 
     try {
-      const params = selectedFilter !== 'all' ? { status: selectedFilter } : {};
-      const result = await incidentAPI.getMyIncidents(params);
+      let incidentsFromApi = [];
+      let paginationData = null;
 
-      if (result.success) {
-        setIncidents(result.incidents);
-        setPagination(result.pagination);
-      } else {
-        Alert.alert('Error', result.error || 'Failed to load incidents');
+      if (selectedFilter !== 'draft') {
+        const params = selectedFilter !== 'all' ? { status: selectedFilter } : {};
+        const result = await incidentAPI.getMyIncidents(params);
+
+        if (result.success) {
+          incidentsFromApi = result.incidents;
+          paginationData = result.pagination;
+        } else {
+          Alert.alert('Error', result.error || 'Failed to load incidents');
+        }
       }
+
+      let draftItem = null;
+      if (selectedFilter === 'all' || selectedFilter === 'draft') {
+        try {
+          const savedDraft = await AsyncStorage.getItem(DRAFT_STORAGE_KEY);
+          if (savedDraft) {
+            const draft = JSON.parse(savedDraft);
+            draftItem = {
+              id: `draft-${draft.savedAt || Date.now()}`,
+              title: draft.title || 'Untitled Draft',
+              description: draft.description || 'No description yet.',
+              category: draft.category || 'other',
+              location: draft.location || null,
+              locationName: draft.locationName || '',
+              createdAt: draft.savedAt || draft.incidentDate || new Date().toISOString(),
+              status: 'draft',
+              isDraft: true,
+              draftData: draft,
+            };
+          }
+        } catch (draftError) {
+          console.error('Error loading draft:', draftError);
+        }
+      }
+
+      const mergedIncidents = draftItem
+        ? [draftItem, ...incidentsFromApi]
+        : incidentsFromApi;
+
+      if (paginationData && draftItem && selectedFilter === 'all') {
+        paginationData = {
+          ...paginationData,
+          total: paginationData.total + 1,
+        };
+      }
+
+      setIncidents(mergedIncidents);
+      setPagination(paginationData);
     } catch (error) {
       console.error('Error fetching incidents:', error);
       Alert.alert('Error', 'An unexpected error occurred');
@@ -106,6 +154,21 @@ const MyReportsScreen = ({ navigation }) => {
    * Handle incident press
    */
   const handleIncidentPress = (incident) => {
+    if (incident.isDraft) {
+      Alert.alert(
+        incident.title,
+        'This is a draft report. Continue editing?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Continue Editing',
+            onPress: () => navigation.navigate('ReportIncident', { draft: incident.draftData }),
+          },
+        ]
+      );
+      return;
+    }
+
     Alert.alert(
       incident.title,
       `Status: ${STATUS_LABELS[incident.status] || incident.status}\n\n${incident.description}`,
@@ -137,6 +200,11 @@ const MyReportsScreen = ({ navigation }) => {
       minute: '2-digit',
     });
 
+    const hasLocation = item.location && typeof item.location.latitude === 'number';
+    const locationDisplay = hasLocation
+      ? `${item.location.latitude.toFixed(4)}, ${item.location.longitude.toFixed(4)}`
+      : item.locationName || 'Location not set';
+
     return (
       <TouchableOpacity
         style={styles.incidentCard}
@@ -164,7 +232,7 @@ const MyReportsScreen = ({ navigation }) => {
           <View style={styles.locationContainer}>
             <Text style={styles.locationIcon}>📍</Text>
             <Text style={styles.locationText}>
-              {item.location.latitude.toFixed(4)}, {item.location.longitude.toFixed(4)}
+              {locationDisplay}
             </Text>
           </View>
           <Text style={styles.dateText}>{date}</Text>
@@ -183,6 +251,8 @@ const MyReportsScreen = ({ navigation }) => {
       <Text style={styles.emptyText}>
         {selectedFilter === 'all'
           ? "You haven't submitted any incident reports yet."
+          : selectedFilter === 'draft'
+          ? 'You have no saved drafts.'
           : `You have no ${selectedFilter} reports.`}
       </Text>
       <TouchableOpacity
@@ -200,6 +270,7 @@ const MyReportsScreen = ({ navigation }) => {
   const renderFilterButtons = () => {
     const filters = [
       { key: 'all', label: 'All' },
+      { key: 'draft', label: 'Drafts' },
       { key: 'submitted', label: 'Submitted' },
       { key: 'in_review', label: 'In Review' },
       { key: 'verified', label: 'Verified' },

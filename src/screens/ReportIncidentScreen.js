@@ -13,6 +13,7 @@ import {
   Modal,
   Dimensions,
   Switch,
+  Linking,
 } from 'react-native';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
@@ -200,6 +201,20 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     setErrors({ ...errors, location: null });
 
     try {
+      const servicesEnabled = await Location.hasServicesEnabledAsync();
+      if (!servicesEnabled) {
+        setIsLoadingLocation(false);
+        Alert.alert(
+          'Location Services Off',
+          'Location services are disabled. Please enable them to use GPS.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ]
+        );
+        return;
+      }
+
       // Check permission first
       const { status } = await Location.requestForegroundPermissionsAsync();
       
@@ -213,11 +228,24 @@ const ReportIncidentScreen = ({ navigation, route }) => {
         return;
       }
 
-      // Get current position with high accuracy
-      const position = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-        timeout: 15000,
-      });
+      let position;
+      try {
+        // Get current position with high accuracy
+        position = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+          timeout: 15000,
+        });
+      } catch (positionError) {
+        // Fallback to last known position (useful for emulators / slow GPS)
+        const lastKnown = await Location.getLastKnownPositionAsync({
+          maxAge: 5 * 60 * 1000,
+          requiredAccuracy: 100,
+        });
+        if (!lastKnown) {
+          throw positionError;
+        }
+        position = lastKnown;
+      }
 
       const { latitude, longitude } = position.coords;
       
@@ -276,6 +304,14 @@ const ReportIncidentScreen = ({ navigation, route }) => {
   const openMapForSelection = async () => {
     // If we don't have a location yet, try to get current location first
     if (!location) {
+      const servicesEnabled = await Location.hasServicesEnabledAsync();
+      if (!servicesEnabled) {
+        Alert.alert(
+          'Location Services Off',
+          'Location services are disabled. You can still pick a location on the map.',
+          [{ text: 'OK' }]
+        );
+      }
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === 'granted') {
         try {
@@ -291,13 +327,40 @@ const ReportIncidentScreen = ({ navigation, route }) => {
           });
           setSelectedMapLocation({ latitude, longitude });
         } catch (error) {
-          // Use default location if GPS fails
-          setMapRegion({
-            latitude: 40.7128,
-            longitude: -74.0060,
-            latitudeDelta: 0.05,
-            longitudeDelta: 0.05,
-          });
+          try {
+            const lastKnown = await Location.getLastKnownPositionAsync({
+              maxAge: 5 * 60 * 1000,
+              requiredAccuracy: 100,
+            });
+            if (lastKnown?.coords) {
+              setMapRegion({
+                latitude: lastKnown.coords.latitude,
+                longitude: lastKnown.coords.longitude,
+                latitudeDelta: 0.01,
+                longitudeDelta: 0.01,
+              });
+              setSelectedMapLocation({
+                latitude: lastKnown.coords.latitude,
+                longitude: lastKnown.coords.longitude,
+              });
+            } else {
+              // Use default location if GPS fails
+              setMapRegion({
+                latitude: 40.7128,
+                longitude: -74.0060,
+                latitudeDelta: 0.05,
+                longitudeDelta: 0.05,
+              });
+            }
+          } catch (fallbackError) {
+            // Use default location if fallback fails
+            setMapRegion({
+              latitude: 40.7128,
+              longitude: -74.0060,
+              latitudeDelta: 0.05,
+              longitudeDelta: 0.05,
+            });
+          }
         }
       }
     } else {
