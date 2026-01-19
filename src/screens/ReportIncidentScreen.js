@@ -77,7 +77,6 @@ const ReportIncidentScreen = ({ navigation, route }) => {
   // Load draft on mount
   useEffect(() => {
     loadDraft();
-    requestPermissions();
   }, []);
 
   // Check if editing existing draft from route params
@@ -87,36 +86,6 @@ const ReportIncidentScreen = ({ navigation, route }) => {
       loadDraftData(draft);
     }
   }, [route?.params?.draft]);
-
-  /**
-   * Request necessary permissions
-   */
-  const requestPermissions = async () => {
-    try {
-      // Request location permission
-      const { status: locationStatus } = await Location.requestForegroundPermissionsAsync();
-      if (locationStatus !== 'granted') {
-        Alert.alert(
-          'Permission Required',
-          'Location permission is needed to accurately report incident locations.'
-        );
-      }
-
-      // Request camera permission
-      const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
-      if (cameraStatus !== 'granted') {
-        console.log('Camera permission not granted');
-      }
-
-      // Request media library permission
-      const { status: mediaStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (mediaStatus !== 'granted') {
-        console.log('Media library permission not granted');
-      }
-    } catch (error) {
-      console.error('Error requesting permissions:', error);
-    }
-  };
 
   /**
    * Load saved draft from storage
@@ -388,6 +357,15 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     }
 
     try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Photo library permission is needed to choose photos.'
+        );
+        return;
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
