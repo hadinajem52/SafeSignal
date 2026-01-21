@@ -560,4 +560,87 @@ export const incidentAPI = {
   },
 };
 
+/**
+ * Stats API functions
+ */
+export const statsAPI = {
+  /**
+   * Get dashboard statistics
+   */
+  async getDashboardStats(params = {}) {
+    try {
+      const { latitude, longitude, radius = 5 } = params;
+      const queryParams = new URLSearchParams();
+
+      if (latitude !== undefined && longitude !== undefined) {
+        queryParams.append('latitude', latitude.toString());
+        queryParams.append('longitude', longitude.toString());
+        queryParams.append('radius', radius.toString());
+      }
+
+      const response = await api.get(`/stats/dashboard?${queryParams.toString()}`);
+
+      if (response.data.status === 'SUCCESS') {
+        return {
+          success: true,
+          data: response.data.data,
+        };
+      }
+
+      return { success: false, error: response.data.message };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to fetch dashboard stats';
+      return { success: false, error: message };
+    }
+  },
+
+  /**
+   * Get area safety score
+   */
+  async getAreaSafety(latitude, longitude, radius = 5) {
+    try {
+      const queryParams = new URLSearchParams({
+        latitude: latitude.toString(),
+        longitude: longitude.toString(),
+        radius: radius.toString(),
+      });
+
+      const response = await api.get(`/stats/area-safety?${queryParams.toString()}`);
+
+      if (response.data.status === 'SUCCESS') {
+        return {
+          success: true,
+          data: response.data.data,
+        };
+      }
+
+      return { success: false, error: response.data.message };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to fetch area safety';
+      return { success: false, error: message };
+    }
+  },
+
+  /**
+   * Get community statistics
+   */
+  async getCommunityStats() {
+    try {
+      const response = await api.get('/stats/community');
+
+      if (response.data.status === 'SUCCESS') {
+        return {
+          success: true,
+          data: response.data.data,
+        };
+      }
+
+      return { success: false, error: response.data.message };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to fetch community stats';
+      return { success: false, error: message };
+    }
+  },
+};
+
 export default api;
