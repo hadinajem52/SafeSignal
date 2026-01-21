@@ -24,7 +24,7 @@
       "package": "com.hhhhjjj.FinalProject",
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyDp2nr7cTa0PX-QgSEMp7H2ZG0vujCntI0"
+          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY"
         }
       },
       "permissions": [
