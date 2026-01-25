@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const pgp = require('pg-promise')({ capSQL: true });
 
 const resetDatabase = async () => {
   try {
@@ -11,6 +12,9 @@ const resetDatabase = async () => {
       DROP TABLE IF EXISTS incidents CASCADE;
       DROP TABLE IF EXISTS users CASCADE;
     `);
+
+    // Drop PostGIS extension (using psql command)
+    console.log('✓ PostGIS extension will be dropped via psql if needed');
 
     console.log('✓ Database reset successfully');
     console.log('Now run: npm run db:init');

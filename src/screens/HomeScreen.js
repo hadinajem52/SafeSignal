@@ -123,6 +123,21 @@ const HomeScreen = ({ navigation }) => {
     );
   }
 
+  if (error && !dashboardData) {
+    return (
+      <View style={styles.errorScreenContainer}>
+        <View style={styles.errorContent}>
+          <Text style={styles.errorEmoji}>⚠️</Text>
+          <Text style={styles.errorTitle}>Unable to Load Dashboard</Text>
+          <Text style={styles.errorMessage}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={onRefresh}>
+            <Text style={styles.retryButtonText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <ScrollView
       style={styles.container}
@@ -348,6 +363,53 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 16,
     color: '#666',
+  },
+  errorScreenContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f7fa',
+    padding: 20,
+  },
+  errorContent: {
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  errorEmoji: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1a1a2e',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  errorMessage: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  retryButton: {
+    backgroundColor: '#1a73e8',
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   header: {
     flexDirection: 'row',
@@ -643,10 +705,13 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     marginVertical: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#c0392b',
   },
   errorText: {
     color: '#c0392b',
     fontSize: 14,
+    fontWeight: '500',
   },
   retryText: {
     color: '#1a73e8',

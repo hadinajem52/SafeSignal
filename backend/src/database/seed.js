@@ -6,14 +6,14 @@ const seedDatabase = async () => {
     console.log('Seeding SafeSignal database with test accounts...');
 
     // Admin account
-    const adminEmail = 'admin@example.com';
-    const adminPassword = 'Admin123!';
+    const adminEmail = 'admin@safesignal.com';
+    const adminPassword = 'password123';
     const adminUsername = 'admin';
 
     // Moderator account
-    const modEmail = 'mod@example.com';
-    const modPassword = 'Moderator123!';
-    const modUsername = 'mod';
+    const modEmail = 'moderator@safesignal.com';
+    const modPassword = 'password123';
+    const modUsername = 'moderator';
 
     // Check if admin already exists
     const existingAdmin = await db.oneOrNone(

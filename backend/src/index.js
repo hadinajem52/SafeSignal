@@ -7,6 +7,7 @@ const db = require('./config/database');
 // Import routes
 const authRoutes = require('./routes/auth');
 const incidentsRoutes = require('./routes/incidents');
+const statsRoutes = require('./routes/stats');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,6 +25,7 @@ app.get('/api/health', (req, res) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/incidents', incidentsRoutes);
+app.use('/api/stats', statsRoutes);
 
 // 404 handler
 app.use((req, res) => {
