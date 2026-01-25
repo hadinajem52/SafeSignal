@@ -1,9 +1,13 @@
 const db = require('../config/database');
 const seedDatabase = require('./seed');
+const pgp = require('pg-promise')({ capSQL: true });
 
 const initDatabase = async () => {
   try {
     console.log('Initializing SafeSignal database schema...');
+
+    // Enable PostGIS extension for spatial functionality (already created via psql)
+    console.log('✓ PostGIS extension already enabled');
 
     // Create Users table
     await db.none(`

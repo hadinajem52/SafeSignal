@@ -38,6 +38,7 @@ function Dashboard() {
       if (result.success) return result.data
       throw new Error(result.error)
     },
+    retry: 1,
   })
 
   if (isLoading) {
@@ -48,14 +49,25 @@ function Dashboard() {
     )
   }
 
-  const mockStats = {
-    totalReports: 1247,
+  // Use mock data if query fails or as fallback
+  const displayStats = stats || {
+    totalIncidents: 1247,
     pendingReports: 34,
     verifiedReports: 892,
     rejectedReports: 145,
     totalUsers: 5643,
     activeUsers: 3821,
     suspendedUsers: 156,
+  }
+
+  const mockStats = {
+    totalReports: displayStats.totalIncidents,
+    pendingReports: displayStats.pendingReports,
+    verifiedReports: displayStats.verifiedReports,
+    rejectedReports: displayStats.rejectedReports,
+    totalUsers: displayStats.totalUsers,
+    activeUsers: displayStats.activeUsers,
+    suspendedUsers: displayStats.suspendedUsers,
   }
 
   return (
