@@ -49,25 +49,31 @@ function Dashboard() {
     )
   }
 
-  // Use mock data if query fails or as fallback
+  // Use real stats from API
   const displayStats = stats || {
-    totalIncidents: 1247,
-    pendingReports: 34,
-    verifiedReports: 892,
-    rejectedReports: 145,
-    totalUsers: 5643,
-    activeUsers: 3821,
-    suspendedUsers: 156,
+    totalIncidents: 0,
+    pendingReports: 0,
+    verifiedReports: 0,
+    rejectedReports: 0,
+    totalUsers: 0,
+    activeUsers: 0,
+    suspendedUsers: 0,
+    recentIncidents: [],
   }
 
-  const mockStats = {
-    totalReports: displayStats.totalIncidents,
-    pendingReports: displayStats.pendingReports,
-    verifiedReports: displayStats.verifiedReports,
-    rejectedReports: displayStats.rejectedReports,
-    totalUsers: displayStats.totalUsers,
-    activeUsers: displayStats.activeUsers,
-    suspendedUsers: displayStats.suspendedUsers,
+  // Helper function to get time ago string
+  const getTimeAgo = (dateString) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const seconds = Math.floor((now - date) / 1000)
+    const minutes = Math.floor(seconds / 60)
+    const hours = Math.floor(minutes / 60)
+    const days = Math.floor(hours / 24)
+
+    if (days > 0) return `${days}d ago`
+    if (hours > 0) return `${hours}h ago`
+    if (minutes > 0) return `${minutes}m ago`
+    return 'just now'
   }
 
   return (
@@ -83,29 +89,25 @@ function Dashboard() {
         <StatCard
           icon={FileText}
           label="Total Reports"
-          value={mockStats.totalReports}
-          change={12}
+          value={displayStats.totalIncidents}
           color="bg-blue-500"
         />
         <StatCard
           icon={Clock}
           label="Pending Review"
-          value={mockStats.pendingReports}
-          change={-8}
+          value={displayStats.pendingReports}
           color="bg-yellow-500"
         />
         <StatCard
           icon={CheckCircle}
           label="Verified Reports"
-          value={mockStats.verifiedReports}
-          change={15}
+          value={displayStats.verifiedReports}
           color="bg-green-500"
         />
         <StatCard
           icon={AlertCircle}
           label="Rejected Reports"
-          value={mockStats.rejectedReports}
-          change={3}
+          value={displayStats.rejectedReports}
           color="bg-red-500"
         />
       </div>
@@ -115,19 +117,19 @@ function Dashboard() {
         <StatCard
           icon={Users}
           label="Total Users"
-          value={mockStats.totalUsers}
+          value={displayStats.totalUsers}
           color="bg-purple-500"
         />
         <StatCard
           icon={TrendingUp}
           label="Active Users"
-          value={mockStats.activeUsers}
+          value={displayStats.activeUsers}
           color="bg-indigo-500"
         />
         <StatCard
           icon={AlertCircle}
           label="Suspended Users"
-          value={mockStats.suspendedUsers}
+          value={displayStats.suspendedUsers}
           color="bg-orange-500"
         />
       </div>
@@ -141,26 +143,25 @@ function Dashboard() {
             Recent Reports
           </h2>
           <div className="space-y-4">
-            {[
-              { title: 'Suspicious Activity Near Park', status: 'pending', time: '2 hours ago' },
-              { title: 'Vandalism Reported', status: 'verified', time: '4 hours ago' },
-              { title: 'Traffic Incident', status: 'rejected', time: '1 day ago' },
-              { title: 'Assault Report', status: 'pending', time: '2 days ago' },
-            ].map((report, i) => (
-              <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="font-medium text-gray-900">{report.title}</p>
-                  <p className="text-sm text-gray-600">{report.time}</p>
+            {displayStats.recentIncidents && displayStats.recentIncidents.length > 0 ? (
+              displayStats.recentIncidents.map((report) => (
+                <div key={report.incident_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div>
+                    <p className="font-medium text-gray-900">{report.title}</p>
+                    <p className="text-sm text-gray-600">{getTimeAgo(report.created_at)}</p>
+                  </div>
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    report.status === 'submitted' ? 'bg-yellow-100 text-yellow-800' :
+                    report.status === 'verified' ? 'bg-green-100 text-green-800' :
+                    'bg-red-100 text-red-800'
+                  }`}>
+                    {report.status.charAt(0).toUpperCase() + report.status.slice(1)}
+                  </span>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                  report.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                  report.status === 'verified' ? 'bg-green-100 text-green-800' :
-                  'bg-red-100 text-red-800'
-                }`}>
-                  {report.status.charAt(0).toUpperCase() + report.status.slice(1)}
-                </span>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-gray-500 text-center py-4">No recent reports</p>
+            )}
           </div>
         </div>
 
@@ -173,29 +174,29 @@ function Dashboard() {
           <div className="space-y-4">
             <div>
               <div className="flex justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">Reports Processed</span>
-                <span className="text-sm font-bold text-gray-900">287</span>
+                <span className="text-sm font-medium text-gray-700">Total Reports</span>
+                <span className="text-sm font-bold text-gray-900">{displayStats.totalIncidents}</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-blue-600 h-2 rounded-full" style={{ width: '72%' }}></div>
+                <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${Math.min(100, displayStats.totalIncidents / 10)}%` }}></div>
               </div>
             </div>
             <div>
               <div className="flex justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">Users Moderated</span>
-                <span className="text-sm font-bold text-gray-900">156</span>
+                <span className="text-sm font-medium text-gray-700">Active Users</span>
+                <span className="text-sm font-bold text-gray-900">{displayStats.activeUsers}</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-purple-600 h-2 rounded-full" style={{ width: '45%' }}></div>
+                <div className="bg-purple-600 h-2 rounded-full" style={{ width: `${displayStats.totalUsers > 0 ? (displayStats.activeUsers / displayStats.totalUsers) * 100 : 0}%` }}></div>
               </div>
             </div>
             <div>
               <div className="flex justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">Verification Accuracy</span>
-                <span className="text-sm font-bold text-gray-900">94.2%</span>
+                <span className="text-sm font-medium text-gray-700">Verification Rate</span>
+                <span className="text-sm font-bold text-gray-900">{displayStats.totalIncidents > 0 ? Math.round((displayStats.verifiedReports / displayStats.totalIncidents) * 100) : 0}%</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-green-600 h-2 rounded-full" style={{ width: '94%' }}></div>
+                <div className="bg-green-600 h-2 rounded-full" style={{ width: `${displayStats.totalIncidents > 0 ? (displayStats.verifiedReports / displayStats.totalIncidents) * 100 : 0}%` }}></div>
               </div>
             </div>
           </div>

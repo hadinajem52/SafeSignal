@@ -19,7 +19,7 @@ api.interceptors.request.use((config) => {
 export const reportsAPI = {
   getAll: async (params = {}) => {
     try {
-      const response = await api.get('/reports', { params })
+      const response = await api.get('/incidents', { params })
       return { success: true, data: response.data.data }
     } catch (error) {
       return { success: false, error: error.response?.data?.message || 'Failed to fetch reports' }
@@ -28,7 +28,7 @@ export const reportsAPI = {
 
   getById: async (id) => {
     try {
-      const response = await api.get(`/reports/${id}`)
+      const response = await api.get(`/incidents/${id}`)
       return { success: true, data: response.data.data }
     } catch (error) {
       return { success: false, error: error.response?.data?.message || 'Failed to fetch report' }
@@ -37,7 +37,7 @@ export const reportsAPI = {
 
   updateStatus: async (id, status) => {
     try {
-      const response = await api.patch(`/reports/${id}`, { status })
+      const response = await api.patch(`/incidents/${id}`, { status })
       return { success: true, data: response.data.data }
     } catch (error) {
       return { success: false, error: error.response?.data?.message || 'Failed to update report' }
@@ -46,7 +46,7 @@ export const reportsAPI = {
 
   verify: async (id) => {
     try {
-      const response = await api.post(`/reports/${id}/verify`)
+      const response = await api.post(`/incidents/${id}/verify`)
       return { success: true, data: response.data.data }
     } catch (error) {
       return { success: false, error: error.response?.data?.message || 'Failed to verify report' }
@@ -55,7 +55,7 @@ export const reportsAPI = {
 
   reject: async (id, reason) => {
     try {
-      const response = await api.post(`/reports/${id}/reject`, { reason })
+      const response = await api.post(`/incidents/${id}/reject`, { reason })
       return { success: true, data: response.data.data }
     } catch (error) {
       return { success: false, error: error.response?.data?.message || 'Failed to reject report' }
@@ -106,7 +106,7 @@ export const usersAPI = {
 export const statsAPI = {
   getDashboardStats: async () => {
     try {
-      const response = await api.get('/stats/dashboard')
+      const response = await api.get('/stats/moderator/dashboard')
       return { success: true, data: response.data.data }
     } catch (error) {
       return { success: false, error: error.response?.data?.message || 'Failed to fetch stats' }
