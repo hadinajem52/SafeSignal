@@ -8,6 +8,7 @@ const db = require('./config/database');
 const authRoutes = require('./routes/auth');
 const incidentsRoutes = require('./routes/incidents');
 const statsRoutes = require('./routes/stats');
+const usersRoutes = require('./routes/users');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -25,6 +26,7 @@ app.get('/api/health', (req, res) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/incidents', incidentsRoutes);
+app.use('/api/users', usersRoutes);
 app.use('/api/stats', statsRoutes);
 
 // 404 handler

@@ -24,61 +24,20 @@ function Reports() {
     },
   })
 
-  // Mock data for demonstration
-  const mockReports = [
-    {
-      id: 1,
-      title: 'Suspicious Activity Near Park',
-      category: 'suspicious_activity',
-      status: 'pending',
-      severity: 'medium',
-      reporter: 'John Doe',
-      location: '40.7128, -74.0060',
-      createdAt: '2024-01-25T14:30:00',
-      description: 'Several individuals acting suspiciously near the park entrance.',
-    },
-    {
-      id: 2,
-      title: 'Vandalism on Building Wall',
-      category: 'vandalism',
-      status: 'verified',
-      severity: 'low',
-      reporter: 'Jane Smith',
-      location: '40.7150, -74.0080',
-      createdAt: '2024-01-25T12:15:00',
-      description: 'Graffiti painted on the building wall.',
-    },
-    {
-      id: 3,
-      title: 'Traffic Incident at Intersection',
-      category: 'traffic_incident',
-      status: 'in_review',
-      severity: 'high',
-      reporter: 'Mike Johnson',
-      location: '40.7180, -74.0100',
-      createdAt: '2024-01-25T10:45:00',
-      description: 'Accident blocking traffic flow.',
-    },
-    {
-      id: 4,
-      title: 'Noise Complaint',
-      category: 'noise_complaint',
-      status: 'rejected',
-      severity: 'low',
-      reporter: 'Sarah Wilson',
-      location: '40.7200, -74.0120',
-      createdAt: '2024-01-25T08:20:00',
-      description: 'Excessive noise from construction.',
-    },
-  ]
-
-  const filteredReports = mockReports.filter(report => {
+  // Transform API data to match UI format and filter
+  const filteredReports = reports.filter(report => {
     const matchesSearch = 
       report.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       report.description.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === 'all' || report.status === statusFilter
     return matchesSearch && matchesStatus
-  })
+  }).map(report => ({
+    ...report,
+    id: report.incident_id,
+    reporter: report.username || 'Anonymous',
+    location: report.location_name ? `${report.latitude}, ${report.longitude}` : 'Unknown Location',
+    createdAt: report.created_at || report.incident_date,
+  }))
 
   const getStatusColor = (status) => {
     switch(status) {

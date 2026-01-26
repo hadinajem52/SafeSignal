@@ -5,6 +5,67 @@ const db = require('../config/database');
 const router = express.Router();
 
 /**
+ * @route   GET /api/stats/moderator/dashboard
+ * @desc    Get dashboard statistics for moderators
+ * @access  Private
+ */
+router.get('/moderator/dashboard', authenticateToken, async (req, res) => {
+  try {
+    // Get total incident counts
+    const incidentStats = await db.one(`
+      SELECT 
+        COUNT(*) as totalIncidents,
+        SUM(CASE WHEN status = 'submitted' THEN 1 ELSE 0 END) as pendingReports,
+        SUM(CASE WHEN status = 'verified' THEN 1 ELSE 0 END) as verifiedReports,
+        SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejectedReports
+      FROM incidents
+      WHERE is_draft = FALSE
+    `);
+
+    // Get user statistics
+    const userStats = await db.one(`
+      SELECT 
+        COUNT(*) as totalUsers,
+        SUM(CASE WHEN is_suspended = FALSE THEN 1 ELSE 0 END) as activeUsers,
+        SUM(CASE WHEN is_suspended = TRUE THEN 1 ELSE 0 END) as suspendedUsers
+      FROM users
+    `);
+
+    // Get recent incidents
+    const recentIncidents = await db.manyOrNone(`
+      SELECT 
+        incident_id, title, status, category, severity, 
+        created_at, username, location_name
+      FROM incidents i
+      JOIN users u ON i.reporter_id = u.user_id
+      WHERE i.is_draft = FALSE
+      ORDER BY i.created_at DESC
+      LIMIT 4
+    `);
+
+    res.json({
+      status: 'OK',
+      data: {
+        totalIncidents: parseInt(incidentStats.totalIncidents || 0),
+        pendingReports: parseInt(incidentStats.pendingReports || 0),
+        verifiedReports: parseInt(incidentStats.verifiedReports || 0),
+        rejectedReports: parseInt(incidentStats.rejectedReports || 0),
+        totalUsers: parseInt(userStats.totalUsers || 0),
+        activeUsers: parseInt(userStats.activeUsers || 0),
+        suspendedUsers: parseInt(userStats.suspendedUsers || 0),
+        recentIncidents: recentIncidents || [],
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching moderator dashboard stats:', error);
+    res.status(500).json({
+      status: 'ERROR',
+      message: 'Failed to fetch moderator dashboard statistics',
+    });
+  }
+});
+
+/**
  * @route   GET /api/stats/dashboard
  * @desc    Get dashboard statistics for mobile app users
  * @access  Private

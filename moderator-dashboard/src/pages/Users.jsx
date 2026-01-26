@@ -24,59 +24,7 @@ function Users() {
     },
   })
 
-  // Mock data for demonstration
-  const mockUsers = [
-    {
-      id: 1,
-      name: 'John Doe',
-      email: 'john@example.com',
-      role: 'user',
-      status: 'active',
-      totalReports: 12,
-      verifiedReports: 10,
-      rejectedReports: 2,
-      joinedDate: '2023-06-15',
-      isSuspended: false,
-    },
-    {
-      id: 2,
-      name: 'Jane Smith',
-      email: 'jane@example.com',
-      role: 'user',
-      status: 'active',
-      totalReports: 24,
-      verifiedReports: 22,
-      rejectedReports: 2,
-      joinedDate: '2023-05-20',
-      isSuspended: false,
-    },
-    {
-      id: 3,
-      name: 'Mike Johnson',
-      email: 'mike@example.com',
-      role: 'user',
-      status: 'suspended',
-      totalReports: 5,
-      verifiedReports: 2,
-      rejectedReports: 3,
-      joinedDate: '2023-07-10',
-      isSuspended: true,
-    },
-    {
-      id: 4,
-      name: 'Sarah Wilson',
-      email: 'sarah@example.com',
-      role: 'moderator',
-      status: 'active',
-      totalReports: 0,
-      verifiedReports: 0,
-      rejectedReports: 0,
-      joinedDate: '2023-01-05',
-      isSuspended: false,
-    },
-  ]
-
-  const filteredUsers = mockUsers.filter(user => {
+  const filteredUsers = users.filter(user => {
     const matchesSearch = 
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase())
