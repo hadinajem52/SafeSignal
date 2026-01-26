@@ -45,9 +45,11 @@ const RegisterScreen = ({ navigation }) => {
       const userInfo = await GoogleSignin.signIn();
       
       const idToken = userInfo.data?.idToken;
+      const email = userInfo.data?.user?.email;
+      const name = userInfo.data?.user?.name;
       
-      if (idToken) {
-        const result = await googleSignIn(idToken);
+      if (idToken && email) {
+        const result = await googleSignIn(idToken, email, name);
         if (!result.success) {
           Alert.alert('Sign-Up Failed', result.error || 'Google authentication failed');
         }

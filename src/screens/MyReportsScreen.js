@@ -330,7 +330,7 @@ const MyReportsScreen = ({ navigation }) => {
       <FlatList
         data={incidents}
         renderItem={renderIncidentItem}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item) => (item.id ? item.id.toString() : Math.random().toString())}
         contentContainerStyle={styles.listContainer}
         refreshControl={
           <RefreshControl

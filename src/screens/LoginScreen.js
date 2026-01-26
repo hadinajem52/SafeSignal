@@ -43,16 +43,20 @@ const LoginScreen = ({ navigation }) => {
       }
       const userInfo = await GoogleSignin.signIn();
       
-      // Get the ID token
+      // Get the ID token and user info
       const idToken = userInfo.data?.idToken;
+      const email = userInfo.data?.user?.email;
+      const name = userInfo.data?.user?.name;
       console.log('Google Sign-In success');
       console.log('- idToken received:', !!idToken);
       console.log('- idToken length:', idToken?.length);
+      console.log('- email received:', email);
+      console.log('- name received:', name);
       console.log('- userInfo keys:', Object.keys(userInfo.data || {}));
       
-      if (idToken) {
-        console.log('Sending idToken to backend...');
-        const result = await googleSignIn(idToken);
+      if (idToken && email) {
+        console.log('Sending idToken and email to backend...');
+        const result = await googleSignIn(idToken, email, name);
         console.log('Backend response:', result);
         
         if (!result.success) {

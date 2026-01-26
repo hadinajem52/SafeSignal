@@ -73,8 +73,8 @@ export const AuthProvider = ({ children }) => {
   /**
    * Sign in with Google
    */
-  const googleSignIn = async (idToken) => {
-    const result = await authAPI.googleSignIn(idToken);
+  const googleSignIn = async (idToken, email, name) => {
+    const result = await authAPI.googleSignIn(idToken, email, name);
     if (result.success) {
       setUser(result.user);
       setIsAuthenticated(true);

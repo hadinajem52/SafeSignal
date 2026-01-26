@@ -325,11 +325,12 @@ export const authAPI = {
   /**
    * Sign in with Google
    */
-  async googleSignIn(idToken) {
+  async googleSignIn(idToken, email, name) {
     try {
       const response = await api.post('/auth/google', { 
         idToken,
-        accessToken: idToken // Send as both in case backend needs accessToken
+        email,
+        name
       });
 
       if (response.data.status === 'OK') {
@@ -441,9 +442,16 @@ export const incidentAPI = {
       const response = await api.get(`/incidents/list?${queryParams.toString()}`);
 
       if (response.data.status === 'SUCCESS') {
+        // Normalize incidents: convert incident_id to id for consistency
+        const normalizedIncidents = (response.data.data.incidents || []).map(incident => ({
+          ...incident,
+          id: incident.incident_id || incident.id,
+          createdAt: incident.created_at || incident.createdAt,
+        }));
+
         return {
           success: true,
-          incidents: response.data.data.incidents,
+          incidents: normalizedIncidents,
           pagination: response.data.data.pagination,
         };
       }

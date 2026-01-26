@@ -563,6 +563,11 @@ const ReportIncidentScreen = ({ navigation, route }) => {
       return;
     }
 
+    // Prevent multiple submissions
+    if (isSubmitting) {
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -582,17 +587,21 @@ const ReportIncidentScreen = ({ navigation, route }) => {
 
       let result;
       
-      if (draftId) {
-        // Update existing draft
+      // For drafts stored locally (with temp ID like "draft-123"), always submit as new
+      // For drafts stored in DB (with numeric ID), update if submitting with isDraft=false, otherwise submit new
+      if (draftId && !draftId.startsWith('draft-') && !asDraft) {
+        // Update existing database draft to submitted status
         result = await incidentAPI.updateIncident(draftId, incidentData);
       } else {
-        // Create new incident
+        // Create new incident (handles both new reports and local draft submissions)
         result = await incidentAPI.submitIncident(incidentData);
       }
 
       if (result.success) {
-        // Clear the local draft on successful submission
-        await clearDraft();
+        // Clear the local draft only on successful submission (not when saving as draft)
+        if (!asDraft) {
+          await clearDraft();
+        }
 
         Alert.alert(
           'Success',
@@ -603,20 +612,25 @@ const ReportIncidentScreen = ({ navigation, route }) => {
             {
               text: 'OK',
               onPress: () => {
-                // Reset form
-                setTitle('');
-                setDescription('');
-                setSelectedCategory('');
-                setLocation(null);
-                setLocationName('');
-                setIncidentDate(new Date());
-                setSeverity('medium');
-                setIsAnonymous(false);
-                setPhotos([]);
-                setErrors({});
-                setDraftId(null);
-                
-                navigation.navigate('Home');
+                // Reset form only when fully submitted, not when saving draft
+                if (!asDraft) {
+                  setTitle('');
+                  setDescription('');
+                  setSelectedCategory('');
+                  setLocation(null);
+                  setLocationName('');
+                  setIncidentDate(new Date());
+                  setSeverity('medium');
+                  setIsAnonymous(false);
+                  setPhotos([]);
+                  setErrors({});
+                  setDraftId(null);
+                  
+                  navigation.navigate('Home');
+                } else {
+                  // When saving as draft, just close the alert
+                  setIsSubmitting(false);
+                }
               },
             },
           ]
@@ -627,11 +641,13 @@ const ReportIncidentScreen = ({ navigation, route }) => {
         } else {
           Alert.alert('Error', result.error || 'Failed to submit incident');
         }
+        // Re-enable button on error
+        setIsSubmitting(false);
       }
     } catch (error) {
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
       console.error('Submit incident error:', error);
-    } finally {
+      // Re-enable button on error
       setIsSubmitting(false);
     }
   };
