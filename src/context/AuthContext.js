@@ -1,8 +1,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI, tokenStorage } from '../services/api';
 
 // Create Auth Context
 const AuthContext = createContext(null);
+
+/**
+ * Get user-specific draft storage key
+ */
+const getDraftStorageKey = (userId) => `safesignal_incident_draft_${userId}`;
 
 /**
  * Auth Provider Component
@@ -86,6 +92,17 @@ export const AuthProvider = ({ children }) => {
    * Logout user
    */
   const logout = async () => {
+    try {
+      // Clear user's draft before logging out
+      if (user?.user_id || user?.userId) {
+        const userId = user.user_id || user.userId;
+        const draftKey = getDraftStorageKey(userId);
+        await AsyncStorage.removeItem(draftKey);
+      }
+    } catch (error) {
+      console.error('Error clearing draft on logout:', error);
+    }
+    
     await authAPI.logout();
     setUser(null);
     setIsAuthenticated(false);

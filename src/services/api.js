@@ -358,7 +358,15 @@ export const incidentAPI = {
    */
   async submitIncident(incidentData) {
     try {
-      const response = await api.post('/incidents/submit', incidentData);
+      // Generate a unique idempotency key to prevent duplicate submissions
+      // This ensures if the request is retried, the server won't create duplicate reports
+      const idempotencyKey = incidentData.idempotencyKey || `incident_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      const response = await api.post('/incidents/submit', incidentData, {
+        headers: {
+          'Idempotency-Key': idempotencyKey,
+        },
+      });
 
       if (response.data.status === 'SUCCESS') {
         return { 

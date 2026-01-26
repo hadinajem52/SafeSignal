@@ -20,20 +20,28 @@ import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MapView, { Marker } from 'react-native-maps';
 import { incidentAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const DRAFT_STORAGE_KEY = 'safesignal_incident_draft';
+
+/**
+ * Get user-specific draft storage key
+ * This ensures different accounts don't share drafts on the same device
+ */
+const getDraftStorageKey = (userId) => `safesignal_incident_draft_${userId}`;
+
 
 // Incident categories matching backend validation
 const CATEGORIES = [
   { value: 'theft', label: 'Theft', icon: '💰' },
   { value: 'assault', label: 'Assault', icon: '⚠️' },
   { value: 'vandalism', label: 'Vandalism', icon: '🔨' },
-  { value: 'burglary', label: 'Burglary', icon: '🏠' },
-  { value: 'harassment', label: 'Harassment', icon: '😠' },
   { value: 'suspicious_activity', label: 'Suspicious Activity', icon: '👀' },
   { value: 'traffic_incident', label: 'Traffic Incident', icon: '🚗' },
-  { value: 'public_disturbance', label: 'Public Disturbance', icon: '📢' },
+  { value: 'noise_complaint', label: 'Noise Complaint', icon: '🔊' },
+  { value: 'fire', label: 'Fire', icon: '🔥' },
+  { value: 'medical_emergency', label: 'Medical Emergency', icon: '🚑' },
+  { value: 'hazard', label: 'Hazard', icon: '⚠️' },
   { value: 'other', label: 'Other', icon: '📝' },
 ];
 
@@ -46,6 +54,8 @@ const SEVERITY_LEVELS = [
 ];
 
 const ReportIncidentScreen = ({ navigation, route }) => {
+  const { user } = useAuth();
+  
   // Form states
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -74,10 +84,16 @@ const ReportIncidentScreen = ({ navigation, route }) => {
   const [errors, setErrors] = useState({});
 
   const mapRef = useRef(null);
+  const isSubmittingRef = useRef(false);
 
   // Load draft on mount
   useEffect(() => {
     loadDraft();
+    
+    // Cleanup function to reset submission flag on unmount
+    return () => {
+      isSubmittingRef.current = false;
+    };
   }, []);
 
   // Check if editing existing draft from route params
@@ -93,7 +109,14 @@ const ReportIncidentScreen = ({ navigation, route }) => {
    */
   const loadDraft = async () => {
     try {
-      const savedDraft = await AsyncStorage.getItem(DRAFT_STORAGE_KEY);
+      if (!user?.user_id && !user?.userId) {
+        console.warn('User ID not available for loading draft');
+        return;
+      }
+      
+      const userId = user.user_id || user.userId;
+      const draftKey = getDraftStorageKey(userId);
+      const savedDraft = await AsyncStorage.getItem(draftKey);
       if (savedDraft) {
         const draft = JSON.parse(savedDraft);
         setHasDraft(true);
@@ -152,6 +175,13 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     setIsSavingDraft(true);
     
     try {
+      if (!user?.user_id && !user?.userId) {
+        Alert.alert('Error', 'User information not available. Please log in again.');
+        return;
+      }
+      
+      const userId = user.user_id || user.userId;
+      const draftKey = getDraftStorageKey(userId);
       const draftData = {
         title,
         description,
@@ -165,7 +195,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
         savedAt: new Date().toISOString(),
       };
 
-      await AsyncStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draftData));
+      await AsyncStorage.setItem(draftKey, JSON.stringify(draftData));
       setHasDraft(true);
 
       if (showAlert) {
@@ -186,7 +216,14 @@ const ReportIncidentScreen = ({ navigation, route }) => {
    */
   const clearDraft = async () => {
     try {
-      await AsyncStorage.removeItem(DRAFT_STORAGE_KEY);
+      if (!user?.user_id && !user?.userId) {
+        console.warn('User ID not available for clearing draft');
+        return;
+      }
+      
+      const userId = user.user_id || user.userId;
+      const draftKey = getDraftStorageKey(userId);
+      await AsyncStorage.removeItem(draftKey);
       setHasDraft(false);
     } catch (error) {
       console.error('Error clearing draft:', error);
@@ -558,6 +595,11 @@ const ReportIncidentScreen = ({ navigation, route }) => {
    * Handle incident submission
    */
   const handleSubmit = async (asDraft = false) => {
+    // Use ref to prevent race conditions from rapid clicks
+    if (isSubmittingRef.current) {
+      return;
+    }
+
     if (!asDraft && !validateForm()) {
       Alert.alert('Validation Error', 'Please fill in all required fields correctly.');
       return;
@@ -568,15 +610,24 @@ const ReportIncidentScreen = ({ navigation, route }) => {
       return;
     }
 
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
 
     try {
+      // Validate location is set for non-draft submissions
+      if (!asDraft && !location) {
+        Alert.alert('Error', 'Please set a location for your incident report.');
+        setIsSubmitting(false);
+        isSubmittingRef.current = false;
+        return;
+      }
+
       const incidentData = {
         title: title.trim(),
         description: description.trim(),
         category: selectedCategory,
-        latitude: location?.latitude,
-        longitude: location?.longitude,
+        latitude: location?.latitude || 0,
+        longitude: location?.longitude || 0,
         locationName: locationName || null,
         incidentDate: incidentDate.toISOString(),
         severity,
@@ -630,6 +681,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
                 } else {
                   // When saving as draft, just close the alert
                   setIsSubmitting(false);
+                  isSubmittingRef.current = false;
                 }
               },
             },
@@ -637,18 +689,28 @@ const ReportIncidentScreen = ({ navigation, route }) => {
         );
       } else {
         if (result.validationErrors && Array.isArray(result.validationErrors)) {
-          Alert.alert('Validation Error', result.validationErrors.join('\n'));
+          // Extract error messages from validation error objects
+          const errorMessages = result.validationErrors.map(err => {
+            if (typeof err === 'string') {
+              return err;
+            }
+            // Handle express-validator error objects { param, msg, value }
+            return err.msg || JSON.stringify(err);
+          });
+          Alert.alert('Validation Error', errorMessages.join('\n'));
         } else {
           Alert.alert('Error', result.error || 'Failed to submit incident');
         }
         // Re-enable button on error
         setIsSubmitting(false);
+        isSubmittingRef.current = false;
       }
     } catch (error) {
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
       console.error('Submit incident error:', error);
       // Re-enable button on error
       setIsSubmitting(false);
+      isSubmittingRef.current = false;
     }
   };
 

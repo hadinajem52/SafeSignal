@@ -12,8 +12,13 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { incidentAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
-const DRAFT_STORAGE_KEY = 'safesignal_incident_draft';
+/**
+ * Get user-specific draft storage key
+ * This ensures different accounts don't share drafts on the same device
+ */
+const getDraftStorageKey = (userId) => `safesignal_incident_draft_${userId}`;
 
 // Status badge colors
 const STATUS_COLORS = {
@@ -59,6 +64,7 @@ const CATEGORY_ICONS = {
 };
 
 const MyReportsScreen = ({ navigation }) => {
+  const { user } = useAuth();
   const [incidents, setIncidents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -92,21 +98,25 @@ const MyReportsScreen = ({ navigation }) => {
       let draftItem = null;
       if (selectedFilter === 'all' || selectedFilter === 'draft') {
         try {
-          const savedDraft = await AsyncStorage.getItem(DRAFT_STORAGE_KEY);
-          if (savedDraft) {
-            const draft = JSON.parse(savedDraft);
-            draftItem = {
-              id: `draft-${draft.savedAt || Date.now()}`,
-              title: draft.title || 'Untitled Draft',
-              description: draft.description || 'No description yet.',
-              category: draft.category || 'other',
-              location: draft.location || null,
-              locationName: draft.locationName || '',
-              createdAt: draft.savedAt || draft.incidentDate || new Date().toISOString(),
-              status: 'draft',
-              isDraft: true,
-              draftData: draft,
-            };
+          if (user?.user_id || user?.userId) {
+            const userId = user.user_id || user.userId;
+            const draftKey = getDraftStorageKey(userId);
+            const savedDraft = await AsyncStorage.getItem(draftKey);
+            if (savedDraft) {
+              const draft = JSON.parse(savedDraft);
+              draftItem = {
+                id: `draft-${draft.savedAt || Date.now()}`,
+                title: draft.title || 'Untitled Draft',
+                description: draft.description || 'No description yet.',
+                category: draft.category || 'other',
+                location: draft.location || null,
+                locationName: draft.locationName || '',
+                createdAt: draft.savedAt || draft.incidentDate || new Date().toISOString(),
+                status: 'draft',
+                isDraft: true,
+                draftData: draft,
+              };
+            }
           }
         } catch (draftError) {
           console.error('Error loading draft:', draftError);
@@ -133,7 +143,7 @@ const MyReportsScreen = ({ navigation }) => {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [selectedFilter]);
+  }, [selectedFilter, user]);
 
   /**
    * Initial load
