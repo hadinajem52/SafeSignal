@@ -49,6 +49,7 @@ yarn-error.*
 *.swp
 *.swo
 *~
+.github/instructions
 
 # Build caches
 .vite/
