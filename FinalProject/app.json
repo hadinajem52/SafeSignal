@@ -1,0 +1,62 @@
+{
+  "expo": {
+    "name": "FinalProject",
+    "slug": "FinalProject",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.hhhhjjj.FinalProject",
+      "config": {
+        "googleMaps": {
+          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY"
+        }
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "SafeSignal needs access to your location to report incidents accurately."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "SafeSignal needs access to your photos to attach images to incident reports.",
+          "cameraPermission": "SafeSignal needs access to your camera to take photos of incidents."
+        }
+      ]
+    ],
+    "scheme": [
+      "safesignal",
+      "com.googleusercontent.apps.148707906240-g25bk9eiiec29k9dt807hebmbqa64v2b"
+    ]
+  }
+}
