@@ -1,14 +1,52 @@
+/**
+ * Authentication Routes
+ * Handles HTTP concerns only: request parsing, validation, and response formatting.
+ * Business logic is delegated to the authService.
+ */
+
 const express = require('express');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
-const db = require('../config/database');
 const authenticateToken = require('../middleware/auth');
+const authService = require('../services/authService');
+const ServiceError = require('../utils/ServiceError');
 
 const router = express.Router();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'safesignal-jwt-secret-change-in-production';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+/**
+ * Handle validation errors
+ */
+function handleValidationErrors(req, res) {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(400).json({
+      status: 'ERROR',
+      message: 'Validation failed',
+      errors: errors.array(),
+    });
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Handle service errors
+ */
+function handleServiceError(error, res, defaultMessage) {
+  console.error(`${defaultMessage}:`, error);
+
+  if (error instanceof ServiceError) {
+    return res.status(error.statusCode).json({
+      status: 'ERROR',
+      message: error.message,
+      code: error.code,
+    });
+  }
+
+  res.status(500).json({
+    status: 'ERROR',
+    message: defaultMessage,
+  });
+}
 
 /**
  * @route   POST /api/auth/login
@@ -22,67 +60,19 @@ router.post(
     body('password').isLength({ min: 6 }),
   ],
   async (req, res) => {
+    if (handleValidationErrors(req, res)) return;
+
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({
-          status: 'ERROR',
-          message: 'Validation failed',
-          errors: errors.array(),
-        });
-      }
-
       const { email, password } = req.body;
-
-      // Find user
-      const user = await db.oneOrNone('SELECT * FROM users WHERE email = $1', [email]);
-
-      if (!user) {
-        return res.status(401).json({
-          status: 'ERROR',
-          message: 'Invalid credentials',
-        });
-      }
-
-      // Check password
-      const isPasswordValid = await bcrypt.compare(password, user.password_hash);
-      if (!isPasswordValid) {
-        return res.status(401).json({
-          status: 'ERROR',
-          message: 'Invalid credentials',
-        });
-      }
-
-      // Generate JWT
-      const token = jwt.sign(
-        {
-          userId: user.user_id,
-          email: user.email,
-          role: user.role,
-        },
-        JWT_SECRET,
-        { expiresIn: JWT_EXPIRES_IN }
-      );
+      const result = await authService.login(email, password);
 
       res.json({
         status: 'OK',
         message: 'Login successful',
-        data: {
-          token,
-          user: {
-            userId: user.user_id,
-            username: user.username,
-            email: user.email,
-            role: user.role,
-          },
-        },
+        data: result,
       });
     } catch (error) {
-      console.error('Login error:', error);
-      res.status(500).json({
-        status: 'ERROR',
-        message: 'Login failed',
-      });
+      handleServiceError(error, res, 'Login failed');
     }
   }
 );
@@ -100,54 +90,19 @@ router.post(
     body('password').isLength({ min: 6 }),
   ],
   async (req, res) => {
+    if (handleValidationErrors(req, res)) return;
+
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({
-          status: 'ERROR',
-          message: 'Validation failed',
-          errors: errors.array(),
-        });
-      }
-
       const { username, email, password } = req.body;
-
-      // Check if user exists
-      const existingUser = await db.oneOrNone(
-        'SELECT user_id FROM users WHERE email = $1 OR username = $2',
-        [email, username]
-      );
-
-      if (existingUser) {
-        return res.status(409).json({
-          status: 'ERROR',
-          message: 'User already exists',
-        });
-      }
-
-      // Hash password
-      const salt = await bcrypt.genSalt(12);
-      const password_hash = await bcrypt.hash(password, salt);
-
-      // Create user
-      const newUser = await db.one(
-        `INSERT INTO users (username, email, password_hash, role, is_verified)
-         VALUES ($1, $2, $3, 'citizen', TRUE)
-         RETURNING user_id, username, email, role`,
-        [username, email, password_hash]
-      );
+      const user = await authService.register(username, email, password);
 
       res.status(201).json({
         status: 'OK',
         message: 'Registration successful',
-        data: newUser,
+        data: user,
       });
     } catch (error) {
-      console.error('Registration error:', error);
-      res.status(500).json({
-        status: 'ERROR',
-        message: 'Registration failed',
-      });
+      handleServiceError(error, res, 'Registration failed');
     }
   }
 );
@@ -160,68 +115,15 @@ router.post(
 router.post('/google', async (req, res) => {
   try {
     const { idToken, email, name } = req.body;
-
-    if (!idToken || !email) {
-      return res.status(400).json({
-        status: 'ERROR',
-        message: 'idToken and email are required',
-      });
-    }
-
-    // Check if user exists
-    let user = await db.oneOrNone('SELECT * FROM users WHERE email = $1', [email]);
-
-    if (!user) {
-      // Create new user from Google sign-in
-      const username = name || email.split('@')[0];
-      
-      try {
-        user = await db.one(
-          `INSERT INTO users (username, email, role, is_verified, created_at)
-           VALUES ($1, $2, 'citizen', TRUE, NOW())
-           RETURNING user_id, username, email, role`,
-          [username, email]
-        );
-      } catch (dbError) {
-        if (dbError.message.includes('duplicate key')) {
-          // Race condition: user was created between check and insert
-          user = await db.oneOrNone('SELECT * FROM users WHERE email = $1', [email]);
-        } else {
-          throw dbError;
-        }
-      }
-    }
-
-    // Generate JWT token
-    const token = jwt.sign(
-      {
-        userId: user.user_id,
-        email: user.email,
-        role: user.role,
-      },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
-    );
+    const result = await authService.googleLogin(idToken, email, name);
 
     res.json({
       status: 'OK',
       message: 'Google sign-in successful',
-      data: {
-        token,
-        user: {
-          userId: user.user_id,
-          username: user.username,
-          email: user.email,
-          role: user.role,
-        },
-      },
+      data: result,
     });
   } catch (error) {
-    console.error('Google sign-in error:', error);
-    res.status(500).json({
-      status: 'ERROR',
-      message: 'Google sign-in failed',
-    });
+    handleServiceError(error, res, 'Google sign-in failed');
   }
 });
 
@@ -232,38 +134,15 @@ router.post('/google', async (req, res) => {
  */
 router.get('/me', authenticateToken, async (req, res) => {
   try {
-    const user = await db.oneOrNone(
-      'SELECT user_id, username, email, role, is_verified, created_at FROM users WHERE user_id = $1',
-      [req.user.userId]
-    );
-
-    if (!user) {
-      return res.status(404).json({
-        status: 'ERROR',
-        message: 'User not found',
-      });
-    }
+    const user = await authService.getCurrentUser(req.user.userId);
 
     res.json({
       status: 'OK',
       message: 'Profile retrieved successfully',
-      data: {
-        user: {
-          userId: user.user_id,
-          username: user.username,
-          email: user.email,
-          role: user.role,
-          isVerified: user.is_verified,
-          createdAt: user.created_at,
-        },
-      },
+      data: { user },
     });
   } catch (error) {
-    console.error('Error fetching profile:', error);
-    res.status(500).json({
-      status: 'ERROR',
-      message: 'Failed to fetch profile',
-    });
+    handleServiceError(error, res, 'Failed to fetch profile');
   }
 });
 

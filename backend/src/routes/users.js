@@ -1,9 +1,36 @@
+/**
+ * User Routes
+ * Handles HTTP concerns only: request parsing, validation, and response formatting.
+ * Business logic is delegated to the userService.
+ */
+
 const express = require('express');
-const { param } = require('express-validator');
-const db = require('../config/database');
+const { param, validationResult } = require('express-validator');
 const authenticateToken = require('../middleware/auth');
+const userService = require('../services/userService');
+const ServiceError = require('../utils/ServiceError');
 
 const router = express.Router();
+
+/**
+ * Handle service errors
+ */
+function handleServiceError(error, res, defaultMessage) {
+  console.error(`${defaultMessage}:`, error);
+
+  if (error instanceof ServiceError) {
+    return res.status(error.statusCode).json({
+      status: 'ERROR',
+      message: error.message,
+      code: error.code,
+    });
+  }
+
+  res.status(500).json({
+    status: 'ERROR',
+    message: defaultMessage,
+  });
+}
 
 /**
  * @route   GET /api/users
@@ -14,51 +41,15 @@ router.get('/', authenticateToken, async (req, res) => {
   try {
     const { role, limit = 50, offset = 0 } = req.query;
 
-    let query = `
-      SELECT 
-        user_id, username, email, role, is_suspended, created_at,
-        (SELECT COUNT(*) FROM incidents WHERE reporter_id = u.user_id AND is_draft = FALSE) as total_reports,
-        (SELECT COUNT(*) FROM incidents WHERE reporter_id = u.user_id AND status = 'verified' AND is_draft = FALSE) as verified_reports,
-        (SELECT COUNT(*) FROM incidents WHERE reporter_id = u.user_id AND status = 'rejected' AND is_draft = FALSE) as rejected_reports
-      FROM users u
-      WHERE 1=1
-    `;
-    const params = [];
-    let paramCount = 1;
-
-    if (role) {
-      query += ` AND u.role = $${paramCount}`;
-      params.push(role);
-      paramCount++;
-    }
-
-    query += ` ORDER BY u.created_at DESC LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
-    params.push(limit, offset);
-
-    const users = await db.manyOrNone(query, params);
+    const users = await userService.getAllUsers({ role, limit, offset });
 
     res.json({
       status: 'OK',
-      data: users.map(u => ({
-        id: u.user_id,
-        name: u.username,
-        email: u.email,
-        role: u.role,
-        status: u.is_suspended ? 'suspended' : 'active',
-        isSuspended: u.is_suspended,
-        totalReports: parseInt(u.total_reports || 0),
-        verifiedReports: parseInt(u.verified_reports || 0),
-        rejectedReports: parseInt(u.rejected_reports || 0),
-        joinedDate: u.created_at,
-      })) || [],
+      data: users,
       count: users.length,
     });
   } catch (error) {
-    console.error('Error fetching users:', error);
-    res.status(500).json({
-      status: 'ERROR',
-      message: 'Failed to fetch users',
-    });
+    handleServiceError(error, res, 'Failed to fetch users');
   }
 });
 
@@ -68,46 +59,23 @@ router.get('/', authenticateToken, async (req, res) => {
  * @access  Private
  */
 router.get('/:id', authenticateToken, [param('id').isInt()], async (req, res) => {
-  try {
-    const user = await db.oneOrNone(
-      `SELECT 
-        user_id, username, email, role, is_suspended, created_at,
-        (SELECT COUNT(*) FROM incidents WHERE reporter_id = u.user_id AND is_draft = FALSE) as total_reports,
-        (SELECT COUNT(*) FROM incidents WHERE reporter_id = u.user_id AND status = 'verified' AND is_draft = FALSE) as verified_reports,
-        (SELECT COUNT(*) FROM incidents WHERE reporter_id = u.user_id AND status = 'rejected' AND is_draft = FALSE) as rejected_reports
-      FROM users u
-      WHERE user_id = $1`,
-      [req.params.id]
-    );
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      status: 'ERROR',
+      message: 'Invalid user ID',
+    });
+  }
 
-    if (!user) {
-      return res.status(404).json({
-        status: 'ERROR',
-        message: 'User not found',
-      });
-    }
+  try {
+    const user = await userService.getUserById(req.params.id);
 
     res.json({
       status: 'OK',
-      data: {
-        id: user.user_id,
-        name: user.username,
-        email: user.email,
-        role: user.role,
-        status: user.is_suspended ? 'suspended' : 'active',
-        isSuspended: user.is_suspended,
-        totalReports: parseInt(user.total_reports || 0),
-        verifiedReports: parseInt(user.verified_reports || 0),
-        rejectedReports: parseInt(user.rejected_reports || 0),
-        joinedDate: user.created_at,
-      },
+      data: user,
     });
   } catch (error) {
-    console.error('Error fetching user:', error);
-    res.status(500).json({
-      status: 'ERROR',
-      message: 'Failed to fetch user',
-    });
+    handleServiceError(error, res, 'Failed to fetch user');
   }
 });
 
@@ -117,6 +85,14 @@ router.get('/:id', authenticateToken, [param('id').isInt()], async (req, res) =>
  * @access  Private
  */
 router.patch('/:id', authenticateToken, [param('id').isInt()], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      status: 'ERROR',
+      message: 'Invalid user ID',
+    });
+  }
+
   try {
     const { is_suspended } = req.body;
 
@@ -127,40 +103,18 @@ router.patch('/:id', authenticateToken, [param('id').isInt()], async (req, res) 
       });
     }
 
-    const user = await db.oneOrNone(
-      'SELECT * FROM users WHERE user_id = $1',
-      [req.params.id]
-    );
-
-    if (!user) {
-      return res.status(404).json({
-        status: 'ERROR',
-        message: 'User not found',
-      });
-    }
-
-    const updatedUser = await db.one(
-      'UPDATE users SET is_suspended = $1 WHERE user_id = $2 RETURNING *',
-      [is_suspended, req.params.id]
+    const updatedUser = await userService.updateUserSuspension(
+      req.params.id,
+      is_suspended
     );
 
     res.json({
       status: 'OK',
       message: is_suspended ? 'User suspended successfully' : 'User unsuspended successfully',
-      data: {
-        id: updatedUser.user_id,
-        name: updatedUser.username,
-        email: updatedUser.email,
-        role: updatedUser.role,
-        isSuspended: updatedUser.is_suspended,
-      },
+      data: updatedUser,
     });
   } catch (error) {
-    console.error('Error updating user:', error);
-    res.status(500).json({
-      status: 'ERROR',
-      message: 'Failed to update user',
-    });
+    handleServiceError(error, res, 'Failed to update user');
   }
 });
 

@@ -1,9 +1,70 @@
+/**
+ * Incident Routes
+ * Handles HTTP concerns only: request parsing, validation, and response formatting.
+ * Business logic is delegated to the incidentService.
+ */
+
 const express = require('express');
 const { body, validationResult, param } = require('express-validator');
-const db = require('../config/database');
 const authenticateToken = require('../middleware/auth');
+const incidentService = require('../services/incidentService');
+const ServiceError = require('../utils/ServiceError');
 
 const router = express.Router();
+
+/**
+ * Validation rules for incident creation
+ */
+const createIncidentValidation = [
+  body('title').trim().isLength({ min: 5, max: 255 }),
+  body('description').trim().isLength({ min: 10, max: 5000 }),
+  body('category').isIn(incidentService.VALID_CATEGORIES),
+  body('latitude').isFloat({ min: -90, max: 90 }),
+  body('longitude').isFloat({ min: -180, max: 180 }),
+  body('severity').isIn(incidentService.VALID_SEVERITIES),
+];
+
+/**
+ * Handle validation errors
+ * @param {Object} req - Express request
+ * @param {Object} res - Express response
+ * @returns {boolean} True if there are errors
+ */
+function handleValidationErrors(req, res) {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(400).json({
+      status: 'ERROR',
+      message: 'Validation failed',
+      errors: errors.array(),
+    });
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Handle service errors
+ * @param {Error} error - The error object
+ * @param {Object} res - Express response
+ * @param {string} defaultMessage - Default error message
+ */
+function handleServiceError(error, res, defaultMessage) {
+  console.error(`${defaultMessage}:`, error);
+
+  if (error instanceof ServiceError) {
+    return res.status(error.statusCode).json({
+      status: 'ERROR',
+      message: error.message,
+      code: error.code,
+    });
+  }
+
+  res.status(500).json({
+    status: 'ERROR',
+    message: defaultMessage,
+  });
+}
 
 /**
  * @route   POST /api/incidents/submit
@@ -13,71 +74,14 @@ const router = express.Router();
 router.post(
   '/submit',
   authenticateToken,
-  [
-    body('title').trim().isLength({ min: 5, max: 255 }),
-    body('description').trim().isLength({ min: 10, max: 5000 }),
-    body('category').isIn([
-      'theft',
-      'assault',
-      'vandalism',
-      'suspicious_activity',
-      'traffic_incident',
-      'noise_complaint',
-      'fire',
-      'medical_emergency',
-      'hazard',
-      'other',
-    ]),
-    body('latitude').isFloat({ min: -90, max: 90 }),
-    body('longitude').isFloat({ min: -180, max: 180 }),
-    body('severity').isIn(['low', 'medium', 'high', 'critical']),
-  ],
+  createIncidentValidation,
   async (req, res) => {
+    if (handleValidationErrors(req, res)) return;
+
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({
-          status: 'ERROR',
-          message: 'Validation failed',
-          errors: errors.array(),
-        });
-      }
-
-      const {
-        title,
-        description,
-        category,
-        latitude,
-        longitude,
-        locationName,
-        incidentDate,
-        severity,
-        isAnonymous,
-        isDraft,
-        photoUrls,
-      } = req.body;
-
-      const incident = await db.one(
-        `INSERT INTO incidents (
-          reporter_id, title, description, category, latitude, longitude,
-          location_name, incident_date, severity, is_anonymous, is_draft, photo_urls, status
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-        RETURNING *`,
-        [
-          req.user.userId,
-          title,
-          description,
-          category,
-          latitude,
-          longitude,
-          locationName || null,
-          incidentDate || new Date(),
-          severity,
-          isAnonymous || false,
-          isDraft || false,
-          photoUrls || null,
-          isDraft ? 'draft' : 'submitted',
-        ]
+      const incident = await incidentService.createIncident(
+        req.body,
+        req.user.userId
       );
 
       res.status(201).json({
@@ -86,11 +90,7 @@ router.post(
         data: incident,
       });
     } catch (error) {
-      console.error('Error creating incident:', error);
-      res.status(500).json({
-        status: 'ERROR',
-        message: 'Failed to create incident',
-      });
+      handleServiceError(error, res, 'Failed to create incident');
     }
   }
 );
@@ -103,71 +103,14 @@ router.post(
 router.post(
   '/',
   authenticateToken,
-  [
-    body('title').trim().isLength({ min: 5, max: 255 }),
-    body('description').trim().isLength({ min: 10, max: 5000 }),
-    body('category').isIn([
-      'theft',
-      'assault',
-      'vandalism',
-      'suspicious_activity',
-      'traffic_incident',
-      'noise_complaint',
-      'fire',
-      'medical_emergency',
-      'hazard',
-      'other',
-    ]),
-    body('latitude').isFloat({ min: -90, max: 90 }),
-    body('longitude').isFloat({ min: -180, max: 180 }),
-    body('severity').isIn(['low', 'medium', 'high', 'critical']),
-  ],
+  createIncidentValidation,
   async (req, res) => {
+    if (handleValidationErrors(req, res)) return;
+
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({
-          status: 'ERROR',
-          message: 'Validation failed',
-          errors: errors.array(),
-        });
-      }
-
-      const {
-        title,
-        description,
-        category,
-        latitude,
-        longitude,
-        locationName,
-        incidentDate,
-        severity,
-        isAnonymous,
-        isDraft,
-        photoUrls,
-      } = req.body;
-
-      const incident = await db.one(
-        `INSERT INTO incidents (
-          reporter_id, title, description, category, latitude, longitude,
-          location_name, incident_date, severity, is_anonymous, is_draft, photo_urls, status
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-        RETURNING *`,
-        [
-          req.user.userId,
-          title,
-          description,
-          category,
-          latitude,
-          longitude,
-          locationName || null,
-          incidentDate || new Date(),
-          severity,
-          isAnonymous || false,
-          isDraft || false,
-          photoUrls || null,
-          isDraft ? 'draft' : 'submitted',
-        ]
+      const incident = await incidentService.createIncident(
+        req.body,
+        req.user.userId
       );
 
       res.status(201).json({
@@ -176,11 +119,7 @@ router.post(
         data: incident,
       });
     } catch (error) {
-      console.error('Error creating incident:', error);
-      res.status(500).json({
-        status: 'ERROR',
-        message: 'Failed to create incident',
-      });
+      handleServiceError(error, res, 'Failed to create incident');
     }
   }
 );
@@ -194,37 +133,13 @@ router.get('/', async (req, res) => {
   try {
     const { category, status, severity, limit = 50, offset = 0 } = req.query;
 
-    let query = `
-      SELECT i.*, u.username, u.email 
-      FROM incidents i
-      JOIN users u ON i.reporter_id = u.user_id
-      WHERE i.is_draft = FALSE
-    `;
-    const params = [];
-    let paramCount = 1;
-
-    if (category) {
-      query += ` AND i.category = $${paramCount}`;
-      params.push(category);
-      paramCount++;
-    }
-
-    if (status) {
-      query += ` AND i.status = $${paramCount}`;
-      params.push(status);
-      paramCount++;
-    }
-
-    if (severity) {
-      query += ` AND i.severity = $${paramCount}`;
-      params.push(severity);
-      paramCount++;
-    }
-
-    query += ` ORDER BY i.incident_date DESC LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
-    params.push(limit, offset);
-
-    const incidents = await db.manyOrNone(query, params);
+    const incidents = await incidentService.getAllIncidents({
+      category,
+      status,
+      severity,
+      limit,
+      offset,
+    });
 
     res.json({
       status: 'OK',
@@ -232,11 +147,7 @@ router.get('/', async (req, res) => {
       count: incidents.length,
     });
   } catch (error) {
-    console.error('Error fetching incidents:', error);
-    res.status(500).json({
-      status: 'ERROR',
-      message: 'Failed to fetch incidents',
-    });
+    handleServiceError(error, res, 'Failed to fetch incidents');
   }
 });
 
@@ -248,75 +159,20 @@ router.get('/', async (req, res) => {
 router.get('/list', authenticateToken, async (req, res) => {
   try {
     const { status, isDraft, limit = 50, offset = 0 } = req.query;
-    const userId = req.user.userId;
 
-    let query = `
-      SELECT 
-        i.incident_id, i.title, i.description, i.category, i.severity,
-        i.latitude, i.longitude, i.location_name, i.status, i.is_draft,
-        i.created_at, i.incident_date, i.photo_urls, i.is_anonymous,
-        u.username, u.email
-      FROM incidents i
-      JOIN users u ON i.reporter_id = u.user_id
-      WHERE i.reporter_id = $1
-    `;
-    const params = [userId];
-    let paramCount = 2;
-
-    if (isDraft === 'true' || isDraft === true) {
-      query += ` AND i.is_draft = TRUE`;
-    } else if (isDraft === 'false' || isDraft === false) {
-      query += ` AND i.is_draft = FALSE`;
-    }
-
-    if (status) {
-      query += ` AND i.status = $${paramCount}`;
-      params.push(status);
-      paramCount++;
-    }
-
-    query += ` ORDER BY i.created_at DESC LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
-    params.push(parseInt(limit), parseInt(offset));
-
-    const incidents = await db.manyOrNone(query, params);
-    
-    // Get total count for pagination
-    let countQuery = `
-      SELECT COUNT(*) as total FROM incidents WHERE reporter_id = $1
-    `;
-    let countParams = [userId];
-    let countParamCount = 2;
-
-    if (isDraft === 'true' || isDraft === true) {
-      countQuery += ` AND is_draft = TRUE`;
-    } else if (isDraft === 'false' || isDraft === false) {
-      countQuery += ` AND is_draft = FALSE`;
-    }
-
-    if (status) {
-      countQuery += ` AND status = $${countParamCount}`;
-      countParams.push(status);
-    }
-
-    const countResult = await db.one(countQuery, countParams);
+    const result = await incidentService.getUserIncidents(req.user.userId, {
+      status,
+      isDraft,
+      limit,
+      offset,
+    });
 
     res.json({
       status: 'SUCCESS',
-      data: {
-        incidents: incidents || [],
-        pagination: {
-          offset: parseInt(offset),
-          limit: parseInt(limit),
-          total: parseInt(countResult.total),
-        },
-      },
+      data: result,
     });
   } catch (error) {
-    console.error('Error fetching user incidents:', error);
-    res.status(500).json({
-      status: 'ERROR',
-      message: 'Failed to fetch incidents',
-    });
+    handleServiceError(error, res, 'Failed to fetch incidents');
   }
 });
 
@@ -326,21 +182,16 @@ router.get('/list', authenticateToken, async (req, res) => {
  * @access  Public
  */
 router.get('/:id', [param('id').isInt()], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        status: 'ERROR',
-        message: 'Invalid incident ID',
-      });
-    }
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      status: 'ERROR',
+      message: 'Invalid incident ID',
+    });
+  }
 
-    const incident = await db.oneOrNone(
-      `SELECT i.*, u.username, u.email FROM incidents i
-       JOIN users u ON i.reporter_id = u.user_id
-       WHERE i.incident_id = $1`,
-      [req.params.id]
-    );
+  try {
+    const incident = await incidentService.getIncidentById(req.params.id);
 
     if (!incident) {
       return res.status(404).json({
@@ -354,11 +205,7 @@ router.get('/:id', [param('id').isInt()], async (req, res) => {
       data: incident,
     });
   } catch (error) {
-    console.error('Error fetching incident:', error);
-    res.status(500).json({
-      status: 'ERROR',
-      message: 'Failed to fetch incident',
-    });
+    handleServiceError(error, res, 'Failed to fetch incident');
   }
 });
 
@@ -368,18 +215,17 @@ router.get('/:id', [param('id').isInt()], async (req, res) => {
  * @access  Public
  */
 router.get('/user/:userId', [param('userId').isInt()], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        status: 'ERROR',
-        message: 'Invalid user ID',
-      });
-    }
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      status: 'ERROR',
+      message: 'Invalid user ID',
+    });
+  }
 
-    const incidents = await db.manyOrNone(
-      `SELECT * FROM incidents WHERE reporter_id = $1 ORDER BY incident_date DESC`,
-      [req.params.userId]
+  try {
+    const incidents = await incidentService.getIncidentsByUserId(
+      req.params.userId
     );
 
     res.json({
@@ -388,11 +234,7 @@ router.get('/user/:userId', [param('userId').isInt()], async (req, res) => {
       count: incidents.length,
     });
   } catch (error) {
-    console.error('Error fetching user incidents:', error);
-    res.status(500).json({
-      status: 'ERROR',
-      message: 'Failed to fetch user incidents',
-    });
+    handleServiceError(error, res, 'Failed to fetch user incidents');
   }
 });
 
@@ -406,83 +248,19 @@ router.put(
   authenticateToken,
   [param('id').isInt()],
   async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        status: 'ERROR',
+        message: 'Invalid incident ID',
+      });
+    }
+
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({
-          status: 'ERROR',
-          message: 'Invalid incident ID',
-        });
-      }
-
-      const incident = await db.oneOrNone(
-        'SELECT * FROM incidents WHERE incident_id = $1',
-        [req.params.id]
-      );
-
-      if (!incident) {
-        return res.status(404).json({
-          status: 'ERROR',
-          message: 'Incident not found',
-        });
-      }
-
-      // Check ownership or admin role
-      if (incident.reporter_id !== req.user.userId && req.user.role !== 'admin') {
-        return res.status(403).json({
-          status: 'ERROR',
-          message: 'Unauthorized to update this incident',
-        });
-      }
-
-      const {
-        title,
-        description,
-        category,
-        severity,
-        status,
-        isDraft,
-        locationName,
-        latitude,
-        longitude,
-      } = req.body;
-
-      // Determine new status based on isDraft flag
-      let newStatus = status;
-      if (isDraft === false && incident.is_draft === true) {
-        // Converting draft to submitted
-        newStatus = 'submitted';
-      } else if (isDraft === true) {
-        // Saving as draft
-        newStatus = 'draft';
-      }
-
-      const updatedIncident = await db.one(
-        `UPDATE incidents 
-         SET title = COALESCE($2, title),
-             description = COALESCE($3, description),
-             category = COALESCE($4, category),
-             severity = COALESCE($5, severity),
-             status = COALESCE($6, status),
-             is_draft = COALESCE($7, is_draft),
-             location_name = COALESCE($8, location_name),
-             latitude = COALESCE($9, latitude),
-             longitude = COALESCE($10, longitude),
-             updated_at = CURRENT_TIMESTAMP
-         WHERE incident_id = $1
-         RETURNING *`,
-        [
-          req.params.id,
-          title,
-          description,
-          category,
-          severity,
-          newStatus,
-          isDraft !== undefined ? isDraft : null,
-          locationName,
-          latitude,
-          longitude,
-        ]
+      const updatedIncident = await incidentService.updateIncident(
+        req.params.id,
+        req.body,
+        req.user
       );
 
       res.json({
@@ -493,18 +271,14 @@ router.put(
         },
       });
     } catch (error) {
-      console.error('Error updating incident:', error);
-      res.status(500).json({
-        status: 'ERROR',
-        message: 'Failed to update incident',
-      });
+      handleServiceError(error, res, 'Failed to update incident');
     }
   }
 );
 
 /**
  * @route   PATCH /api/incidents/:id
- * @desc    Update an incident
+ * @desc    Partially update an incident
  * @access  Private
  */
 router.patch(
@@ -512,48 +286,19 @@ router.patch(
   authenticateToken,
   [param('id').isInt()],
   async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        status: 'ERROR',
+        message: 'Invalid incident ID',
+      });
+    }
+
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({
-          status: 'ERROR',
-          message: 'Invalid incident ID',
-        });
-      }
-
-      const incident = await db.oneOrNone(
-        'SELECT * FROM incidents WHERE incident_id = $1',
-        [req.params.id]
-      );
-
-      if (!incident) {
-        return res.status(404).json({
-          status: 'ERROR',
-          message: 'Incident not found',
-        });
-      }
-
-      // Check ownership or admin role
-      if (incident.reporter_id !== req.user.userId && req.user.role !== 'admin') {
-        return res.status(403).json({
-          status: 'ERROR',
-          message: 'Unauthorized to update this incident',
-        });
-      }
-
-      const { title, description, category, severity, status } = req.body;
-
-      const updatedIncident = await db.one(
-        `UPDATE incidents 
-         SET title = COALESCE($2, title),
-             description = COALESCE($3, description),
-             category = COALESCE($4, category),
-             severity = COALESCE($5, severity),
-             status = COALESCE($6, status),
-             updated_at = CURRENT_TIMESTAMP
-         WHERE incident_id = $1
-         RETURNING *`,
-        [req.params.id, title, description, category, severity, status]
+      const updatedIncident = await incidentService.patchIncident(
+        req.params.id,
+        req.body,
+        req.user
       );
 
       res.json({
@@ -562,11 +307,7 @@ router.patch(
         data: updatedIncident,
       });
     } catch (error) {
-      console.error('Error updating incident:', error);
-      res.status(500).json({
-        status: 'ERROR',
-        message: 'Failed to update incident',
-      });
+      handleServiceError(error, res, 'Failed to update incident');
     }
   }
 );
@@ -576,8 +317,11 @@ router.patch(
  * @desc    Delete an incident
  * @access  Private
  */
-router.delete('/:id', authenticateToken, [param('id').isInt()], async (req, res) => {
-  try {
+router.delete(
+  '/:id',
+  authenticateToken,
+  [param('id').isInt()],
+  async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
@@ -586,39 +330,17 @@ router.delete('/:id', authenticateToken, [param('id').isInt()], async (req, res)
       });
     }
 
-    const incident = await db.oneOrNone(
-      'SELECT * FROM incidents WHERE incident_id = $1',
-      [req.params.id]
-    );
+    try {
+      await incidentService.deleteIncident(req.params.id, req.user);
 
-    if (!incident) {
-      return res.status(404).json({
-        status: 'ERROR',
-        message: 'Incident not found',
+      res.json({
+        status: 'OK',
+        message: 'Incident deleted successfully',
       });
+    } catch (error) {
+      handleServiceError(error, res, 'Failed to delete incident');
     }
-
-    // Check ownership or admin role
-    if (incident.reporter_id !== req.user.userId && req.user.role !== 'admin') {
-      return res.status(403).json({
-        status: 'ERROR',
-        message: 'Unauthorized to delete this incident',
-      });
-    }
-
-    await db.none('DELETE FROM incidents WHERE incident_id = $1', [req.params.id]);
-
-    res.json({
-      status: 'OK',
-      message: 'Incident deleted successfully',
-    });
-  } catch (error) {
-    console.error('Error deleting incident:', error);
-    res.status(500).json({
-      status: 'ERROR',
-      message: 'Failed to delete incident',
-    });
   }
-});
+);
 
 module.exports = router;
