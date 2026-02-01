@@ -265,7 +265,7 @@ const HomeScreen = ({ navigation }) => {
           
           <TouchableOpacity 
             style={styles.actionButton}
-            onPress={() => navigation.navigate('MyReports')}
+            onPress={() => navigation.navigate('Reports')}
           >
             <View style={[styles.actionIconContainer, { backgroundColor: '#9b59b615' }]}>
               <Text style={styles.actionIcon}>📊</Text>
@@ -294,7 +294,7 @@ const HomeScreen = ({ navigation }) => {
               <TouchableOpacity 
                 key={index} 
                 style={styles.activityItem}
-                onPress={() => navigation.navigate('MyReports')}
+                onPress={() => navigation.navigate('Reports')}
               >
                 <View style={styles.activityDot} />
                 <View style={styles.activityContent}>
