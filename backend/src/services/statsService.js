@@ -122,10 +122,11 @@ async function getUserDashboardStats(userId, { latitude, longitude, radius = 5 }
       SELECT severity, created_at
       FROM incidents i
       WHERE i.is_draft = FALSE
-        AND ST_Distance(
+        AND ST_DWithin(
+          i.location,
           ST_SetSRID(ST_Point($1::float, $2::float), 4326)::geography,
-          ST_SetSRID(ST_Point(i.longitude::float, i.latitude::float), 4326)::geography
-        ) / 1000 <= $3::float
+          $3::float * 1000
+        )
     `, [longitude, latitude, radius])
         : Promise.resolve([]);
 
@@ -135,10 +136,11 @@ async function getUserDashboardStats(userId, { latitude, longitude, radius = 5 }
     WHERE is_draft = FALSE
       AND status = 'verified'
       AND created_at >= NOW() - INTERVAL '7 days'
-      ${hasCoords ? `AND ST_Distance(
+      ${hasCoords ? `AND ST_DWithin(
+        location,
         ST_SetSRID(ST_Point($1::float, $2::float), 4326)::geography,
-        ST_SetSRID(ST_Point(longitude::float, latitude::float), 4326)::geography
-      ) / 1000 <= $3::float` : ''}
+        $3::float * 1000
+      )` : ''}
   `, hasCoords ? [longitude, latitude, radius] : []);
 
     const resolvedThisWeekPromise = db.one(`
@@ -242,15 +244,16 @@ async function getAreaSafetyStats(latitude, longitude, radius = 5) {
     const incidents = await db.manyOrNone(`
     SELECT i.incident_id, i.title, i.category, i.severity, i.created_at,
            ST_Distance(
-             ST_SetSRID(ST_Point($1::float, $2::float), 4326)::geography,
-             ST_SetSRID(ST_Point(i.longitude::float, i.latitude::float), 4326)::geography
+             i.location,
+             ST_SetSRID(ST_Point($1::float, $2::float), 4326)::geography
            ) / 1000 as distance_km
     FROM incidents i
     WHERE i.is_draft = FALSE
-      AND ST_Distance(
+      AND ST_DWithin(
+        i.location,
         ST_SetSRID(ST_Point($1::float, $2::float), 4326)::geography,
-        ST_SetSRID(ST_Point(i.longitude::float, i.latitude::float), 4326)::geography
-      ) / 1000 <= $3::float
+        $3::float * 1000
+      )
     ORDER BY distance_km ASC
     LIMIT 50
   `, [longitude, latitude, radius]);

@@ -37,6 +37,7 @@ const initDatabase = async () => {
         category VARCHAR(100) NOT NULL,
         latitude DECIMAL(10, 8) NOT NULL,
         longitude DECIMAL(11, 8) NOT NULL,
+        location GEOGRAPHY(Point, 4326),
         location_name VARCHAR(500),
         incident_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         severity VARCHAR(20) DEFAULT 'medium' CHECK (severity IN ('low', 'medium', 'high', 'critical')),
@@ -59,6 +60,12 @@ const initDatabase = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+    `);
+
+    await db.none(`
+      UPDATE incidents
+      SET location = ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography
+      WHERE location IS NULL AND longitude IS NOT NULL AND latitude IS NOT NULL;
     `);
 
     // Create Reports table
@@ -137,9 +144,14 @@ const initDatabase = async () => {
     // Create indexes for performance
     await db.none(`
       CREATE INDEX IF NOT EXISTS idx_incidents_location ON incidents (latitude, longitude);
+      CREATE INDEX IF NOT EXISTS idx_incidents_location_geo ON incidents USING GIST (location);
       CREATE INDEX IF NOT EXISTS idx_incidents_status ON incidents (status);
       CREATE INDEX IF NOT EXISTS idx_incidents_created_at ON incidents (created_at);
       CREATE INDEX IF NOT EXISTS idx_incidents_reporter ON incidents (reporter_id);
+      CREATE INDEX IF NOT EXISTS idx_incidents_dashboard ON incidents (is_draft, status, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_incidents_map ON incidents (status, incident_date DESC) WHERE is_draft = FALSE;
+      CREATE INDEX IF NOT EXISTS idx_incidents_user_reports ON incidents (reporter_id, is_draft, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_incidents_category ON incidents (category);
       CREATE INDEX IF NOT EXISTS idx_reports_incident_id ON reports (incident_id);
       CREATE INDEX IF NOT EXISTS idx_moderation_queue_status ON moderation_queue (status);
       CREATE INDEX IF NOT EXISTS idx_report_actions_incident ON report_actions (incident_id);
