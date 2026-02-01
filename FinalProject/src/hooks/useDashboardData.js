@@ -1,79 +1,74 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import * as Location from 'expo-location';
 import { statsAPI } from '../services/api';
 
 const useDashboardData = () => {
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [location, setLocation] = useState(null);
-  const [dashboardData, setDashboardData] = useState(null);
-  const [error, setError] = useState(null);
+  const queryKey = ['dashboard', location?.latitude, location?.longitude, location?.radius];
 
-  const fetchDashboardData = useCallback(async (coords = null) => {
-    try {
-      setError(null);
-      const params = coords
-        ? { latitude: coords.latitude, longitude: coords.longitude, radius: 5 }
-        : {};
+  const queryFn = useCallback(async () => {
+    const params = location
+      ? { latitude: location.latitude, longitude: location.longitude, radius: 5 }
+      : {};
 
-      const result = await statsAPI.getDashboardStats(params);
-
-      if (result.success) {
-        setDashboardData(result.data);
-      } else {
-        setError(result.error);
-      }
-    } catch (err) {
-      setError('Failed to load dashboard data');
-      console.error('Dashboard fetch error:', err);
+    const result = await statsAPI.getDashboardStats(params);
+    if (result.success) {
+      return result.data;
     }
-  }, []);
+    throw new Error(result.error || 'Failed to load dashboard data');
+  }, [location]);
 
-  const loadData = useCallback(async () => {
-    try {
-      const getLocation = async () => {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          return null;
-        }
-        return Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
-      };
-
-      const [locationResult] = await Promise.allSettled([
-        getLocation(),
-        fetchDashboardData(),
-      ]);
-
-      if (locationResult.status === 'fulfilled' && locationResult.value) {
-        setLocation(locationResult.value.coords);
-        fetchDashboardData(locationResult.value.coords);
-      }
-    } catch (err) {
-      console.error('Location error:', err);
-      await fetchDashboardData();
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchDashboardData]);
+  const {
+    data: dashboardData,
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey,
+    queryFn,
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+  });
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    let isMounted = true;
 
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
-  }, [loadData]);
+    const requestLocation = async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          return;
+        }
+        const loc = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        if (isMounted) {
+          setLocation(loc.coords);
+        }
+      } catch (err) {
+        console.error('Location error:', err);
+      }
+    };
+
+    requestLocation();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const onRefresh = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   return {
-    loading,
-    refreshing,
+    loading: isLoading,
+    refreshing: isFetching,
     location,
     dashboardData,
-    error,
+    error: error?.message || null,
     onRefresh,
   };
 };
