@@ -31,16 +31,24 @@ const useDashboardData = () => {
 
   const loadData = useCallback(async () => {
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-
-      if (status === 'granted') {
-        const loc = await Location.getCurrentPositionAsync({
+      const getLocation = async () => {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          return null;
+        }
+        return Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,
         });
-        setLocation(loc.coords);
-        await fetchDashboardData(loc.coords);
-      } else {
-        await fetchDashboardData();
+      };
+
+      const [locationResult] = await Promise.allSettled([
+        getLocation(),
+        fetchDashboardData(),
+      ]);
+
+      if (locationResult.status === 'fulfilled' && locationResult.value) {
+        setLocation(locationResult.value.coords);
+        fetchDashboardData(locationResult.value.coords);
       }
     } catch (err) {
       console.error('Location error:', err);
