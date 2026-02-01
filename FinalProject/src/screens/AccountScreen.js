@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, Button } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { Button, Card } from '../components';
 
 const AccountScreen = () => {
   const { logout, user } = useAuth();
@@ -9,15 +10,15 @@ const AccountScreen = () => {
     <View style={styles.container}>
       <Text style={styles.title}>Account</Text>
       
-      <View style={styles.infoContainer}>
+      <Card style={styles.infoContainer}>
         <Text style={styles.label}>Email:</Text>
         <Text style={styles.value}>{user?.email || 'User'}</Text>
-      </View>
+      </Card>
       
       {/* Add more user details here */}
       
       <View style={styles.buttonContainer}>
-        <Button title="Sign Out" onPress={logout} color="#d9534f" />
+        <Button title="Sign Out" onPress={logout} style={styles.signOutButton} />
       </View>
     </View>
   );
@@ -53,6 +54,9 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     marginTop: 20,
+  },
+  signOutButton: {
+    backgroundColor: '#d9534f',
   },
 });
 

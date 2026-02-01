@@ -13,6 +13,7 @@ import {
 import * as Clipboard from 'expo-clipboard';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
+import { Button } from '../components';
 
 const VerificationScreen = ({ navigation, route }) => {
   const { email } = route.params;
@@ -191,17 +192,13 @@ const VerificationScreen = ({ navigation, route }) => {
           <Text style={styles.pasteButtonText}>📋 Paste Code</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.verifyButton, isLoading && styles.verifyButtonDisabled]}
+        <Button
+          title="Verify Email"
           onPress={() => handleVerify()}
+          loading={isLoading}
           disabled={isLoading || code.join('').length !== 6}
-        >
-          {isLoading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.verifyButtonText}>Verify Email</Text>
-          )}
-        </TouchableOpacity>
+          style={[styles.verifyButton, isLoading && styles.verifyButtonDisabled]}
+        />
 
         <View style={styles.resendContainer}>
           <Text style={styles.resendText}>Didn't receive the code? </Text>

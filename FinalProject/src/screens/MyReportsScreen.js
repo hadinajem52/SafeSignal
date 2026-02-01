@@ -14,22 +14,7 @@ import { useAuth } from '../context/AuthContext';
 import incidentConstants from '../../../constants/incident';
 import { formatDate } from '../utils/dateUtils';
 import useMyReports from '../hooks/useMyReports';
-
-// Status badge colors
-const STATUS_COLORS = {
-  submitted: '#6c757d',
-  auto_processed: '#17a2b8',
-  in_review: '#ffc107',
-  verified: '#28a745',
-  rejected: '#dc3545',
-  needs_info: '#fd7e14',
-  published: '#007bff',
-  resolved: '#20c997',
-  archived: '#6c757d',
-  auto_flagged: '#e83e8c',
-  merged: '#6610f2',
-  draft: '#6f42c1',
-};
+import { Button, Card, SeverityBadge, StatusBadge } from '../components';
 
 const { INCIDENT_CATEGORIES, STATUS_LABELS } = incidentConstants;
 
@@ -90,8 +75,6 @@ const MyReportsScreen = ({ navigation }) => {
    */
   const renderIncidentItem = ({ item }) => {
     const categoryIcon = CATEGORY_ICON_MAP[item.category] || '📝';
-    const statusColor = STATUS_COLORS[item.status] || '#6c757d';
-    const statusLabel = STATUS_LABELS[item.status] || item.status;
     const date = formatDate(item.createdAt);
 
     const hasLocation = item.location && typeof item.location.latitude === 'number';
@@ -105,32 +88,37 @@ const MyReportsScreen = ({ navigation }) => {
         onPress={() => handleIncidentPress(item)}
         activeOpacity={0.7}
       >
-        <View style={styles.cardHeader}>
-          <View style={styles.categoryBadge}>
-            <Text style={styles.categoryIcon}>{categoryIcon}</Text>
+        <Card style={styles.incidentCardInner}>
+          <View style={styles.cardHeader}>
+            <View style={styles.categoryBadge}>
+              <Text style={styles.categoryIcon}>{categoryIcon}</Text>
+            </View>
+            <View style={styles.badgesRight}>
+              {item.severity ? (
+                <SeverityBadge severity={item.severity} style={styles.severityBadge} />
+              ) : null}
+              <StatusBadge status={item.status} style={styles.statusBadge} />
+            </View>
           </View>
-          <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
-            <Text style={styles.statusText}>{statusLabel}</Text>
+
+          <Text style={styles.incidentTitle} numberOfLines={2}>
+            {item.title}
+          </Text>
+
+          <Text style={styles.incidentDescription} numberOfLines={3}>
+            {item.description}
+          </Text>
+
+          <View style={styles.cardFooter}>
+            <View style={styles.locationContainer}>
+              <Text style={styles.locationIcon}>📍</Text>
+              <Text style={styles.locationText}>
+                {locationDisplay}
+              </Text>
+            </View>
+            <Text style={styles.dateText}>{date}</Text>
           </View>
-        </View>
-
-        <Text style={styles.incidentTitle} numberOfLines={2}>
-          {item.title}
-        </Text>
-
-        <Text style={styles.incidentDescription} numberOfLines={3}>
-          {item.description}
-        </Text>
-
-        <View style={styles.cardFooter}>
-          <View style={styles.locationContainer}>
-            <Text style={styles.locationIcon}>📍</Text>
-            <Text style={styles.locationText}>
-              {locationDisplay}
-            </Text>
-          </View>
-          <Text style={styles.dateText}>{date}</Text>
-        </View>
+        </Card>
       </TouchableOpacity>
     );
   };
@@ -149,12 +137,11 @@ const MyReportsScreen = ({ navigation }) => {
           ? 'You have no saved drafts.'
           : `You have no ${selectedFilter} reports.`}
       </Text>
-      <TouchableOpacity
-        style={styles.reportButton}
+      <Button
+        title="Report an Incident"
         onPress={() => navigation.navigate('ReportIncident')}
-      >
-        <Text style={styles.reportButtonText}>Report an Incident</Text>
-      </TouchableOpacity>
+        style={styles.reportButton}
+      />
     </View>
   );
 
@@ -304,15 +291,10 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   incidentCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+  },
+  incidentCardInner: {
+    padding: 16,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -328,15 +310,15 @@ const styles = StyleSheet.create({
   categoryIcon: {
     fontSize: 20,
   },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+  badgesRight: {
+    alignItems: 'flex-end',
+    gap: 6,
   },
-  statusText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
+  statusBadge: {
+    alignSelf: 'flex-end',
+  },
+  severityBadge: {
+    alignSelf: 'flex-end',
   },
   incidentTitle: {
     fontSize: 18,
@@ -399,15 +381,8 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   reportButton: {
-    backgroundColor: '#1a73e8',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  reportButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    alignSelf: 'center',
+    minWidth: 200,
   },
 });
 
