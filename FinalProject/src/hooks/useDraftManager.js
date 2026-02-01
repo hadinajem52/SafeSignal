@@ -1,0 +1,103 @@
+import { useCallback, useState } from 'react';
+import { Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const getDraftStorageKey = (userId) => `safesignal_incident_draft_${userId}`;
+
+const useDraftManager = ({ userId, onLoadDraft, getDraftPayload }) => {
+  const [hasDraft, setHasDraft] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [draftId, setDraftId] = useState(null);
+
+  const clearDraft = useCallback(async () => {
+    try {
+      if (!userId) {
+        console.warn('User ID not available for clearing draft');
+        return;
+      }
+
+      const draftKey = getDraftStorageKey(userId);
+      await AsyncStorage.removeItem(draftKey);
+      setHasDraft(false);
+    } catch (error) {
+      console.error('Error clearing draft:', error);
+    }
+  }, [userId]);
+
+  const loadDraft = useCallback(async () => {
+    try {
+      if (!userId) {
+        console.warn('User ID not available for loading draft');
+        return;
+      }
+
+      const draftKey = getDraftStorageKey(userId);
+      const savedDraft = await AsyncStorage.getItem(draftKey);
+      if (savedDraft) {
+        const draft = JSON.parse(savedDraft);
+        setHasDraft(true);
+
+        Alert.alert('Draft Found', 'You have an unsaved draft. Would you like to continue editing it?', [
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: () => clearDraft(),
+          },
+          {
+            text: 'Continue',
+            onPress: () => onLoadDraft?.(draft),
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error('Error loading draft:', error);
+    }
+  }, [clearDraft, onLoadDraft, userId]);
+
+  const saveDraft = useCallback(
+    async (showAlert = true) => {
+      setIsSavingDraft(true);
+
+      try {
+        if (!userId) {
+          Alert.alert('Error', 'User information not available. Please log in again.');
+          return;
+        }
+
+        const draftKey = getDraftStorageKey(userId);
+        const payload = getDraftPayload?.();
+        const draftData = {
+          ...payload,
+          savedAt: new Date().toISOString(),
+        };
+
+        await AsyncStorage.setItem(draftKey, JSON.stringify(draftData));
+        setHasDraft(true);
+
+        if (showAlert) {
+          Alert.alert('Draft Saved', 'Your report has been saved as a draft.');
+        }
+      } catch (error) {
+        console.error('Error saving draft:', error);
+        if (showAlert) {
+          Alert.alert('Error', 'Failed to save draft. Please try again.');
+        }
+      } finally {
+        setIsSavingDraft(false);
+      }
+    },
+    [getDraftPayload, userId]
+  );
+
+  return {
+    hasDraft,
+    isSavingDraft,
+    draftId,
+    setDraftId,
+    loadDraft,
+    saveDraft,
+    clearDraft,
+  };
+};
+
+export default useDraftManager;

@@ -8,44 +8,11 @@
 const db = require('../config/database');
 const ServiceError = require('../utils/ServiceError');
 
-/**
- * Valid incident categories
- */
-const VALID_CATEGORIES = [
-  'theft',
-  'assault',
-  'vandalism',
-  'suspicious_activity',
-  'traffic_incident',
-  'noise_complaint',
-  'fire',
-  'medical_emergency',
-  'hazard',
-  'other',
-];
-
-/**
- * Valid severity levels
- */
-const VALID_SEVERITIES = ['low', 'medium', 'high', 'critical'];
-
-/**
- * Valid incident statuses
- */
-const VALID_STATUSES = [
-  'draft',
-  'submitted',
-  'auto_processed',
-  'auto_flagged',
-  'in_review',
-  'verified',
-  'rejected',
-  'needs_info',
-  'published',
-  'resolved',
-  'archived',
-  'merged',
-];
+const {
+  VALID_CATEGORIES,
+  VALID_SEVERITIES,
+  VALID_STATUSES,
+} = require('../../../constants/incident');
 
 /**
  * Create a new incident
