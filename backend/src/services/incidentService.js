@@ -49,8 +49,12 @@ async function createIncident(incidentData, reporterId) {
   const incident = await db.one(
     `INSERT INTO incidents (
       reporter_id, title, description, category, latitude, longitude,
-      location_name, incident_date, severity, is_anonymous, is_draft, photo_urls, status
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      location, location_name, incident_date, severity, is_anonymous, is_draft, photo_urls, status
+    ) VALUES (
+      $1, $2, $3, $4, $5, $6,
+      ST_SetSRID(ST_MakePoint($6::float, $5::float), 4326)::geography,
+      $7, $8, $9, $10, $11, $12, $13, $14
+    )
     RETURNING *`,
     [
       reporterId,
@@ -137,7 +141,8 @@ async function getUserIncidents(userId, filters = {}) {
       i.incident_id, i.title, i.description, i.category, i.severity,
       i.latitude, i.longitude, i.location_name, i.status, i.is_draft,
       i.created_at, i.incident_date, i.photo_urls, i.is_anonymous,
-      u.username, u.email
+      u.username, u.email,
+      COUNT(*) OVER() as total_count
     FROM incidents i
     JOIN users u ON i.reporter_id = u.user_id
     WHERE i.reporter_id = $1
@@ -161,33 +166,15 @@ async function getUserIncidents(userId, filters = {}) {
   params.push(parseInt(limit), parseInt(offset));
 
   const incidents = await db.manyOrNone(query, params);
-
-  // Get total count for pagination
-  let countQuery = `
-    SELECT COUNT(*) as total FROM incidents WHERE reporter_id = $1
-  `;
-  let countParams = [userId];
-  let countParamCount = 2;
-
-  if (isDraft === 'true' || isDraft === true) {
-    countQuery += ` AND is_draft = TRUE`;
-  } else if (isDraft === 'false' || isDraft === false) {
-    countQuery += ` AND is_draft = FALSE`;
-  }
-
-  if (status) {
-    countQuery += ` AND status = $${countParamCount}`;
-    countParams.push(status);
-  }
-
-  const countResult = await db.one(countQuery, countParams);
+  const total = incidents.length > 0 ? parseInt(incidents[0].total_count || 0) : 0;
+  const normalizedIncidents = incidents.map(({ total_count, ...incident }) => incident);
 
   return {
-    incidents: incidents || [],
+    incidents: normalizedIncidents || [],
     pagination: {
       offset: parseInt(offset),
       limit: parseInt(limit),
-      total: parseInt(countResult.total),
+      total,
     },
   };
 }
@@ -280,6 +267,11 @@ async function updateIncident(incidentId, updateData, requestingUser) {
          location_name = COALESCE($8, location_name),
          latitude = COALESCE($9, latitude),
          longitude = COALESCE($10, longitude),
+         location = CASE
+           WHEN $9 IS NOT NULL AND $10 IS NOT NULL
+             THEN ST_SetSRID(ST_MakePoint($10::float, $9::float), 4326)::geography
+           ELSE location
+         END,
          updated_at = CURRENT_TIMESTAMP
      WHERE incident_id = $1
      RETURNING *`,

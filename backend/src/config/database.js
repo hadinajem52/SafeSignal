@@ -10,7 +10,12 @@ const pgp = pgPromise(initOptions);
 const connectionString = process.env.DATABASE_URL || 
   'postgresql://safesignal_user:safesignal_password@localhost:5432/safesignal_db';
 
-const db = pgp(connectionString);
+const db = pgp({
+  connectionString,
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
+});
 
 // Test the connection
 db.connect()
