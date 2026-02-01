@@ -6,7 +6,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   ScrollView,
-  Modal,
+  Modal as NativeModal,
   Dimensions,
   Platform,
 } from 'react-native';
@@ -17,6 +17,7 @@ import { incidentAPI } from '../services/api';
 import incidentConstants from '../../../constants/incident';
 import useIncidentFilters from '../hooks/useIncidentFilters';
 import useMapRegion from '../hooks/useMapRegion';
+import { Button, Modal as AppModal } from '../components';
 
 const { width, height } = Dimensions.get('window');
 
@@ -241,34 +242,27 @@ const MapScreen = () => {
 
   // Render legend
   const renderLegend = () => (
-    <Modal
+    <AppModal
       visible={showLegend}
-      transparent
       animationType="fade"
-      onRequestClose={() => setShowLegend(false)}
+      onClose={() => setShowLegend(false)}
+      overlayStyle={styles.legendOverlay}
+      contentStyle={styles.legendContainer}
     >
-      <TouchableOpacity
-        style={styles.legendOverlay}
-        activeOpacity={1}
-        onPress={() => setShowLegend(false)}
-      >
-        <View style={styles.legendContainer}>
-          <Text style={styles.legendTitle}>Incident Categories</Text>
-          {Object.entries(CATEGORY_DISPLAY).map(([key, config]) => (
-            <View key={key} style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: config.mapColor }]} />
-              <Ionicons name={config.mapIcon} size={18} color={config.mapColor} />
-              <Text style={styles.legendText}>{config.label}</Text>
-            </View>
-          ))}
+      <Text style={styles.legendTitle}>Incident Categories</Text>
+      {Object.entries(CATEGORY_DISPLAY).map(([key, config]) => (
+        <View key={key} style={styles.legendItem}>
+          <View style={[styles.legendDot, { backgroundColor: config.mapColor }]} />
+          <Ionicons name={config.mapIcon} size={18} color={config.mapColor} />
+          <Text style={styles.legendText}>{config.label}</Text>
         </View>
-      </TouchableOpacity>
-    </Modal>
+      ))}
+    </AppModal>
   );
 
   // Render incident detail modal
   const renderIncidentDetail = () => (
-    <Modal
+    <NativeModal
       visible={!!selectedIncident}
       transparent
       animationType="slide"
@@ -345,7 +339,7 @@ const MapScreen = () => {
           )}
         </View>
       </TouchableOpacity>
-    </Modal>
+    </NativeModal>
   );
 
   // Render error state
@@ -354,9 +348,7 @@ const MapScreen = () => {
       <View style={styles.centerContainer}>
         <Ionicons name="alert-circle" size={64} color="#E53935" />
         <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={() => fetchIncidents()}>
-          <Text style={styles.retryButtonText}>Retry</Text>
-        </TouchableOpacity>
+        <Button title="Retry" onPress={() => fetchIncidents()} style={styles.retryButton} />
       </View>
     );
   }
@@ -738,11 +730,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
   },
   
   // Legend Modal Styles

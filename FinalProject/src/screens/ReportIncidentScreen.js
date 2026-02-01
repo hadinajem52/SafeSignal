@@ -20,6 +20,7 @@ import useImagePicker from '../hooks/useImagePicker';
 import useIncidentForm from '../hooks/useIncidentForm';
 import useLocationPicker from '../hooks/useLocationPicker';
 import incidentConstants from '../../../constants/incident';
+import { Button } from '../components';
 
 const { INCIDENT_CATEGORIES, SEVERITY_LEVELS } = incidentConstants;
 
@@ -496,30 +497,23 @@ const ReportIncidentScreen = ({ navigation, route }) => {
         {/* Action Buttons */}
         <View style={styles.actionButtonsContainer}>
           {/* Save Draft Button */}
-          <TouchableOpacity
-            style={[styles.draftButton, isSavingDraft && styles.buttonDisabled]}
+          <Button
+            title="💾 Save Draft"
             onPress={() => saveDraft(true)}
+            loading={isSavingDraft}
             disabled={isSavingDraft}
-          >
-            {isSavingDraft ? (
-              <ActivityIndicator color="#1a73e8" />
-            ) : (
-              <Text style={styles.draftButtonText}>💾 Save Draft</Text>
-            )}
-          </TouchableOpacity>
+            variant="secondary"
+            style={styles.draftButton}
+          />
 
           {/* Submit Button */}
-          <TouchableOpacity
-            style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+          <Button
+            title="Submit Report"
             onPress={() => handleSubmit(false)}
+            loading={isSubmitting}
             disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.submitButtonText}>Submit Report</Text>
-            )}
-          </TouchableOpacity>
+            style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+          />
         </View>
       </View>
 

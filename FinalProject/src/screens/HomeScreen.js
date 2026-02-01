@@ -12,6 +12,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import incidentConstants from '../../../constants/incident';
 import useDashboardData from '../hooks/useDashboardData';
+import { Card } from '../components';
 
 const { width } = Dimensions.get('window');
 
@@ -83,7 +84,7 @@ const HomeScreen = ({ navigation }) => {
 
       {/* Safety Score Card */}
       {dashboardData?.safetyScore && (
-        <View style={[styles.safetyCard, { borderLeftColor: getSafetyScoreColor(dashboardData.safetyScore.score) }]}>
+        <Card style={[styles.safetyCard, { borderLeftColor: getSafetyScoreColor(dashboardData.safetyScore.score) }]}>
           <View style={styles.safetyHeader}>
             <Text style={styles.safetyTitle}>Area Safety Score</Text>
             {location && <Text style={styles.locationBadge}>📍 Your Location</Text>}
@@ -100,7 +101,7 @@ const HomeScreen = ({ navigation }) => {
               <Text style={styles.safetyNote}>Based on incidents within 5km radius</Text>
             </View>
           </View>
-        </View>
+        </Card>
       )}
 
       {/* Quick Stats Cards */}
@@ -125,7 +126,7 @@ const HomeScreen = ({ navigation }) => {
       {dashboardData?.trendingCategories?.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>📈 Trending This Week</Text>
-          <View style={styles.trendingContainer}>
+          <Card style={styles.trendingContainer}>
             {dashboardData.trendingCategories.map((cat, index) => {
               const config = CATEGORY_DISPLAY[cat.category] || CATEGORY_DISPLAY.other;
               return (
@@ -145,14 +146,14 @@ const HomeScreen = ({ navigation }) => {
                 </View>
               );
             })}
-          </View>
+          </Card>
         </View>
       )}
 
       {/* Your Contributions */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>🏆 Your Contributions</Text>
-        <View style={styles.contributionsGrid}>
+        <Card style={styles.contributionsGrid}>
           <View style={styles.contributionCard}>
             <Text style={styles.contributionNumber}>{dashboardData?.userStats?.totalReports || 0}</Text>
             <Text style={styles.contributionLabel}>Total{'\n'}Reports</Text>
@@ -175,7 +176,7 @@ const HomeScreen = ({ navigation }) => {
             </Text>
             <Text style={styles.contributionLabel}>Pending</Text>
           </View>
-        </View>
+        </Card>
       </View>
 
       {/* Quick Actions */}
@@ -228,7 +229,7 @@ const HomeScreen = ({ navigation }) => {
       {dashboardData?.recentActivity?.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>🕐 Recent Activity</Text>
-          <View style={styles.activityContainer}>
+          <Card style={styles.activityContainer}>
             {dashboardData.recentActivity.slice(0, 3).map((activity, index) => (
               <TouchableOpacity 
                 key={index} 
@@ -249,18 +250,18 @@ const HomeScreen = ({ navigation }) => {
                 </Text>
               </TouchableOpacity>
             ))}
-          </View>
+          </Card>
         </View>
       )}
 
       {/* Error Message */}
       {error && (
-        <View style={styles.errorContainer}>
+        <Card style={styles.errorContainer}>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity onPress={onRefresh}>
             <Text style={styles.retryText}>Tap to retry</Text>
           </TouchableOpacity>
-        </View>
+        </Card>
       )}
 
       {/* Bottom Spacing */}

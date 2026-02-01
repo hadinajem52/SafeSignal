@@ -21,7 +21,24 @@ const STATUS_COLORS = {
   default: 'bg-gray-100 text-gray-800',
 };
 
+const STATUS_BADGE_COLORS = {
+  submitted: '#6c757d',
+  auto_processed: '#17a2b8',
+  in_review: '#ffc107',
+  verified: '#28a745',
+  rejected: '#dc3545',
+  needs_info: '#fd7e14',
+  published: '#007bff',
+  resolved: '#20c997',
+  archived: '#6c757d',
+  auto_flagged: '#e83e8c',
+  merged: '#6610f2',
+  draft: '#6f42c1',
+  default: '#6c757d',
+};
+
 module.exports = {
   SEVERITY_COLORS,
   STATUS_COLORS,
+  STATUS_BADGE_COLORS,
 };

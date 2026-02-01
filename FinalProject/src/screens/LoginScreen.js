@@ -17,6 +17,7 @@ import {
   statusCodes,
 } from '@react-native-google-signin/google-signin';
 import { useAuth } from '../context/AuthContext';
+import { Button } from '../components';
 
 // Configure Google Sign-In
 GoogleSignin.configure({
@@ -190,17 +191,13 @@ const LoginScreen = ({ navigation }) => {
             {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
           </View>
 
-          <TouchableOpacity
-            style={[styles.button, isLoading && styles.buttonDisabled]}
+          <Button
+            title="Sign In"
             onPress={handleLogin}
+            loading={isLoading}
             disabled={isLoading || isGoogleLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Sign In</Text>
-            )}
-          </TouchableOpacity>
+            style={[styles.button, isLoading && styles.buttonDisabled]}
+          />
 
           <View style={styles.dividerContainer}>
             <View style={styles.divider} />
