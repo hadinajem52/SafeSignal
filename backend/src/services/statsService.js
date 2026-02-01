@@ -115,10 +115,10 @@ async function getModeratorStats() {
  * @returns {Promise<Object>} User dashboard data
  */
 async function getUserDashboardStats(userId, { latitude, longitude, radius = 5 }) {
-    // 1. Get safety score for the area (if coords provided)
-    let safetyScore = null;
-    if (latitude && longitude) {
-        const nearbyIncidents = await db.manyOrNone(`
+    const hasCoords = latitude && longitude;
+
+    const nearbyIncidentsPromise = hasCoords
+        ? db.manyOrNone(`
       SELECT severity, created_at
       FROM incidents i
       WHERE i.is_draft = FALSE
@@ -126,26 +126,22 @@ async function getUserDashboardStats(userId, { latitude, longitude, radius = 5 }
           ST_SetSRID(ST_Point($1::float, $2::float), 4326)::geography,
           ST_SetSRID(ST_Point(i.longitude::float, i.latitude::float), 4326)::geography
         ) / 1000 <= $3::float
-    `, [longitude, latitude, radius]);
+    `, [longitude, latitude, radius])
+        : Promise.resolve([]);
 
-        safetyScore = calculateSafetyScore(nearbyIncidents);
-    }
-
-    // 2. Get active verified incidents nearby (last 7 days)
-    const activeNearby = await db.one(`
+    const activeNearbyPromise = db.one(`
     SELECT COUNT(*) as count
     FROM incidents
     WHERE is_draft = FALSE
       AND status = 'verified'
       AND created_at >= NOW() - INTERVAL '7 days'
-      ${latitude && longitude ? `AND ST_Distance(
+      ${hasCoords ? `AND ST_Distance(
         ST_SetSRID(ST_Point($1::float, $2::float), 4326)::geography,
         ST_SetSRID(ST_Point(longitude::float, latitude::float), 4326)::geography
       ) / 1000 <= $3::float` : ''}
-  `, latitude && longitude ? [longitude, latitude, radius] : []);
+  `, hasCoords ? [longitude, latitude, radius] : []);
 
-    // 3. Get total global resolved incidents this week
-    const resolvedThisWeek = await db.one(`
+    const resolvedThisWeekPromise = db.one(`
     SELECT COUNT(*) as count
     FROM incidents
     WHERE is_draft = FALSE
@@ -153,43 +149,35 @@ async function getUserDashboardStats(userId, { latitude, longitude, radius = 5 }
       AND created_at >= NOW() - INTERVAL '7 days'
   `);
 
-    // 4. Get trending categories
-    const trendingCategories = await db.manyOrNone(`
-    SELECT category, COUNT(*) as count
-    FROM incidents
-    WHERE is_draft = FALSE
-      AND created_at >= NOW() - INTERVAL '7 days'
-    GROUP BY category
-    ORDER BY count DESC
+    const trendingWithChangePromise = db.manyOrNone(`
+    WITH current_week AS (
+      SELECT category, COUNT(*) as count
+      FROM incidents
+      WHERE is_draft = FALSE
+        AND created_at >= NOW() - INTERVAL '7 days'
+      GROUP BY category
+    ),
+    prev_week AS (
+      SELECT category, COUNT(*) as count
+      FROM incidents
+      WHERE is_draft = FALSE
+        AND created_at >= NOW() - INTERVAL '14 days'
+        AND created_at < NOW() - INTERVAL '7 days'
+      GROUP BY category
+    )
+    SELECT c.category,
+           c.count,
+           CASE
+             WHEN COALESCE(p.count, 0) = 0 THEN CASE WHEN c.count > 0 THEN 100 ELSE 0 END
+             ELSE ROUND(((c.count - p.count)::float / p.count) * 100)
+           END as "changePercentage"
+    FROM current_week c
+    LEFT JOIN prev_week p ON c.category = p.category
+    ORDER BY c.count DESC
     LIMIT 5
   `);
 
-    // 5. Calculate percentage change for trending categories
-    const trendingWithChange = await Promise.all(
-        (trendingCategories || []).map(async (cat) => {
-            const prevWeek = await db.one(`
-        SELECT COUNT(*) as count
-        FROM incidents
-        WHERE is_draft = FALSE
-          AND category = $1
-          AND created_at >= NOW() - INTERVAL '14 days'
-          AND created_at < NOW() - INTERVAL '7 days'
-      `, [cat.category]);
-
-            const change = prevWeek.count > 0
-                ? Math.round(((cat.count - prevWeek.count) / prevWeek.count) * 100)
-                : (cat.count > 0 ? 100 : 0);
-
-            return {
-                category: cat.category,
-                count: parseInt(cat.count),
-                changePercentage: change,
-            };
-        })
-    );
-
-    // 6. Get per-user contribution stats
-    const userStats = await db.one(`
+    const userStatsPromise = db.one(`
     SELECT 
       COUNT(*) as totalReports,
       SUM(CASE WHEN status = 'verified' THEN 1 ELSE 0 END) as verifiedReports,
@@ -199,8 +187,7 @@ async function getUserDashboardStats(userId, { latitude, longitude, radius = 5 }
     WHERE reporter_id = $1 AND is_draft = FALSE
   `, [userId]);
 
-    // 7. Get recent activity for the user
-    const recentActivity = await db.manyOrNone(`
+    const recentActivityPromise = db.manyOrNone(`
     SELECT incident_id, title as incidentTitle, category as type, created_at as timestamp
     FROM incidents
     WHERE reporter_id = $1 AND is_draft = FALSE
@@ -208,13 +195,31 @@ async function getUserDashboardStats(userId, { latitude, longitude, radius = 5 }
     LIMIT 5
   `, [userId]);
 
+    const [
+        nearbyIncidents,
+        activeNearby,
+        resolvedThisWeek,
+        trendingWithChange,
+        userStats,
+        recentActivity,
+    ] = await Promise.all([
+        nearbyIncidentsPromise,
+        activeNearbyPromise,
+        resolvedThisWeekPromise,
+        trendingWithChangePromise,
+        userStatsPromise,
+        recentActivityPromise,
+    ]);
+
+    const safetyScore = hasCoords ? calculateSafetyScore(nearbyIncidents) : null;
+
     return {
         safetyScore,
         quickStats: {
             activeNearby: parseInt(activeNearby.count),
             resolvedThisWeek: parseInt(resolvedThisWeek.count),
         },
-        trendingCategories: trendingWithChange,
+        trendingCategories: trendingWithChange || [],
         userStats: {
             totalReports: parseInt(userStats.totalReports || 0),
             verifiedReports: parseInt(userStats.verifiedReports || 0),
