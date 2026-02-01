@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -10,15 +10,10 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { incidentAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-
-/**
- * Get user-specific draft storage key
- * This ensures different accounts don't share drafts on the same device
- */
-const getDraftStorageKey = (userId) => `safesignal_incident_draft_${userId}`;
+import incidentConstants from '../../../constants/incident';
+import { formatDate } from '../utils/dateUtils';
+import useMyReports from '../hooks/useMyReports';
 
 // Status badge colors
 const STATUS_COLORS = {
@@ -36,129 +31,24 @@ const STATUS_COLORS = {
   draft: '#6f42c1',
 };
 
-const STATUS_LABELS = {
-  submitted: 'Submitted',
-  auto_processed: 'Processing',
-  in_review: 'Under Review',
-  verified: 'Verified',
-  rejected: 'Rejected',
-  needs_info: 'Needs Info',
-  published: 'Published',
-  resolved: 'Resolved',
-  archived: 'Archived',
-  auto_flagged: 'Flagged',
-  merged: 'Merged',
-  draft: 'Draft',
-};
+const { INCIDENT_CATEGORIES, STATUS_LABELS } = incidentConstants;
 
-const CATEGORY_ICONS = {
-  theft: '💰',
-  assault: '⚠️',
-  vandalism: '🔨',
-  burglary: '🏠',
-  harassment: '😠',
-  suspicious_activity: '👀',
-  traffic_incident: '🚗',
-  public_disturbance: '📢',
-  other: '📝',
-};
+const CATEGORY_ICON_MAP = INCIDENT_CATEGORIES.reduce((acc, category) => {
+  acc[category.value] = category.icon;
+  return acc;
+}, {});
 
 const MyReportsScreen = ({ navigation }) => {
   const { user } = useAuth();
-  const [incidents, setIncidents] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [selectedFilter, setSelectedFilter] = useState('all');
-  const [pagination, setPagination] = useState(null);
-
-  /**
-   * Fetch incidents from API
-   */
-  const fetchIncidents = useCallback(async (showLoader = true) => {
-    if (showLoader) {
-      setIsLoading(true);
-    }
-
-    try {
-      let incidentsFromApi = [];
-      let paginationData = null;
-
-      if (selectedFilter !== 'draft') {
-        const params = selectedFilter !== 'all' ? { status: selectedFilter } : {};
-        const result = await incidentAPI.getMyIncidents(params);
-
-        if (result.success) {
-          incidentsFromApi = result.incidents;
-          paginationData = result.pagination;
-        } else {
-          Alert.alert('Error', result.error || 'Failed to load incidents');
-        }
-      }
-
-      let draftItem = null;
-      if (selectedFilter === 'all' || selectedFilter === 'draft') {
-        try {
-          if (user?.user_id || user?.userId) {
-            const userId = user.user_id || user.userId;
-            const draftKey = getDraftStorageKey(userId);
-            const savedDraft = await AsyncStorage.getItem(draftKey);
-            if (savedDraft) {
-              const draft = JSON.parse(savedDraft);
-              draftItem = {
-                id: `draft-${draft.savedAt || Date.now()}`,
-                title: draft.title || 'Untitled Draft',
-                description: draft.description || 'No description yet.',
-                category: draft.category || 'other',
-                location: draft.location || null,
-                locationName: draft.locationName || '',
-                createdAt: draft.savedAt || draft.incidentDate || new Date().toISOString(),
-                status: 'draft',
-                isDraft: true,
-                draftData: draft,
-              };
-            }
-          }
-        } catch (draftError) {
-          console.error('Error loading draft:', draftError);
-        }
-      }
-
-      const mergedIncidents = draftItem
-        ? [draftItem, ...incidentsFromApi]
-        : incidentsFromApi;
-
-      if (paginationData && draftItem && selectedFilter === 'all') {
-        paginationData = {
-          ...paginationData,
-          total: paginationData.total + 1,
-        };
-      }
-
-      setIncidents(mergedIncidents);
-      setPagination(paginationData);
-    } catch (error) {
-      console.error('Error fetching incidents:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  }, [selectedFilter, user]);
-
-  /**
-   * Initial load
-   */
-  useEffect(() => {
-    fetchIncidents();
-  }, [fetchIncidents]);
-
-  /**
-   * Handle refresh
-   */
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    fetchIncidents(false);
-  };
+  const {
+    incidents,
+    isLoading,
+    isRefreshing,
+    selectedFilter,
+    setSelectedFilter,
+    pagination,
+    handleRefresh,
+  } = useMyReports({ user });
 
   /**
    * Handle incident press
@@ -199,16 +89,10 @@ const MyReportsScreen = ({ navigation }) => {
    * Render incident item
    */
   const renderIncidentItem = ({ item }) => {
-    const categoryIcon = CATEGORY_ICONS[item.category] || '📝';
+    const categoryIcon = CATEGORY_ICON_MAP[item.category] || '📝';
     const statusColor = STATUS_COLORS[item.status] || '#6c757d';
     const statusLabel = STATUS_LABELS[item.status] || item.status;
-    const date = new Date(item.createdAt).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const date = formatDate(item.createdAt);
 
     const hasLocation = item.location && typeof item.location.latitude === 'number';
     const locationDisplay = hasLocation

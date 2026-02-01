@@ -9,14 +9,14 @@ import {
   Modal,
   Dimensions,
   Platform,
-  Alert,
 } from 'react-native';
 import MapView, { Marker, Callout, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as Location from 'expo-location';
 import { incidentAPI } from '../services/api';
 import incidentConstants from '../../../constants/incident';
+import useIncidentFilters from '../hooks/useIncidentFilters';
+import useMapRegion from '../hooks/useMapRegion';
 
 const { width, height } = Dimensions.get('window');
 
@@ -45,19 +45,25 @@ const MapScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
-  const [region, setRegion] = useState(DEFAULT_REGION);
-  const [mapReady, setMapReady] = useState(false);
-  const [userLocation, setUserLocation] = useState(null);
-  const [locationLoading, setLocationLoading] = useState(false);
-  
-  // Filter states
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [selectedTimeframe, setSelectedTimeframe] = useState('30d');
-  const [showFilters, setShowFilters] = useState(false);
   const [showLegend, setShowLegend] = useState(false);
   
   // Selected incident for detail view
   const [selectedIncident, setSelectedIncident] = useState(null);
+
+  const {
+    selectedCategory,
+    setSelectedCategory,
+    selectedTimeframe,
+    setSelectedTimeframe,
+  } = useIncidentFilters({ defaultTimeframe: '30d' });
+
+  const {
+    region,
+    setRegion,
+    locationLoading,
+    goToMyLocation,
+    resetToDefaultRegion,
+  } = useMapRegion({ defaultRegion: DEFAULT_REGION, mapRef });
 
   // Fetch incidents from API
   const fetchIncidents = useCallback(async (isRefresh = false) => {
@@ -117,44 +123,6 @@ const MapScreen = () => {
   }, [fetchIncidents]);
 
   // Go to user's current location
-  const goToMyLocation = async () => {
-    try {
-      setLocationLoading(true);
-      
-      // Request permission
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert(
-          'Permission Denied',
-          'Location permission is required to show your current location on the map.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      // Get current position
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-
-      const { latitude, longitude } = location.coords;
-      setUserLocation({ latitude, longitude });
-
-      // Animate map to user's location
-      mapRef.current?.animateToRegion({
-        latitude,
-        longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      }, 1000);
-    } catch (err) {
-      console.error('Error getting location:', err);
-      // Removed Alert to prevent spamming
-    } finally {
-      setLocationLoading(false);
-    }
-  };
-
   // Get marker color based on category
   const getMarkerColor = (category) => {
     return CATEGORY_DISPLAY[category]?.mapColor || CATEGORY_DISPLAY.other.mapColor;
@@ -286,10 +254,10 @@ const MapScreen = () => {
       >
         <View style={styles.legendContainer}>
           <Text style={styles.legendTitle}>Incident Categories</Text>
-          {Object.entries(CATEGORY_CONFIG).map(([key, config]) => (
+          {Object.entries(CATEGORY_DISPLAY).map(([key, config]) => (
             <View key={key} style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: config.color }]} />
-              <Ionicons name={config.icon} size={18} color={config.color} />
+              <View style={[styles.legendDot, { backgroundColor: config.mapColor }]} />
+              <Ionicons name={config.mapIcon} size={18} color={config.mapColor} />
               <Text style={styles.legendText}>{config.label}</Text>
             </View>
           ))}
@@ -329,7 +297,7 @@ const MapScreen = () => {
                   ]}
                 >
                   <Ionicons
-                    name={CATEGORY_CONFIG[selectedIncident.category]?.icon || 'help-circle'}
+                    name={CATEGORY_DISPLAY[selectedIncident.category]?.mapIcon || 'help-circle'}
                     size={16}
                     color="#fff"
                   />
@@ -402,7 +370,6 @@ const MapScreen = () => {
         provider={PROVIDER_GOOGLE}
         initialRegion={region}
         onRegionChangeComplete={setRegion}
-        onMapReady={() => setMapReady(true)}
         showsUserLocation
         showsMyLocationButton={false}
         showsCompass
@@ -433,7 +400,7 @@ const MapScreen = () => {
                 ]}
               >
                 <Ionicons
-                  name={CATEGORY_CONFIG[incident.category]?.icon || 'help-circle'}
+                  name={CATEGORY_DISPLAY[incident.category]?.mapIcon || 'help-circle'}
                   size={16}
                   color="#fff"
                 />
@@ -490,9 +457,7 @@ const MapScreen = () => {
         {/* Reset to Lebanon Button */}
         <TouchableOpacity
           style={styles.fab}
-          onPress={() => {
-            mapRef.current?.animateToRegion(DEFAULT_REGION, 1000);
-          }}
+          onPress={resetToDefaultRegion}
         >
           <Ionicons name="home" size={24} color="#1976D2" />
         </TouchableOpacity>
