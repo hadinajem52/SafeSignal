@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { usersAPI } from '../services/api'
 import { 
   Search, 
@@ -21,6 +21,24 @@ function Users() {
       const params = roleFilter !== 'all' ? { role: roleFilter } : {}
       const result = await usersAPI.getAll(params)
       return result.success ? result.data : []
+    },
+  })
+
+  const queryClient = useQueryClient()
+
+  const suspendMutation = useMutation({
+    mutationFn: (id) => usersAPI.suspend(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+      setSelectedUser(null)
+    },
+  })
+
+  const unsuspendMutation = useMutation({
+    mutationFn: (id) => usersAPI.unsuspend(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+      setSelectedUser(null)
     },
   })
 
@@ -197,14 +215,22 @@ function Users() {
 
               <div className="pt-6 border-t border-gray-200 flex gap-3">
                 {selectedUser.isSuspended ? (
-                  <button className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-2">
+                  <button 
+                    onClick={() => unsuspendMutation.mutate(selectedUser.id)}
+                    disabled={unsuspendMutation.isPending}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
                     <RotateCcw size={20} />
-                    Unsuspend User
+                    {unsuspendMutation.isPending ? 'Unsuspending...' : 'Unsuspend User'}
                   </button>
                 ) : (
-                  <button className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-2">
+                  <button 
+                    onClick={() => suspendMutation.mutate(selectedUser.id)}
+                    disabled={suspendMutation.isPending}
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
                     <Ban size={20} />
-                    Suspend User
+                    {suspendMutation.isPending ? 'Suspending...' : 'Suspend User'}
                   </button>
                 )}
                 <button

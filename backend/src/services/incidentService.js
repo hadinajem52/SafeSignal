@@ -54,6 +54,17 @@ const VALID_STATUSES = [
  * @returns {Promise<Object>} The created incident
  */
 async function createIncident(incidentData, reporterId) {
+  // Check if user is suspended
+  const user = await db.oneOrNone('SELECT is_suspended FROM users WHERE user_id = $1', [reporterId]);
+  
+  if (!user) {
+    throw ServiceError.notFound('User not found');
+  }
+  
+  if (user.is_suspended) {
+    throw ServiceError.forbidden('Your account has been suspended. You cannot submit reports.');
+  }
+
   const {
     title,
     description,
