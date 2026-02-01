@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -8,589 +8,116 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-  Platform,
   Image,
   Modal,
-  Dimensions,
   Switch,
-  Linking,
 } from 'react-native';
-import * as Location from 'expo-location';
-import * as ImagePicker from 'expo-image-picker';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import MapView, { Marker } from 'react-native-maps';
 import { incidentAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import useDraftManager from '../hooks/useDraftManager';
+import useImagePicker from '../hooks/useImagePicker';
+import useIncidentForm from '../hooks/useIncidentForm';
+import useLocationPicker from '../hooks/useLocationPicker';
+import incidentConstants from '../../../constants/incident';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-/**
- * Get user-specific draft storage key
- * This ensures different accounts don't share drafts on the same device
- */
-const getDraftStorageKey = (userId) => `safesignal_incident_draft_${userId}`;
-
-
-// Incident categories matching backend validation
-const CATEGORIES = [
-  { value: 'theft', label: 'Theft', icon: '💰' },
-  { value: 'assault', label: 'Assault', icon: '⚠️' },
-  { value: 'vandalism', label: 'Vandalism', icon: '🔨' },
-  { value: 'suspicious_activity', label: 'Suspicious Activity', icon: '👀' },
-  { value: 'traffic_incident', label: 'Traffic Incident', icon: '🚗' },
-  { value: 'noise_complaint', label: 'Noise Complaint', icon: '🔊' },
-  { value: 'fire', label: 'Fire', icon: '🔥' },
-  { value: 'medical_emergency', label: 'Medical Emergency', icon: '🚑' },
-  { value: 'hazard', label: 'Hazard', icon: '⚠️' },
-  { value: 'other', label: 'Other', icon: '📝' },
-];
-
-// Severity levels
-const SEVERITY_LEVELS = [
-  { value: 'low', label: 'Low', color: '#28a745', description: 'Minor incident, no immediate risk' },
-  { value: 'medium', label: 'Medium', color: '#ffc107', description: 'Moderate concern, needs attention' },
-  { value: 'high', label: 'High', color: '#fd7e14', description: 'Serious incident, urgent' },
-  { value: 'critical', label: 'Critical', color: '#dc3545', description: 'Emergency, immediate action needed' },
-];
+const { INCIDENT_CATEGORIES, SEVERITY_LEVELS } = incidentConstants;
 
 const ReportIncidentScreen = ({ navigation, route }) => {
   const { user } = useAuth();
-  
-  // Form states
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [location, setLocation] = useState(null);
-  const [locationName, setLocationName] = useState('');
-  const [incidentDate, setIncidentDate] = useState(new Date());
-  const [severity, setSeverity] = useState('medium');
-  const [isAnonymous, setIsAnonymous] = useState(false);
-  const [photos, setPhotos] = useState([]);
-  
-  // UI states
-  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const userId = user?.user_id || user?.userId;
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSavingDraft, setIsSavingDraft] = useState(false);
-  const [showMapModal, setShowMapModal] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [hasDraft, setHasDraft] = useState(false);
-  const [draftId, setDraftId] = useState(null);
-  
-  // Map states
-  const [mapRegion, setMapRegion] = useState(null);
-  const [selectedMapLocation, setSelectedMapLocation] = useState(null);
-  
-  // Form validation states
-  const [errors, setErrors] = useState({});
-
-  const mapRef = useRef(null);
   const isSubmittingRef = useRef(false);
 
-  // Load draft on mount
-  useEffect(() => {
-    loadDraft();
-    
-    // Cleanup function to reset submission flag on unmount
-    return () => {
-      isSubmittingRef.current = false;
-    };
-  }, []);
+  const {
+    title,
+    setTitle,
+    description,
+    setDescription,
+    selectedCategory,
+    setSelectedCategory,
+    incidentDate,
+    severity,
+    setSeverity,
+    isAnonymous,
+    setIsAnonymous,
+    errors,
+    setErrors,
+    formatDate,
+    setDateToNow,
+    validateForm,
+    resetForm,
+    applyDraftForm,
+  } = useIncidentForm();
 
-  // Check if editing existing draft from route params
-  useEffect(() => {
-    if (route?.params?.draft) {
-      const draft = route.params.draft;
-      loadDraftData(draft);
-    }
-  }, [route?.params?.draft]);
+  const {
+    location,
+    setLocation,
+    locationName,
+    setLocationName,
+    isLoadingLocation,
+    showMapModal,
+    setShowMapModal,
+    mapRegion,
+    setMapRegion,
+    selectedMapLocation,
+    setSelectedMapLocation,
+    mapRef,
+    getCurrentLocation,
+    openMapForSelection,
+    handleMapPress,
+    confirmMapLocation,
+    applyDraftLocation,
+  } = useLocationPicker({
+    onClearLocationError: () => setErrors((prev) => ({ ...prev, location: null })),
+    onLocationError: (message) => setErrors((prev) => ({ ...prev, location: message })),
+  });
 
-  /**
-   * Load saved draft from storage
-   */
-  const loadDraft = async () => {
-    try {
-      if (!user?.user_id && !user?.userId) {
-        console.warn('User ID not available for loading draft');
-        return;
-      }
-      
-      const userId = user.user_id || user.userId;
-      const draftKey = getDraftStorageKey(userId);
-      const savedDraft = await AsyncStorage.getItem(draftKey);
-      if (savedDraft) {
-        const draft = JSON.parse(savedDraft);
-        setHasDraft(true);
-        
-        // Ask user if they want to restore draft
-        Alert.alert(
-          'Draft Found',
-          'You have an unsaved draft. Would you like to continue editing it?',
-          [
-            {
-              text: 'Discard',
-              style: 'destructive',
-              onPress: () => clearDraft(),
-            },
-            {
-              text: 'Continue',
-              onPress: () => loadDraftData(draft),
-            },
-          ]
-        );
-      }
-    } catch (error) {
-      console.error('Error loading draft:', error);
-    }
-  };
+  const { photos, setPhotos, removePhoto, showPhotoOptions } = useImagePicker();
 
-  /**
-   * Load draft data into form
-   */
-  const loadDraftData = (draft) => {
-    setTitle(draft.title || '');
-    setDescription(draft.description || '');
-    setSelectedCategory(draft.category || '');
-    setSeverity(draft.severity || 'medium');
-    setIsAnonymous(draft.isAnonymous || false);
-    setPhotos(draft.photos || []);
-    
-    if (draft.location) {
-      setLocation(draft.location);
-      setLocationName(draft.locationName || '');
-    }
-    
-    if (draft.incidentDate) {
-      setIncidentDate(new Date(draft.incidentDate));
-    }
-    
-    if (draft.id) {
+  const applyDraft = (draft) => {
+    applyDraftForm(draft);
+    applyDraftLocation(draft);
+    setPhotos(draft?.photos || []);
+    if (draft?.id) {
       setDraftId(draft.id);
     }
   };
 
-  /**
-   * Save current form as draft
-   */
-  const saveDraft = async (showAlert = true) => {
-    setIsSavingDraft(true);
-    
-    try {
-      if (!user?.user_id && !user?.userId) {
-        Alert.alert('Error', 'User information not available. Please log in again.');
-        return;
-      }
-      
-      const userId = user.user_id || user.userId;
-      const draftKey = getDraftStorageKey(userId);
-      const draftData = {
-        title,
-        description,
-        category: selectedCategory,
-        location,
-        locationName,
-        incidentDate: incidentDate.toISOString(),
-        severity,
-        isAnonymous,
-        photos,
-        savedAt: new Date().toISOString(),
-      };
+  const getDraftPayload = () => ({
+    title,
+    description,
+    category: selectedCategory,
+    location,
+    locationName,
+    incidentDate: incidentDate.toISOString(),
+    severity,
+    isAnonymous,
+    photos,
+  });
 
-      await AsyncStorage.setItem(draftKey, JSON.stringify(draftData));
-      setHasDraft(true);
+  const {
+    hasDraft,
+    isSavingDraft,
+    draftId,
+    setDraftId,
+    loadDraft,
+    saveDraft,
+    clearDraft,
+  } = useDraftManager({ userId, onLoadDraft: applyDraft, getDraftPayload });
 
-      if (showAlert) {
-        Alert.alert('Draft Saved', 'Your report has been saved as a draft.');
-      }
-    } catch (error) {
-      console.error('Error saving draft:', error);
-      if (showAlert) {
-        Alert.alert('Error', 'Failed to save draft. Please try again.');
-      }
-    } finally {
-      setIsSavingDraft(false);
+  useEffect(() => {
+    loadDraft();
+    return () => {
+      isSubmittingRef.current = false;
+    };
+  }, [loadDraft]);
+
+  useEffect(() => {
+    if (route?.params?.draft) {
+      applyDraft(route.params.draft);
     }
-  };
-
-  /**
-   * Clear saved draft
-   */
-  const clearDraft = async () => {
-    try {
-      if (!user?.user_id && !user?.userId) {
-        console.warn('User ID not available for clearing draft');
-        return;
-      }
-      
-      const userId = user.user_id || user.userId;
-      const draftKey = getDraftStorageKey(userId);
-      await AsyncStorage.removeItem(draftKey);
-      setHasDraft(false);
-    } catch (error) {
-      console.error('Error clearing draft:', error);
-    }
-  };
-
-  /**
-   * Get current location using real GPS
-   */
-  const getCurrentLocation = async () => {
-    setIsLoadingLocation(true);
-    setErrors({ ...errors, location: null });
-
-    try {
-      const servicesEnabled = await Location.hasServicesEnabledAsync();
-      if (!servicesEnabled) {
-        setIsLoadingLocation(false);
-        Alert.alert(
-          'Location Services Off',
-          'Location services are disabled. Please enable them to use GPS.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Open Settings', onPress: () => Linking.openSettings() },
-          ]
-        );
-        return;
-      }
-
-      // Check permission first
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      
-      if (status !== 'granted') {
-        setIsLoadingLocation(false);
-        Alert.alert(
-          'Permission Denied',
-          'Location permission is required to get your current location. Please enable it in settings.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      let position;
-      try {
-        // Get current position with high accuracy
-        position = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.High,
-          timeout: 15000,
-        });
-      } catch (positionError) {
-        // Fallback to last known position (useful for emulators / slow GPS)
-        const lastKnown = await Location.getLastKnownPositionAsync({
-          maxAge: 5 * 60 * 1000,
-          requiredAccuracy: 100,
-        });
-        if (!lastKnown) {
-          throw positionError;
-        }
-        position = lastKnown;
-      }
-
-      const { latitude, longitude } = position.coords;
-      
-      setLocation({ latitude, longitude });
-      setSelectedMapLocation({ latitude, longitude });
-      
-      // Try to get address (reverse geocoding)
-      try {
-        const [address] = await Location.reverseGeocodeAsync({ latitude, longitude });
-        if (address) {
-          const addressParts = [
-            address.street,
-            address.city,
-            address.region,
-          ].filter(Boolean);
-          setLocationName(addressParts.join(', '));
-        }
-      } catch (geocodeError) {
-        console.log('Reverse geocoding failed:', geocodeError);
-      }
-
-      // Update map region
-      setMapRegion({
-        latitude,
-        longitude,
-        latitudeDelta: 0.005,
-        longitudeDelta: 0.005,
-      });
-
-      setIsLoadingLocation(false);
-      
-      Alert.alert(
-        'Location Set',
-        `Your location has been captured.\n\nLat: ${latitude.toFixed(6)}\nLng: ${longitude.toFixed(6)}`,
-        [{ text: 'OK' }]
-      );
-    } catch (error) {
-      setIsLoadingLocation(false);
-      console.error('Location error:', error);
-      
-      let errorMessage = 'Unable to get your current location.';
-      if (error.code === 'E_LOCATION_TIMEOUT') {
-        errorMessage = 'Location request timed out. Please try again.';
-      } else if (error.code === 'E_LOCATION_SERVICES_DISABLED') {
-        errorMessage = 'Please enable location services in your device settings.';
-      }
-      
-      setErrors({ ...errors, location: errorMessage });
-      Alert.alert('Location Error', errorMessage);
-    }
-  };
-
-  /**
-   * Open map for location selection
-   */
-  const openMapForSelection = async () => {
-    // If we don't have a location yet, try to get current location first
-    if (!location) {
-      const servicesEnabled = await Location.hasServicesEnabledAsync();
-      if (!servicesEnabled) {
-        Alert.alert(
-          'Location Services Off',
-          'Location services are disabled. You can still pick a location on the map.',
-          [{ text: 'OK' }]
-        );
-      }
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
-        try {
-          const position = await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.Balanced,
-          });
-          const { latitude, longitude } = position.coords;
-          setMapRegion({
-            latitude,
-            longitude,
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.01,
-          });
-          setSelectedMapLocation({ latitude, longitude });
-        } catch (error) {
-          try {
-            const lastKnown = await Location.getLastKnownPositionAsync({
-              maxAge: 5 * 60 * 1000,
-              requiredAccuracy: 100,
-            });
-            if (lastKnown?.coords) {
-              setMapRegion({
-                latitude: lastKnown.coords.latitude,
-                longitude: lastKnown.coords.longitude,
-                latitudeDelta: 0.01,
-                longitudeDelta: 0.01,
-              });
-              setSelectedMapLocation({
-                latitude: lastKnown.coords.latitude,
-                longitude: lastKnown.coords.longitude,
-              });
-            } else {
-              // Use default location if GPS fails
-              setMapRegion({
-                latitude: 40.7128,
-                longitude: -74.0060,
-                latitudeDelta: 0.05,
-                longitudeDelta: 0.05,
-              });
-            }
-          } catch (fallbackError) {
-            // Use default location if fallback fails
-            setMapRegion({
-              latitude: 40.7128,
-              longitude: -74.0060,
-              latitudeDelta: 0.05,
-              longitudeDelta: 0.05,
-            });
-          }
-        }
-      }
-    } else {
-      setMapRegion({
-        latitude: location.latitude,
-        longitude: location.longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      });
-      setSelectedMapLocation(location);
-    }
-    
-    setShowMapModal(true);
-  };
-
-  /**
-   * Handle map press to select location
-   */
-  const handleMapPress = async (event) => {
-    const { latitude, longitude } = event.nativeEvent.coordinate;
-    setSelectedMapLocation({ latitude, longitude });
-
-    // Try to get address
-    try {
-      const [address] = await Location.reverseGeocodeAsync({ latitude, longitude });
-      if (address) {
-        const addressParts = [
-          address.street,
-          address.city,
-          address.region,
-        ].filter(Boolean);
-        setLocationName(addressParts.join(', '));
-      }
-    } catch (error) {
-      console.log('Reverse geocoding failed:', error);
-    }
-  };
-
-  /**
-   * Confirm selected map location
-   */
-  const confirmMapLocation = () => {
-    if (selectedMapLocation) {
-      setLocation(selectedMapLocation);
-      setErrors({ ...errors, location: null });
-    }
-    setShowMapModal(false);
-  };
-
-  /**
-   * Pick image from gallery
-   */
-  const pickImage = async () => {
-    if (photos.length >= 5) {
-      Alert.alert('Limit Reached', 'You can only attach up to 5 photos.');
-      return;
-    }
-
-    try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert(
-          'Permission Required',
-          'Photo library permission is needed to choose photos.'
-        );
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        setPhotos([...photos, result.assets[0].uri]);
-      }
-    } catch (error) {
-      console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image. Please try again.');
-    }
-  };
-
-  /**
-   * Take photo with camera
-   */
-  const takePhoto = async () => {
-    if (photos.length >= 5) {
-      Alert.alert('Limit Reached', 'You can only attach up to 5 photos.');
-      return;
-    }
-
-    try {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Camera permission is needed to take photos.');
-        return;
-      }
-
-      const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        setPhotos([...photos, result.assets[0].uri]);
-      }
-    } catch (error) {
-      console.error('Error taking photo:', error);
-      Alert.alert('Error', 'Failed to take photo. Please try again.');
-    }
-  };
-
-  /**
-   * Remove a photo
-   */
-  const removePhoto = (index) => {
-    const newPhotos = [...photos];
-    newPhotos.splice(index, 1);
-    setPhotos(newPhotos);
-  };
-
-  /**
-   * Show photo options
-   */
-  const showPhotoOptions = () => {
-    Alert.alert(
-      'Add Photo',
-      'Choose an option',
-      [
-        { text: 'Take Photo', onPress: takePhoto },
-        { text: 'Choose from Gallery', onPress: pickImage },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
-  };
-
-  /**
-   * Format date for display
-   */
-  const formatDate = (date) => {
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  /**
-   * Set incident date to now
-   */
-  const setDateToNow = () => {
-    setIncidentDate(new Date());
-  };
-
-  /**
-   * Validate form inputs
-   */
-  const validateForm = () => {
-    const newErrors = {};
-
-    if (!title.trim()) {
-      newErrors.title = 'Title is required';
-    } else if (title.trim().length < 5) {
-      newErrors.title = 'Title must be at least 5 characters';
-    } else if (title.trim().length > 255) {
-      newErrors.title = 'Title must not exceed 255 characters';
-    }
-
-    if (!description.trim()) {
-      newErrors.description = 'Description is required';
-    } else if (description.trim().length < 10) {
-      newErrors.description = 'Description must be at least 10 characters';
-    } else if (description.trim().length > 5000) {
-      newErrors.description = 'Description must not exceed 5000 characters';
-    }
-
-    if (!selectedCategory) {
-      newErrors.category = 'Please select a category';
-    }
-
-    if (!location) {
-      newErrors.location = 'Please set the incident location';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
+  }, [route?.params?.draft]);
   /**
    * Handle incident submission
    */
@@ -600,7 +127,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
       return;
     }
 
-    if (!asDraft && !validateForm()) {
+    if (!asDraft && !validateForm(location)) {
       Alert.alert('Validation Error', 'Please fill in all required fields correctly.');
       return;
     }
@@ -665,16 +192,12 @@ const ReportIncidentScreen = ({ navigation, route }) => {
               onPress: () => {
                 // Reset form only when fully submitted, not when saving draft
                 if (!asDraft) {
-                  setTitle('');
-                  setDescription('');
-                  setSelectedCategory('');
+                  resetForm();
                   setLocation(null);
                   setLocationName('');
-                  setIncidentDate(new Date());
-                  setSeverity('medium');
-                  setIsAnonymous(false);
+                  setSelectedMapLocation(null);
+                  setMapRegion(null);
                   setPhotos([]);
-                  setErrors({});
                   setDraftId(null);
                   
                   navigation.navigate('Home');
@@ -802,7 +325,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
             Category <Text style={styles.required}>*</Text>
           </Text>
           <View style={styles.categoryGrid}>
-            {CATEGORIES.map((category) => (
+            {INCIDENT_CATEGORIES.map((category) => (
               <TouchableOpacity
                 key={category.value}
                 style={[

@@ -9,11 +9,14 @@ import {
   Clock,
   AlertTriangle
 } from 'lucide-react'
+import incidentConstants from '../../../constants/incident'
 
 function Reports() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedReport, setSelectedReport] = useState(null)
+
+  const { STATUS_COLORS, STATUS_LABELS, MODERATOR_STATUS_FILTERS } = incidentConstants
 
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ['reports', statusFilter],
@@ -57,19 +60,13 @@ function Reports() {
     createdAt: report.created_at || report.incident_date,
   }))
 
-  const getStatusColor = (status) => {
-    switch(status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'in_review':
-        return 'bg-blue-100 text-blue-800'
-      case 'verified':
-        return 'bg-green-100 text-green-800'
-      case 'rejected':
-        return 'bg-red-100 text-red-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
+  const getStatusColor = (status) => STATUS_COLORS[status] || STATUS_COLORS.default
+
+  const formatStatusLabel = (status) => {
+    if (STATUS_LABELS[status]) {
+      return STATUS_LABELS[status]
     }
+    return status.replace('_', ' ').toUpperCase()
   }
 
   const getSeverityColor = (severity) => {
@@ -117,11 +114,11 @@ function Reports() {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="all">All Reports</option>
-              <option value="pending">Pending</option>
-              <option value="in_review">In Review</option>
-              <option value="verified">Verified</option>
-              <option value="rejected">Rejected</option>
+              {MODERATOR_STATUS_FILTERS.map((filter) => (
+                <option key={filter.value} value={filter.value}>
+                  {filter.label}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -145,7 +142,7 @@ function Reports() {
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="text-lg font-bold text-gray-900">{report.title}</h3>
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(report.status)}`}>
-                      {report.status.replace('_', ' ').toUpperCase()}
+                      {formatStatusLabel(report.status)}
                     </span>
                   </div>
                   <p className="text-gray-600 text-sm mb-3">{report.description}</p>
@@ -189,7 +186,7 @@ function Reports() {
                 <h3 className="text-2xl font-bold text-gray-900 mb-4">{selectedReport.title}</h3>
                 <div className="flex gap-3">
                   <span className={`px-4 py-2 rounded-full text-sm font-medium ${getStatusColor(selectedReport.status)}`}>
-                    {selectedReport.status.replace('_', ' ').toUpperCase()}
+                    {formatStatusLabel(selectedReport.status)}
                   </span>
                   <span className={`px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-800`}>
                     {selectedReport.category.replace('_', ' ').toUpperCase()}
