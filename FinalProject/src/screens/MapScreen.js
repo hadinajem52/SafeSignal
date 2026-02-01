@@ -160,11 +160,7 @@ const MapScreen = () => {
       }, 1000);
     } catch (err) {
       console.error('Error getting location:', err);
-      Alert.alert(
-        'Location Error',
-        'Unable to get your current location. Please try again.',
-        [{ text: 'OK' }]
-      );
+      // Removed Alert to prevent spamming
     } finally {
       setLocationLoading(false);
     }
@@ -427,6 +423,8 @@ const MapScreen = () => {
         loadingEnabled={true}
         loadingIndicatorColor="#1976D2"
         loadingBackgroundColor="#ffffff"
+        // Explicitly disable this event prop to fix the error
+        onUserLocationChange={null}
       >
         {incidents.map((incident) => (
           <Marker

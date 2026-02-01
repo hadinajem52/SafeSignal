@@ -107,10 +107,10 @@ const getMapIncidents = async (filters) => {
   query += ` ORDER BY incident_date DESC LIMIT 500`;
 
   try {
-    const result = await db.query(query, params);
+    const result = await db.any(query, params);
 
     // Format incidents for map display (privacy-safe)
-    const incidents = result.rows.map(incident => ({
+    const incidents = result.map(incident => ({
       id: incident.incident_id,
       title: incident.title,
       category: incident.category,
