@@ -11,6 +11,79 @@ const INCIDENT_CATEGORIES = [
   { value: 'other', label: 'Other', icon: '📝' },
 ];
 
+const CATEGORY_DISPLAY = {
+  theft: {
+    label: 'Theft',
+    mapColor: '#E53935',
+    mapIcon: 'warning',
+    trendIcon: '🔓',
+    trendColor: '#e74c3c',
+  },
+  assault: {
+    label: 'Assault',
+    mapColor: '#D32F2F',
+    mapIcon: 'alert-circle',
+    trendIcon: '⚠️',
+    trendColor: '#c0392b',
+  },
+  vandalism: {
+    label: 'Vandalism',
+    mapColor: '#FF9800',
+    mapIcon: 'construct',
+    trendIcon: '🔨',
+    trendColor: '#e67e22',
+  },
+  suspicious_activity: {
+    label: 'Suspicious Activity',
+    mapColor: '#FFC107',
+    mapIcon: 'eye',
+    trendIcon: '👁️',
+    trendColor: '#9b59b6',
+  },
+  traffic_incident: {
+    label: 'Traffic Incident',
+    mapColor: '#2196F3',
+    mapIcon: 'car',
+    trendIcon: '🚗',
+    trendColor: '#3498db',
+  },
+  noise_complaint: {
+    label: 'Noise Complaint',
+    mapColor: '#9C27B0',
+    mapIcon: 'volume-high',
+    trendIcon: '🔊',
+    trendColor: '#1abc9c',
+  },
+  fire: {
+    label: 'Fire',
+    mapColor: '#FF5722',
+    mapIcon: 'flame',
+    trendIcon: '🔥',
+    trendColor: '#e74c3c',
+  },
+  medical_emergency: {
+    label: 'Medical Emergency',
+    mapColor: '#F44336',
+    mapIcon: 'medkit',
+    trendIcon: '🏥',
+    trendColor: '#e91e63',
+  },
+  hazard: {
+    label: 'Hazard',
+    mapColor: '#795548',
+    mapIcon: 'nuclear',
+    trendIcon: '☣️',
+    trendColor: '#8d6e63',
+  },
+  other: {
+    label: 'Other',
+    mapColor: '#607D8B',
+    mapIcon: 'help-circle',
+    trendIcon: '📋',
+    trendColor: '#95a5a6',
+  },
+};
+
 const SEVERITY_LEVELS = [
   { value: 'low', label: 'Low', color: '#28a745', description: 'Minor incident, no immediate risk' },
   { value: 'medium', label: 'Medium', color: '#ffc107', description: 'Moderate concern, needs attention' },
@@ -68,6 +141,7 @@ const MODERATOR_STATUS_FILTERS = [
 
 module.exports = {
   INCIDENT_CATEGORIES,
+  CATEGORY_DISPLAY,
   SEVERITY_LEVELS,
   INCIDENT_STATUSES,
   VALID_CATEGORIES,

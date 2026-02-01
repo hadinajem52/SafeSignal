@@ -16,22 +16,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { incidentAPI } from '../services/api';
+import incidentConstants from '../../../constants/incident';
 
 const { width, height } = Dimensions.get('window');
 
-// Category configurations with colors and icons
-const CATEGORY_CONFIG = {
-  theft: { color: '#E53935', icon: 'warning', label: 'Theft' },
-  assault: { color: '#D32F2F', icon: 'alert-circle', label: 'Assault' },
-  vandalism: { color: '#FF9800', icon: 'construct', label: 'Vandalism' },
-  suspicious_activity: { color: '#FFC107', icon: 'eye', label: 'Suspicious Activity' },
-  traffic_incident: { color: '#2196F3', icon: 'car', label: 'Traffic Incident' },
-  noise_complaint: { color: '#9C27B0', icon: 'volume-high', label: 'Noise Complaint' },
-  fire: { color: '#FF5722', icon: 'flame', label: 'Fire' },
-  medical_emergency: { color: '#F44336', icon: 'medkit', label: 'Medical Emergency' },
-  hazard: { color: '#795548', icon: 'nuclear', label: 'Hazard' },
-  other: { color: '#607D8B', icon: 'help-circle', label: 'Other' },
-};
+const { CATEGORY_DISPLAY } = incidentConstants;
 
 // Timeframe options
 const TIMEFRAME_OPTIONS = [
@@ -168,12 +157,12 @@ const MapScreen = () => {
 
   // Get marker color based on category
   const getMarkerColor = (category) => {
-    return CATEGORY_CONFIG[category]?.color || CATEGORY_CONFIG.other.color;
+    return CATEGORY_DISPLAY[category]?.mapColor || CATEGORY_DISPLAY.other.mapColor;
   };
 
   // Get category label
   const getCategoryLabel = (category) => {
-    return CATEGORY_CONFIG[category]?.label || 'Other';
+    return CATEGORY_DISPLAY[category]?.label || CATEGORY_DISPLAY.other.label;
   };
 
   // Format date for display
@@ -228,20 +217,20 @@ const MapScreen = () => {
           All
         </Text>
       </TouchableOpacity>
-      {Object.entries(CATEGORY_CONFIG).map(([key, config]) => (
+      {Object.entries(CATEGORY_DISPLAY).map(([key, config]) => (
         <TouchableOpacity
           key={key}
           style={[
             styles.filterChip,
             selectedCategory === key && styles.filterChipActive,
-            selectedCategory === key && { backgroundColor: config.color },
+            selectedCategory === key && { backgroundColor: config.mapColor },
           ]}
           onPress={() => setSelectedCategory(selectedCategory === key ? null : key)}
         >
           <Ionicons
-            name={config.icon}
+            name={config.mapIcon}
             size={14}
-            color={selectedCategory === key ? '#fff' : config.color}
+            color={selectedCategory === key ? '#fff' : config.mapColor}
             style={styles.filterChipIcon}
           />
           <Text
