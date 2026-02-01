@@ -11,6 +11,9 @@
     "db:seed": "node src/database/seed.js"
   },
   "dependencies": {
+    "compression": "^1.7.4",
+    "helmet": "^7.1.0",
+    "express-rate-limit": "^7.4.0",
     "express": "^4.18.2",
     "pg-promise": "^11.5.0",
     "bcryptjs": "^2.4.3",

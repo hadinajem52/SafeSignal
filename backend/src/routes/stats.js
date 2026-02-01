@@ -68,6 +68,7 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
       radius,
     });
 
+    res.set('Cache-Control', 'private, max-age=30');
     res.json({
       status: 'SUCCESS',
       data: dashboardData,
