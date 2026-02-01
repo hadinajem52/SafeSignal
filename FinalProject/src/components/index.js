@@ -3,3 +3,6 @@ export { default as Card } from './Card';
 export { default as Modal } from './Modal';
 export { default as StatusBadge } from './StatusBadge';
 export { default as SeverityBadge } from './SeverityBadge';
+export { default as CategoryFilter } from './CategoryFilter';
+export { default as MapLegend } from './MapLegend';
+export { default as IncidentDetailModal } from './IncidentDetailModal';
