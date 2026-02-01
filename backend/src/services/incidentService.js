@@ -392,6 +392,58 @@ async function deleteIncident(incidentId, requestingUser) {
   await db.none('DELETE FROM incidents WHERE incident_id = $1', [incidentId]);
 }
 
+/**
+ * Verify an incident
+ * @param {number} incidentId
+ * @param {number} moderatorId
+ */
+async function verifyIncident(incidentId, moderatorId) {
+  const incident = await db.oneOrNone(
+    'SELECT * FROM incidents WHERE incident_id = $1',
+    [incidentId]
+  );
+
+  if (!incident) {
+    throw ServiceError.notFound('Incident');
+  }
+
+  const updated = await db.one(
+    `UPDATE incidents 
+     SET status = 'verified', updated_at = CURRENT_TIMESTAMP 
+     WHERE incident_id = $1 
+     RETURNING *`,
+    [incidentId]
+  );
+
+  return updated;
+}
+
+/**
+ * Reject an incident
+ * @param {number} incidentId
+ * @param {number} moderatorId
+ */
+async function rejectIncident(incidentId, moderatorId) {
+  const incident = await db.oneOrNone(
+    'SELECT * FROM incidents WHERE incident_id = $1',
+    [incidentId]
+  );
+
+  if (!incident) {
+    throw ServiceError.notFound('Incident');
+  }
+
+  const updated = await db.one(
+    `UPDATE incidents 
+     SET status = 'rejected', updated_at = CURRENT_TIMESTAMP 
+     WHERE incident_id = $1 
+     RETURNING *`,
+    [incidentId]
+  );
+
+  return updated;
+}
+
 module.exports = {
   // Constants
   VALID_CATEGORIES,
@@ -407,4 +459,6 @@ module.exports = {
   updateIncident,
   patchIncident,
   deleteIncident,
+  verifyIncident,
+  rejectIncident,
 };
