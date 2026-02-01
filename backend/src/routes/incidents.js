@@ -343,4 +343,66 @@ router.delete(
   }
 );
 
+/**
+ * @route   POST /api/incidents/:id/verify
+ * @desc    Verify an incident
+ * @access  Private (Moderator/Admin)
+ */
+router.post(
+  '/:id/verify',
+  authenticateToken,
+  [param('id').isInt()],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        status: 'ERROR',
+        message: 'Invalid incident ID',
+      });
+    }
+
+    try {
+      const incident = await incidentService.verifyIncident(req.params.id, req.user.userId);
+      res.json({
+        status: 'OK',
+        message: 'Incident verified',
+        data: incident,
+      });
+    } catch (error) {
+      handleServiceError(error, res, 'Failed to verify incident');
+    }
+  }
+);
+
+/**
+ * @route   POST /api/incidents/:id/reject
+ * @desc    Reject an incident
+ * @access  Private (Moderator/Admin)
+ */
+router.post(
+  '/:id/reject',
+  authenticateToken,
+  [param('id').isInt()],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        status: 'ERROR',
+        message: 'Invalid incident ID',
+      });
+    }
+
+    try {
+      const incident = await incidentService.rejectIncident(req.params.id, req.user.userId);
+      res.json({
+        status: 'OK',
+        message: 'Incident rejected',
+        data: incident,
+      });
+    } catch (error) {
+      handleServiceError(error, res, 'Failed to reject incident');
+    }
+  }
+);
+
 module.exports = router;

@@ -67,10 +67,10 @@ async function getModeratorStats() {
     // Get total incident counts
     const incidentStats = await db.one(`
     SELECT 
-      COUNT(*) as totalIncidents,
-      SUM(CASE WHEN status = 'submitted' THEN 1 ELSE 0 END) as pendingReports,
-      SUM(CASE WHEN status = 'verified' THEN 1 ELSE 0 END) as verifiedReports,
-      SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejectedReports
+      COUNT(*) as "totalIncidents",
+      SUM(CASE WHEN status = 'submitted' THEN 1 ELSE 0 END) as "pendingReports",
+      SUM(CASE WHEN status = 'verified' THEN 1 ELSE 0 END) as "verifiedReports",
+      SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as "rejectedReports"
     FROM incidents
     WHERE is_draft = FALSE
   `);
@@ -78,17 +78,17 @@ async function getModeratorStats() {
     // Get user statistics
     const userStats = await db.one(`
     SELECT 
-      COUNT(*) as totalUsers,
-      SUM(CASE WHEN is_suspended = FALSE THEN 1 ELSE 0 END) as activeUsers,
-      SUM(CASE WHEN is_suspended = TRUE THEN 1 ELSE 0 END) as suspendedUsers
+      COUNT(*) as "totalUsers",
+      SUM(CASE WHEN is_suspended = FALSE THEN 1 ELSE 0 END) as "activeUsers",
+      SUM(CASE WHEN is_suspended = TRUE THEN 1 ELSE 0 END) as "suspendedUsers"
     FROM users
   `);
 
     // Get recent incidents
     const recentIncidents = await db.manyOrNone(`
     SELECT 
-      incident_id, title, status, category, severity, 
-      created_at, username, location_name
+      i.incident_id, i.title, i.status, i.category, i.severity, 
+      i.created_at, u.username, i.location_name
     FROM incidents i
     JOIN users u ON i.reporter_id = u.user_id
     WHERE i.is_draft = FALSE

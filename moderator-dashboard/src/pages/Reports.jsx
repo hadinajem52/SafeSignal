@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { reportsAPI } from '../services/api'
 import { 
   Search, 
@@ -21,6 +21,24 @@ function Reports() {
       const params = statusFilter !== 'all' ? { status: statusFilter } : {}
       const result = await reportsAPI.getAll(params)
       return result.success ? result.data : []
+    },
+  })
+
+  const queryClient = useQueryClient()
+
+  const verifyMutation = useMutation({
+    mutationFn: (id) => reportsAPI.verify(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reports'] })
+      setSelectedReport(null)
+    },
+  })
+
+  const rejectMutation = useMutation({
+    mutationFn: (id) => reportsAPI.reject(id, 'Rejected by moderator'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reports'] })
+      setSelectedReport(null)
     },
   })
 
@@ -206,13 +224,21 @@ function Reports() {
               </div>
 
               <div className="pt-6 border-t border-gray-200 flex gap-3">
-                <button className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-2">
+                <button 
+                  onClick={() => verifyMutation.mutate(selectedReport.id)}
+                  disabled={verifyMutation.isPending}
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                >
                   <CheckCircle size={20} />
-                  Verify
+                  {verifyMutation.isPending ? 'Verifying...' : 'Verify'}
                 </button>
-                <button className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-2">
+                <button 
+                  onClick={() => rejectMutation.mutate(selectedReport.id)}
+                  disabled={rejectMutation.isPending}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                >
                   <XCircle size={20} />
-                  Reject
+                  {rejectMutation.isPending ? 'Rejecting...' : 'Reject'}
                 </button>
                 <button
                   onClick={() => setSelectedReport(null)}

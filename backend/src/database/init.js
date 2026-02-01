@@ -19,6 +19,7 @@ const initDatabase = async () => {
         google_id VARCHAR(255) UNIQUE,
         role VARCHAR(50) DEFAULT 'citizen' CHECK (role IN ('citizen', 'moderator', 'admin')),
         is_verified BOOLEAN DEFAULT FALSE,
+        is_suspended BOOLEAN DEFAULT FALSE,
         verification_code VARCHAR(6),
         verification_code_expires_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
