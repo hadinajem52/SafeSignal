@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { formatDate } from '../utils/dateUtils';
 
 const DEFAULT_SEVERITY = 'medium';
 
@@ -11,15 +12,7 @@ const useIncidentForm = () => {
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [errors, setErrors] = useState({});
 
-  const formatDate = useCallback((date) => {
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  }, []);
+  const formatIncidentDate = useCallback((date) => formatDate(date), []);
 
   const setDateToNow = useCallback(() => {
     setIncidentDate(new Date());
@@ -96,7 +89,7 @@ const useIncidentForm = () => {
     setIsAnonymous,
     errors,
     setErrors,
-    formatDate,
+    formatDate: formatIncidentDate,
     setDateToNow,
     validateForm,
     resetForm,

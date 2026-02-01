@@ -1,8 +1,10 @@
 import { useCallback, useState } from 'react';
 import { Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import limits from '../../../constants/limits';
 
-const MAX_PHOTOS = 5;
+const { LIMITS } = limits;
+const { MAX_PHOTOS } = LIMITS;
 
 const useImagePicker = () => {
   const [photos, setPhotos] = useState([]);
