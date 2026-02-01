@@ -10,6 +10,7 @@ import MyReportsScreen from '../screens/MyReportsScreen';
 import ReportIncidentScreen from '../screens/ReportIncidentScreen';
 import MapScreen from '../screens/MapScreen';
 import AccountScreen from '../screens/AccountScreen';
+import IncidentDetailScreen from '../screens/IncidentDetailScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -37,6 +38,11 @@ const ReportsStack = () => {
       <Stack.Screen 
         name="ReportIncident" 
         component={ReportIncidentScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="IncidentDetail"
+        component={IncidentDetailScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

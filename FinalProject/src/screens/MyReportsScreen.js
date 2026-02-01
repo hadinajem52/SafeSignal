@@ -62,8 +62,7 @@ const MyReportsScreen = ({ navigation }) => {
         {
           text: 'View Details',
           onPress: () => {
-            // TODO: Navigate to incident detail screen when created
-            console.log('View incident:', incident.id);
+            navigation.navigate('IncidentDetail', { incident });
           },
         },
       ]
