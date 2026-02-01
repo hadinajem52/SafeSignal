@@ -12,21 +12,11 @@ import {
 import * as Location from 'expo-location';
 import { useAuth } from '../context/AuthContext';
 import { statsAPI } from '../services/api';
+import incidentConstants from '../../../constants/incident';
 
 const { width } = Dimensions.get('window');
 
-// Category icons and colors mapping
-const CATEGORY_CONFIG = {
-  theft: { icon: '🔓', color: '#e74c3c' },
-  vandalism: { icon: '🔨', color: '#e67e22' },
-  assault: { icon: '⚠️', color: '#c0392b' },
-  suspicious_activity: { icon: '👁️', color: '#9b59b6' },
-  traffic: { icon: '🚗', color: '#3498db' },
-  noise: { icon: '🔊', color: '#1abc9c' },
-  fire: { icon: '🔥', color: '#e74c3c' },
-  medical: { icon: '🏥', color: '#e91e63' },
-  other: { icon: '📋', color: '#95a5a6' },
-};
+const { CATEGORY_DISPLAY } = incidentConstants;
 
 const HomeScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -108,7 +98,7 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const formatCategoryName = (category) => {
-    return category
+    return CATEGORY_DISPLAY[category]?.label || category
       .split('_')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
@@ -188,11 +178,11 @@ const HomeScreen = ({ navigation }) => {
           <Text style={styles.sectionTitle}>📈 Trending This Week</Text>
           <View style={styles.trendingContainer}>
             {dashboardData.trendingCategories.map((cat, index) => {
-              const config = CATEGORY_CONFIG[cat.category] || CATEGORY_CONFIG.other;
+              const config = CATEGORY_DISPLAY[cat.category] || CATEGORY_DISPLAY.other;
               return (
                 <View key={index} style={styles.trendingItem}>
-                  <View style={[styles.trendingIcon, { backgroundColor: `${config.color}15` }]}>
-                    <Text style={styles.trendingEmoji}>{config.icon}</Text>
+                  <View style={[styles.trendingIcon, { backgroundColor: `${config.trendColor}15` }]}>
+                    <Text style={styles.trendingEmoji}>{config.trendIcon}</Text>
                   </View>
                   <View style={styles.trendingInfo}>
                     <Text style={styles.trendingCategory}>{formatCategoryName(cat.category)}</Text>
