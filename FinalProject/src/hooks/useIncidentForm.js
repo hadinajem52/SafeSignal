@@ -1,5 +1,7 @@
 import { useCallback, useState } from 'react';
 import { formatDate } from '../utils/dateUtils';
+import { VALID_CATEGORIES } from '../../../constants/incident';
+import { LIMITS } from '../../../constants/limits';
 
 const DEFAULT_SEVERITY = 'medium';
 
@@ -24,22 +26,24 @@ const useIncidentForm = () => {
 
       if (!title.trim()) {
         newErrors.title = 'Title is required';
-      } else if (title.trim().length < 5) {
-        newErrors.title = 'Title must be at least 5 characters';
-      } else if (title.trim().length > 255) {
-        newErrors.title = 'Title must not exceed 255 characters';
+      } else if (title.trim().length < LIMITS.TITLE.MIN) {
+        newErrors.title = `Title must be at least ${LIMITS.TITLE.MIN} characters`;
+      } else if (title.trim().length > LIMITS.TITLE.MAX) {
+        newErrors.title = `Title must not exceed ${LIMITS.TITLE.MAX} characters`;
       }
 
       if (!description.trim()) {
         newErrors.description = 'Description is required';
-      } else if (description.trim().length < 10) {
-        newErrors.description = 'Description must be at least 10 characters';
-      } else if (description.trim().length > 5000) {
-        newErrors.description = 'Description must not exceed 5000 characters';
+      } else if (description.trim().length < LIMITS.DESCRIPTION.MIN) {
+        newErrors.description = `Description must be at least ${LIMITS.DESCRIPTION.MIN} characters`;
+      } else if (description.trim().length > LIMITS.DESCRIPTION.MAX) {
+        newErrors.description = `Description must not exceed ${LIMITS.DESCRIPTION.MAX} characters`;
       }
 
       if (!selectedCategory) {
         newErrors.category = 'Please select a category';
+      } else if (!VALID_CATEGORIES.includes(selectedCategory)) {
+        newErrors.category = 'Invalid category selected';
       }
 
       if (!location) {

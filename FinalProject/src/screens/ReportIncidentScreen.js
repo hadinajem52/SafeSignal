@@ -3,16 +3,10 @@ import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   ScrollView,
   Alert,
-  ActivityIndicator,
-  Image,
-  Modal,
-  Switch,
 } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
 import { incidentAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -23,6 +17,15 @@ import useLocationPicker from '../hooks/useLocationPicker';
 import useUserPreferences from '../hooks/useUserPreferences';
 import incidentConstants from '../../../constants/incident';
 import { Button } from '../components';
+import {
+  IncidentCategoryPicker,
+  IncidentSeverityPicker,
+  IncidentDateTimePicker,
+  IncidentLocationPicker,
+  IncidentPhotoUploader,
+  IncidentTextFields,
+  AnonymousToggle,
+} from '../components/IncidentForm';
 
 const { INCIDENT_CATEGORIES, SEVERITY_LEVELS } = incidentConstants;
 
@@ -35,6 +38,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
   const isSubmittingRef = useRef(false);
   const hasAppliedDefaultAnonymous = useRef(false);
 
+  // Form State Hook
   const {
     title,
     setTitle,
@@ -56,6 +60,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     applyDraftForm,
   } = useIncidentForm();
 
+  // Location Hook
   const {
     location,
     setLocation,
@@ -80,8 +85,10 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     locationServicesEnabled: preferences.locationServices,
   });
 
+  // Image Picker Hook
   const { photos, setPhotos, removePhoto, showPhotoOptions } = useImagePicker();
 
+  // Draft Management Logic
   const applyDraft = (draft) => {
     applyDraftForm(draft);
     applyDraftLocation(draft);
@@ -114,6 +121,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     clearDraft,
   } = useDraftManager({ userId, onLoadDraft: applyDraft, getDraftPayload });
 
+  // Effects
   useEffect(() => {
     loadDraft();
     return () => {
@@ -144,6 +152,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     setIsAnonymous(!!preferences.defaultAnonymous);
     hasAppliedDefaultAnonymous.current = true;
   }, [isLoadingPreferences, preferences.defaultAnonymous, route?.params?.draft, setIsAnonymous]);
+
   /**
    * Handle incident submission
    */
@@ -288,236 +297,69 @@ const ReportIncidentScreen = ({ navigation, route }) => {
 
       {/* Form */}
       <View style={styles.formContainer}>
-        {/* Anonymous Reporting Toggle */}
-        <View style={styles.toggleSection}>
-          <View style={styles.toggleInfo}>
-            <Text style={styles.toggleLabel}>🕵️ Report Anonymously</Text>
-            <Text style={styles.toggleDescription}>
-              Your identity will be hidden from the public
-            </Text>
-          </View>
-          <Switch
-            value={isAnonymous}
-            onValueChange={setIsAnonymous}
-            trackColor={{ false: '#ddd', true: '#81b0ff' }}
-            thumbColor={isAnonymous ? '#1a73e8' : '#f4f3f4'}
-          />
-        </View>
+        <AnonymousToggle 
+          isAnonymous={isAnonymous} 
+          onToggle={setIsAnonymous} 
+        />
 
-        {/* Title Input */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>
-            Title <Text style={styles.required}>*</Text>
-          </Text>
-          <TextInput
-            style={[styles.input, errors.title && styles.inputError]}
-            placeholder="Brief summary of the incident"
-            value={title}
-            onChangeText={(text) => {
-              setTitle(text);
-              setErrors({ ...errors, title: null });
-            }}
-            maxLength={255}
-          />
-          {errors.title && <Text style={styles.errorText}>{errors.title}</Text>}
-          <Text style={styles.charCount}>{title.length}/255</Text>
-        </View>
+        <IncidentTextFields
+          title={title}
+          onTitleChange={(text) => {
+            setTitle(text);
+            setErrors({ ...errors, title: null });
+          }}
+          description={description}
+          onDescriptionChange={(text) => {
+            setDescription(text);
+            setErrors({ ...errors, description: null });
+          }}
+          errors={errors}
+        />
 
-        {/* Description Input */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>
-            Description <Text style={styles.required}>*</Text>
-          </Text>
-          <TextInput
-            style={[styles.textArea, errors.description && styles.inputError]}
-            placeholder="Provide detailed information about what happened, when, and any other relevant details..."
-            value={description}
-            onChangeText={(text) => {
-              setDescription(text);
-              setErrors({ ...errors, description: null });
-            }}
-            multiline
-            numberOfLines={6}
-            textAlignVertical="top"
-            maxLength={5000}
-          />
-          {errors.description && <Text style={styles.errorText}>{errors.description}</Text>}
-          <Text style={styles.charCount}>{description.length}/5000</Text>
-        </View>
+        <IncidentCategoryPicker
+          categories={INCIDENT_CATEGORIES}
+          selectedCategory={selectedCategory}
+          onSelect={(value) => {
+            setSelectedCategory(value);
+            setErrors({ ...errors, category: null });
+          }}
+          error={errors.category}
+        />
 
-        {/* Category Picker */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>
-            Category <Text style={styles.required}>*</Text>
-          </Text>
-          <View style={styles.categoryGrid}>
-            {INCIDENT_CATEGORIES.map((category) => (
-              <TouchableOpacity
-                key={category.value}
-                style={[
-                  styles.categoryButton,
-                  selectedCategory === category.value && styles.categoryButtonSelected,
-                ]}
-                onPress={() => {
-                  setSelectedCategory(category.value);
-                  setErrors({ ...errors, category: null });
-                }}
-              >
-                <Text style={styles.categoryIcon}>{category.icon}</Text>
-                <Text
-                  style={[
-                    styles.categoryLabel,
-                    selectedCategory === category.value && styles.categoryLabelSelected,
-                  ]}
-                >
-                  {category.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          {errors.category && <Text style={styles.errorText}>{errors.category}</Text>}
-        </View>
+        <IncidentSeverityPicker
+          levels={SEVERITY_LEVELS}
+          severity={severity}
+          onSelect={setSeverity}
+        />
 
-        {/* Severity Indicator */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Severity Level</Text>
-          <View style={styles.severityContainer}>
-            {SEVERITY_LEVELS.map((level) => (
-              <TouchableOpacity
-                key={level.value}
-                style={[
-                  styles.severityButton,
-                  { borderColor: level.color },
-                  severity === level.value && { backgroundColor: level.color },
-                ]}
-                onPress={() => setSeverity(level.value)}
-              >
-                <Text
-                  style={[
-                    styles.severityLabel,
-                    severity === level.value && styles.severityLabelSelected,
-                  ]}
-                >
-                  {level.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <Text style={styles.helperText}>
-            {SEVERITY_LEVELS.find(l => l.value === severity)?.description}
-          </Text>
-        </View>
+        <IncidentDateTimePicker
+          incidentDate={incidentDate}
+          formatDate={formatDate}
+          onSetToNow={setDateToNow}
+        />
 
-        {/* Date/Time Picker */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>When did this happen?</Text>
-          <View style={styles.dateTimeContainer}>
-            <View style={styles.dateDisplay}>
-              <Text style={styles.dateIcon}>📅</Text>
-              <Text style={styles.dateText}>{formatDate(incidentDate)}</Text>
-            </View>
-            <TouchableOpacity style={styles.setNowButton} onPress={setDateToNow}>
-              <Text style={styles.setNowButtonText}>Set to Now</Text>
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.helperText}>
-            Default is current time. Adjust if incident happened earlier.
-          </Text>
-        </View>
+        <IncidentLocationPicker
+          location={location}
+          locationName={locationName}
+          isLoadingLocation={isLoadingLocation}
+          onGetCurrentLocation={getCurrentLocation}
+          onOpenMap={openMapForSelection}
+          error={errors.location}
+          showMapModal={showMapModal}
+          onCloseMapModal={() => setShowMapModal(false)}
+          onConfirmMapLocation={confirmMapLocation}
+          mapRegion={mapRegion}
+          onMapRegionChange={setMapRegion}
+          selectedMapLocation={selectedMapLocation}
+          onMapPress={handleMapPress}
+          mapRef={mapRef}
+        />
 
-        {/* Location Picker */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>
-            Location <Text style={styles.required}>*</Text>
-          </Text>
-          
-          <View style={styles.locationButtonsContainer}>
-            <TouchableOpacity
-              style={[styles.locationButton, location && styles.locationButtonActive]}
-              onPress={getCurrentLocation}
-              disabled={isLoadingLocation}
-            >
-              {isLoadingLocation ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <>
-                  <Text style={styles.locationIcon}>📍</Text>
-                  <Text style={styles.locationButtonText}>
-                    {location ? 'Update Location' : 'Use GPS'}
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.mapSelectButton}
-              onPress={openMapForSelection}
-            >
-              <Text style={styles.locationIcon}>🗺️</Text>
-              <Text style={styles.mapSelectButtonText}>Select on Map</Text>
-            </TouchableOpacity>
-          </View>
-
-          {location && (
-            <View style={styles.locationPreview}>
-              <MapView
-                style={styles.miniMap}
-                region={{
-                  latitude: location.latitude,
-                  longitude: location.longitude,
-                  latitudeDelta: 0.005,
-                  longitudeDelta: 0.005,
-                }}
-                scrollEnabled={false}
-                zoomEnabled={false}
-                pitchEnabled={false}
-                rotateEnabled={false}
-              >
-                <Marker coordinate={location} />
-              </MapView>
-              <View style={styles.locationDetails}>
-                {locationName ? (
-                  <Text style={styles.locationNameText}>{locationName}</Text>
-                ) : null}
-                <Text style={styles.coordinatesText}>
-                  {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
-                </Text>
-              </View>
-            </View>
-          )}
-          
-          {errors.location && <Text style={styles.errorText}>{errors.location}</Text>}
-          <Text style={styles.helperText}>
-            Your exact location will be slightly randomized for privacy
-          </Text>
-        </View>
-
-        {/* Photo Upload */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Photos (Optional)</Text>
-          <Text style={styles.helperText}>Add up to 5 photos to support your report</Text>
-          
-          <View style={styles.photosContainer}>
-            {photos.map((photo, index) => (
-              <View key={index} style={styles.photoWrapper}>
-                <Image source={{ uri: photo }} style={styles.photoThumbnail} />
-                <TouchableOpacity
-                  style={styles.removePhotoButton}
-                  onPress={() => removePhoto(index)}
-                >
-                  <Text style={styles.removePhotoText}>×</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
-            
-            {photos.length < 5 && (
-              <TouchableOpacity style={styles.addPhotoButton} onPress={showPhotoOptions}>
-                <Text style={styles.addPhotoIcon}>📷</Text>
-                <Text style={styles.addPhotoText}>Add Photo</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
+        <IncidentPhotoUploader
+          photos={photos}
+          onAddPhoto={showPhotoOptions}
+          onRemovePhoto={removePhoto}
+        />
 
         {/* Action Buttons */}
         <View style={styles.actionButtonsContainer}>
@@ -541,52 +383,6 @@ const ReportIncidentScreen = ({ navigation, route }) => {
           />
         </View>
       </View>
-
-      {/* Map Selection Modal */}
-      <Modal
-        visible={showMapModal}
-        animationType="slide"
-        onRequestClose={() => setShowMapModal(false)}
-      >
-        <View style={styles.mapModalContainer}>
-          <View style={styles.mapModalHeader}>
-            <TouchableOpacity onPress={() => setShowMapModal(false)}>
-              <Text style={styles.mapModalCancel}>Cancel</Text>
-            </TouchableOpacity>
-            <Text style={styles.mapModalTitle}>Select Location</Text>
-            <TouchableOpacity onPress={confirmMapLocation}>
-              <Text style={styles.mapModalConfirm}>Confirm</Text>
-            </TouchableOpacity>
-          </View>
-          
-          <MapView
-            ref={mapRef}
-            style={styles.fullMap}
-            region={mapRegion}
-            onRegionChangeComplete={setMapRegion}
-            onPress={handleMapPress}
-          >
-            {selectedMapLocation && (
-              <Marker
-                coordinate={selectedMapLocation}
-                draggable
-                onDragEnd={(e) => handleMapPress(e)}
-              />
-            )}
-          </MapView>
-          
-          <View style={styles.mapInstructions}>
-            <Text style={styles.mapInstructionsText}>
-              Tap on the map or drag the marker to select the incident location
-            </Text>
-            {selectedMapLocation && (
-              <Text style={styles.selectedLocationText}>
-                Selected: {selectedMapLocation.latitude.toFixed(6)}, {selectedMapLocation.longitude.toFixed(6)}
-              </Text>
-            )}
-          </View>
-        </View>
-      </Modal>
     </ScrollView>
   );
 };
@@ -655,373 +451,18 @@ const styles = StyleSheet.create({
   formContainer: {
     padding: 20,
   },
-  toggleSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  toggleInfo: {
-    flex: 1,
-    marginRight: 12,
-  },
-  toggleLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
-  },
-  toggleDescription: {
-    fontSize: 12,
-    color: '#666',
-  },
-  inputGroup: {
-    marginBottom: 24,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  required: {
-    color: '#dc3545',
-  },
-  input: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-  },
-  textArea: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    minHeight: 120,
-  },
-  inputError: {
-    borderColor: '#dc3545',
-  },
-  errorText: {
-    color: '#dc3545',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  charCount: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'right',
-    marginTop: 4,
-  },
-  helperText: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 6,
-    fontStyle: 'italic',
-  },
-  categoryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginHorizontal: -6,
-  },
-  categoryButton: {
-    width: '31%',
-    margin: '1%',
-    backgroundColor: '#fff',
-    borderWidth: 2,
-    borderColor: '#ddd',
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 90,
-  },
-  categoryButtonSelected: {
-    borderColor: '#1a73e8',
-    backgroundColor: '#e8f4fd',
-  },
-  categoryIcon: {
-    fontSize: 28,
-    marginBottom: 6,
-  },
-  categoryLabel: {
-    fontSize: 12,
-    color: '#333',
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  categoryLabelSelected: {
-    color: '#1a73e8',
-    fontWeight: '700',
-  },
-  severityContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  severityButton: {
-    flex: 1,
-    marginHorizontal: 4,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 2,
-    alignItems: 'center',
-    backgroundColor: '#fff',
-  },
-  severityLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-  },
-  severityLabelSelected: {
-    color: '#fff',
-  },
-  dateTimeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-  },
-  dateDisplay: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  dateIcon: {
-    fontSize: 20,
-    marginRight: 8,
-  },
-  dateText: {
-    fontSize: 15,
-    color: '#333',
-  },
-  setNowButton: {
-    backgroundColor: '#e8f4fd',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  setNowButtonText: {
-    color: '#1a73e8',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  locationButtonsContainer: {
-    flexDirection: 'row',
-    marginBottom: 12,
-  },
-  locationButton: {
-    flex: 1,
-    backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-  },
-  locationButtonActive: {
-    backgroundColor: '#28a745',
-  },
-  locationIcon: {
-    fontSize: 20,
-    marginRight: 8,
-  },
-  locationButtonText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  mapSelectButton: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#1a73e8',
-  },
-  mapSelectButtonText: {
-    color: '#1a73e8',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  locationPreview: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  miniMap: {
-    height: 150,
-    width: '100%',
-  },
-  locationDetails: {
-    padding: 12,
-  },
-  locationNameText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
-  },
-  coordinatesText: {
-    fontSize: 12,
-    color: '#666',
-  },
-  photosContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 12,
-  },
-  photoWrapper: {
-    position: 'relative',
-    marginRight: 10,
-    marginBottom: 10,
-  },
-  photoThumbnail: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-  },
-  removePhotoButton: {
-    position: 'absolute',
-    top: -8,
-    right: -8,
-    backgroundColor: '#dc3545',
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  removePhotoText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-    lineHeight: 20,
-  },
-  addPhotoButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: '#ddd',
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fafafa',
-  },
-  addPhotoIcon: {
-    fontSize: 24,
-    marginBottom: 4,
-  },
-  addPhotoText: {
-    fontSize: 11,
-    color: '#666',
-  },
   actionButtonsContainer: {
-    flexDirection: 'row',
-    marginTop: 10,
+    marginTop: 20,
+    gap: 12,
   },
   draftButton: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-    marginRight: 10,
-    borderWidth: 2,
-    borderColor: '#1a73e8',
-  },
-  draftButtonText: {
-    color: '#1a73e8',
-    fontSize: 16,
-    fontWeight: 'bold',
+    marginBottom: 10,
   },
   submitButton: {
-    flex: 2,
     backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
   },
   submitButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  submitButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  mapModalContainer: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  mapModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 50,
-    paddingBottom: 15,
-    paddingHorizontal: 20,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-  },
-  mapModalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-  },
-  mapModalCancel: {
-    fontSize: 16,
-    color: '#666',
-  },
-  mapModalConfirm: {
-    fontSize: 16,
-    color: '#1a73e8',
-    fontWeight: '600',
-  },
-  fullMap: {
-    flex: 1,
-  },
-  mapInstructions: {
-    padding: 16,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#ddd',
-  },
-  mapInstructionsText: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-  },
-  selectedLocationText: {
-    fontSize: 12,
-    color: '#1a73e8',
-    textAlign: 'center',
-    marginTop: 8,
-    fontWeight: '500',
+    opacity: 0.7,
   },
 });
 

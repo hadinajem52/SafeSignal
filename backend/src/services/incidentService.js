@@ -53,7 +53,7 @@ async function createIncident(incidentData, reporterId) {
     ) VALUES (
       $1, $2, $3, $4, $5, $6,
       ST_SetSRID(ST_MakePoint($6::float, $5::float), 4326)::geography,
-      $7, $8, $9, $10, $11, $12, $13, $14
+      $7, $8, $9, $10, $11, $12, $13
     )
     RETURNING *`,
     [
@@ -363,11 +363,30 @@ async function deleteIncident(incidentId, requestingUser) {
 }
 
 /**
- * Verify an incident
+ * Log a moderation action
  * @param {number} incidentId
  * @param {number} moderatorId
+ * @param {string} actionType
+ * @param {string} [notes]
  */
-async function verifyIncident(incidentId, moderatorId) {
+async function logAction(incidentId, moderatorId, actionType, notes = null) {
+  // Map 'escalated' to 'flagged' to satisfy DB constraint if needed, 
+  // or use safe types. The DB constraint has 'flagged'.
+  const safeActionType = actionType === 'escalated' ? 'flagged' : actionType;
+  
+  await db.none(
+    `INSERT INTO report_actions (incident_id, moderator_id, action_type, notes)
+     VALUES ($1, $2, $3, $4)`,
+    [incidentId, moderatorId, safeActionType, notes]
+  );
+}
+
+/**
+ * Verify an incident
+ * @param {number} incidentId
+ * @param {Object} requestingUser
+ */
+async function verifyIncident(incidentId, requestingUser) {
   const incident = await db.oneOrNone(
     'SELECT * FROM incidents WHERE incident_id = $1',
     [incidentId]
@@ -385,15 +404,17 @@ async function verifyIncident(incidentId, moderatorId) {
     [incidentId]
   );
 
+  await logAction(incidentId, requestingUser.userId, 'verified');
+
   return updated;
 }
 
 /**
  * Reject an incident
  * @param {number} incidentId
- * @param {number} moderatorId
+ * @param {Object} requestingUser
  */
-async function rejectIncident(incidentId, moderatorId) {
+async function rejectIncident(incidentId, requestingUser) {
   const incident = await db.oneOrNone(
     'SELECT * FROM incidents WHERE incident_id = $1',
     [incidentId]
@@ -410,6 +431,40 @@ async function rejectIncident(incidentId, moderatorId) {
      RETURNING *`,
     [incidentId]
   );
+
+  await logAction(incidentId, requestingUser.userId, 'rejected');
+
+  return updated;
+}
+
+/**
+ * Escalate an incident
+ * @param {number} incidentId
+ * @param {Object} requestingUser
+ * @param {string} reason
+ */
+async function escalateIncident(incidentId, requestingUser, reason) {
+  const incident = await db.oneOrNone(
+    'SELECT * FROM incidents WHERE incident_id = $1',
+    [incidentId]
+  );
+
+  if (!incident) {
+    throw ServiceError.notFound('Incident');
+  }
+
+  // Escalation implies moving to 'auto_flagged' or keeping 'in_review' but adding high priority/audit log
+  // Since 'escalated' isn't a valid status in our check constraint, we'll use 'auto_flagged' 
+  // or just rely on the audit trail and severity update.
+  const updated = await db.one(
+    `UPDATE incidents 
+     SET severity = 'critical', updated_at = CURRENT_TIMESTAMP 
+     WHERE incident_id = $1 
+     RETURNING *`,
+    [incidentId]
+  );
+
+  await logAction(incidentId, requestingUser.userId, 'flagged', `Escalated: ${reason}`);
 
   return updated;
 }
@@ -431,4 +486,5 @@ module.exports = {
   deleteIncident,
   verifyIncident,
   rejectIncident,
+  escalateIncident,
 };
