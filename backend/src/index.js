@@ -19,7 +19,8 @@ const incidentsRoutes = require('./routes/incidents');
 const statsRoutes = require('./routes/stats');
 const usersRoutes = require('./routes/users');
 const mapRoutes = require('./routes/map');
-const { setSocketServer } = require('./utils/leiNotifier');
+const jwt = require('jsonwebtoken');
+const { setSocketServer } = require('./utils/socketService');
 
 const app = express();
 const server = http.createServer(app);
@@ -32,12 +33,35 @@ const io = new Server(server, {
 
 setSocketServer(io);
 
-io.on('connection', (socket) => {
-  socket.on('join_role', (role) => {
-    if (role === 'law_enforcement' || role === 'admin') {
-      socket.join('law_enforcement');
+const JWT_SECRET = process.env.JWT_SECRET || 'safesignal-jwt-secret-change-in-production';
+
+io.use((socket, next) => {
+  try {
+    const authHeader = socket.handshake.headers?.authorization;
+    const token = socket.handshake.auth?.token || (authHeader ? authHeader.split(' ')[1] : null);
+
+    if (!token) {
+      return next(new Error('Unauthorized'));
     }
-  });
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    socket.user = decoded;
+    return next();
+  } catch (error) {
+    return next(new Error('Unauthorized'));
+  }
+});
+
+io.on('connection', (socket) => {
+  const role = socket.user?.role;
+  if (role) {
+    socket.join(role);
+  }
+
+  if (role === 'admin') {
+    socket.join('moderator');
+    socket.join('law_enforcement');
+  }
 });
 const PORT = process.env.PORT || 3000;
 

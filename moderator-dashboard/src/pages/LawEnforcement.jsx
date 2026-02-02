@@ -133,8 +133,12 @@ function LawEnforcement() {
   useEffect(() => {
     if (user?.role !== 'law_enforcement' && user?.role !== 'admin') return
 
-    const socket = io('http://localhost:3000')
-    socket.emit('join_role', user.role)
+    const token = localStorage.getItem('moderator_token')
+    if (!token) return
+
+    const socket = io('http://localhost:3000', {
+      auth: { token },
+    })
 
     socket.on('lei_alert', (payload) => {
       setLeiAlerts((prev) => [payload, ...prev].slice(0, 5))

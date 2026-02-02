@@ -14,7 +14,7 @@ const {
   VALID_STATUSES,
   VALID_CLOSURE_OUTCOMES,
 } = require('../../../constants/incident');
-const { emitLeiAlert } = require('../utils/leiNotifier');
+const { emitToRoles } = require('../utils/socketService');
 
 const LEI_STATUSES = ['verified', 'dispatched', 'on_scene', 'investigating', 'police_closed'];
 
@@ -76,6 +76,16 @@ async function createIncident(incidentData, reporterId) {
       isDraft ? 'draft' : 'submitted',
     ]
   );
+
+  if (!incident.is_draft) {
+    emitToRoles(['moderator', 'admin'], 'incident:new', {
+      incidentId: incident.incident_id,
+      title: incident.title,
+      severity: incident.severity,
+      status: incident.status,
+      incidentDate: incident.incident_date,
+    });
+  }
 
   return incident;
 }
@@ -294,6 +304,12 @@ async function updateIncident(incidentId, updateData, requestingUser) {
     ]
   );
 
+  emitToRoles(['moderator', 'admin'], 'incident:update', {
+    incidentId: updatedIncident.incident_id,
+    status: updatedIncident.status,
+    severity: updatedIncident.severity,
+  });
+
   return updatedIncident;
 }
 
@@ -336,6 +352,12 @@ async function patchIncident(incidentId, updateData, requestingUser) {
      RETURNING *`,
     [incidentId, title, description, category, severity, status]
   );
+
+  emitToRoles(['moderator', 'admin'], 'incident:update', {
+    incidentId: updatedIncident.incident_id,
+    status: updatedIncident.status,
+    severity: updatedIncident.severity,
+  });
 
   return updatedIncident;
 }
@@ -533,6 +555,12 @@ async function updateLEIStatus(incidentId, status, closureOutcome, closureDetail
       : `Status changed to ${status}`
   );
 
+  emitToRoles(['moderator', 'admin', 'law_enforcement'], 'incident:update', {
+    incidentId: updatedIncident.incident_id,
+    status: updatedIncident.status,
+    severity: updatedIncident.severity,
+  });
+
   return updatedIncident;
 }
 
@@ -561,8 +589,14 @@ async function verifyIncident(incidentId, requestingUser) {
 
   await logAction(incidentId, requestingUser.userId, 'verified');
 
+  emitToRoles(['moderator', 'admin'], 'incident:update', {
+    incidentId: updated.incident_id,
+    status: updated.status,
+    severity: updated.severity,
+  });
+
   if (['high', 'critical'].includes(updated.severity)) {
-    emitLeiAlert({
+    emitToRoles(['law_enforcement', 'admin'], 'lei_alert', {
       incidentId: updated.incident_id,
       title: updated.title,
       severity: updated.severity,
@@ -599,6 +633,12 @@ async function rejectIncident(incidentId, requestingUser) {
 
   await logAction(incidentId, requestingUser.userId, 'rejected');
 
+  emitToRoles(['moderator', 'admin'], 'incident:update', {
+    incidentId: updated.incident_id,
+    status: updated.status,
+    severity: updated.severity,
+  });
+
   return updated;
 }
 
@@ -630,6 +670,12 @@ async function escalateIncident(incidentId, requestingUser, reason) {
   );
 
   await logAction(incidentId, requestingUser.userId, 'flagged', `Escalated: ${reason}`);
+
+  emitToRoles(['moderator', 'admin'], 'incident:update', {
+    incidentId: updated.incident_id,
+    status: updated.status,
+    severity: updated.severity,
+  });
 
   return updated;
 }
