@@ -36,9 +36,9 @@ function handleServiceError(error, res, defaultMessage) {
 /**
  * @route   GET /api/users
  * @desc    Get all users with optional filtering
- * @access  Private (Admin only)
+ * @access  Private (Admin/Moderator)
  */
-router.get('/', authenticateToken, requireRole('admin'), async (req, res) => {
+router.get('/', authenticateToken, requireRole(['admin', 'moderator']), async (req, res) => {
   try {
     const { role, limit = 50, offset = 0 } = req.query;
 
@@ -57,9 +57,9 @@ router.get('/', authenticateToken, requireRole('admin'), async (req, res) => {
 /**
  * @route   GET /api/users/:id
  * @desc    Get user by ID
- * @access  Private
+ * @access  Private (Admin/Moderator)
  */
-router.get('/:id', authenticateToken, [param('id').isInt()], async (req, res) => {
+router.get('/:id', authenticateToken, requireRole(['admin', 'moderator']), [param('id').isInt()], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({

@@ -147,7 +147,7 @@ async function getUserDashboardStats(userId, { latitude, longitude, radius = 5 }
     SELECT COUNT(*) as count
     FROM incidents
     WHERE is_draft = FALSE
-      AND status = 'resolved'
+      AND status IN ('resolved', 'police_closed')
       AND created_at >= NOW() - INTERVAL '7 days'
   `);
 
@@ -183,7 +183,7 @@ async function getUserDashboardStats(userId, { latitude, longitude, radius = 5 }
     SELECT 
       COUNT(*) as totalReports,
       SUM(CASE WHEN status = 'verified' THEN 1 ELSE 0 END) as verifiedReports,
-      SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0 END) as resolvedReports,
+      SUM(CASE WHEN status IN ('resolved', 'police_closed') THEN 1 ELSE 0 END) as resolvedReports,
       SUM(CASE WHEN status = 'submitted' THEN 1 ELSE 0 END) as pendingReports
     FROM incidents
     WHERE reporter_id = $1 AND is_draft = FALSE

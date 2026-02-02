@@ -18,11 +18,15 @@ function Navigation() {
 
   const navItems = [
     { path: '/', label: 'Dashboard', icon: Home },
-    { path: '/reports', label: 'Reports', icon: FileText },
+    ...(user?.role !== 'law_enforcement'
+      ? [{ path: '/reports', label: 'Reports', icon: FileText }]
+      : []),
     ...(user?.role === 'law_enforcement' || user?.role === 'admin'
       ? [{ path: '/lei', label: 'LE Interface', icon: Shield }]
       : []),
-    { path: '/users', label: 'Users', icon: Users },
+    ...(user?.role === 'admin' || user?.role === 'moderator'
+      ? [{ path: '/users', label: 'Users', icon: Users }]
+      : []),
     { path: '/settings', label: 'Settings', icon: Settings },
   ]
 
