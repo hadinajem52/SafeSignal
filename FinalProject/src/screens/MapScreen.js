@@ -89,11 +89,15 @@ const MapScreen = () => {
       const result = await incidentAPI.getMapIncidents(params);
 
       if (result.success) {
-        setIncidents(result.incidents);
+        const allowedStatuses = new Set(['verified', 'dispatched', 'on_scene']);
+        const filteredIncidents = result.incidents.filter((incident) =>
+          allowedStatuses.has(incident.status)
+        );
+        setIncidents(filteredIncidents);
         
         // If we have incidents, fit the map to show all of them
-        if (result.incidents.length > 0 && mapRef.current) {
-          const coordinates = result.incidents.map(inc => ({
+        if (filteredIncidents.length > 0 && mapRef.current) {
+          const coordinates = filteredIncidents.map(inc => ({
             latitude: inc.location.latitude,
             longitude: inc.location.longitude,
           }));

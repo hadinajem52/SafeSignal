@@ -1,4 +1,6 @@
 const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 const cors = require('cors');
 const compression = require('compression');
 const helmet = require('helmet');
@@ -17,8 +19,26 @@ const incidentsRoutes = require('./routes/incidents');
 const statsRoutes = require('./routes/stats');
 const usersRoutes = require('./routes/users');
 const mapRoutes = require('./routes/map');
+const { setSocketServer } = require('./utils/leiNotifier');
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST', 'PATCH'],
+  },
+});
+
+setSocketServer(io);
+
+io.on('connection', (socket) => {
+  socket.on('join_role', (role) => {
+    if (role === 'law_enforcement' || role === 'admin') {
+      socket.join('law_enforcement');
+    }
+  });
+});
 const PORT = process.env.PORT || 3000;
 
 // Initialize Sentry (if DSN is provided)
@@ -98,7 +118,7 @@ if (process.env.SENTRY_DSN) {
 app.use(errorHandler);
 
 // Start server
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   logger.info(`🚀 SafeSignal Backend running on http://localhost:${PORT}`);
   logger.info(`📚 API Docs: http://localhost:${PORT}/api/docs`);
   logger.info(`🏥 Health Check: http://localhost:${PORT}/api/health`);
