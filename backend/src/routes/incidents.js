@@ -7,8 +7,11 @@
 const express = require('express');
 const { body, validationResult, param } = require('express-validator');
 const authenticateToken = require('../middleware/auth');
+const requireRole = require('../middleware/roles');
 const incidentService = require('../services/incidentService');
 const ServiceError = require('../utils/ServiceError');
+const { VALID_CATEGORIES, VALID_SEVERITIES } = require('../../../constants/incident');
+const { LIMITS } = require('../../../constants/limits');
 
 const router = express.Router();
 
@@ -16,12 +19,12 @@ const router = express.Router();
  * Validation rules for incident creation
  */
 const createIncidentValidation = [
-  body('title').trim().isLength({ min: 5, max: 255 }),
-  body('description').trim().isLength({ min: 10, max: 5000 }),
-  body('category').isIn(incidentService.VALID_CATEGORIES),
-  body('latitude').isFloat({ min: -90, max: 90 }),
-  body('longitude').isFloat({ min: -180, max: 180 }),
-  body('severity').isIn(incidentService.VALID_SEVERITIES),
+  body('title').trim().isLength({ min: LIMITS.TITLE.MIN, max: LIMITS.TITLE.MAX }),
+  body('description').trim().isLength({ min: LIMITS.DESCRIPTION.MIN, max: LIMITS.DESCRIPTION.MAX }),
+  body('category').isIn(VALID_CATEGORIES),
+  body('latitude').isFloat({ min: LIMITS.COORDINATES.LAT.MIN, max: LIMITS.COORDINATES.LAT.MAX }),
+  body('longitude').isFloat({ min: LIMITS.COORDINATES.LNG.MIN, max: LIMITS.COORDINATES.LNG.MAX }),
+  body('severity').isIn(VALID_SEVERITIES),
 ];
 
 /**
@@ -351,6 +354,7 @@ router.delete(
 router.post(
   '/:id/verify',
   authenticateToken,
+  requireRole(['moderator', 'admin']),
   [param('id').isInt()],
   async (req, res) => {
     const errors = validationResult(req);
@@ -362,7 +366,7 @@ router.post(
     }
 
     try {
-      const incident = await incidentService.verifyIncident(req.params.id, req.user.userId);
+      const incident = await incidentService.verifyIncident(req.params.id, req.user);
       res.json({
         status: 'OK',
         message: 'Incident verified',
@@ -382,6 +386,7 @@ router.post(
 router.post(
   '/:id/reject',
   authenticateToken,
+  requireRole(['moderator', 'admin']),
   [param('id').isInt()],
   async (req, res) => {
     const errors = validationResult(req);
@@ -393,7 +398,7 @@ router.post(
     }
 
     try {
-      const incident = await incidentService.rejectIncident(req.params.id, req.user.userId);
+      const incident = await incidentService.rejectIncident(req.params.id, req.user);
       res.json({
         status: 'OK',
         message: 'Incident rejected',
@@ -402,6 +407,42 @@ router.post(
     } catch (error) {
       handleServiceError(error, res, 'Failed to reject incident');
     }
+  }
+);
+
+/**
+ * @route   POST /api/incidents/:id/escalate
+ * @desc    Escalate an incident
+ * @access  Private (Moderator/Admin)
+ */
+router.post(
+  '/:id/escalate',
+  authenticateToken,
+  requireRole(['moderator', 'admin']),
+  [
+    param('id').isInt(),
+    body('reason').isString().trim().notEmpty().withMessage('Reason is required')
+  ],
+  async (req, res) => {
+    if (handleValidationErrors(req, res)) return;
+
+    try {
+      const incident = await incidentService.escalateIncident(
+        req.params.id, 
+        req.user, 
+        req.body.reason
+      );
+      
+      res.json({
+        status: 'OK',
+        message: 'Incident escalated',
+        data: incident,
+      });
+    } catch (error) {
+      handleServiceError(error, res, 'Failed to escalate incident');
+    }
+  }
+);
   }
 );
 

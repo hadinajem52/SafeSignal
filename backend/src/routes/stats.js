@@ -6,6 +6,7 @@
 
 const express = require('express');
 const authenticateToken = require('../middleware/auth');
+const requireRole = require('../middleware/roles');
 const statsService = require('../services/statsService');
 const ServiceError = require('../utils/ServiceError');
 
@@ -34,9 +35,9 @@ function handleServiceError(error, res, defaultMessage) {
 /**
  * @route   GET /api/stats/moderator/dashboard
  * @desc    Get dashboard statistics for moderators
- * @access  Private
+ * @access  Private (Moderator/Admin)
  */
-router.get('/moderator/dashboard', authenticateToken, async (req, res) => {
+router.get('/moderator/dashboard', authenticateToken, requireRole(['moderator', 'admin']), async (req, res) => {
   try {
     const stats = await statsService.getModeratorStats();
 
@@ -56,13 +57,11 @@ router.get('/moderator/dashboard', authenticateToken, async (req, res) => {
  */
 router.get('/dashboard', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.user_id; // Note: Middleware might use userId or user_id, ensuring access to correct prop
-    // Fallback if middleware attached 'userId' (common in other routes)
-    const effectiveUserId = userId || req.user.userId;
+    const userId = req.user.userId;
 
     const { latitude, longitude, radius } = req.query;
 
-    const dashboardData = await statsService.getUserDashboardStats(effectiveUserId, {
+    const dashboardData = await statsService.getUserDashboardStats(userId, {
       latitude,
       longitude,
       radius,

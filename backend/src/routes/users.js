@@ -7,6 +7,7 @@
 const express = require('express');
 const { param, validationResult } = require('express-validator');
 const authenticateToken = require('../middleware/auth');
+const requireRole = require('../middleware/roles');
 const userService = require('../services/userService');
 const ServiceError = require('../utils/ServiceError');
 
@@ -35,9 +36,9 @@ function handleServiceError(error, res, defaultMessage) {
 /**
  * @route   GET /api/users
  * @desc    Get all users with optional filtering
- * @access  Private
+ * @access  Private (Admin only)
  */
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
     const { role, limit = 50, offset = 0 } = req.query;
 
@@ -82,9 +83,9 @@ router.get('/:id', authenticateToken, [param('id').isInt()], async (req, res) =>
 /**
  * @route   PATCH /api/users/:id
  * @desc    Update user (suspend/unsuspend)
- * @access  Private
+ * @access  Private (Admin only)
  */
-router.patch('/:id', authenticateToken, [param('id').isInt()], async (req, res) => {
+router.patch('/:id', authenticateToken, requireRole('admin'), [param('id').isInt()], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({
