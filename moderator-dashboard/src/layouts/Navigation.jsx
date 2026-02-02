@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 
 function Navigation() {
-  const { logout } = useAuth()
+  const { logout, user } = useAuth()
   const location = useLocation()
 
   const isActive = (path) => location.pathname === path
@@ -19,6 +19,9 @@ function Navigation() {
   const navItems = [
     { path: '/', label: 'Dashboard', icon: Home },
     { path: '/reports', label: 'Reports', icon: FileText },
+    ...(user?.role === 'law_enforcement' || user?.role === 'admin'
+      ? [{ path: '/lei', label: 'LE Interface', icon: Shield }]
+      : []),
     { path: '/users', label: 'Users', icon: Users },
     { path: '/settings', label: 'Settings', icon: Settings },
   ]

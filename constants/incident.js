@@ -100,12 +100,23 @@ const INCIDENT_STATUSES = [
   { value: 'auto_flagged', label: 'Auto Flagged' },
   { value: 'in_review', label: 'In Review' },
   { value: 'verified', label: 'Verified' },
+  { value: 'dispatched', label: 'Dispatched' },
+  { value: 'on_scene', label: 'On Scene' },
+  { value: 'investigating', label: 'Investigating' },
+  { value: 'police_closed', label: 'Police Closed' },
   { value: 'rejected', label: 'Rejected' },
   { value: 'needs_info', label: 'Needs Info' },
   { value: 'published', label: 'Published' },
   { value: 'resolved', label: 'Resolved' },
   { value: 'archived', label: 'Archived' },
   { value: 'merged', label: 'Merged' },
+];
+
+const CLOSURE_OUTCOMES = [
+  { value: 'resolved_handled', label: 'Resolved' },
+  { value: 'arrest_made', label: 'Arrest Made' },
+  { value: 'false_alarm', label: 'False Alarm' },
+  { value: 'report_filed', label: 'Report Filed' },
 ];
 
 const VALID_CATEGORIES = INCIDENT_CATEGORIES.map((category) => category.value);
@@ -126,6 +137,17 @@ const MODERATOR_STATUS_FILTERS = [
   { value: 'rejected', label: 'Rejected' },
 ];
 
+const LEI_STATUS_FILTERS = [
+  { value: 'all', label: 'All Active' },
+  { value: 'verified', label: 'Pending Action' },
+  { value: 'dispatched', label: 'Dispatched' },
+  { value: 'on_scene', label: 'On Scene' },
+  { value: 'investigating', label: 'Investigating' },
+  { value: 'police_closed', label: 'Police Closed' },
+];
+
+const VALID_CLOSURE_OUTCOMES = CLOSURE_OUTCOMES.map((outcome) => outcome.value);
+
 module.exports = {
   INCIDENT_CATEGORIES,
   CATEGORY_DISPLAY,
@@ -137,5 +159,10 @@ module.exports = {
   STATUS_LABELS,
   STATUS_COLORS,
   MODERATOR_STATUS_FILTERS,
+  LEI_STATUS_FILTERS,
+  CLOSURE_OUTCOMES,
+  VALID_CLOSURE_OUTCOMES,
   SEVERITY_COLORS,
 };
+
+module.exports.default = module.exports;

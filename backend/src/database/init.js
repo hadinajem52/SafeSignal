@@ -17,7 +17,7 @@ const initDatabase = async () => {
         email VARCHAR(255) UNIQUE NOT NULL,
         password_hash VARCHAR(255),
         google_id VARCHAR(255) UNIQUE,
-        role VARCHAR(50) DEFAULT 'citizen' CHECK (role IN ('citizen', 'moderator', 'admin')),
+        role VARCHAR(50) DEFAULT 'citizen' CHECK (role IN ('citizen', 'moderator', 'admin', 'law_enforcement')),
         is_verified BOOLEAN DEFAULT FALSE,
         is_suspended BOOLEAN DEFAULT FALSE,
         verification_code VARCHAR(6),
@@ -25,6 +25,17 @@ const initDatabase = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+    `);
+
+    // Ensure role constraint is updated for existing tables
+    await db.none(`
+      ALTER TABLE users
+      DROP CONSTRAINT IF EXISTS users_role_check;
+    `);
+
+    await db.none(`
+      ALTER TABLE users
+      ADD CONSTRAINT users_role_check CHECK (role IN ('citizen', 'moderator', 'admin', 'law_enforcement'));
     `);
 
     // Create Incidents table with proper status workflow
@@ -49,6 +60,10 @@ const initDatabase = async () => {
           'auto_processed',
           'in_review',
           'verified',
+          'dispatched',
+          'on_scene',
+          'investigating',
+          'police_closed',
           'rejected',
           'needs_info',
           'published',
@@ -57,8 +72,59 @@ const initDatabase = async () => {
           'auto_flagged',
           'merged'
         )),
+        closure_outcome VARCHAR(50) CHECK (closure_outcome IN (
+          'resolved_handled',
+          'arrest_made',
+          'false_alarm',
+          'report_filed'
+        )),
+        closure_details JSONB,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Ensure status and closure constraints are updated for existing tables
+    await db.none(`
+      ALTER TABLE incidents
+      DROP CONSTRAINT IF EXISTS incidents_status_check;
+    `);
+
+    await db.none(`
+      ALTER TABLE incidents
+      ADD CONSTRAINT incidents_status_check CHECK (status IN (
+        'submitted',
+        'auto_processed',
+        'in_review',
+        'verified',
+        'dispatched',
+        'on_scene',
+        'investigating',
+        'police_closed',
+        'rejected',
+        'needs_info',
+        'published',
+        'resolved',
+        'archived',
+        'auto_flagged',
+        'merged'
+      ));
+    `);
+
+    await db.none(`
+      ALTER TABLE incidents
+      DROP CONSTRAINT IF EXISTS incidents_closure_outcome_check;
+    `);
+
+    await db.none(`
+      ALTER TABLE incidents
+      ADD CONSTRAINT incidents_closure_outcome_check CHECK (
+        closure_outcome IS NULL OR closure_outcome IN (
+          'resolved_handled',
+          'arrest_made',
+          'false_alarm',
+          'report_filed'
+        )
       );
     `);
 
@@ -114,6 +180,27 @@ const initDatabase = async () => {
         notes TEXT,
         timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+    `);
+
+    // Ensure action_type constraint is updated for existing tables
+    await db.none(`
+      ALTER TABLE report_actions
+      DROP CONSTRAINT IF EXISTS report_actions_action_type_check;
+    `);
+
+    await db.none(`
+      ALTER TABLE report_actions
+      ADD CONSTRAINT report_actions_action_type_check CHECK (action_type IN (
+        'created',
+        'status_changed',
+        'verified',
+        'rejected',
+        'flagged',
+        'merged',
+        'published',
+        'archived',
+        'needs_info'
+      ));
     `);
 
     // Create Report_Links table for duplicate management

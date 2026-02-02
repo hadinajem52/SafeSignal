@@ -114,4 +114,34 @@ export const statsAPI = {
   },
 }
 
+// Law Enforcement Interface API
+export const leiAPI = {
+  getAll: async (params = {}) => {
+    try {
+      const response = await api.get('/incidents/lei', { params })
+      return { success: true, data: response.data.data }
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Failed to fetch LEI incidents' }
+    }
+  },
+
+  getById: async (id) => {
+    try {
+      const response = await api.get(`/incidents/lei/${id}`)
+      return { success: true, data: response.data.data }
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Failed to fetch LEI incident' }
+    }
+  },
+
+  updateStatus: async (id, payload) => {
+    try {
+      const response = await api.patch(`/incidents/lei/${id}/status`, payload)
+      return { success: true, data: response.data.data }
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Failed to update LEI status' }
+    }
+  },
+}
+
 export default api
