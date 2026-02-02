@@ -451,11 +451,23 @@ export const incidentAPI = {
 
       if (response.data.status === 'SUCCESS') {
         // Normalize incidents: convert incident_id to id for consistency
-        const normalizedIncidents = (response.data.data.incidents || []).map(incident => ({
-          ...incident,
-          id: incident.incident_id || incident.id,
-          createdAt: incident.created_at || incident.createdAt,
-        }));
+        const normalizedIncidents = (response.data.data.incidents || []).map(incident => {
+          const latitude = incident.latitude !== undefined && incident.latitude !== null
+            ? Number(incident.latitude)
+            : null;
+          const longitude = incident.longitude !== undefined && incident.longitude !== null
+            ? Number(incident.longitude)
+            : null;
+          const hasCoordinates = Number.isFinite(latitude) && Number.isFinite(longitude);
+
+          return {
+            ...incident,
+            id: incident.incident_id || incident.id,
+            createdAt: incident.created_at || incident.createdAt,
+            locationName: incident.location_name || incident.locationName || '',
+            location: hasCoordinates ? { latitude, longitude } : null,
+          };
+        });
 
         return {
           success: true,

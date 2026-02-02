@@ -19,6 +19,7 @@ import useDraftManager from '../hooks/useDraftManager';
 import useImagePicker from '../hooks/useImagePicker';
 import useIncidentForm from '../hooks/useIncidentForm';
 import useLocationPicker from '../hooks/useLocationPicker';
+import useUserPreferences from '../hooks/useUserPreferences';
 import incidentConstants from '../../../constants/incident';
 import { Button } from '../components';
 
@@ -27,8 +28,10 @@ const { INCIDENT_CATEGORIES, SEVERITY_LEVELS } = incidentConstants;
 const ReportIncidentScreen = ({ navigation, route }) => {
   const { user } = useAuth();
   const userId = user?.user_id || user?.userId;
+  const { preferences, isLoading: isLoadingPreferences } = useUserPreferences();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
+  const hasAppliedDefaultAnonymous = useRef(false);
 
   const {
     title,
@@ -72,6 +75,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
   } = useLocationPicker({
     onClearLocationError: () => setErrors((prev) => ({ ...prev, location: null })),
     onLocationError: (message) => setErrors((prev) => ({ ...prev, location: message })),
+    locationServicesEnabled: preferences.locationServices,
   });
 
   const { photos, setPhotos, removePhoto, showPhotoOptions } = useImagePicker();
@@ -83,6 +87,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     if (draft?.id) {
       setDraftId(draft.id);
     }
+    hasAppliedDefaultAnonymous.current = true;
   };
 
   const getDraftPayload = () => ({
@@ -119,6 +124,24 @@ const ReportIncidentScreen = ({ navigation, route }) => {
       applyDraft(route.params.draft);
     }
   }, [route?.params?.draft]);
+
+  useEffect(() => {
+    if (hasAppliedDefaultAnonymous.current) {
+      return;
+    }
+
+    if (isLoadingPreferences) {
+      return;
+    }
+
+    if (route?.params?.draft) {
+      hasAppliedDefaultAnonymous.current = true;
+      return;
+    }
+
+    setIsAnonymous(!!preferences.defaultAnonymous);
+    hasAppliedDefaultAnonymous.current = true;
+  }, [isLoadingPreferences, preferences.defaultAnonymous, route?.params?.draft, setIsAnonymous]);
   /**
    * Handle incident submission
    */

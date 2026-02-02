@@ -9,7 +9,11 @@ const DEFAULT_REGION = {
   longitudeDelta: 0.05,
 };
 
-const useLocationPicker = ({ onClearLocationError, onLocationError } = {}) => {
+const useLocationPicker = ({
+  onClearLocationError,
+  onLocationError,
+  locationServicesEnabled = true,
+} = {}) => {
   const [location, setLocation] = useState(null);
   const [locationName, setLocationName] = useState('');
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
@@ -20,6 +24,15 @@ const useLocationPicker = ({ onClearLocationError, onLocationError } = {}) => {
   const mapRef = useRef(null);
 
   const getCurrentLocation = useCallback(async () => {
+    if (!locationServicesEnabled) {
+      Alert.alert(
+        'Location Disabled',
+        'Location services are disabled in settings. Enable them to use GPS.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     setIsLoadingLocation(true);
     onClearLocationError?.();
 
@@ -110,9 +123,16 @@ const useLocationPicker = ({ onClearLocationError, onLocationError } = {}) => {
       onLocationError?.(errorMessage);
       Alert.alert('Location Error', errorMessage);
     }
-  }, [onClearLocationError, onLocationError]);
+  }, [locationServicesEnabled, onClearLocationError, onLocationError]);
 
   const openMapForSelection = useCallback(async () => {
+    if (!locationServicesEnabled && !location) {
+      setMapRegion(DEFAULT_REGION);
+      setSelectedMapLocation(null);
+      setShowMapModal(true);
+      return;
+    }
+
     if (!location) {
       const servicesEnabled = await Location.hasServicesEnabledAsync();
       if (!servicesEnabled) {
@@ -175,7 +195,7 @@ const useLocationPicker = ({ onClearLocationError, onLocationError } = {}) => {
     }
 
     setShowMapModal(true);
-  }, [location]);
+  }, [location, locationServicesEnabled]);
 
   const handleMapPress = useCallback(async (event) => {
     const { latitude, longitude } = event.nativeEvent.coordinate;

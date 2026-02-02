@@ -1,21 +1,42 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Switch, TouchableOpacity, Linking, ScrollView, Alert } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Switch,
+  TouchableOpacity,
+  Linking,
+  ScrollView,
+  Alert,
+  Image,
+  Modal,
+  TextInput,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
+import useUserPreferences from '../hooks/useUserPreferences';
 import { Button, Card } from '../components';
 
 const AccountScreen = () => {
   const { logout, user } = useAuth();
-  const [darkModeEnabled, setDarkModeEnabled] = useState(false);
-  const [locationServicesEnabled, setLocationServicesEnabled] = useState(true);
-  const [pushNotificationsEnabled, setPushNotificationsEnabled] = useState(true);
-  const [defaultAnonymousEnabled, setDefaultAnonymousEnabled] = useState(false);
+  const { preferences, updatePreference } = useUserPreferences();
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [pendingName, setPendingName] = useState('');
+
+  const displayName = useMemo(() => {
+    const savedName = preferences.displayName?.trim();
+    return savedName || user?.username || user?.email || 'User';
+  }, [preferences.displayName, user]);
+
+  const avatarUri = preferences.avatarUri || '';
+  const isDarkMode = preferences.darkMode;
 
   const username = user?.username || user?.email || 'User';
   const memberSince = user?.created_at
     ? new Date(user.created_at).toLocaleString('en-US', { month: 'long', year: 'numeric' })
     : 'January 2026';
-  const initials = username
+  const initials = displayName
     .split(' ')
     .filter(Boolean)
     .slice(0, 2)
@@ -32,8 +53,14 @@ const AccountScreen = () => {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            // TODO: Wire to backend delete account endpoint
-            Alert.alert('Request Submitted', 'Your account deletion request has been queued.');
+            const email = 'support@safesignal.org';
+            const subject = encodeURIComponent('Account Deletion Request');
+            const body = encodeURIComponent(
+              `Please delete my SafeSignal account.\n\nUser: ${user?.email || 'Unknown'}`
+            );
+            Linking.openURL(`mailto:${email}?subject=${subject}&body=${body}`).catch(() => {
+              Alert.alert('Error', 'Unable to open mail app. Please contact support.');
+            });
           },
         },
       ]
@@ -51,111 +78,210 @@ const AccountScreen = () => {
     Linking.openURL(`mailto:${email}?subject=${subject}&body=${body}`).catch(() => {});
   };
 
+  const handleAvatarPress = () => {
+    Alert.alert('Profile Photo', 'Update your profile photo', [
+      {
+        text: 'Choose Photo',
+        onPress: async () => {
+          try {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== 'granted') {
+              Alert.alert('Permission Required', 'Photo library permission is needed to choose a photo.');
+              return;
+            }
+
+            const result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ['images'],
+              allowsEditing: true,
+              aspect: [1, 1],
+              quality: 0.8,
+            });
+
+            if (!result.canceled && result.assets[0]) {
+              updatePreference('avatarUri', result.assets[0].uri);
+            }
+          } catch (error) {
+            console.error('Error picking avatar:', error);
+            Alert.alert('Error', 'Failed to update profile photo.');
+          }
+        },
+      },
+      {
+        text: 'Remove Photo',
+        style: 'destructive',
+        onPress: () => updatePreference('avatarUri', ''),
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
+  const openEditName = () => {
+    setPendingName(displayName);
+    setIsEditingName(true);
+  };
+
+  const handleSaveName = () => {
+    const trimmed = pendingName.trim();
+    if (!trimmed) {
+      Alert.alert('Invalid Name', 'Please enter a display name.');
+      return;
+    }
+
+    updatePreference('displayName', trimmed);
+    setIsEditingName(false);
+  };
+
+
+
+  const handleLocationToggle = (value) => {
+    updatePreference('locationServices', value);
+    if (!value) {
+      Alert.alert(
+        'Location Disabled',
+        'Location access is disabled for the app. You can re-enable it in system settings.',
+        [
+          { text: 'Open Settings', onPress: () => Linking.openSettings?.() },
+          { text: 'OK' },
+        ]
+      );
+    }
+  };
+
+  const handleNotificationsToggle = (value) => {
+    updatePreference('pushNotifications', value);
+    if (!value) {
+      Alert.alert(
+        'Notifications Disabled',
+        'Notification permissions can be managed in system settings.',
+        [
+          { text: 'Open Settings', onPress: () => Linking.openSettings?.() },
+          { text: 'OK' },
+        ]
+      );
+    }
+  };
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      <Text style={styles.title}>Account</Text>
+    <ScrollView
+      style={[styles.container, isDarkMode && styles.containerDark]}
+      contentContainerStyle={styles.contentContainer}
+    >
+      <Text style={[styles.title, isDarkMode && styles.textPrimaryDark]}>Account</Text>
       
-      <Card style={styles.profileHeader}>
+      <Card style={[styles.profileHeader, isDarkMode && styles.cardDark]}>
         <View style={styles.profileRow}>
-          <View style={styles.avatar}
-          >
-            <Text style={styles.avatarText}>{initials}</Text>
-            <TouchableOpacity style={styles.avatarEdit}>
+          <View style={styles.avatar}>
+            {avatarUri ? (
+              <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+            ) : (
+              <Text style={styles.avatarText}>{initials}</Text>
+            )}
+            <TouchableOpacity style={styles.avatarEdit} onPress={handleAvatarPress}>
               <Ionicons name="camera" size={14} color="#fff" />
             </TouchableOpacity>
           </View>
           <View style={styles.profileInfo}>
             <View style={styles.usernameRow}>
-              <Text style={styles.username}>{username}</Text>
-              <TouchableOpacity style={styles.editButton}>
+              <Text style={[styles.username, isDarkMode && styles.textPrimaryDark]}>{displayName}</Text>
+              <TouchableOpacity style={styles.editButton} onPress={openEditName}>
                 <Ionicons name="pencil" size={16} color="#6b7280" />
               </TouchableOpacity>
             </View>
-            <Text style={styles.memberSince}>Joined {memberSince}</Text>
+            <Text style={[styles.memberSince, isDarkMode && styles.textSecondaryDark]}>
+              Joined {memberSince}
+            </Text>
           </View>
-        </View>
-        <View style={styles.verificationRow}>
-          <Ionicons
-            name={user?.is_verified ? 'checkmark-circle' : 'alert-circle'}
-            size={16}
-            color={user?.is_verified ? '#16a34a' : '#f59e0b'}
-          />
-          <Text style={styles.verificationText}>
-            {user?.is_verified ? 'Email verified' : 'Email not verified'}
-          </Text>
         </View>
       </Card>
 
-      <Card style={styles.infoContainer}>
-        <Text style={styles.label}>Email:</Text>
-        <Text style={styles.value}>{user?.email || 'User'}</Text>
+      <Card style={[styles.infoContainer, isDarkMode && styles.cardDark]}>
+        <Text style={[styles.label, isDarkMode && styles.textSecondaryDark]}>Email:</Text>
+        <Text style={[styles.value, isDarkMode && styles.textPrimaryDark]}>{user?.email || 'User'}</Text>
       </Card>
 
-      <Card style={styles.settingsContainer}>
-        <Text style={styles.sectionTitle}>Settings</Text>
+      <Card style={[styles.settingsContainer, isDarkMode && styles.cardDark]}>
+        <Text style={[styles.sectionTitle, isDarkMode && styles.textPrimaryDark]}>Settings</Text>
 
         <View style={styles.settingRow}>
           <View style={styles.settingInfo}>
-            <Text style={styles.settingLabel}>Dark Mode</Text>
-            <Text style={styles.settingHint}>Reduce glare at night</Text>
-          </View>
-          <Switch
-            value={darkModeEnabled}
-            onValueChange={setDarkModeEnabled}
-            trackColor={{ false: '#d1d5db', true: '#4f46e5' }}
-            thumbColor={darkModeEnabled ? '#1a73e8' : '#f4f3f4'}
-          />
-        </View>
-
-        <View style={styles.settingRow}>
-          <View style={styles.settingInfo}>
-            <Text style={styles.settingLabel}>Location Services</Text>
-            <Text style={styles.settingHint}>
-              Status: {locationServicesEnabled ? 'Enabled' : 'Disabled'}
+            <Text style={[styles.settingLabel, isDarkMode && styles.textPrimaryDark]}>Dark Mode</Text>
+            <Text style={[styles.settingHint, isDarkMode && styles.textSecondaryDark]}>
+              Reduce glare at night
             </Text>
           </View>
           <Switch
-            value={locationServicesEnabled}
-            onValueChange={setLocationServicesEnabled}
+            value={preferences.darkMode}
+            onValueChange={(value) => updatePreference('darkMode', value)}
+            trackColor={{ false: '#d1d5db', true: '#4f46e5' }}
+            thumbColor={preferences.darkMode ? '#1a73e8' : '#f4f3f4'}
+          />
+        </View>
+
+        <View style={styles.settingRow}>
+          <View style={styles.settingInfo}>
+            <Text style={[styles.settingLabel, isDarkMode && styles.textPrimaryDark]}>
+              Location Services
+            </Text>
+            <Text style={[styles.settingHint, isDarkMode && styles.textSecondaryDark]}>
+              Status: {preferences.locationServices ? 'Enabled' : 'Disabled'}
+            </Text>
+          </View>
+          <Switch
+            value={preferences.locationServices}
+            onValueChange={handleLocationToggle}
             trackColor={{ false: '#d1d5db', true: '#10b981' }}
-            thumbColor={locationServicesEnabled ? '#059669' : '#f4f3f4'}
+            thumbColor={preferences.locationServices ? '#059669' : '#f4f3f4'}
           />
         </View>
 
         <View style={styles.settingRow}>
           <View style={styles.settingInfo}>
-            <Text style={styles.settingLabel}>Push Notifications</Text>
-            <Text style={styles.settingHint}>Incident updates and alerts</Text>
+            <Text style={[styles.settingLabel, isDarkMode && styles.textPrimaryDark]}>
+              Push Notifications
+            </Text>
+            <Text style={[styles.settingHint, isDarkMode && styles.textSecondaryDark]}>
+              Incident updates and alerts
+            </Text>
           </View>
           <Switch
-            value={pushNotificationsEnabled}
-            onValueChange={setPushNotificationsEnabled}
+            value={preferences.pushNotifications}
+            onValueChange={handleNotificationsToggle}
             trackColor={{ false: '#d1d5db', true: '#60a5fa' }}
-            thumbColor={pushNotificationsEnabled ? '#2563eb' : '#f4f3f4'}
+            thumbColor={preferences.pushNotifications ? '#2563eb' : '#f4f3f4'}
           />
         </View>
 
         <View style={styles.settingRow}>
           <View style={styles.settingInfo}>
-            <Text style={styles.settingLabel}>Default Anonymous</Text>
-            <Text style={styles.settingHint}>Hide your identity by default</Text>
+            <Text style={[styles.settingLabel, isDarkMode && styles.textPrimaryDark]}>
+              Default Anonymous
+            </Text>
+            <Text style={[styles.settingHint, isDarkMode && styles.textSecondaryDark]}>
+              Hide your identity by default
+            </Text>
           </View>
           <Switch
-            value={defaultAnonymousEnabled}
-            onValueChange={setDefaultAnonymousEnabled}
+            value={preferences.defaultAnonymous}
+            onValueChange={(value) => updatePreference('defaultAnonymous', value)}
             trackColor={{ false: '#d1d5db', true: '#f59e0b' }}
-            thumbColor={defaultAnonymousEnabled ? '#d97706' : '#f4f3f4'}
+            thumbColor={preferences.defaultAnonymous ? '#d97706' : '#f4f3f4'}
           />
         </View>
       </Card>
 
-      <Card style={styles.settingsContainer}>
-        <Text style={styles.sectionTitle}>About & Support</Text>
+      <Card style={[styles.settingsContainer, isDarkMode && styles.cardDark]}>
+        <Text style={[styles.sectionTitle, isDarkMode && styles.textPrimaryDark]}>
+          About & Support
+        </Text>
 
         <View style={styles.settingRow}>
           <View style={styles.settingInfo}>
-            <Text style={styles.settingLabel}>App Version</Text>
-            <Text style={styles.settingHint}>v1.0.0</Text>
+            <Text style={[styles.settingLabel, isDarkMode && styles.textPrimaryDark]}>
+              App Version
+            </Text>
+            <Text style={[styles.settingHint, isDarkMode && styles.textSecondaryDark]}>
+              v1.0.0
+            </Text>
           </View>
         </View>
 
@@ -163,7 +289,7 @@ const AccountScreen = () => {
           style={styles.linkRow}
           onPress={() => openLink('https://safesignal.org/help')}
         >
-          <Text style={styles.linkText}>Help & FAQ</Text>
+          <Text style={[styles.linkText, isDarkMode && styles.textPrimaryDark]}>Help & FAQ</Text>
           <Text style={styles.linkArrow}>›</Text>
         </TouchableOpacity>
 
@@ -171,7 +297,7 @@ const AccountScreen = () => {
           style={styles.linkRow}
           onPress={() => openLink('https://safesignal.org/terms')}
         >
-          <Text style={styles.linkText}>Terms of Service</Text>
+          <Text style={[styles.linkText, isDarkMode && styles.textPrimaryDark]}>Terms of Service</Text>
           <Text style={styles.linkArrow}>›</Text>
         </TouchableOpacity>
 
@@ -179,20 +305,20 @@ const AccountScreen = () => {
           style={styles.linkRow}
           onPress={() => openLink('https://safesignal.org/privacy')}
         >
-          <Text style={styles.linkText}>Privacy Policy</Text>
+          <Text style={[styles.linkText, isDarkMode && styles.textPrimaryDark]}>Privacy Policy</Text>
           <Text style={styles.linkArrow}>›</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.linkRow} onPress={contactSupport}>
-          <Text style={styles.linkText}>Contact Support</Text>
+          <Text style={[styles.linkText, isDarkMode && styles.textPrimaryDark]}>Contact Support</Text>
           <Text style={styles.linkArrow}>›</Text>
         </TouchableOpacity>
       </Card>
       
       {/* Add more user details here */}
       
-      <Card style={styles.settingsContainer}>
-        <Text style={styles.sectionTitle}>Danger Zone</Text>
+      <Card style={[styles.settingsContainer, isDarkMode && styles.cardDark]}>
+        <Text style={[styles.sectionTitle, isDarkMode && styles.textPrimaryDark]}>Danger Zone</Text>
         <Button title="Sign Out" onPress={logout} style={styles.signOutButton} />
         <View style={styles.dangerSpacing} />
         <Button
@@ -201,6 +327,36 @@ const AccountScreen = () => {
           style={styles.deleteButton}
         />
       </Card>
+
+      <Modal transparent visible={isEditingName} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, isDarkMode && styles.cardDark]}>
+            <Text style={[styles.modalTitle, isDarkMode && styles.textPrimaryDark]}>
+              Edit Display Name
+            </Text>
+            <TextInput
+              style={[styles.modalInput, isDarkMode && styles.inputDark]}
+              value={pendingName}
+              onChangeText={setPendingName}
+              placeholder="Enter display name"
+              placeholderTextColor="#9ca3af"
+            />
+            <View style={styles.modalActions}>
+              <Button
+                title="Cancel"
+                onPress={() => setIsEditingName(false)}
+                variant="secondary"
+                style={styles.modalButton}
+              />
+              <Button
+                title="Save"
+                onPress={handleSaveName}
+                style={styles.modalButton}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 };
@@ -210,6 +366,9 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     backgroundColor: '#fff',
+  },
+  containerDark: {
+    backgroundColor: '#0f172a',
   },
   contentContainer: {
     paddingBottom: 24,
@@ -223,6 +382,9 @@ const styles = StyleSheet.create({
   },
   profileHeader: {
     marginBottom: 16,
+  },
+  cardDark: {
+    backgroundColor: '#111827',
   },
   profileRow: {
     flexDirection: 'row',
@@ -242,6 +404,11 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
   },
+  avatarImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+  },
   avatarEdit: {
     position: 'absolute',
     right: -2,
@@ -257,6 +424,9 @@ const styles = StyleSheet.create({
   },
   profileInfo: {
     flex: 1,
+  },
+  profileActionButton: {
+    marginTop: 12,
   },
   usernameRow: {
     flexDirection: 'row',
@@ -274,16 +444,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 12,
     color: '#6b7280',
-  },
-  verificationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  verificationText: {
-    marginLeft: 6,
-    fontSize: 12,
-    color: '#374151',
   },
   infoContainer: {
     marginBottom: 20,
@@ -348,6 +508,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '500',
   },
+  textPrimaryDark: {
+    color: '#f9fafb',
+  },
+  textSecondaryDark: {
+    color: '#cbd5f5',
+  },
   signOutButton: {
     backgroundColor: '#d9534f',
   },
@@ -356,6 +522,48 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     backgroundColor: '#b91c1c',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    width: '100%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 12,
+    color: '#111827',
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    color: '#111827',
+    marginBottom: 16,
+  },
+  inputDark: {
+    backgroundColor: '#0b1220',
+    borderColor: '#1f2937',
+    color: '#f9fafb',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  modalButton: {
+    marginLeft: 10,
+    minWidth: 100,
   },
 });
 
