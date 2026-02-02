@@ -109,18 +109,18 @@ const HomeScreen = ({ navigation }) => {
       {/* Quick Stats Cards */}
       <View style={styles.quickStatsRow}>
         <TouchableOpacity 
-          style={[styles.quickStatCard, styles.activeCard]}
+          style={[styles.quickStatCard, styles.activeCard, { backgroundColor: theme.card }]}
           onPress={() => navigation.navigate('Map')}
         >
           <Text style={styles.quickStatIcon}>🚨</Text>
-          <Text style={styles.quickStatNumber}>{dashboardData?.quickStats?.activeNearby || 0}</Text>
-          <Text style={styles.quickStatLabel}>Active{'\n'}Nearby</Text>
+          <Text style={[styles.quickStatNumber, { color: theme.text }]}>{dashboardData?.quickStats?.activeNearby || 0}</Text>
+          <Text style={[styles.quickStatLabel, { color: theme.text }]}>Active{'\n'}Nearby</Text>
         </TouchableOpacity>
         
-        <View style={[styles.quickStatCard, styles.resolvedCard]}>
+        <View style={[styles.quickStatCard, styles.resolvedCard, { backgroundColor: theme.card }]}>
           <Text style={styles.quickStatIcon}>✅</Text>
-          <Text style={styles.quickStatNumber}>{dashboardData?.quickStats?.resolvedThisWeek || 0}</Text>
-          <Text style={styles.quickStatLabel}>Resolved{'\n'}This Week</Text>
+          <Text style={[styles.quickStatNumber, { color: theme.text }]}>{dashboardData?.quickStats?.resolvedThisWeek || 0}</Text>
+          <Text style={[styles.quickStatLabel, { color: theme.text }]}>Resolved{'\n'}This Week</Text>
         </View>
       </View>
 
@@ -132,7 +132,7 @@ const HomeScreen = ({ navigation }) => {
             {dashboardData.trendingCategories.map((cat, index) => {
               const config = CATEGORY_DISPLAY[cat.category] || CATEGORY_DISPLAY.other;
               return (
-                <View key={index} style={styles.trendingItem}>
+                <View key={index} style={[styles.trendingItem, { borderBottomColor: theme.divider }]}>
                   <View style={[styles.trendingIcon, { backgroundColor: `${config.trendColor}15` }]}>
                     <Text style={styles.trendingEmoji}>{config.trendIcon}</Text>
                   </View>
@@ -235,10 +235,10 @@ const HomeScreen = ({ navigation }) => {
             {dashboardData.recentActivity.slice(0, 3).map((activity, index) => (
               <TouchableOpacity 
                 key={index} 
-                style={styles.activityItem}
+                style={[styles.activityItem, { borderBottomColor: theme.divider }]}
                 onPress={() => navigation.navigate('Reports')}
               >
-                <View style={styles.activityDot} />
+                <View style={[styles.activityDot, { backgroundColor: theme.primary }]} />
                 <View style={styles.activityContent}>
                   <Text style={[styles.activityTitle, { color: theme.text }]} numberOfLines={1}>
                     {activity.incidentTitle}
@@ -382,6 +382,7 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     marginHorizontal: 4,
+    borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -391,10 +392,14 @@ const styles = StyleSheet.create({
   activeCard: {
     borderTopWidth: 3,
     borderTopColor: '#e74c3c',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
   resolvedCard: {
     borderTopWidth: 3,
     borderTopColor: '#27ae60',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
   quickStatIcon: {
     fontSize: 24,

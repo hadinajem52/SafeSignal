@@ -195,15 +195,15 @@ const AccountScreen = () => {
         </View>
       </Card>
 
-      <Card style={[styles.infoContainer, { backgroundColor: theme.card }]}>
-        <Text style={[styles.label, { color: theme.textSecondary }]}>Email:</Text>
+      <Card style={[styles.infoContainer, { backgroundColor: theme.surface, borderColor: theme.border, borderWidth: 1 }]}>
+        <Text style={[styles.label, { color: theme.textSecondary }]}>Email Address</Text>
         <Text style={[styles.value, { color: theme.text }]}>{user?.email || 'User'}</Text>
       </Card>
 
-      <Card style={[styles.settingsContainer, { backgroundColor: theme.card }]}>
+      <Card style={[styles.settingsContainer, { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1 }]}>
         <Text style={[styles.sectionTitle, { color: theme.text }]}>Settings</Text>
 
-        <View style={styles.settingRow}>
+        <View style={[styles.settingRow, { borderBottomColor: theme.divider }]}>
           <View style={styles.settingInfo}>
             <Text style={[styles.settingLabel, { color: theme.text }]}>Dark Mode</Text>
             <Text style={[styles.settingHint, { color: theme.textSecondary }]}>
@@ -218,7 +218,7 @@ const AccountScreen = () => {
           />
         </View>
 
-        <View style={styles.settingRow}>
+        <View style={[styles.settingRow, { borderBottomColor: theme.divider }]}>
           <View style={styles.settingInfo}>
             <Text style={[styles.settingLabel, { color: theme.text }]}>Location Services</Text>
             <Text style={[styles.settingHint, { color: theme.textSecondary }]}>
@@ -233,7 +233,7 @@ const AccountScreen = () => {
           />
         </View>
 
-        <View style={styles.settingRow}>
+        <View style={[styles.settingRow, { borderBottomColor: theme.divider }]}>
           <View style={styles.settingInfo}>
             <Text style={[styles.settingLabel, { color: theme.text }]}>Push Notifications</Text>
             <Text style={[styles.settingHint, { color: theme.textSecondary }]}>
@@ -248,7 +248,7 @@ const AccountScreen = () => {
           />
         </View>
 
-        <View style={styles.settingRow}>
+        <View style={[styles.settingRow, { borderBottomColor: theme.divider }]}>
           <View style={styles.settingInfo}>
             <Text style={[styles.settingLabel, { color: theme.text }]}>Default Anonymous</Text>
             <Text style={[styles.settingHint, { color: theme.textSecondary }]}>
@@ -264,10 +264,10 @@ const AccountScreen = () => {
         </View>
       </Card>
 
-      <Card style={[styles.settingsContainer, { backgroundColor: theme.card }]}>
+      <Card style={[styles.settingsContainer, { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1 }]}>
         <Text style={[styles.sectionTitle, { color: theme.text }]}>About & Support</Text>
 
-        <View style={styles.settingRow}>
+        <View style={[styles.settingRow, { borderBottomColor: theme.divider }]}>
           <View style={styles.settingInfo}>
             <Text style={[styles.settingLabel, { color: theme.text }]}>App Version</Text>
             <Text style={[styles.settingHint, { color: theme.textSecondary }]}>v1.0.0</Text>
@@ -275,7 +275,7 @@ const AccountScreen = () => {
         </View>
 
         <TouchableOpacity
-          style={styles.linkRow}
+          style={[styles.linkRow, { borderBottomColor: theme.divider }]}
           onPress={() => openLink('https://safesignal.org/help')}
         >
           <Text style={[styles.linkText, { color: theme.text }]}>Help & FAQ</Text>
@@ -283,7 +283,7 @@ const AccountScreen = () => {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.linkRow}
+          style={[styles.linkRow, { borderBottomColor: theme.divider }]}
           onPress={() => openLink('https://safesignal.org/terms')}
         >
           <Text style={[styles.linkText, { color: theme.text }]}>Terms of Service</Text>
@@ -291,14 +291,14 @@ const AccountScreen = () => {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.linkRow}
+          style={[styles.linkRow, { borderBottomColor: theme.divider }]}
           onPress={() => openLink('https://safesignal.org/privacy')}
         >
           <Text style={[styles.linkText, { color: theme.text }]}>Privacy Policy</Text>
           <Text style={styles.linkArrow}>›</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.linkRow} onPress={contactSupport}>
+        <TouchableOpacity style={[styles.linkRow, { borderBottomColor: theme.divider }]} onPress={contactSupport}>
           <Text style={[styles.linkText, { color: theme.text }]}>Contact Support</Text>
           <Text style={styles.linkArrow}>›</Text>
         </TouchableOpacity>
@@ -306,7 +306,7 @@ const AccountScreen = () => {
       
       {/* Add more user details here */}
       
-      <Card style={[styles.settingsContainer, { backgroundColor: theme.card }]}>
+      <Card style={[styles.settingsContainer, { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1 }]}>
         <Text style={[styles.sectionTitle, { color: theme.text }]}>Danger Zone</Text>
         <Button title="Sign Out" onPress={logout} style={styles.signOutButton} />
         <View style={styles.dangerSpacing} />
@@ -446,7 +446,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
   },
   linkRow: {
     flexDirection: 'row',
@@ -454,7 +453,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
   },
   linkText: {
     fontSize: 15,
