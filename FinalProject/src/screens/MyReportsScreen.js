@@ -11,6 +11,7 @@ import {
   Alert,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import incidentConstants from '../../../constants/incident';
 import { formatDate } from '../utils/dateUtils';
 import useMyReports from '../hooks/useMyReports';
@@ -25,6 +26,7 @@ const CATEGORY_ICON_MAP = INCIDENT_CATEGORIES.reduce((acc, category) => {
 
 const MyReportsScreen = ({ navigation }) => {
   const { user } = useAuth();
+  const { theme } = useTheme();
   const {
     incidents,
     isLoading,

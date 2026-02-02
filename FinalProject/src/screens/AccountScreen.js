@@ -15,11 +15,13 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import useUserPreferences from '../hooks/useUserPreferences';
 import { Button, Card } from '../components';
 
 const AccountScreen = () => {
   const { logout, user } = useAuth();
+  const { theme, isDark, mode, setThemeMode } = useTheme();
   const { preferences, updatePreference } = useUserPreferences();
   const [isEditingName, setIsEditingName] = useState(false);
   const [pendingName, setPendingName] = useState('');
@@ -30,7 +32,6 @@ const AccountScreen = () => {
   }, [preferences.displayName, user]);
 
   const avatarUri = preferences.avatarUri || '';
-  const isDarkMode = preferences.darkMode;
 
   const username = user?.username || user?.email || 'User';
   const memberSince = user?.created_at
@@ -163,12 +164,12 @@ const AccountScreen = () => {
 
   return (
     <ScrollView
-      style={[styles.container, isDarkMode && styles.containerDark]}
+      style={[styles.container, { backgroundColor: theme.background }]}
       contentContainerStyle={styles.contentContainer}
     >
-      <Text style={[styles.title, isDarkMode && styles.textPrimaryDark]}>Account</Text>
+      <Text style={[styles.title, { color: theme.text }]}>Account</Text>
       
-      <Card style={[styles.profileHeader, isDarkMode && styles.cardDark]}>
+      <Card style={[styles.profileHeader, { backgroundColor: theme.card }]}>
         <View style={styles.profileRow}>
           <View style={styles.avatar}>
             {avatarUri ? (
@@ -182,47 +183,45 @@ const AccountScreen = () => {
           </View>
           <View style={styles.profileInfo}>
             <View style={styles.usernameRow}>
-              <Text style={[styles.username, isDarkMode && styles.textPrimaryDark]}>{displayName}</Text>
+              <Text style={[styles.username, { color: theme.text }]}>{displayName}</Text>
               <TouchableOpacity style={styles.editButton} onPress={openEditName}>
                 <Ionicons name="pencil" size={16} color="#6b7280" />
               </TouchableOpacity>
             </View>
-            <Text style={[styles.memberSince, isDarkMode && styles.textSecondaryDark]}>
+            <Text style={[styles.memberSince, { color: theme.textSecondary }]}>
               Joined {memberSince}
             </Text>
           </View>
         </View>
       </Card>
 
-      <Card style={[styles.infoContainer, isDarkMode && styles.cardDark]}>
-        <Text style={[styles.label, isDarkMode && styles.textSecondaryDark]}>Email:</Text>
-        <Text style={[styles.value, isDarkMode && styles.textPrimaryDark]}>{user?.email || 'User'}</Text>
+      <Card style={[styles.infoContainer, { backgroundColor: theme.card }]}>
+        <Text style={[styles.label, { color: theme.textSecondary }]}>Email:</Text>
+        <Text style={[styles.value, { color: theme.text }]}>{user?.email || 'User'}</Text>
       </Card>
 
-      <Card style={[styles.settingsContainer, isDarkMode && styles.cardDark]}>
-        <Text style={[styles.sectionTitle, isDarkMode && styles.textPrimaryDark]}>Settings</Text>
+      <Card style={[styles.settingsContainer, { backgroundColor: theme.card }]}>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>Settings</Text>
 
         <View style={styles.settingRow}>
           <View style={styles.settingInfo}>
-            <Text style={[styles.settingLabel, isDarkMode && styles.textPrimaryDark]}>Dark Mode</Text>
-            <Text style={[styles.settingHint, isDarkMode && styles.textSecondaryDark]}>
-              Reduce glare at night
+            <Text style={[styles.settingLabel, { color: theme.text }]}>Dark Mode</Text>
+            <Text style={[styles.settingHint, { color: theme.textSecondary }]}>
+              {mode === 'system' ? 'System' : mode === 'dark' ? 'Dark' : 'Light'}
             </Text>
           </View>
           <Switch
-            value={preferences.darkMode}
-            onValueChange={(value) => updatePreference('darkMode', value)}
-            trackColor={{ false: '#d1d5db', true: '#4f46e5' }}
-            thumbColor={preferences.darkMode ? '#1a73e8' : '#f4f3f4'}
+            value={isDark}
+            onValueChange={(value) => setThemeMode(value ? 'dark' : 'light')}
+            trackColor={{ false: '#d1d5db', true: theme.primary }}
+            thumbColor={isDark ? theme.primary : '#f4f3f4'}
           />
         </View>
 
         <View style={styles.settingRow}>
           <View style={styles.settingInfo}>
-            <Text style={[styles.settingLabel, isDarkMode && styles.textPrimaryDark]}>
-              Location Services
-            </Text>
-            <Text style={[styles.settingHint, isDarkMode && styles.textSecondaryDark]}>
+            <Text style={[styles.settingLabel, { color: theme.text }]}>Location Services</Text>
+            <Text style={[styles.settingHint, { color: theme.textSecondary }]}>
               Status: {preferences.locationServices ? 'Enabled' : 'Disabled'}
             </Text>
           </View>
@@ -236,10 +235,8 @@ const AccountScreen = () => {
 
         <View style={styles.settingRow}>
           <View style={styles.settingInfo}>
-            <Text style={[styles.settingLabel, isDarkMode && styles.textPrimaryDark]}>
-              Push Notifications
-            </Text>
-            <Text style={[styles.settingHint, isDarkMode && styles.textSecondaryDark]}>
+            <Text style={[styles.settingLabel, { color: theme.text }]}>Push Notifications</Text>
+            <Text style={[styles.settingHint, { color: theme.textSecondary }]}>
               Incident updates and alerts
             </Text>
           </View>
@@ -253,10 +250,8 @@ const AccountScreen = () => {
 
         <View style={styles.settingRow}>
           <View style={styles.settingInfo}>
-            <Text style={[styles.settingLabel, isDarkMode && styles.textPrimaryDark]}>
-              Default Anonymous
-            </Text>
-            <Text style={[styles.settingHint, isDarkMode && styles.textSecondaryDark]}>
+            <Text style={[styles.settingLabel, { color: theme.text }]}>Default Anonymous</Text>
+            <Text style={[styles.settingHint, { color: theme.textSecondary }]}>
               Hide your identity by default
             </Text>
           </View>
@@ -269,19 +264,13 @@ const AccountScreen = () => {
         </View>
       </Card>
 
-      <Card style={[styles.settingsContainer, isDarkMode && styles.cardDark]}>
-        <Text style={[styles.sectionTitle, isDarkMode && styles.textPrimaryDark]}>
-          About & Support
-        </Text>
+      <Card style={[styles.settingsContainer, { backgroundColor: theme.card }]}>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>About & Support</Text>
 
         <View style={styles.settingRow}>
           <View style={styles.settingInfo}>
-            <Text style={[styles.settingLabel, isDarkMode && styles.textPrimaryDark]}>
-              App Version
-            </Text>
-            <Text style={[styles.settingHint, isDarkMode && styles.textSecondaryDark]}>
-              v1.0.0
-            </Text>
+            <Text style={[styles.settingLabel, { color: theme.text }]}>App Version</Text>
+            <Text style={[styles.settingHint, { color: theme.textSecondary }]}>v1.0.0</Text>
           </View>
         </View>
 
@@ -289,7 +278,7 @@ const AccountScreen = () => {
           style={styles.linkRow}
           onPress={() => openLink('https://safesignal.org/help')}
         >
-          <Text style={[styles.linkText, isDarkMode && styles.textPrimaryDark]}>Help & FAQ</Text>
+          <Text style={[styles.linkText, { color: theme.text }]}>Help & FAQ</Text>
           <Text style={styles.linkArrow}>›</Text>
         </TouchableOpacity>
 
@@ -297,7 +286,7 @@ const AccountScreen = () => {
           style={styles.linkRow}
           onPress={() => openLink('https://safesignal.org/terms')}
         >
-          <Text style={[styles.linkText, isDarkMode && styles.textPrimaryDark]}>Terms of Service</Text>
+          <Text style={[styles.linkText, { color: theme.text }]}>Terms of Service</Text>
           <Text style={styles.linkArrow}>›</Text>
         </TouchableOpacity>
 
@@ -305,20 +294,20 @@ const AccountScreen = () => {
           style={styles.linkRow}
           onPress={() => openLink('https://safesignal.org/privacy')}
         >
-          <Text style={[styles.linkText, isDarkMode && styles.textPrimaryDark]}>Privacy Policy</Text>
+          <Text style={[styles.linkText, { color: theme.text }]}>Privacy Policy</Text>
           <Text style={styles.linkArrow}>›</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.linkRow} onPress={contactSupport}>
-          <Text style={[styles.linkText, isDarkMode && styles.textPrimaryDark]}>Contact Support</Text>
+          <Text style={[styles.linkText, { color: theme.text }]}>Contact Support</Text>
           <Text style={styles.linkArrow}>›</Text>
         </TouchableOpacity>
       </Card>
       
       {/* Add more user details here */}
       
-      <Card style={[styles.settingsContainer, isDarkMode && styles.cardDark]}>
-        <Text style={[styles.sectionTitle, isDarkMode && styles.textPrimaryDark]}>Danger Zone</Text>
+      <Card style={[styles.settingsContainer, { backgroundColor: theme.card }]}>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>Danger Zone</Text>
         <Button title="Sign Out" onPress={logout} style={styles.signOutButton} />
         <View style={styles.dangerSpacing} />
         <Button
@@ -330,16 +319,14 @@ const AccountScreen = () => {
 
       <Modal transparent visible={isEditingName} animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalCard, isDarkMode && styles.cardDark]}>
-            <Text style={[styles.modalTitle, isDarkMode && styles.textPrimaryDark]}>
-              Edit Display Name
-            </Text>
+          <View style={[styles.modalCard, { backgroundColor: theme.card }]}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Edit Display Name</Text>
             <TextInput
-              style={[styles.modalInput, isDarkMode && styles.inputDark]}
+              style={[styles.modalInput, { backgroundColor: theme.input, borderColor: theme.inputBorder, color: theme.text }]}
               value={pendingName}
               onChangeText={setPendingName}
               placeholder="Enter display name"
-              placeholderTextColor="#9ca3af"
+              placeholderTextColor={theme.inputPlaceholder}
             />
             <View style={styles.modalActions}>
               <Button
@@ -365,10 +352,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#fff',
-  },
-  containerDark: {
-    backgroundColor: '#0f172a',
   },
   contentContainer: {
     paddingBottom: 24,
@@ -382,9 +365,6 @@ const styles = StyleSheet.create({
   },
   profileHeader: {
     marginBottom: 16,
-  },
-  cardDark: {
-    backgroundColor: '#111827',
   },
   profileRow: {
     flexDirection: 'row',
@@ -508,12 +488,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '500',
   },
-  textPrimaryDark: {
-    color: '#f9fafb',
-  },
-  textSecondaryDark: {
-    color: '#cbd5f5',
-  },
   signOutButton: {
     backgroundColor: '#d9534f',
   },
@@ -549,13 +523,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 16,
-    color: '#111827',
     marginBottom: 16,
-  },
-  inputDark: {
-    backgroundColor: '#0b1220',
-    borderColor: '#1f2937',
-    color: '#f9fafb',
   },
   modalActions: {
     flexDirection: 'row',

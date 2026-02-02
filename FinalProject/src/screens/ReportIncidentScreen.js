@@ -15,6 +15,7 @@ import {
 import MapView, { Marker } from 'react-native-maps';
 import { incidentAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import useDraftManager from '../hooks/useDraftManager';
 import useImagePicker from '../hooks/useImagePicker';
 import useIncidentForm from '../hooks/useIncidentForm';
@@ -27,6 +28,7 @@ const { INCIDENT_CATEGORIES, SEVERITY_LEVELS } = incidentConstants;
 
 const ReportIncidentScreen = ({ navigation, route }) => {
   const { user } = useAuth();
+  const { theme } = useTheme();
   const userId = user?.user_id || user?.userId;
   const { preferences, isLoading: isLoadingPreferences } = useUserPreferences();
   const [isSubmitting, setIsSubmitting] = useState(false);

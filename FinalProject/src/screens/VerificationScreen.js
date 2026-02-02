@@ -12,12 +12,14 @@ import {
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { authAPI } from '../services/api';
 import { Button } from '../components';
 
 const VerificationScreen = ({ navigation, route }) => {
   const { email } = route.params;
   const { checkAuthStatus } = useAuth();
+  const { theme } = useTheme();
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);

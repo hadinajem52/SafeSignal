@@ -3,6 +3,7 @@ import { View, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
 
 // Screens
 import HomeScreen from '../screens/HomeScreen';
@@ -15,13 +16,16 @@ import IncidentDetailScreen from '../screens/IncidentDetailScreen';
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
-const CustomTabBarButton = ({ children, onPress }) => (
+const CustomTabBarButton = ({ children, onPress, theme }) => (
   <TouchableOpacity
     style={styles.fabWrapper}
     onPress={onPress}
     activeOpacity={0.9}
   >
-    <View style={styles.fabButton}>
+    <View style={[styles.fabButton, { 
+      backgroundColor: theme.primary,
+      borderColor: theme.tabBar 
+    }]}>
       {children}
     </View>
   </TouchableOpacity>
@@ -50,6 +54,8 @@ const ReportsStack = () => {
 };
 
 const TabNavigator = () => {
+  const { theme } = useTheme();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -68,10 +74,10 @@ const TabNavigator = () => {
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#1a73e8',
-        tabBarInactiveTintColor: 'gray',
+        tabBarActiveTintColor: theme.tabBarActive,
+        tabBarInactiveTintColor: theme.tabBarInactive,
         headerShown: false,
-        tabBarStyle: styles.tabBar
+        tabBarStyle: [styles.tabBar, { backgroundColor: theme.tabBar }]
       })}
     >
       <Tab.Screen name="Dashboard" component={HomeScreen} />
@@ -84,10 +90,10 @@ const TabNavigator = () => {
           tabBarIcon: () => (
             <Ionicons name="add" size={28} color="white" style={styles.fabIcon} />
           ),
-            tabBarButton: (props) => (
-                <CustomTabBarButton {...props} />
-            ),
-            tabBarLabel: () => null,
+          tabBarButton: (props) => (
+            <CustomTabBarButton {...props} theme={theme} />
+          ),
+          tabBarLabel: () => null,
           headerShown: false
         }}
       />
@@ -106,7 +112,6 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     paddingTop: 10,
     borderRadius: 24,
-    backgroundColor: '#fff',
     borderTopWidth: 0,
     ...Platform.select({
       ios: {
@@ -129,11 +134,9 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#6C63FF',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 6,
-    borderColor: '#fff',
     ...Platform.select({
       ios: {
         shadowColor: '#000',

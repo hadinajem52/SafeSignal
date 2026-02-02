@@ -10,6 +10,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import incidentConstants from '../../../constants/incident';
 import useDashboardData from '../hooks/useDashboardData';
 import { Card } from '../components';
@@ -20,6 +21,7 @@ const { CATEGORY_DISPLAY } = incidentConstants;
 
 const HomeScreen = ({ navigation }) => {
   const { user } = useAuth();
+  const { theme } = useTheme();
   const {
     loading,
     refreshing,
@@ -56,28 +58,28 @@ const HomeScreen = ({ navigation }) => {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1a73e8" />
-        <Text style={styles.loadingText}>Loading dashboard...</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
+        <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Loading dashboard...</Text>
       </View>
     );
   }
 
   return (
     <ScrollView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.background }]}
       contentContainerStyle={styles.contentContainer}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#1a73e8']} />
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} />
       }
     >
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Hello, {user?.username}! 👋</Text>
-          <Text style={styles.subtitle}>Stay informed, stay safe</Text>
+          <Text style={[styles.greeting, { color: theme.text }]}>Hello, {user?.username}! 👋</Text>
+          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>Stay informed, stay safe</Text>
         </View>
-        <View style={styles.logoContainer}>
+        <View style={[styles.logoContainer, { backgroundColor: `${theme.primary}15` }]}>
           <Text style={styles.logo}>🛡️</Text>
         </View>
       </View>
@@ -86,19 +88,19 @@ const HomeScreen = ({ navigation }) => {
       {dashboardData?.safetyScore && (
         <Card style={[styles.safetyCard, { borderLeftColor: getSafetyScoreColor(dashboardData.safetyScore.score) }]}>
           <View style={styles.safetyHeader}>
-            <Text style={styles.safetyTitle}>Area Safety Score</Text>
-            {location && <Text style={styles.locationBadge}>📍 Your Location</Text>}
+            <Text style={[styles.safetyTitle, { color: theme.text }]}>Area Safety Score</Text>
+            {location && <Text style={[styles.locationBadge, { color: theme.textSecondary, backgroundColor: theme.surface }]}>📍 Your Location</Text>}
           </View>
           <View style={styles.safetyContent}>
-            <View style={styles.scoreCircle}>
+            <View style={[styles.scoreCircle, { backgroundColor: theme.surface }]}>
               <Text style={[styles.scoreNumber, { color: getSafetyScoreColor(dashboardData.safetyScore.score) }]}>
                 {dashboardData.safetyScore.score}
               </Text>
-              <Text style={styles.scoreLabel}>{dashboardData.safetyScore.label}</Text>
+              <Text style={[styles.scoreLabel, { color: theme.textSecondary }]}>{dashboardData.safetyScore.label}</Text>
             </View>
             <View style={styles.safetyInfo}>
-              <Text style={styles.safetyDescription}>{dashboardData.safetyScore.description}</Text>
-              <Text style={styles.safetyNote}>Based on incidents within 5km radius</Text>
+              <Text style={[styles.safetyDescription, { color: theme.text }]}>{dashboardData.safetyScore.description}</Text>
+              <Text style={[styles.safetyNote, { color: theme.textTertiary }]}>Based on incidents within 5km radius</Text>
             </View>
           </View>
         </Card>
@@ -125,7 +127,7 @@ const HomeScreen = ({ navigation }) => {
       {/* Trending Categories */}
       {dashboardData?.trendingCategories?.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📈 Trending This Week</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>📈 Trending This Week</Text>
           <Card style={styles.trendingContainer}>
             {dashboardData.trendingCategories.map((cat, index) => {
               const config = CATEGORY_DISPLAY[cat.category] || CATEGORY_DISPLAY.other;
@@ -135,8 +137,8 @@ const HomeScreen = ({ navigation }) => {
                     <Text style={styles.trendingEmoji}>{config.trendIcon}</Text>
                   </View>
                   <View style={styles.trendingInfo}>
-                    <Text style={styles.trendingCategory}>{formatCategoryName(cat.category)}</Text>
-                    <Text style={styles.trendingCount}>{cat.count} reports</Text>
+                    <Text style={[styles.trendingCategory, { color: theme.text }]}>{formatCategoryName(cat.category)}</Text>
+                    <Text style={[styles.trendingCount, { color: theme.textSecondary }]}>{cat.count} reports</Text>
                   </View>
                   <View style={[styles.trendBadge, { backgroundColor: `${getTrendColor(cat.changePercentage)}15` }]}>
                     <Text style={[styles.trendText, { color: getTrendColor(cat.changePercentage) }]}>
@@ -152,36 +154,36 @@ const HomeScreen = ({ navigation }) => {
 
       {/* Your Contributions */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🏆 Your Contributions</Text>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>🏆 Your Contributions</Text>
         <Card style={styles.contributionsGrid}>
           <View style={styles.contributionCard}>
-            <Text style={styles.contributionNumber}>{dashboardData?.userStats?.totalReports || 0}</Text>
-            <Text style={styles.contributionLabel}>Total{'\n'}Reports</Text>
+            <Text style={[styles.contributionNumber, { color: theme.text }]}>{dashboardData?.userStats?.totalReports || 0}</Text>
+            <Text style={[styles.contributionLabel, { color: theme.textSecondary }]}>Total{'\n'}Reports</Text>
           </View>
           <View style={styles.contributionCard}>
             <Text style={[styles.contributionNumber, { color: '#27ae60' }]}>
               {dashboardData?.userStats?.verifiedReports || 0}
             </Text>
-            <Text style={styles.contributionLabel}>Verified</Text>
+            <Text style={[styles.contributionLabel, { color: theme.textSecondary }]}>Verified</Text>
           </View>
           <View style={styles.contributionCard}>
             <Text style={[styles.contributionNumber, { color: '#3498db' }]}>
               {dashboardData?.userStats?.resolvedReports || 0}
             </Text>
-            <Text style={styles.contributionLabel}>Resolved</Text>
+            <Text style={[styles.contributionLabel, { color: theme.textSecondary }]}>Resolved</Text>
           </View>
           <View style={styles.contributionCard}>
             <Text style={[styles.contributionNumber, { color: '#f39c12' }]}>
               {dashboardData?.userStats?.pendingReports || 0}
             </Text>
-            <Text style={styles.contributionLabel}>Pending</Text>
+            <Text style={[styles.contributionLabel, { color: theme.textSecondary }]}>Pending</Text>
           </View>
         </Card>
       </View>
 
       {/* Quick Actions */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>⚡ Quick Actions</Text>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>⚡ Quick Actions</Text>
         <View style={styles.actionsRow}>
           <TouchableOpacity 
             style={styles.actionButton}
@@ -190,7 +192,7 @@ const HomeScreen = ({ navigation }) => {
             <View style={[styles.actionIconContainer, { backgroundColor: '#e74c3c15' }]}>
               <Text style={styles.actionIcon}>📝</Text>
             </View>
-            <Text style={styles.actionText}>Report</Text>
+            <Text style={[styles.actionText, { color: theme.text }]}>Report</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -200,7 +202,7 @@ const HomeScreen = ({ navigation }) => {
             <View style={[styles.actionIconContainer, { backgroundColor: '#3498db15' }]}>
               <Text style={styles.actionIcon}>🗺️</Text>
             </View>
-            <Text style={styles.actionText}>Map</Text>
+            <Text style={[styles.actionText, { color: theme.text }]}>Map</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -210,7 +212,7 @@ const HomeScreen = ({ navigation }) => {
             <View style={[styles.actionIconContainer, { backgroundColor: '#9b59b615' }]}>
               <Text style={styles.actionIcon}>📊</Text>
             </View>
-            <Text style={styles.actionText}>My Reports</Text>
+            <Text style={[styles.actionText, { color: theme.text }]}>My Reports</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -220,7 +222,7 @@ const HomeScreen = ({ navigation }) => {
             <View style={[styles.actionIconContainer, { backgroundColor: '#1abc9c15' }]}>
               <Text style={styles.actionIcon}>👤</Text>
             </View>
-            <Text style={styles.actionText}>Account</Text>
+            <Text style={[styles.actionText, { color: theme.text }]}>Account</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -228,7 +230,7 @@ const HomeScreen = ({ navigation }) => {
       {/* Recent Activity */}
       {dashboardData?.recentActivity?.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🕐 Recent Activity</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>🕐 Recent Activity</Text>
           <Card style={styles.activityContainer}>
             {dashboardData.recentActivity.slice(0, 3).map((activity, index) => (
               <TouchableOpacity 
@@ -238,14 +240,14 @@ const HomeScreen = ({ navigation }) => {
               >
                 <View style={styles.activityDot} />
                 <View style={styles.activityContent}>
-                  <Text style={styles.activityTitle} numberOfLines={1}>
+                  <Text style={[styles.activityTitle, { color: theme.text }]} numberOfLines={1}>
                     {activity.incidentTitle}
                   </Text>
-                  <Text style={styles.activityType}>
+                  <Text style={[styles.activityType, { color: theme.textSecondary }]}>
                     {activity.type.replace(/_/g, ' ')}
                   </Text>
                 </View>
-                <Text style={styles.activityTime}>
+                <Text style={[styles.activityTime, { color: theme.textTertiary }]}>
                   {new Date(activity.timestamp).toLocaleDateString()}
                 </Text>
               </TouchableOpacity>
@@ -256,10 +258,10 @@ const HomeScreen = ({ navigation }) => {
 
       {/* Error Message */}
       {error && (
-        <Card style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
+        <Card style={[styles.errorContainer, { backgroundColor: `${theme.statusError}15` }]}>
+          <Text style={[styles.errorText, { color: theme.statusError }]}>{error}</Text>
           <TouchableOpacity onPress={onRefresh}>
-            <Text style={styles.retryText}>Tap to retry</Text>
+            <Text style={[styles.retryText, { color: theme.primary }]}>Tap to retry</Text>
           </TouchableOpacity>
         </Card>
       )}
@@ -273,7 +275,6 @@ const HomeScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f7fa',
   },
   contentContainer: {
     padding: 16,
@@ -282,12 +283,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f7fa',
   },
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#666',
   },
   header: {
     flexDirection: 'row',
@@ -299,18 +298,15 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1a1a2e',
   },
   subtitle: {
     fontSize: 14,
-    color: '#666',
     marginTop: 4,
   },
   logoContainer: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#1a73e815',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -318,7 +314,6 @@ const styles = StyleSheet.create({
     fontSize: 28,
   },
   safetyCard: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
@@ -338,12 +333,9 @@ const styles = StyleSheet.create({
   safetyTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1a1a2e',
   },
   locationBadge: {
     fontSize: 12,
-    color: '#666',
-    backgroundColor: '#f0f0f0',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -356,7 +348,6 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#f5f7fa',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -367,7 +358,6 @@ const styles = StyleSheet.create({
   },
   scoreLabel: {
     fontSize: 12,
-    color: '#666',
     marginTop: 2,
   },
   safetyInfo: {
@@ -375,12 +365,10 @@ const styles = StyleSheet.create({
   },
   safetyDescription: {
     fontSize: 14,
-    color: '#333',
     lineHeight: 20,
   },
   safetyNote: {
     fontSize: 12,
-    color: '#999',
     marginTop: 8,
   },
   quickStatsRow: {
@@ -390,7 +378,6 @@ const styles = StyleSheet.create({
   },
   quickStatCard: {
     flex: 1,
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
@@ -416,11 +403,9 @@ const styles = StyleSheet.create({
   quickStatNumber: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1a1a2e',
   },
   quickStatLabel: {
     fontSize: 12,
-    color: '#666',
     textAlign: 'center',
     marginTop: 4,
   },
@@ -430,11 +415,9 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1a1a2e',
     marginBottom: 12,
   },
   trendingContainer: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 4,
     shadowColor: '#000',
@@ -448,7 +431,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   trendingIcon: {
     width: 40,
@@ -467,11 +449,9 @@ const styles = StyleSheet.create({
   trendingCategory: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1a1a2e',
   },
   trendingCount: {
     fontSize: 12,
-    color: '#666',
     marginTop: 2,
   },
   trendBadge: {
@@ -486,7 +466,6 @@ const styles = StyleSheet.create({
   contributionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 8,
     shadowColor: '#000',
@@ -503,11 +482,9 @@ const styles = StyleSheet.create({
   contributionNumber: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1a1a2e',
   },
   contributionLabel: {
     fontSize: 11,
-    color: '#666',
     textAlign: 'center',
     marginTop: 4,
   },
@@ -532,11 +509,9 @@ const styles = StyleSheet.create({
   },
   actionText: {
     fontSize: 12,
-    color: '#333',
     fontWeight: '500',
   },
   activityContainer: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 4,
     shadowColor: '#000',
@@ -550,7 +525,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   activityDot: {
     width: 8,
@@ -565,31 +539,25 @@ const styles = StyleSheet.create({
   activityTitle: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#1a1a2e',
   },
   activityType: {
     fontSize: 12,
-    color: '#666',
     marginTop: 2,
     textTransform: 'capitalize',
   },
   activityTime: {
     fontSize: 11,
-    color: '#999',
   },
   errorContainer: {
-    backgroundColor: '#fee',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
     marginVertical: 16,
   },
   errorText: {
-    color: '#c0392b',
     fontSize: 14,
   },
   retryText: {
-    color: '#1a73e8',
     fontSize: 14,
     marginTop: 8,
     fontWeight: '500',
