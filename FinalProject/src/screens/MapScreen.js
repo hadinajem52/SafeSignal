@@ -13,6 +13,7 @@ import MapView, { Marker, Callout, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { incidentAPI } from '../services/api';
+import { useTheme } from '../context/ThemeContext';
 import incidentConstants from '../../../constants/incident';
 import useIncidentFilters from '../hooks/useIncidentFilters';
 import useMapRegion from '../hooks/useMapRegion';
@@ -41,6 +42,7 @@ const DEFAULT_REGION = {
 
 const MapScreen = () => {
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
   const mapRef = useRef(null);
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -182,9 +184,9 @@ const MapScreen = () => {
   // Render error state
   if (error && !loading && incidents.length === 0) {
     return (
-      <View style={styles.centerContainer}>
-        <Ionicons name="alert-circle" size={64} color="#E53935" />
-        <Text style={styles.errorText}>{error}</Text>
+      <View style={[styles.centerContainer, { backgroundColor: theme.background }]}>
+        <Ionicons name="alert-circle" size={64} color={theme.statusError} />
+        <Text style={[styles.errorText, { color: theme.textSecondary }]}>{error}</Text>
         <Button title="Retry" onPress={() => fetchIncidents()} style={styles.retryButton} />
       </View>
     );
@@ -253,7 +255,7 @@ const MapScreen = () => {
       </MapView>
 
       {/* Filter Header */}
-      <View style={[styles.filterHeader, { paddingTop: insets.top + 10 }]}>
+      <View style={[styles.filterHeader, { paddingTop: insets.top + 10, backgroundColor: `${theme.card}fc` }]}>
         <View style={styles.filterRow}>
           <CategoryFilter
             categoryDisplay={CATEGORY_DISPLAY}
@@ -349,13 +351,11 @@ const MapScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
     padding: 20,
   },
   map: {
@@ -370,7 +370,6 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.98)',
     paddingBottom: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -438,7 +437,6 @@ const styles = StyleSheet.create({
 
   // Callout Styles
   calloutContainer: {
-    backgroundColor: '#fff',
     borderRadius: 8,
     padding: 12,
     minWidth: 150,
@@ -452,17 +450,14 @@ const styles = StyleSheet.create({
   calloutTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 4,
   },
   calloutCategory: {
     fontSize: 12,
-    color: '#666',
     marginBottom: 2,
   },
   calloutTime: {
     fontSize: 11,
-    color: '#999',
     marginBottom: 4,
   },
   calloutTap: {
@@ -519,7 +514,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingContainer: {
-    backgroundColor: '#fff',
     padding: 20,
     borderRadius: 12,
     alignItems: 'center',
@@ -532,13 +526,11 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: '#666',
   },
 
   // Error Styles
   errorText: {
     fontSize: 16,
-    color: '#666',
     textAlign: 'center',
     marginTop: 16,
     marginBottom: 20,

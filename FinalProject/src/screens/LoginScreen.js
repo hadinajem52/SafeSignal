@@ -17,6 +17,7 @@ import {
   statusCodes,
 } from '@react-native-google-signin/google-signin';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { Button } from '../components';
 
 // Configure Google Sign-In
@@ -27,6 +28,7 @@ GoogleSignin.configure({
 
 const LoginScreen = ({ navigation }) => {
   const { login, googleSignIn } = useAuth();
+  const { theme } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -138,7 +140,7 @@ const LoginScreen = ({ navigation }) => {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
@@ -147,20 +149,20 @@ const LoginScreen = ({ navigation }) => {
       >
         <View style={styles.headerContainer}>
           <Text style={styles.logo}>🛡️</Text>
-          <Text style={styles.title}>SafeSignal</Text>
-          <Text style={styles.subtitle}>Community Safety Network</Text>
+          <Text style={[styles.title, { color: theme.primary }]}>SafeSignal</Text>
+          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>Community Safety Network</Text>
         </View>
 
-        <View style={styles.formContainer}>
-          <Text style={styles.formTitle}>Welcome Back</Text>
-          <Text style={styles.formSubtitle}>Sign in to your account</Text>
+        <View style={[styles.formContainer, { backgroundColor: theme.card }]}>
+          <Text style={[styles.formTitle, { color: theme.text }]}>Welcome Back</Text>
+          <Text style={[styles.formSubtitle, { color: theme.textSecondary }]}>Sign in to your account</Text>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email</Text>
+            <Text style={[styles.label, { color: theme.text }]}>Email</Text>
             <TextInput
-              style={[styles.input, errors.email && styles.inputError]}
+              style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }, errors.email && styles.inputError]}
               placeholder="Enter your email"
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.textTertiary}
               value={email}
               onChangeText={(text) => {
                 setEmail(text);
@@ -171,15 +173,15 @@ const LoginScreen = ({ navigation }) => {
               autoCorrect={false}
               editable={!isLoading}
             />
-            {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+            {errors.email && <Text style={[styles.errorText, { color: theme.statusError }]}>{errors.email}</Text>}
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Password</Text>
+            <Text style={[styles.label, { color: theme.text }]}>Password</Text>
             <TextInput
-              style={[styles.input, errors.password && styles.inputError]}
+              style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }, errors.password && styles.inputError]}
               placeholder="Enter your password"
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.textTertiary}
               value={password}
               onChangeText={(text) => {
                 setPassword(text);
@@ -188,7 +190,7 @@ const LoginScreen = ({ navigation }) => {
               secureTextEntry
               editable={!isLoading}
             />
-            {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+            {errors.password && <Text style={[styles.errorText, { color: theme.statusError }]}>{errors.password}</Text>}
           </View>
 
           <Button
@@ -200,33 +202,33 @@ const LoginScreen = ({ navigation }) => {
           />
 
           <View style={styles.dividerContainer}>
-            <View style={styles.divider} />
-            <Text style={styles.dividerText}>or</Text>
-            <View style={styles.divider} />
+            <View style={[styles.divider, { borderColor: theme.border }]} />
+            <Text style={[styles.dividerText, { color: theme.textTertiary }]}>or</Text>
+            <View style={[styles.divider, { borderColor: theme.border }]} />
           </View>
 
           <TouchableOpacity
-            style={[styles.googleButton, isGoogleLoading && styles.googleButtonDisabled]}
+            style={[styles.googleButton, { backgroundColor: theme.card, borderColor: theme.border }, isGoogleLoading && styles.googleButtonDisabled]}
             onPress={handleGoogleSignIn}
             disabled={isLoading || isGoogleLoading}
           >
             {isGoogleLoading ? (
-              <ActivityIndicator color="#333" />
+              <ActivityIndicator color={theme.primary} />
             ) : (
               <>
                 <Text style={styles.googleIcon}>G</Text>
-                <Text style={styles.googleButtonText}>Continue with Google</Text>
+                <Text style={[styles.googleButtonText, { color: theme.text }]}>Continue with Google</Text>
               </>
             )}
           </TouchableOpacity>
 
           <View style={styles.footerContainer}>
-            <Text style={styles.footerText}>Don't have an account? </Text>
+            <Text style={[styles.footerText, { color: theme.textSecondary }]}>Don't have an account? </Text>
             <TouchableOpacity
               onPress={() => navigation.navigate('Register')}
               disabled={isLoading || isGoogleLoading}
             >
-              <Text style={styles.linkText}>Sign Up</Text>
+              <Text style={[styles.linkText, { color: theme.primary }]}>Sign Up</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -238,7 +240,6 @@ const LoginScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   scrollContent: {
     flexGrow: 1,
@@ -256,15 +257,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#1a73e8',
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
     marginTop: 5,
   },
   formContainer: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 24,
     shadowColor: '#000',
@@ -276,12 +274,10 @@ const styles = StyleSheet.create({
   formTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 4,
   },
   formSubtitle: {
     fontSize: 14,
-    color: '#666',
     marginBottom: 24,
   },
   inputContainer: {
@@ -290,27 +286,22 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#f5f5f5',
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
   },
   inputError: {
     borderColor: '#e74c3c',
   },
   errorText: {
-    color: '#e74c3c',
     fontSize: 12,
     marginTop: 4,
   },
   button: {
-    backgroundColor: '#1a73e8',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
@@ -330,11 +321,9 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   footerText: {
-    color: '#666',
     fontSize: 14,
   },
   linkText: {
-    color: '#1a73e8',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -346,27 +335,23 @@ const styles = StyleSheet.create({
   divider: {
     flex: 1,
     height: 1,
-    backgroundColor: '#e0e0e0',
+    borderTopWidth: 1,
   },
   dividerText: {
-    color: '#999',
     paddingHorizontal: 16,
     fontSize: 14,
   },
   googleButton: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
     marginBottom: 8,
   },
   googleButtonDisabled: {
-    backgroundColor: '#f5f5f5',
-    borderColor: '#e0e0e0',
+    opacity: 0.6,
   },
   googleIcon: {
     fontSize: 20,
@@ -375,7 +360,6 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   googleButtonText: {
-    color: '#333',
     fontSize: 16,
     fontWeight: '600',
   },

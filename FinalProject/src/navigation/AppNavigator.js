@@ -1,7 +1,8 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 
 import LoginScreen from '../screens/LoginScreen';
@@ -43,9 +44,9 @@ const AppStack = () => (
 /**
  * Loading Screen while checking auth status
  */
-const LoadingScreen = () => (
-  <View style={styles.loadingContainer}>
-    <ActivityIndicator size="large" color="#1a73e8" />
+const LoadingScreen = ({ theme }) => (
+  <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
+    <ActivityIndicator size="large" color={theme.primary} />
   </View>
 );
 
@@ -55,13 +56,26 @@ const LoadingScreen = () => (
  */
 const AppNavigator = () => {
   const { isAuthenticated, isLoading } = useAuth();
+  const { theme, isDark } = useTheme();
+
+  const navigationTheme = {
+    ...(isDark ? DarkTheme : DefaultTheme),
+    colors: {
+      ...(isDark ? DarkTheme.colors : DefaultTheme.colors),
+      background: theme.background,
+      card: theme.card,
+      text: theme.text,
+      border: theme.border,
+      primary: theme.primary,
+    },
+  };
 
   if (isLoading) {
-    return <LoadingScreen />;
+    return <LoadingScreen theme={theme} />;
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={navigationTheme}>
       {isAuthenticated ? <AppStack /> : <AuthStack />}
     </NavigationContainer>
   );
@@ -72,7 +86,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
   },
 });
 

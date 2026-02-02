@@ -1,5 +1,6 @@
 import React from 'react';
 import { Modal as NativeModal, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 
 const Modal = ({
   visible,
@@ -11,6 +12,8 @@ const Modal = ({
   overlayStyle,
   contentStyle,
 }) => {
+  const { theme } = useTheme();
+
   return (
     <NativeModal
       visible={visible}
@@ -24,7 +27,7 @@ const Modal = ({
         onPress={closeOnOverlayPress ? onClose : undefined}
       >
         <View
-          style={[styles.content, contentStyle]}
+          style={[styles.content, { backgroundColor: theme.card }, contentStyle]}
           onStartShouldSetResponder={() => true}
         >
           {children}
@@ -42,7 +45,6 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   content: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
   },

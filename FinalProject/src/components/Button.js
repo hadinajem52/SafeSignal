@@ -1,5 +1,6 @@
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 
 const Button = ({
   title,
@@ -10,13 +11,33 @@ const Button = ({
   style,
   textStyle,
 }) => {
+  const { theme } = useTheme();
   const isDisabled = disabled || loading;
+
+  const variantStyles = {
+    primary: {
+      backgroundColor: theme.primary,
+      text: '#fff',
+    },
+    secondary: {
+      backgroundColor: 'transparent',
+      borderWidth: 2,
+      borderColor: theme.primary,
+      text: theme.primary,
+    },
+    ghost: {
+      backgroundColor: 'transparent',
+      text: theme.primary,
+    },
+  };
+
+  const selected = variantStyles[variant];
 
   return (
     <TouchableOpacity
       style={[
         styles.base,
-        styles[variant],
+        selected,
         isDisabled && styles.disabled,
         style,
       ]}
@@ -25,9 +46,9 @@ const Button = ({
       activeOpacity={0.8}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'secondary' ? '#1a73e8' : '#fff'} />
+        <ActivityIndicator color={selected.text} />
       ) : (
-        <Text style={[styles.baseText, styles[`${variant}Text`], textStyle]}>
+        <Text style={[styles.baseText, { color: selected.text }, textStyle]}>
           {title}
         </Text>
       )}
@@ -46,26 +67,6 @@ const styles = StyleSheet.create({
   baseText: {
     fontSize: 16,
     fontWeight: '600',
-  },
-  primary: {
-    backgroundColor: '#1a73e8',
-  },
-  primaryText: {
-    color: '#fff',
-  },
-  secondary: {
-    backgroundColor: '#fff',
-    borderWidth: 2,
-    borderColor: '#1a73e8',
-  },
-  secondaryText: {
-    color: '#1a73e8',
-  },
-  ghost: {
-    backgroundColor: 'transparent',
-  },
-  ghostText: {
-    color: '#1a73e8',
   },
   disabled: {
     opacity: 0.6,
