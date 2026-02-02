@@ -7,6 +7,7 @@ import Reports from './pages/Reports'
 import Users from './pages/Users'
 import Settings from './pages/Settings'
 import Login from './pages/Login'
+import LawEnforcement from './pages/LawEnforcement'
 import { AuthProvider, useAuth } from './context/AuthContext'
 
 const queryClient = new QueryClient({
@@ -47,6 +48,7 @@ function AppRoutes() {
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/reports" element={<Reports />} />
+                <Route path="/lei" element={<LawEnforcement />} />
                 <Route path="/users" element={<Users />} />
                 <Route path="/settings" element={<Settings />} />
               </Routes>

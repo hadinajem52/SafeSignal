@@ -12,7 +12,10 @@ const {
   VALID_CATEGORIES,
   VALID_SEVERITIES,
   VALID_STATUSES,
+  VALID_CLOSURE_OUTCOMES,
 } = require('../../../constants/incident');
+
+const LEI_STATUSES = ['verified', 'dispatched', 'on_scene', 'investigating', 'police_closed'];
 
 /**
  * Create a new incident
@@ -381,6 +384,148 @@ async function logAction(incidentId, moderatorId, actionType, notes = null) {
   );
 }
 
+function validateLEIStatusTransition(currentStatus, nextStatus) {
+  if (currentStatus === nextStatus) return true;
+
+  const transitions = {
+    verified: ['dispatched', 'investigating', 'police_closed'],
+    dispatched: ['on_scene', 'investigating', 'police_closed'],
+    on_scene: ['investigating', 'police_closed'],
+    investigating: ['police_closed'],
+    police_closed: [],
+  };
+
+  const allowedNext = transitions[currentStatus] || [];
+  return allowedNext.includes(nextStatus);
+}
+
+async function getLEIIncidents(filters = {}) {
+  const { status } = filters;
+
+  if (status && status !== 'all' && !LEI_STATUSES.includes(status)) {
+    throw ServiceError.badRequest('Invalid law enforcement status filter');
+  }
+
+  const params = [];
+  let paramCount = 1;
+
+  let query = `
+    SELECT i.*, u.username, u.email
+    FROM incidents i
+    JOIN users u ON i.reporter_id = u.user_id
+    WHERE i.is_draft = FALSE
+      AND i.status = ANY($${paramCount}::text[])
+  `;
+
+  const statuses = status && status !== 'all' ? [status] : LEI_STATUSES;
+  params.push(statuses);
+  paramCount++;
+
+  query += `
+    ORDER BY
+      CASE i.severity
+        WHEN 'critical' THEN 1
+        WHEN 'high' THEN 2
+        WHEN 'medium' THEN 3
+        WHEN 'low' THEN 4
+        ELSE 5
+      END,
+      i.incident_date DESC
+  `;
+
+  return db.manyOrNone(query, params);
+}
+
+async function getLEIIncidentById(incidentId) {
+  const incidentQuery = db.oneOrNone(
+    `SELECT i.*, u.username, u.email
+     FROM incidents i
+     JOIN users u ON i.reporter_id = u.user_id
+     WHERE i.incident_id = $1`,
+    [incidentId]
+  );
+
+  const actionsQuery = db.manyOrNone(
+    `SELECT action_id, moderator_id, action_type, notes, timestamp
+     FROM report_actions
+     WHERE incident_id = $1
+     ORDER BY timestamp DESC`,
+    [incidentId]
+  );
+
+  const [incident, actions] = await Promise.all([incidentQuery, actionsQuery]);
+
+  if (!incident) {
+    throw ServiceError.notFound('Incident');
+  }
+
+  return { incident, actions };
+}
+
+async function updateLEIStatus(incidentId, status, closureOutcome, closureDetails, requestingUser) {
+  const incident = await db.oneOrNone(
+    'SELECT * FROM incidents WHERE incident_id = $1',
+    [incidentId]
+  );
+
+  if (!incident) {
+    throw ServiceError.notFound('Incident');
+  }
+
+  if (!LEI_STATUSES.includes(status)) {
+    throw ServiceError.badRequest('Invalid law enforcement status');
+  }
+
+  if (!validateLEIStatusTransition(incident.status, status)) {
+    throw ServiceError.badRequest('Invalid status transition for law enforcement workflow');
+  }
+
+  if (status === 'police_closed') {
+    if (!closureOutcome || !VALID_CLOSURE_OUTCOMES.includes(closureOutcome)) {
+      throw ServiceError.badRequest('Valid closure_outcome is required to close a case');
+    }
+
+    if (closureOutcome === 'report_filed' && !closureDetails?.case_id) {
+      throw ServiceError.badRequest('case_id is required when outcome is report_filed');
+    }
+  }
+
+  const safeClosureDetails = status === 'police_closed'
+    ? {
+        case_id: closureDetails?.case_id || null,
+        officer_notes: closureDetails?.officer_notes || null,
+        responding_officer_id: requestingUser.userId,
+      }
+    : null;
+
+  const updatedIncident = await db.one(
+    `UPDATE incidents
+     SET status = $2,
+         closure_outcome = $3,
+         closure_details = $4,
+         updated_at = CURRENT_TIMESTAMP
+     WHERE incident_id = $1
+     RETURNING *`,
+    [
+      incidentId,
+      status,
+      status === 'police_closed' ? closureOutcome : null,
+      status === 'police_closed' ? safeClosureDetails : null,
+    ]
+  );
+
+  await logAction(
+    incidentId,
+    requestingUser.userId,
+    'status_changed',
+    status === 'police_closed'
+      ? `Closed with outcome: ${closureOutcome}`
+      : `Status changed to ${status}`
+  );
+
+  return updatedIncident;
+}
+
 /**
  * Verify an incident
  * @param {number} incidentId
@@ -487,4 +632,7 @@ module.exports = {
   verifyIncident,
   rejectIncident,
   escalateIncident,
+  getLEIIncidents,
+  getLEIIncidentById,
+  updateLEIStatus,
 };

@@ -15,6 +15,11 @@ const seedDatabase = async () => {
     const modPassword = 'password123';
     const modUsername = 'moderator';
 
+    // Law enforcement account
+    const leiEmail = 'lei@safesignal.com';
+    const leiPassword = 'password123';
+    const leiUsername = 'law_enforcement';
+
     // Check if admin already exists
     const existingAdmin = await db.oneOrNone(
       'SELECT user_id FROM users WHERE email = $1',
@@ -59,10 +64,33 @@ const seedDatabase = async () => {
       console.log(`ℹ Moderator account already exists: ${modEmail}`);
     }
 
+    // Check if law enforcement account already exists
+    const existingLei = await db.oneOrNone(
+      'SELECT user_id FROM users WHERE email = $1',
+      [leiEmail]
+    );
+
+    if (!existingLei) {
+      const salt = await bcrypt.genSalt(12);
+      const leiHash = await bcrypt.hash(leiPassword, salt);
+
+      await db.one(
+        `INSERT INTO users (username, email, password_hash, role, is_verified, created_at, updated_at)
+         VALUES ($1, $2, $3, 'law_enforcement', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+         RETURNING user_id, email, role`,
+        [leiUsername, leiEmail, leiHash]
+      );
+
+      console.log(`✓ Created law enforcement account: ${leiEmail} / ${leiPassword}`);
+    } else {
+      console.log(`ℹ Law enforcement account already exists: ${leiEmail}`);
+    }
+
     console.log('\n📝 Test Credentials:');
     console.log('═══════════════════════════════════════');
     console.log(`Admin Account:\n  Email: ${adminEmail}\n  Password: ${adminPassword}`);
     console.log(`Moderator Account:\n  Email: ${modEmail}\n  Password: ${modPassword}`);
+    console.log(`Law Enforcement Account:\n  Email: ${leiEmail}\n  Password: ${leiPassword}`);
     console.log('═══════════════════════════════════════\n');
   } catch (error) {
     console.error('✗ Error seeding database:', error.message);

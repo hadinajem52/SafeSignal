@@ -9,14 +9,12 @@ import {
   Clock,
   AlertTriangle
 } from 'lucide-react'
-import incidentConstants from '../../../constants/incident'
+import { STATUS_COLORS, STATUS_LABELS, MODERATOR_STATUS_FILTERS } from '../constants/incident'
 
 function Reports() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedReport, setSelectedReport] = useState(null)
-
-  const { STATUS_COLORS, STATUS_LABELS, MODERATOR_STATUS_FILTERS } = incidentConstants
 
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ['reports', statusFilter],

@@ -10,7 +10,12 @@ const authenticateToken = require('../middleware/auth');
 const requireRole = require('../middleware/roles');
 const incidentService = require('../services/incidentService');
 const ServiceError = require('../utils/ServiceError');
-const { VALID_CATEGORIES, VALID_SEVERITIES } = require('../../../constants/incident');
+const {
+  VALID_CATEGORIES,
+  VALID_SEVERITIES,
+  VALID_STATUSES,
+  VALID_CLOSURE_OUTCOMES,
+} = require('../../../constants/incident');
 const { LIMITS } = require('../../../constants/limits');
 
 const router = express.Router();
@@ -153,6 +158,104 @@ router.get('/', async (req, res) => {
     handleServiceError(error, res, 'Failed to fetch incidents');
   }
 });
+
+/**
+ * @route   GET /api/incidents/lei
+ * @desc    Get incidents for law enforcement interface
+ * @access  Private (Law Enforcement/Admin)
+ */
+router.get('/lei', authenticateToken, requireRole(['law_enforcement', 'admin']), async (req, res) => {
+  try {
+    const { status = 'all' } = req.query;
+
+    if (status !== 'all' && !VALID_STATUSES.includes(status)) {
+      return res.status(400).json({
+        status: 'ERROR',
+        message: 'Invalid status filter',
+      });
+    }
+
+    const incidents = await incidentService.getLEIIncidents({ status });
+
+    res.json({
+      status: 'OK',
+      data: incidents,
+      count: incidents.length,
+    });
+  } catch (error) {
+    handleServiceError(error, res, 'Failed to fetch LEI incidents');
+  }
+});
+
+/**
+ * @route   GET /api/incidents/lei/:id
+ * @desc    Get incident details for law enforcement
+ * @access  Private (Law Enforcement/Admin)
+ */
+router.get(
+  '/lei/:id',
+  authenticateToken,
+  requireRole(['law_enforcement', 'admin']),
+  [param('id').isInt()],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        status: 'ERROR',
+        message: 'Invalid incident ID',
+      });
+    }
+
+    try {
+      const data = await incidentService.getLEIIncidentById(req.params.id);
+
+      res.json({
+        status: 'OK',
+        data,
+      });
+    } catch (error) {
+      handleServiceError(error, res, 'Failed to fetch LEI incident');
+    }
+  }
+);
+
+/**
+ * @route   PATCH /api/incidents/lei/:id/status
+ * @desc    Update incident status for law enforcement
+ * @access  Private (Law Enforcement/Admin)
+ */
+router.patch(
+  '/lei/:id/status',
+  authenticateToken,
+  requireRole(['law_enforcement', 'admin']),
+  [
+    param('id').isInt(),
+    body('status').isString().trim().isIn(VALID_STATUSES),
+    body('closure_outcome').optional().isString().trim().isIn(VALID_CLOSURE_OUTCOMES),
+    body('closure_details').optional().isObject(),
+  ],
+  async (req, res) => {
+    if (handleValidationErrors(req, res)) return;
+
+    try {
+      const updatedIncident = await incidentService.updateLEIStatus(
+        req.params.id,
+        req.body.status,
+        req.body.closure_outcome,
+        req.body.closure_details,
+        req.user
+      );
+
+      res.json({
+        status: 'OK',
+        message: 'Incident status updated',
+        data: updatedIncident,
+      });
+    } catch (error) {
+      handleServiceError(error, res, 'Failed to update LEI status');
+    }
+  }
+);
 
 /**
  * @route   GET /api/incidents/list
@@ -441,8 +544,6 @@ router.post(
     } catch (error) {
       handleServiceError(error, res, 'Failed to escalate incident');
     }
-  }
-);
   }
 );
 
