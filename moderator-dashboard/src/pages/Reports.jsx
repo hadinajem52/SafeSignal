@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { reportsAPI } from '../services/api'
 import { 
@@ -9,6 +9,7 @@ import {
   Clock,
   AlertTriangle
 } from 'lucide-react'
+import { io } from 'socket.io-client'
 import { STATUS_COLORS, STATUS_LABELS, MODERATOR_STATUS_FILTERS } from '../constants/incident'
 
 function Reports() {
@@ -26,6 +27,27 @@ function Reports() {
   })
 
   const queryClient = useQueryClient()
+
+  useEffect(() => {
+    const token = localStorage.getItem('moderator_token')
+    if (!token) return
+
+    const socket = io('http://localhost:3000', {
+      auth: { token },
+    })
+
+    socket.on('incident:new', () => {
+      queryClient.invalidateQueries({ queryKey: ['reports'] })
+    })
+
+    socket.on('incident:update', () => {
+      queryClient.invalidateQueries({ queryKey: ['reports'] })
+    })
+
+    return () => {
+      socket.disconnect()
+    }
+  }, [queryClient])
 
   const verifyMutation = useMutation({
     mutationFn: (id) => reportsAPI.verify(id),
