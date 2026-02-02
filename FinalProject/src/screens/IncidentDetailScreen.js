@@ -19,6 +19,12 @@ const IncidentDetailScreen = ({ route }) => {
 
   const categoryConfig = CATEGORY_DISPLAY[incident.category] || CATEGORY_DISPLAY.other;
   const statusLabel = STATUS_LABELS[incident.status] || incident.status;
+  const closureOutcome = incident.closure_outcome
+    ? incident.closure_outcome.replace('_', ' ')
+    : null;
+  const resolvedLabel = closureOutcome
+    ? `${statusLabel} - ${closureOutcome.replace(/\b\w/g, (char) => char.toUpperCase())}`
+    : statusLabel;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
@@ -34,7 +40,10 @@ const IncidentDetailScreen = ({ route }) => {
           </View>
         </View>
         <Text style={styles.title}>{incident.title}</Text>
-        <Text style={styles.subtitle}>{statusLabel}</Text>
+        <Text style={styles.subtitle}>{resolvedLabel}</Text>
+        {closureOutcome ? (
+          <Text style={styles.outcomeText}>Outcome: {closureOutcome}</Text>
+        ) : null}
       </Card>
 
       <Card style={styles.sectionCard}>
@@ -106,6 +115,12 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 13,
     color: '#6b7280',
+  },
+  outcomeText: {
+    fontSize: 13,
+    color: '#047857',
+    marginTop: 4,
+    fontWeight: '600',
   },
   sectionCard: {
     marginBottom: 12,

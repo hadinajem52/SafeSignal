@@ -14,6 +14,7 @@ const {
   VALID_STATUSES,
   VALID_CLOSURE_OUTCOMES,
 } = require('../../../constants/incident');
+const { emitLeiAlert } = require('../utils/leiNotifier');
 
 const LEI_STATUSES = ['verified', 'dispatched', 'on_scene', 'investigating', 'police_closed'];
 
@@ -144,6 +145,7 @@ async function getUserIncidents(userId, filters = {}) {
       i.incident_id, i.title, i.description, i.category, i.severity,
       i.latitude, i.longitude, i.location_name, i.status, i.is_draft,
       i.created_at, i.incident_date, i.photo_urls, i.is_anonymous,
+      i.closure_outcome, i.closure_details,
       u.username, u.email,
       COUNT(*) OVER() as total_count
     FROM incidents i
@@ -446,10 +448,18 @@ async function getLEIIncidentById(incidentId) {
   );
 
   const actionsQuery = db.manyOrNone(
-    `SELECT action_id, moderator_id, action_type, notes, timestamp
-     FROM report_actions
-     WHERE incident_id = $1
-     ORDER BY timestamp DESC`,
+    `SELECT 
+       ra.action_id,
+       ra.moderator_id,
+       ra.action_type,
+       ra.notes,
+       ra.timestamp,
+       u.username as moderator_name,
+       u.email as moderator_email
+     FROM report_actions ra
+     LEFT JOIN users u ON ra.moderator_id = u.user_id
+     WHERE ra.incident_id = $1
+     ORDER BY ra.timestamp DESC`,
     [incidentId]
   );
 
@@ -550,6 +560,16 @@ async function verifyIncident(incidentId, requestingUser) {
   );
 
   await logAction(incidentId, requestingUser.userId, 'verified');
+
+  if (['high', 'critical'].includes(updated.severity)) {
+    emitLeiAlert({
+      incidentId: updated.incident_id,
+      title: updated.title,
+      severity: updated.severity,
+      status: updated.status,
+      incidentDate: updated.incident_date,
+    });
+  }
 
   return updated;
 }

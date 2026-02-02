@@ -56,9 +56,17 @@ const MyReportsScreen = ({ navigation }) => {
       return;
     }
 
+    const outcomeLabel = incident.closure_outcome
+      ? incident.closure_outcome.replace('_', ' ')
+      : null;
+    const statusLabel = STATUS_LABELS[incident.status] || incident.status;
+    const resolvedLabel = outcomeLabel
+      ? `${statusLabel} - ${outcomeLabel.replace(/\b\w/g, (char) => char.toUpperCase())}`
+      : statusLabel;
+
     Alert.alert(
       incident.title,
-      `Status: ${STATUS_LABELS[incident.status] || incident.status}\n\n${incident.description}`,
+      `Status: ${resolvedLabel}\n\n${incident.description}`,
       [
         { text: 'OK' },
         {
@@ -156,6 +164,10 @@ const MyReportsScreen = ({ navigation }) => {
       { key: 'submitted', label: 'Submitted' },
       { key: 'in_review', label: 'In Review' },
       { key: 'verified', label: 'Verified' },
+      { key: 'dispatched', label: 'Dispatched' },
+      { key: 'on_scene', label: 'On Scene' },
+      { key: 'investigating', label: 'Investigating' },
+      { key: 'police_closed', label: 'Police Closed' },
       { key: 'published', label: 'Published' },
     ];
 

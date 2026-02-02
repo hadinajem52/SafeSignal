@@ -69,7 +69,7 @@ const getMapIncidents = async (filters) => {
 
   const startDate = calculateStartDate(timeframe);
 
-  // Build query - only show verified/published incidents for privacy
+  // Build query - only show verified and active LEI statuses for public awareness
   let query = `
     SELECT 
       incident_id,
@@ -81,7 +81,7 @@ const getMapIncidents = async (filters) => {
       incident_date,
       status
     FROM incidents
-    WHERE status IN ('verified', 'published')
+    WHERE status IN ('verified', 'published', 'dispatched', 'on_scene', 'investigating')
       AND incident_date >= $1
       AND is_draft = false
   `;

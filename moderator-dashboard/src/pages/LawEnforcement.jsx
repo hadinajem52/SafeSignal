@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, BadgeCheck, MapPin, Search, Shield } from 'lucide-react'
+import { io } from 'socket.io-client'
 import { leiAPI } from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import { STATUS_COLORS, STATUS_LABELS, LEI_STATUS_FILTERS, CLOSURE_OUTCOMES } from '../constants/incident'
@@ -21,6 +22,7 @@ function LawEnforcement() {
   const [closeOutcome, setCloseOutcome] = useState('resolved_handled')
   const [closeNotes, setCloseNotes] = useState('')
   const [caseId, setCaseId] = useState('')
+  const [leiAlerts, setLeiAlerts] = useState([])
 
   const queryClient = useQueryClient()
 
@@ -57,6 +59,13 @@ function LawEnforcement() {
           incident.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
           incident.description.toLowerCase().includes(searchTerm.toLowerCase())
         return matchesSearch
+      })
+      .sort((a, b) => {
+        const severityRank = { critical: 1, high: 2, medium: 3, low: 4 }
+        const rankA = severityRank[a.severity] || 5
+        const rankB = severityRank[b.severity] || 5
+        if (rankA !== rankB) return rankA - rankB
+        return new Date(b.incident_date || b.created_at) - new Date(a.incident_date || a.created_at)
       })
       .map((incident) => ({
         ...incident,
@@ -121,6 +130,22 @@ function LawEnforcement() {
     })
   }
 
+  useEffect(() => {
+    if (user?.role !== 'law_enforcement' && user?.role !== 'admin') return
+
+    const socket = io('http://localhost:3000')
+    socket.emit('join_role', user.role)
+
+    socket.on('lei_alert', (payload) => {
+      setLeiAlerts((prev) => [payload, ...prev].slice(0, 5))
+      queryClient.invalidateQueries({ queryKey: ['lei-incidents'] })
+    })
+
+    return () => {
+      socket.disconnect()
+    }
+  }, [queryClient, user])
+
   if (user?.role !== 'law_enforcement' && user?.role !== 'admin') {
     return (
       <div className="bg-white rounded-lg shadow p-8 text-center">
@@ -140,6 +165,23 @@ function LawEnforcement() {
         </div>
         <p className="text-gray-600 mt-2">Operational response and case resolution</p>
       </div>
+
+      {leiAlerts.length > 0 && (
+        <div className="mb-6 space-y-3">
+          {leiAlerts.map((alert, index) => (
+            <div
+              key={`${alert.incidentId}-${index}`}
+              className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-3"
+            >
+              <AlertTriangle size={20} />
+              <div>
+                <p className="font-semibold">Critical alert: {alert.title}</p>
+                <p className="text-sm">Severity: {alert.severity?.toUpperCase()} · Status: {formatStatusLabel(alert.status)}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -308,13 +350,15 @@ function LawEnforcement() {
               <div className="bg-white border border-gray-200 rounded-lg p-4">
                 <h4 className="font-bold text-gray-900 mb-3">Status Management</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <button
-                    onClick={() => handleStatusUpdate('dispatched')}
-                    disabled={!canTransitionTo(selectedIncident.status, 'dispatched') || statusMutation.isPending}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition-colors disabled:opacity-50"
-                  >
-                    Dispatch Unit
-                  </button>
+                  {(user?.role === 'law_enforcement' || user?.role === 'admin') && (
+                    <button
+                      onClick={() => handleStatusUpdate('dispatched')}
+                      disabled={!canTransitionTo(selectedIncident.status, 'dispatched') || statusMutation.isPending}
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      Dispatch Unit
+                    </button>
+                  )}
                   <button
                     onClick={() => handleStatusUpdate('on_scene')}
                     disabled={!canTransitionTo(selectedIncident.status, 'on_scene') || statusMutation.isPending}
@@ -354,7 +398,11 @@ function LawEnforcement() {
                     />
                     <button
                       onClick={handleCloseCase}
-                      disabled={!canTransitionTo(selectedIncident.status, 'police_closed') || statusMutation.isPending}
+                      disabled={
+                        !canTransitionTo(selectedIncident.status, 'police_closed') ||
+                        statusMutation.isPending ||
+                        (closeOutcome === 'report_filed' && !caseId)
+                      }
                       className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 rounded-lg transition-colors disabled:opacity-50"
                     >
                       Close Case
@@ -383,6 +431,7 @@ function LawEnforcement() {
                         <div>
                           <p className="text-sm text-gray-800">
                             {entry.action_type.replace('_', ' ')}
+                            {entry.moderator_name ? ` · ${entry.moderator_name}` : ''}
                           </p>
                           {entry.notes && <p className="text-xs text-gray-500">{entry.notes}</p>}
                           <p className="text-xs text-gray-400">{new Date(entry.timestamp).toLocaleString()}</p>
