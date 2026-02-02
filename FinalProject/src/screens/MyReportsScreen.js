@@ -89,9 +89,9 @@ const MyReportsScreen = ({ navigation }) => {
         onPress={() => handleIncidentPress(item)}
         activeOpacity={0.7}
       >
-        <Card style={styles.incidentCardInner}>
+        <Card style={[styles.incidentCardInner, { borderColor: theme.border, borderWidth: 1, borderBottomColor: theme.divider }]}>
           <View style={styles.cardHeader}>
-            <View style={styles.categoryBadge}>
+            <View style={[styles.categoryBadge, { backgroundColor: theme.surface }]}>
               <Text style={styles.categoryIcon}>{categoryIcon}</Text>
             </View>
             <View style={styles.badgesRight}>
@@ -102,22 +102,22 @@ const MyReportsScreen = ({ navigation }) => {
             </View>
           </View>
 
-          <Text style={styles.incidentTitle} numberOfLines={2}>
+          <Text style={[styles.incidentTitle, { color: theme.text }]} numberOfLines={2}>
             {item.title}
           </Text>
 
-          <Text style={styles.incidentDescription} numberOfLines={3}>
+          <Text style={[styles.incidentDescription, { color: theme.textSecondary }]} numberOfLines={3}>
             {item.description}
           </Text>
 
-          <View style={styles.cardFooter}>
+          <View style={[styles.cardFooter, { borderTopColor: theme.divider }]}>
             <View style={styles.locationContainer}>
               <Text style={styles.locationIcon}>📍</Text>
-              <Text style={styles.locationText}>
+              <Text style={[styles.locationText, { color: theme.textSecondary }]}>
                 {locationDisplay}
               </Text>
             </View>
-            <Text style={styles.dateText}>{date}</Text>
+            <Text style={[styles.dateText, { color: theme.textTertiary }]}>{date}</Text>
           </View>
         </Card>
       </TouchableOpacity>
@@ -130,8 +130,8 @@ const MyReportsScreen = ({ navigation }) => {
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
       <Text style={styles.emptyIcon}>📭</Text>
-      <Text style={styles.emptyTitle}>No Reports Yet</Text>
-      <Text style={styles.emptyText}>
+      <Text style={[styles.emptyTitle, { color: theme.text }]}>No Reports Yet</Text>
+      <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
         {selectedFilter === 'all'
           ? "You haven't submitted any incident reports yet."
           : selectedFilter === 'draft'
@@ -160,21 +160,22 @@ const MyReportsScreen = ({ navigation }) => {
     ];
 
     return (
-      <View style={styles.filterContainer}>
+      <View style={[styles.filterContainer, { backgroundColor: theme.card, borderBottomColor: theme.divider }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {filters.map((filter) => (
             <TouchableOpacity
               key={filter.key}
               style={[
                 styles.filterButton,
-                selectedFilter === filter.key && styles.filterButtonActive,
+                selectedFilter === filter.key && [styles.filterButtonActive, { backgroundColor: theme.primary }],
+                selectedFilter !== filter.key && { backgroundColor: theme.surface },
               ]}
               onPress={() => setSelectedFilter(filter.key)}
             >
               <Text
                 style={[
                   styles.filterButtonText,
-                  selectedFilter === filter.key && styles.filterButtonTextActive,
+                  selectedFilter === filter.key ? styles.filterButtonTextActive : { color: theme.text },
                 ]}
               >
                 {filter.label}
@@ -188,17 +189,17 @@ const MyReportsScreen = ({ navigation }) => {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1a73e8" />
-        <Text style={styles.loadingText}>Loading your reports...</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
+        <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Loading your reports...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: theme.primary }]}>
         <Text style={styles.headerTitle}>My Reports</Text>
         <Text style={styles.headerSubtitle}>
           {pagination ? `${pagination.total} total report${pagination.total !== 1 ? 's' : ''}` : ''}
@@ -218,8 +219,8 @@ const MyReportsScreen = ({ navigation }) => {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={handleRefresh}
-            colors={['#1a73e8']}
-            tintColor="#1a73e8"
+            colors={[theme.primary]}
+            tintColor={theme.primary}
           />
         }
         ListEmptyComponent={renderEmptyState}
