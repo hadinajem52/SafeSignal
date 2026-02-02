@@ -15,7 +15,7 @@ const ServiceError = require('../utils/ServiceError');
  */
 const USER_STATS_SELECT = `
   (SELECT COUNT(*) FROM incidents WHERE reporter_id = u.user_id AND is_draft = FALSE) as total_reports,
-  (SELECT COUNT(*) FROM incidents WHERE reporter_id = u.user_id AND status = 'verified' AND is_draft = FALSE) as verified_reports,
+  (SELECT COUNT(*) FROM incidents WHERE reporter_id = u.user_id AND status IN ('verified', 'dispatched', 'on_scene', 'police_closed', 'resolved') AND is_draft = FALSE) as verified_reports,
   (SELECT COUNT(*) FROM incidents WHERE reporter_id = u.user_id AND status = 'rejected' AND is_draft = FALSE) as rejected_reports
 `;
 

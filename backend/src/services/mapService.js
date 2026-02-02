@@ -69,7 +69,8 @@ const getMapIncidents = async (filters) => {
 
   const startDate = calculateStartDate(timeframe);
 
-  // Build query - only show verified and active LEI statuses for public awareness
+  // Build query - show verified and active LEI statuses for public awareness
+  // Keep police_closed visible for 24 hours after closure.
   let query = `
     SELECT 
       incident_id,
@@ -81,7 +82,10 @@ const getMapIncidents = async (filters) => {
       incident_date,
       status
     FROM incidents
-    WHERE status IN ('verified', 'published', 'dispatched', 'on_scene', 'investigating')
+    WHERE (
+      status IN ('verified', 'published', 'dispatched', 'on_scene', 'investigating')
+      OR (status = 'police_closed' AND updated_at >= NOW() - INTERVAL '24 hours')
+    )
       AND incident_date >= $1
       AND is_draft = false
   `;

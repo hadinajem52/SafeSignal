@@ -36,6 +36,27 @@ function ProtectedRoute({ children }) {
   return isAuthenticated ? children : <Navigate to="/login" />
 }
 
+function RoleProtectedRoute({ allowedRoles, children }) {
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user || !allowedRoles.includes(user.role)) {
+    return <Navigate to="/" />
+  }
+
+  return children
+}
+
 function AppRoutes() {
   return (
     <Routes>
@@ -47,9 +68,30 @@ function AppRoutes() {
             <Layout>
               <Routes>
                 <Route path="/" element={<Dashboard />} />
-                <Route path="/reports" element={<Reports />} />
-                <Route path="/lei" element={<LawEnforcement />} />
-                <Route path="/users" element={<Users />} />
+                <Route
+                  path="/reports"
+                  element={
+                    <RoleProtectedRoute allowedRoles={['moderator', 'admin']}>
+                      <Reports />
+                    </RoleProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/lei"
+                  element={
+                    <RoleProtectedRoute allowedRoles={['law_enforcement', 'admin']}>
+                      <LawEnforcement />
+                    </RoleProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/users"
+                  element={
+                    <RoleProtectedRoute allowedRoles={['admin', 'moderator']}>
+                      <Users />
+                    </RoleProtectedRoute>
+                  }
+                />
                 <Route path="/settings" element={<Settings />} />
               </Routes>
             </Layout>
