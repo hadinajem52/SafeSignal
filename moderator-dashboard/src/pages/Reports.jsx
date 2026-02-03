@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tantml/react-query'
 import { reportsAPI } from '../services/api'
 import { 
   Search, 
@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { io } from 'socket.io-client'
 import { STATUS_COLORS, STATUS_LABELS, MODERATOR_STATUS_FILTERS } from '../constants/incident'
+import IncidentTimeline from '../components/IncidentTimeline'
 
 function Reports() {
   const [searchTerm, setSearchTerm] = useState('')
@@ -190,8 +191,8 @@ function Reports() {
       {/* Detail Modal */}
       {selectedReport && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-screen overflow-y-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 flex justify-between items-center">
+          <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] flex flex-col">
+            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 flex justify-between items-center rounded-t-lg">
               <h2 className="text-2xl font-bold">Report Details</h2>
               <button
                 onClick={() => setSelectedReport(null)}
@@ -201,68 +202,82 @@ function Reports() {
               </button>
             </div>
 
-            <div className="p-6 space-y-6">
-              <div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">{selectedReport.title}</h3>
-                <div className="flex gap-3">
-                  <span className={`px-4 py-2 rounded-full text-sm font-medium ${getStatusColor(selectedReport.status)}`}>
-                    {formatStatusLabel(selectedReport.status)}
-                  </span>
-                  <span className={`px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-800`}>
-                    {selectedReport.category.replace('_', ' ').toUpperCase()}
-                  </span>
+            <div className="flex-1 overflow-hidden flex">
+              {/* Left side - Report details */}
+              <div className="w-1/2 p-6 space-y-6 overflow-y-auto border-r">
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-4">{selectedReport.title}</h3>
+                  <div className="flex gap-3">
+                    <span className={`px-4 py-2 rounded-full text-sm font-medium ${getStatusColor(selectedReport.status)}`}>
+                      {formatStatusLabel(selectedReport.status)}
+                    </span>
+                    <span className={`px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-800`}>
+                      {selectedReport.category.replace('_', ' ').toUpperCase()}
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-bold text-gray-900 mb-2">Description</h4>
+                  <p className="text-gray-700">{selectedReport.description}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600">Reported By</p>
+                    <p className="font-medium text-gray-900">{selectedReport.reporter}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Location</p>
+                    <p className="font-medium text-gray-900">{selectedReport.location}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Date Reported</p>
+                    <p className="font-medium text-gray-900">{new Date(selectedReport.createdAt).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Severity Level</p>
+                    <p className={`font-medium capitalize ${getSeverityColor(selectedReport.severity)}`}>
+                      {selectedReport.severity}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-6 border-t border-gray-200 flex gap-3">
+                  <button 
+                    onClick={() => verifyMutation.mutate(selectedReport.id)}
+                    disabled={verifyMutation.isPending}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <CheckCircle size={20} />
+                    {verifyMutation.isPending ? 'Verifying...' : 'Verify'}
+                  </button>
+                  <button 
+                    onClick={() => rejectMutation.mutate(selectedReport.id)}
+                    disabled={rejectMutation.isPending}
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <XCircle size={20} />
+                    {rejectMutation.isPending ? 'Rejecting...' : 'Reject'}
+                  </button>
+                  <button
+                    onClick={() => setSelectedReport(null)}
+                    className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 rounded-lg transition-colors"
+                  >
+                    Close
+                  </button>
                 </div>
               </div>
 
-              <div>
-                <h4 className="font-bold text-gray-900 mb-2">Description</h4>
-                <p className="text-gray-700">{selectedReport.description}</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-600">Reported By</p>
-                  <p className="font-medium text-gray-900">{selectedReport.reporter}</p>
+              {/* Right side - Timeline */}
+              <div className="w-1/2 flex flex-col">
+                <div className="p-4 border-b bg-gray-50">
+                  <h3 className="text-lg font-bold text-gray-900">Timeline & Communication</h3>
+                  <p className="text-sm text-gray-600 mt-1">Communicate with the reporter or add internal notes</p>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-600">Location</p>
-                  <p className="font-medium text-gray-900">{selectedReport.location}</p>
+                <div className="flex-1">
+                  <IncidentTimeline incidentId={selectedReport.id} />
                 </div>
-                <div>
-                  <p className="text-sm text-gray-600">Date Reported</p>
-                  <p className="font-medium text-gray-900">{new Date(selectedReport.createdAt).toLocaleString()}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Severity Level</p>
-                  <p className={`font-medium capitalize ${getSeverityColor(selectedReport.severity)}`}>
-                    {selectedReport.severity}
-                  </p>
-                </div>
-              </div>
-
-              <div className="pt-6 border-t border-gray-200 flex gap-3">
-                <button 
-                  onClick={() => verifyMutation.mutate(selectedReport.id)}
-                  disabled={verifyMutation.isPending}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  <CheckCircle size={20} />
-                  {verifyMutation.isPending ? 'Verifying...' : 'Verify'}
-                </button>
-                <button 
-                  onClick={() => rejectMutation.mutate(selectedReport.id)}
-                  disabled={rejectMutation.isPending}
-                  className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  <XCircle size={20} />
-                  {rejectMutation.isPending ? 'Rejecting...' : 'Reject'}
-                </button>
-                <button
-                  onClick={() => setSelectedReport(null)}
-                  className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 rounded-lg transition-colors"
-                >
-                  Close
-                </button>
               </div>
             </div>
           </div>

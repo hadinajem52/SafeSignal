@@ -6,3 +6,5 @@ export { default as SeverityBadge } from './SeverityBadge';
 export { default as CategoryFilter } from './CategoryFilter';
 export { default as MapLegend } from './MapLegend';
 export { default as IncidentDetailModal } from './IncidentDetailModal';
+export { default as IncidentTimeline } from './IncidentTimeline';
+

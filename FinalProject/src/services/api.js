@@ -671,4 +671,56 @@ export const statsAPI = {
   },
 };
 
+/**
+ * Timeline/Comment API
+ * Handles incident timeline and comments
+ */
+export const timelineAPI = {
+  /**
+   * Get timeline for an incident (comments + status changes)
+   */
+  async getTimeline(incidentId) {
+    try {
+      const response = await api.get(`/incidents/${incidentId}/timeline`);
+
+      if (response.data.status === 'OK') {
+        return {
+          success: true,
+          data: response.data.data,
+        };
+      }
+
+      return { success: false, error: response.data.message };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to fetch timeline';
+      return { success: false, error: message };
+    }
+  },
+
+  /**
+   * Post a comment on an incident
+   */
+  async postComment(incidentId, content, isInternal = false, attachments = null) {
+    try {
+      const response = await api.post(`/incidents/${incidentId}/comments`, {
+        content,
+        isInternal,
+        attachments,
+      });
+
+      if (response.data.status === 'OK') {
+        return {
+          success: true,
+          data: response.data.data,
+        };
+      }
+
+      return { success: false, error: response.data.message };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to post comment';
+      return { success: false, error: message };
+    }
+  },
+};
+
 export default api;
