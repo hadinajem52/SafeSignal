@@ -9,6 +9,7 @@ const { body, validationResult, param } = require('express-validator');
 const authenticateToken = require('../middleware/auth');
 const requireRole = require('../middleware/roles');
 const incidentService = require('../services/incidentService');
+const commentService = require('../services/commentService');
 const ServiceError = require('../utils/ServiceError');
 const {
   VALID_CATEGORIES,
@@ -543,6 +544,73 @@ router.post(
       });
     } catch (error) {
       handleServiceError(error, res, 'Failed to escalate incident');
+    }
+  }
+);
+
+/**
+ * GET /api/incidents/:id/timeline
+ * Get timeline (comments + status changes) for an incident
+ * Access: Authenticated users (citizen for own incidents, staff for all)
+ */
+router.get(
+  '/:id/timeline',
+  authenticateToken,
+  param('id').isInt(),
+  async (req, res) => {
+    if (handleValidationErrors(req, res)) return;
+
+    try {
+      const timeline = await commentService.getTimeline(
+        parseInt(req.params.id),
+        req.user.userId
+      );
+      
+      res.json({
+        status: 'OK',
+        data: timeline,
+      });
+    } catch (error) {
+      handleServiceError(error, res, 'Failed to fetch timeline');
+    }
+  }
+);
+
+/**
+ * POST /api/incidents/:id/comments
+ * Post a new comment on an incident
+ * Access: Authenticated users (citizen for own incidents, staff for all)
+ */
+router.post(
+  '/:id/comments',
+  authenticateToken,
+  [
+    param('id').isInt(),
+    body('content').trim().isLength({ min: 1, max: 10000 }),
+    body('isInternal').optional().isBoolean(),
+    body('attachments').optional().isArray(),
+  ],
+  async (req, res) => {
+    if (handleValidationErrors(req, res)) return;
+
+    try {
+      const comment = await commentService.createComment(
+        parseInt(req.params.id),
+        req.user.userId,
+        {
+          content: req.body.content,
+          isInternal: req.body.isInternal,
+          attachments: req.body.attachments,
+        }
+      );
+      
+      res.status(201).json({
+        status: 'OK',
+        message: 'Comment posted successfully',
+        data: comment,
+      });
+    } catch (error) {
+      handleServiceError(error, res, 'Failed to post comment');
     }
   }
 );

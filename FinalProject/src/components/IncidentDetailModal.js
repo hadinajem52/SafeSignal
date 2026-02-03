@@ -2,6 +2,7 @@ import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { formatTimeAgo } from '../utils/dateUtils';
+import { useTheme } from '../context/ThemeContext';
 
 const IncidentDetailModal = ({
   visible,
@@ -12,21 +13,23 @@ const IncidentDetailModal = ({
   getCategoryLabel,
   categoryDisplay,
 }) => {
+  const { theme } = useTheme();
+  
   if (!visible) return null;
 
   return (
     <TouchableOpacity
-      style={styles.detailOverlay}
+      style={[styles.detailOverlay, { backgroundColor: theme.overlay }]}
       activeOpacity={1}
       onPress={onClose}
     >
-      <View style={styles.detailContainer}>
+      <View style={[styles.detailContainer, { backgroundColor: theme.card }]}>
         <TouchableOpacity style={styles.detailCloseButton} onPress={onClose}>
-          <Ionicons name="close" size={24} color="#666" />
+          <Ionicons name="close" size={24} color={theme.textSecondary} />
         </TouchableOpacity>
 
         {!incident ? (
-          <ActivityIndicator size="small" color="#1976D2" />
+          <ActivityIndicator size="small" color={theme.primary} />
         ) : (
           <>
             <View style={styles.detailHeader}>
@@ -45,27 +48,27 @@ const IncidentDetailModal = ({
                   {getCategoryLabel(incident.category)}
                 </Text>
               </View>
-              <Text style={styles.detailTime}>{formatTimeAgo(incident.createdAt)}</Text>
+              <Text style={[styles.detailTime, { color: theme.textSecondary }]}>{formatTimeAgo(incident.createdAt)}</Text>
             </View>
 
-            <Text style={styles.detailTitle}>{incident.title}</Text>
+            <Text style={[styles.detailTitle, { color: theme.text }]}>{incident.title}</Text>
 
             <View style={styles.detailStatusRow}>
-              <Ionicons name="checkmark-circle" size={18} color="#4CAF50" />
-              <Text style={styles.detailStatusText}>
+              <Ionicons name="checkmark-circle" size={18} color={theme.success} />
+              <Text style={[styles.detailStatusText, { color: theme.success }]}>
                 {incident.status.charAt(0).toUpperCase() + incident.status.slice(1)}
               </Text>
             </View>
 
             <View style={styles.detailLocationRow}>
-              <Ionicons name="location" size={18} color="#666" />
-              <Text style={styles.detailLocationText}>
+              <Ionicons name="location" size={18} color={theme.textSecondary} />
+              <Text style={[styles.detailLocationText, { color: theme.textSecondary }]}>
                 {incident.location.latitude.toFixed(4)}, {incident.location.longitude.toFixed(4)}
               </Text>
             </View>
 
             <TouchableOpacity
-              style={styles.centerMapButton}
+              style={[styles.centerMapButton, { backgroundColor: theme.primary }]}
               onPress={() => onCenterMap(incident)}
             >
               <Ionicons name="navigate" size={18} color="#fff" />
@@ -81,11 +84,9 @@ const IncidentDetailModal = ({
 const styles = StyleSheet.create({
   detailOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'flex-end',
   },
   detailContainer: {
-    backgroundColor: '#fff',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
@@ -117,12 +118,10 @@ const styles = StyleSheet.create({
   },
   detailTime: {
     fontSize: 12,
-    color: '#666',
   },
   detailTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#333',
     marginBottom: 10,
   },
   detailStatusRow: {
@@ -132,7 +131,6 @@ const styles = StyleSheet.create({
   },
   detailStatusText: {
     fontSize: 14,
-    color: '#4CAF50',
     marginLeft: 6,
     fontWeight: '600',
   },
@@ -143,7 +141,6 @@ const styles = StyleSheet.create({
   },
   detailLocationText: {
     fontSize: 13,
-    color: '#666',
     marginLeft: 6,
   },
   centerMapButton: {
@@ -152,7 +149,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 12,
     borderRadius: 10,
-    backgroundColor: '#1976D2',
   },
   centerMapButtonText: {
     color: '#fff',

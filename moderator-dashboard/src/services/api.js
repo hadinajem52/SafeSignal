@@ -144,4 +144,30 @@ export const leiAPI = {
   },
 }
 
+// Timeline/Comments API
+export const timelineAPI = {
+  getTimeline: async (incidentId) => {
+    try {
+      const response = await api.get(`/incidents/${incidentId}/timeline`)
+      return { success: true, data: response.data.data }
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Failed to fetch timeline' }
+    }
+  },
+
+  postComment: async (incidentId, content, isInternal = false, attachments = null) => {
+    try {
+      const response = await api.post(`/incidents/${incidentId}/comments`, {
+        content,
+        isInternal,
+        attachments,
+      })
+      return { success: true, data: response.data.data }
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Failed to post comment' }
+    }
+  },
+}
+
 export default api
+

@@ -228,6 +228,19 @@ const initDatabase = async () => {
       );
     `);
 
+    // Create Incident_Comments table for timeline feature
+    await db.none(`
+      CREATE TABLE IF NOT EXISTS incident_comments (
+        comment_id SERIAL PRIMARY KEY,
+        incident_id INTEGER NOT NULL REFERENCES incidents(incident_id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+        content TEXT NOT NULL,
+        is_internal BOOLEAN NOT NULL DEFAULT false,
+        attachments TEXT[],
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+
     // Create indexes for performance
     await db.none(`
       CREATE INDEX IF NOT EXISTS idx_incidents_location ON incidents (latitude, longitude);
@@ -244,6 +257,9 @@ const initDatabase = async () => {
       CREATE INDEX IF NOT EXISTS idx_report_actions_incident ON report_actions (incident_id);
       CREATE INDEX IF NOT EXISTS idx_report_actions_timestamp ON report_actions (timestamp);
       CREATE INDEX IF NOT EXISTS idx_report_ml_report ON report_ml (report_id);
+      CREATE INDEX IF NOT EXISTS idx_incident_comments_incident_id ON incident_comments (incident_id, created_at ASC);
+      CREATE INDEX IF NOT EXISTS idx_incident_comments_user_id ON incident_comments (user_id);
+      CREATE INDEX IF NOT EXISTS idx_incident_comments_visibility ON incident_comments (incident_id, is_internal, created_at ASC);
     `);
 
     console.log('✓ Database schema initialized successfully');

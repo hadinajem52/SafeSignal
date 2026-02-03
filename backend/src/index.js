@@ -54,6 +54,11 @@ io.use((socket, next) => {
 
 io.on('connection', (socket) => {
   const role = socket.user?.role;
+  const userId = socket.user?.userId;
+  
+  logger.info(`Socket connected: User ${userId} with role ${role}`);
+  
+  // Join role-based rooms
   if (role) {
     socket.join(role);
   }
@@ -62,6 +67,71 @@ io.on('connection', (socket) => {
     socket.join('moderator');
     socket.join('law_enforcement');
   }
+  
+  /**
+   * Join incident room
+   * Citizens can only join rooms for their own incidents
+   * Staff can join any incident room (both public and internal)
+   */
+  socket.on('join_incident', async ({ incidentId }) => {
+    try {
+      const isStaff = ['moderator', 'admin', 'law_enforcement'].includes(role);
+      
+      // Verify incident exists
+      const incident = await db.oneOrNone(
+        'SELECT incident_id, reporter_id FROM incidents WHERE incident_id = $1',
+        [incidentId]
+      );
+      
+      if (!incident) {
+        socket.emit('error', { message: 'Incident not found' });
+        return;
+      }
+      
+      // Check access permissions
+      const canAccess = isStaff || incident.reporter_id === userId;
+      
+      if (!canAccess) {
+        socket.emit('error', { message: 'Access denied to this incident' });
+        return;
+      }
+      
+      // Join public incident room
+      const publicRoom = `incident_${incidentId}`;
+      socket.join(publicRoom);
+      logger.info(`User ${userId} joined room ${publicRoom}`);
+      
+      // Staff also join internal room
+      if (isStaff) {
+        const internalRoom = `incident_${incidentId}_internal`;
+        socket.join(internalRoom);
+        logger.info(`Staff ${userId} joined room ${internalRoom}`);
+      }
+      
+      socket.emit('joined_incident', { incidentId });
+    } catch (error) {
+      logger.error('Error joining incident room:', error);
+      socket.emit('error', { message: 'Failed to join incident' });
+    }
+  });
+  
+  /**
+   * Leave incident room
+   */
+  socket.on('leave_incident', ({ incidentId }) => {
+    const publicRoom = `incident_${incidentId}`;
+    const internalRoom = `incident_${incidentId}_internal`;
+    
+    socket.leave(publicRoom);
+    socket.leave(internalRoom);
+    
+    logger.info(`User ${userId} left incident rooms for ${incidentId}`);
+    socket.emit('left_incident', { incidentId });
+  });
+  
+  socket.on('disconnect', () => {
+    logger.info(`Socket disconnected: User ${userId}`);
+  });
 });
 const PORT = process.env.PORT || 3000;
 
