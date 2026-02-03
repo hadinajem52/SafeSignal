@@ -5,6 +5,7 @@ import { io } from 'socket.io-client'
 import { leiAPI } from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import { STATUS_COLORS, STATUS_LABELS, LEI_STATUS_FILTERS, CLOSURE_OUTCOMES } from '../constants/incident'
+import IncidentTimeline from '../components/IncidentTimeline'
 
 const STATUS_TRANSITIONS = {
   verified: ['dispatched', 'investigating', 'police_closed'],
@@ -423,6 +424,11 @@ function LawEnforcement() {
                     <p className="text-sm text-red-600 mt-2">Case ID is required for report filed.</p>
                   )}
                 </div>
+              </div>
+
+              <div className="bg-white border border-gray-200 rounded-lg p-4">
+                <h4 className="font-bold text-gray-900 mb-3">Timeline & Communication</h4>
+                <IncidentTimeline incidentId={selectedIncident.incident_id} />
               </div>
 
               <div className="bg-white border border-gray-200 rounded-lg p-4">

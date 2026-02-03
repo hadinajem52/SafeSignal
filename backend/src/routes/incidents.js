@@ -588,7 +588,7 @@ router.post(
     param('id').isInt(),
     body('content').trim().isLength({ min: 1, max: 10000 }),
     body('isInternal').optional().isBoolean(),
-    body('attachments').optional().isArray(),
+    body('attachments').optional({ checkFalsy: true }).isArray(),
   ],
   async (req, res) => {
     if (handleValidationErrors(req, res)) return;
