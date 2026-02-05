@@ -12,6 +12,7 @@ import {
 import { io } from 'socket.io-client'
 import { STATUS_COLORS, STATUS_LABELS, MODERATOR_STATUS_FILTERS } from '../constants/incident'
 import IncidentTimeline from '../components/IncidentTimeline'
+import DedupCandidatesPanel from '../components/DedupCandidatesPanel'
 
 function Reports() {
   const [searchTerm, setSearchTerm] = useState('')
@@ -25,6 +26,26 @@ function Reports() {
       const result = await reportsAPI.getAll(params)
       return result.success ? result.data : []
     },
+  })
+
+  const { data: dedupData, isLoading: isDedupLoading } = useQuery({
+    queryKey: ['report-dedup', selectedReport?.id],
+    queryFn: async () => {
+      if (!selectedReport?.id) return null
+      const result = await reportsAPI.getDedup(selectedReport.id)
+      return result.success ? result.data : null
+    },
+    enabled: Boolean(selectedReport?.id),
+  })
+
+  const { data: mlSummary, isLoading: isMlLoading } = useQuery({
+    queryKey: ['report-ml', selectedReport?.id],
+    queryFn: async () => {
+      if (!selectedReport?.id) return null
+      const result = await reportsAPI.getMlSummary(selectedReport.id)
+      return result.success ? result.data : null
+    },
+    enabled: Boolean(selectedReport?.id),
   })
 
   const queryClient = useQueryClient()
@@ -63,6 +84,22 @@ function Reports() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reports'] })
       setSelectedReport(null)
+    },
+  })
+
+  const linkDuplicateMutation = useMutation({
+    mutationFn: (duplicateIncidentId) => reportsAPI.linkDuplicate(selectedReport.id, duplicateIncidentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reports'] })
+      queryClient.invalidateQueries({ queryKey: ['report-dedup', selectedReport?.id] })
+    },
+  })
+
+  const updateCategoryMutation = useMutation({
+    mutationFn: (category) => reportsAPI.updateCategory(selectedReport.id, category),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reports'] })
+      queryClient.invalidateQueries({ queryKey: ['report-ml', selectedReport?.id] })
     },
   })
 
@@ -221,6 +258,61 @@ function Reports() {
                   <h4 className="font-bold text-gray-900 mb-2">Description</h4>
                   <p className="text-gray-700">{selectedReport.description}</p>
                 </div>
+
+                <div className="border border-gray-200 rounded-lg p-4 bg-white">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-bold text-gray-900">ML Insights</h4>
+                    {isMlLoading && <span className="text-xs text-gray-500">Loading...</span>}
+                  </div>
+
+                  {!isMlLoading && !mlSummary && (
+                    <p className="text-sm text-gray-600">No ML data available.</p>
+                  )}
+
+                  {mlSummary && (
+                    <div className="space-y-2 text-sm text-gray-700">
+                      <div className="flex items-center justify-between">
+                        <span>Suggested category</span>
+                        <span className="font-semibold text-gray-900">
+                          {mlSummary.predictedCategory || 'N/A'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Category confidence</span>
+                        <span className="font-semibold text-gray-900">{mlSummary.categoryConfidence}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Risk score</span>
+                        <span className={`font-semibold ${mlSummary.riskScore >= 0.8 ? 'text-red-600' : mlSummary.riskScore >= 0.5 ? 'text-amber-600' : 'text-gray-900'}`}>
+                          {mlSummary.riskScore}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Toxicity</span>
+                        <span className={`font-semibold ${mlSummary.isToxic ? 'text-red-600' : 'text-gray-900'}`}>
+                          {mlSummary.isToxic ? `Flagged (${mlSummary.toxicityScore})` : mlSummary.toxicityScore}
+                        </span>
+                      </div>
+
+                      {mlSummary.predictedCategory && mlSummary.predictedCategory !== selectedReport.category && (
+                        <button
+                          onClick={() => updateCategoryMutation.mutate(mlSummary.predictedCategory)}
+                          disabled={updateCategoryMutation.isPending}
+                          className="mt-3 w-full bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-2 rounded-lg disabled:opacity-50"
+                        >
+                          {updateCategoryMutation.isPending ? 'Updating...' : 'Apply Suggested Category'}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <DedupCandidatesPanel
+                  dedup={dedupData}
+                  isLoading={isDedupLoading}
+                  isMerging={linkDuplicateMutation.isPending}
+                  onMerge={(duplicateIncidentId) => linkDuplicateMutation.mutate(duplicateIncidentId)}
+                />
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
