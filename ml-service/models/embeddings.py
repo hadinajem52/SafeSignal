@@ -25,9 +25,10 @@ class EmbeddingModel:
 
     def __init__(self, model_name: str = "sentence-transformers/all-MiniLM-L6-v2"):
         if self._model is None:
-            logger.info(f"Loading embedding model: {model_name}")
-            self._model = SentenceTransformer(model_name, device=config.DEVICE)
-            logger.info(f"Embedding model loaded successfully on {config.DEVICE}")
+            dev = config.EMBEDDING_DEVICE
+            logger.info(f"Loading embedding model: {model_name} on {dev}")
+            self._model = SentenceTransformer(model_name, device=dev)
+            logger.info(f"Embedding model loaded successfully on {dev}")
 
     def encode(self, texts: List[str]) -> np.ndarray:
         """Encode texts into embeddings."""

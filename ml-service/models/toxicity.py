@@ -27,9 +27,10 @@ class ToxicityDetector:
         model_type options: 'original', 'unbiased', 'multilingual'
         """
         if self._model is None:
-            logger.info(f"Loading toxicity model: {model_type}")
-            self._model = Detoxify(model_type, device=config.DEVICE)
-            logger.info(f"Toxicity model loaded successfully on {config.DEVICE}")
+            dev = config.TOXICITY_DEVICE
+            logger.info(f"Loading toxicity model: {model_type} on {dev}")
+            self._model = Detoxify(model_type, device=dev)
+            logger.info(f"Toxicity model loaded successfully on {dev}")
 
     def analyze(self, text: str) -> Dict[str, float]:
         """
