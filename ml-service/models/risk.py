@@ -104,12 +104,15 @@ class RiskScorer:
         toxicity_boost = min(0.1, toxicity_score * 0.2)
 
         # Weighted combination
+        # Category + severity are the primary signals (70%)
+        # Keywords are a strong secondary signal (20%)
+        # Duplicates + toxicity are boosters (10%)
         raw_score = (
-            category_score * 0.3
-            + sev_mult * 0.25
-            + keyword_score * 0.25
-            + duplicate_boost * 0.1
-            + toxicity_boost * 0.1
+            category_score * 0.35
+            + sev_mult * 0.35
+            + keyword_score * 0.20
+            + duplicate_boost * 0.05
+            + toxicity_boost * 0.05
         )
 
         # Normalize to 0-1

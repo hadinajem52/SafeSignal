@@ -5,6 +5,7 @@ FastAPI service providing ML capabilities for incident analysis.
 
 import hashlib
 import logging
+import os
 import time
 from collections import OrderedDict
 from contextlib import asynccontextmanager
@@ -409,9 +410,10 @@ async def full_analysis(request: FullAnalysisRequest):
 if __name__ == "__main__":
     import uvicorn
 
+    reload = os.getenv("ML_RELOAD", "false").lower() == "true"
     uvicorn.run(
         "main:app",
         host=config.HOST,
         port=config.PORT,
-        reload=True,
+        reload=reload,
     )
