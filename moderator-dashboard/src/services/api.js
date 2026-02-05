@@ -35,6 +35,42 @@ export const reportsAPI = {
     }
   },
 
+  getDedup: async (id) => {
+    try {
+      const response = await api.get(`/incidents/${id}/dedup`)
+      return { success: true, data: response.data.data }
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Failed to fetch dedup candidates' }
+    }
+  },
+
+  getMlSummary: async (id) => {
+    try {
+      const response = await api.get(`/incidents/${id}/ml`)
+      return { success: true, data: response.data.data }
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Failed to fetch ML summary' }
+    }
+  },
+
+  updateCategory: async (id, category) => {
+    try {
+      const response = await api.patch(`/incidents/${id}/category`, { category })
+      return { success: true, data: response.data.data }
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Failed to update category' }
+    }
+  },
+
+  linkDuplicate: async (id, duplicateIncidentId) => {
+    try {
+      const response = await api.post(`/incidents/${id}/duplicates`, { duplicateIncidentId })
+      return { success: true, data: response.data.data }
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Failed to link duplicate' }
+    }
+  },
+
   updateStatus: async (id, status) => {
     try {
       const response = await api.patch(`/incidents/${id}`, { status })

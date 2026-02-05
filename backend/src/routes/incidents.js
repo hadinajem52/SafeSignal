@@ -483,6 +483,130 @@ router.post(
 );
 
 /**
+ * @route   GET /api/incidents/:id/dedup
+ * @desc    Get dedup candidates for an incident
+ * @access  Private (Moderator/Admin)
+ */
+router.get(
+  '/:id/dedup',
+  authenticateToken,
+  requireRole(['moderator', 'admin']),
+  [param('id').isInt()],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        status: 'ERROR',
+        message: 'Invalid incident ID',
+      });
+    }
+
+    try {
+      const dedup = await incidentService.getIncidentDedupCandidates(req.params.id);
+      res.json({
+        status: 'OK',
+        data: dedup,
+      });
+    } catch (error) {
+      handleServiceError(error, res, 'Failed to fetch dedup candidates');
+    }
+  }
+);
+
+/**
+ * @route   GET /api/incidents/:id/ml
+ * @desc    Get ML summary for an incident
+ * @access  Private (Moderator/Admin)
+ */
+router.get(
+  '/:id/ml',
+  authenticateToken,
+  requireRole(['moderator', 'admin']),
+  [param('id').isInt()],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        status: 'ERROR',
+        message: 'Invalid incident ID',
+      });
+    }
+
+    try {
+      const ml = await incidentService.getIncidentMlSummary(req.params.id);
+      res.json({
+        status: 'OK',
+        data: ml,
+      });
+    } catch (error) {
+      handleServiceError(error, res, 'Failed to fetch ML summary');
+    }
+  }
+);
+
+/**
+ * @route   PATCH /api/incidents/:id/category
+ * @desc    Update incident category (moderation feedback)
+ * @access  Private (Moderator/Admin)
+ */
+router.patch(
+  '/:id/category',
+  authenticateToken,
+  requireRole(['moderator', 'admin']),
+  [param('id').isInt(), body('category').isIn(VALID_CATEGORIES)],
+  async (req, res) => {
+    if (handleValidationErrors(req, res)) return;
+
+    try {
+      const updatedIncident = await incidentService.updateIncidentCategoryForModeration(
+        req.params.id,
+        req.body.category,
+        req.user
+      );
+
+      res.json({
+        status: 'OK',
+        message: 'Category updated',
+        data: updatedIncident,
+      });
+    } catch (error) {
+      handleServiceError(error, res, 'Failed to update category');
+    }
+  }
+);
+
+/**
+ * @route   POST /api/incidents/:id/duplicates
+ * @desc    Link a duplicate incident to a canonical incident
+ * @access  Private (Moderator/Admin)
+ */
+router.post(
+  '/:id/duplicates',
+  authenticateToken,
+  requireRole(['moderator', 'admin']),
+  [param('id').isInt(), body('duplicateIncidentId').isInt()],
+  async (req, res) => {
+    if (handleValidationErrors(req, res)) return;
+
+    try {
+      const result = await incidentService.linkDuplicateIncident(
+        parseInt(req.params.id),
+        parseInt(req.body.duplicateIncidentId),
+        req.user
+      );
+
+      res.json({
+        status: 'OK',
+        message: 'Duplicate linked',
+        data: result,
+      });
+    } catch (error) {
+      handleServiceError(error, res, 'Failed to link duplicate');
+    }
+  }
+);
+
+/**
  * @route   POST /api/incidents/:id/reject
  * @desc    Reject an incident
  * @access  Private (Moderator/Admin)

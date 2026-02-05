@@ -7,6 +7,9 @@
 
 const db = require('../config/database');
 const ServiceError = require('../utils/ServiceError');
+const logger = require('../utils/logger');
+const Filter = require('bad-words');
+const mlClient = require('../utils/mlClient');
 
 const {
   VALID_CATEGORIES,
@@ -14,9 +17,162 @@ const {
   VALID_STATUSES,
   VALID_CLOSURE_OUTCOMES,
 } = require('../../../constants/incident');
+const { LIMITS } = require('../../../constants/limits');
 const { emitToRoles } = require('../utils/socketService');
 
 const LEI_STATUSES = ['verified', 'dispatched', 'on_scene', 'investigating', 'police_closed'];
+const profanityFilter = new Filter();
+
+const CATEGORY_KEYWORDS = {
+  theft: ['theft', 'stolen', 'robbery', 'burglary', 'break-in'],
+  assault: ['assault', 'fight', 'attack', 'battery'],
+  vandalism: ['vandal', 'graffiti', 'damage', 'destroyed'],
+  suspicious_activity: ['suspicious', 'loitering', 'prowler'],
+  traffic_incident: ['traffic', 'crash', 'accident', 'collision', 'hit'],
+  noise_complaint: ['noise', 'loud', 'party', 'music'],
+  fire: ['fire', 'smoke', 'flames', 'burning'],
+  medical_emergency: ['medical', 'injury', 'ambulance', 'unconscious'],
+  hazard: ['hazard', 'spill', 'gas', 'leak', 'danger'],
+};
+
+const HIGH_RISK_KEYWORDS = ['weapon', 'gun', 'fire', 'shooting', 'blood', 'knife', 'explosion'];
+
+const normalizeText = (text) =>
+  (text || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((token) => token.length >= 3);
+
+const toTokenSet = (text) => new Set(normalizeText(text));
+
+const jaccardSimilarity = (setA, setB) => {
+  if (!setA.size && !setB.size) {
+    return 0;
+  }
+
+  let intersection = 0;
+  setA.forEach((token) => {
+    if (setB.has(token)) {
+      intersection += 1;
+    }
+  });
+
+  const union = setA.size + setB.size - intersection;
+  return union === 0 ? 0 : intersection / union;
+};
+
+const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+const countKeywordMatches = (text, keywords) => {
+  const lowered = (text || '').toLowerCase();
+  return keywords.reduce((count, keyword) => {
+    return lowered.includes(keyword) ? count + 1 : count;
+  }, 0);
+};
+
+const predictCategory = (title, description) => {
+  const text = `${title || ''} ${description || ''}`.toLowerCase();
+  const scores = Object.entries(CATEGORY_KEYWORDS).map(([category, keywords]) => ({
+    category,
+    score: countKeywordMatches(text, keywords),
+  }));
+
+  const best = scores.sort((a, b) => b.score - a.score)[0];
+  if (!best || best.score === 0) {
+    return { predictedCategory: null, confidence: 0 };
+  }
+
+  const confidence = clamp(0.4 + best.score * 0.1, 0, 0.95);
+  return { predictedCategory: best.category, confidence };
+};
+
+const assessToxicity = (text) => {
+  const tokens = (text || '').split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) {
+    return { score: 0, isToxic: false };
+  }
+
+  const profaneCount = tokens.reduce((count, token) => {
+    return profanityFilter.isProfane(token) ? count + 1 : count;
+  }, 0);
+
+  const score = clamp(profaneCount / tokens.length, 0, 1);
+  return { score, isToxic: score >= LIMITS.ML.TOXICITY_THRESHOLD };
+};
+
+const computeRiskScore = ({ severity, category, text, highConfidenceDuplicates }) => {
+  const baseMap = {
+    low: 0.2,
+    medium: 0.4,
+    high: 0.7,
+    critical: 0.9,
+  };
+
+  const baseScore = baseMap[severity] ?? 0.4;
+  const keywordHits = countKeywordMatches(text, HIGH_RISK_KEYWORDS);
+  const keywordBoost = Math.min(0.3, keywordHits * 0.05);
+  const duplicateBoost = Math.min(0.2, (highConfidenceDuplicates || 0) * 0.05);
+  const categoryBoost = ['fire', 'assault', 'medical_emergency'].includes(category) ? 0.1 : 0;
+
+  return clamp(baseScore + keywordBoost + duplicateBoost + categoryBoost, 0, 1);
+};
+
+const computeDedupScore = ({
+  textSimilarity,
+  distanceMeters,
+  timeHours,
+  categoryMatch,
+  sameReporter,
+}) => {
+  const distanceScore = clamp(1 - distanceMeters / LIMITS.DEDUP.RADIUS_METERS, 0, 1);
+  const timeScore = clamp(1 - timeHours / LIMITS.DEDUP.TIME_HOURS, 0, 1);
+  const categoryScore = categoryMatch ? 1 : 0;
+  const sameReporterScore = sameReporter ? 1 : 0;
+
+  const score =
+    0.45 * textSimilarity +
+    0.2 * distanceScore +
+    0.2 * timeScore +
+    0.1 * categoryScore +
+    0.05 * sameReporterScore;
+
+  return clamp(score, 0, 1);
+};
+
+const buildDedupCandidates = (incident, candidates) => {
+  const baseTokens = toTokenSet(`${incident.title} ${incident.description}`);
+  const incidentDate = new Date(incident.incident_date);
+
+  return candidates
+    .map((candidate) => {
+      const candidateTokens = toTokenSet(`${candidate.title} ${candidate.description}`);
+      const textSimilarity = jaccardSimilarity(baseTokens, candidateTokens);
+      const distanceMeters = Math.max(0, parseFloat(candidate.distance_meters || 0));
+      const timeHours = Math.abs(incidentDate - new Date(candidate.incident_date)) / 36e5;
+      const categoryMatch = incident.category === candidate.category;
+      const sameReporter = incident.reporter_id === candidate.reporter_id;
+      const score = computeDedupScore({
+        textSimilarity,
+        distanceMeters,
+        timeHours,
+        categoryMatch,
+        sameReporter,
+      });
+
+      return {
+        incidentId: candidate.incident_id,
+        score: Number(score.toFixed(3)),
+        distanceMeters: Math.round(distanceMeters),
+        timeHours: Number(timeHours.toFixed(2)),
+        textSimilarity: Number(textSimilarity.toFixed(3)),
+        categoryMatch,
+        sameReporter,
+      };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, LIMITS.DEDUP.MAX_CANDIDATES);
+};
 
 /**
  * Create a new incident
@@ -76,6 +232,206 @@ async function createIncident(incidentData, reporterId) {
       isDraft ? 'draft' : 'submitted',
     ]
   );
+
+  if (!incident.is_draft) {
+    try {
+      const latitudeValue = parseFloat(incident.latitude);
+      const longitudeValue = parseFloat(incident.longitude);
+      const mlText = `${incident.title} ${incident.description}`;
+
+      // Try external ML service first, fallback to heuristics
+      let mlResults = null;
+      let useExternalMl = false;
+      try {
+        mlResults = await mlClient.analyzeIncident({
+          text: mlText,
+          category: incident.category,
+          severity: incident.severity,
+          duplicateCount: 0,
+        });
+        useExternalMl = mlResults !== null;
+        if (useExternalMl) {
+          logger.info(`Using external ML service for incident ${incident.incident_id}`);
+        }
+      } catch (mlError) {
+        logger.warn(`External ML service unavailable, using heuristics: ${mlError.message}`);
+      }
+
+      // Extract ML results or fallback to heuristics
+      const { predictedCategory, confidence: categoryConfidence } = useExternalMl && mlResults?.classification
+        ? { predictedCategory: mlResults.classification.predictedCategory, confidence: mlResults.classification.confidence }
+        : predictCategory(incident.title, incident.description);
+
+      const toxicity = useExternalMl && mlResults?.toxicity
+        ? { score: mlResults.toxicity.toxicityScore, isToxic: mlResults.toxicity.isToxic }
+        : assessToxicity(mlText);
+
+      if (!Number.isNaN(latitudeValue) && !Number.isNaN(longitudeValue)) {
+        const candidateQuery = `
+          SELECT
+            i.incident_id,
+            i.title,
+            i.description,
+            i.category,
+            i.incident_date,
+            i.reporter_id,
+            ST_Distance(
+              i.location,
+              ST_SetSRID(ST_MakePoint($1::float, $2::float), 4326)::geography
+            ) AS distance_meters
+          FROM incidents i
+          WHERE i.is_draft = FALSE
+            AND i.incident_id <> $3
+            AND i.location IS NOT NULL
+            AND i.incident_date BETWEEN
+              $4::timestamp - INTERVAL '${LIMITS.DEDUP.TIME_HOURS} hours'
+              AND $4::timestamp + INTERVAL '${LIMITS.DEDUP.TIME_HOURS} hours'
+            AND ST_DWithin(
+              i.location,
+              ST_SetSRID(ST_MakePoint($1::float, $2::float), 4326)::geography,
+              $5
+            )
+          ORDER BY i.incident_date DESC
+          LIMIT $6
+        `;
+
+        const reportPromise = db.one(
+          `INSERT INTO reports (incident_id, photo_urls, metadata, ml_confidence_score)
+           VALUES ($1, $2, $3, $4)
+           RETURNING report_id`,
+          [
+            incident.incident_id,
+            incident.photo_urls || null,
+            { source: 'incident' },
+            categoryConfidence || null,
+          ]
+        );
+
+        const candidatePromise = db.manyOrNone(candidateQuery, [
+          longitudeValue,
+          latitudeValue,
+          incident.incident_id,
+          incident.incident_date,
+          LIMITS.DEDUP.RADIUS_METERS,
+          LIMITS.DEDUP.MAX_CANDIDATES,
+        ]);
+
+        const [report, candidates] = await Promise.all([reportPromise, candidatePromise]);
+
+        // Compute dedup with optional ML-enhanced similarity
+        let scoredCandidates = buildDedupCandidates(incident, candidates);
+
+        // Try ML-based semantic similarity if external service available
+        if (useExternalMl && candidates.length > 0) {
+          try {
+            const candidateTexts = candidates.map((c) => `${c.title} ${c.description}`);
+            const similarityResults = await mlClient.computeSimilarity(mlText, candidateTexts, 0.5);
+            if (similarityResults && similarityResults.length > 0) {
+              // Enhance scores with ML similarity
+              scoredCandidates = scoredCandidates.map((candidate, idx) => {
+                const mlSim = similarityResults.find((s) => s.index === idx);
+                if (mlSim) {
+                  // Blend heuristic and ML similarity (60% ML, 40% heuristic)
+                  const blendedTextSim = 0.6 * mlSim.score + 0.4 * candidate.textSimilarity;
+                  const newScore = computeDedupScore({
+                    textSimilarity: blendedTextSim,
+                    distanceMeters: candidate.distanceMeters,
+                    timeHours: candidate.timeHours,
+                    categoryMatch: candidate.categoryMatch,
+                    sameReporter: candidate.sameReporter,
+                  });
+                  return {
+                    ...candidate,
+                    textSimilarity: Number(blendedTextSim.toFixed(3)),
+                    mlSimilarity: mlSim.score,
+                    score: Number(newScore.toFixed(3)),
+                  };
+                }
+                return candidate;
+              }).sort((a, b) => b.score - a.score);
+            }
+          } catch (simError) {
+            logger.warn(`ML similarity enhancement failed: ${simError.message}`);
+          }
+        }
+
+        const topScore = scoredCandidates[0]?.score || 0;
+        const highConfidenceDuplicates = scoredCandidates.filter((candidate) => candidate.score >= 0.7).length;
+
+        // Risk scoring: prefer ML if available
+        const riskScore = useExternalMl && mlResults?.risk
+          ? mlResults.risk.riskScore
+          : computeRiskScore({
+              severity: incident.severity,
+              category: incident.category,
+              text: mlText,
+              highConfidenceDuplicates,
+            });
+
+        await db.none(
+          `INSERT INTO report_ml (
+            report_id,
+            predicted_category,
+            confidence,
+            dedup_candidates,
+            risk_score,
+            toxicity_score,
+            is_toxic
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [
+            report.report_id,
+            predictedCategory,
+            Number((categoryConfidence || 0).toFixed(2)),
+            {
+              generatedAt: new Date().toISOString(),
+              radiusMeters: LIMITS.DEDUP.RADIUS_METERS,
+              timeHours: LIMITS.DEDUP.TIME_HOURS,
+              topScore: Number(topScore.toFixed(2)),
+              candidates: scoredCandidates,
+              mlEnhanced: useExternalMl,
+            },
+            Number(riskScore.toFixed(2)),
+            Number(toxicity.score.toFixed(2)),
+            toxicity.isToxic,
+          ]
+        );
+
+        const shouldAutoFlag = toxicity.isToxic || riskScore >= LIMITS.ML.RISK_AUTOFLAG;
+        if (shouldAutoFlag) {
+          const newSeverity = riskScore >= LIMITS.ML.RISK_AUTOFLAG ? 'critical' : incident.severity;
+          const updatedIncident = await db.one(
+            `UPDATE incidents
+             SET status = 'auto_flagged',
+                 severity = $2,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE incident_id = $1
+             RETURNING *`,
+            [incident.incident_id, newSeverity]
+          );
+
+          incident.status = updatedIncident.status;
+          incident.severity = updatedIncident.severity;
+
+          await logAction(
+            incident.incident_id,
+            null,
+            'flagged',
+            toxicity.isToxic
+              ? 'Auto-flagged due to toxicity'
+              : 'Auto-flagged due to high risk score'
+          );
+
+          emitToRoles(['moderator', 'admin', 'law_enforcement'], 'incident:update', {
+            incidentId: updatedIncident.incident_id,
+            status: updatedIncident.status,
+            severity: updatedIncident.severity,
+          });
+        }
+      }
+    } catch (error) {
+      logger.warn(`Dedup/ML processing failed for incident ${incident.incident_id}: ${error.message}`);
+    }
+  }
 
   if (!incident.is_draft) {
     emitToRoles(['moderator', 'admin'], 'incident:new', {
@@ -208,6 +564,192 @@ async function getIncidentById(incidentId) {
   );
 
   return incident;
+}
+
+/**
+ * Get latest dedup candidates for an incident
+ * @param {number} incidentId - The incident ID
+ * @returns {Promise<Object>} Dedup candidates payload
+ */
+async function getIncidentDedupCandidates(incidentId) {
+  const incident = await db.oneOrNone(
+    'SELECT incident_id FROM incidents WHERE incident_id = $1',
+    [incidentId]
+  );
+
+  if (!incident) {
+    throw ServiceError.notFound('Incident');
+  }
+
+  const dedup = await db.oneOrNone(
+    `SELECT rm.dedup_candidates, rm.confidence, rm.created_at, r.report_id
+     FROM reports r
+     JOIN report_ml rm ON rm.report_id = r.report_id
+     WHERE r.incident_id = $1
+     ORDER BY rm.created_at DESC
+     LIMIT 1`,
+    [incidentId]
+  );
+
+  return {
+    reportId: dedup?.report_id || null,
+    confidence: dedup?.confidence ? Number(dedup.confidence) : 0,
+    dedupCandidates: dedup?.dedup_candidates || {
+      generatedAt: null,
+      radiusMeters: LIMITS.DEDUP.RADIUS_METERS,
+      timeHours: LIMITS.DEDUP.TIME_HOURS,
+      candidates: [],
+    },
+  };
+}
+
+/**
+ * Get latest ML summary for an incident
+ * @param {number} incidentId - The incident ID
+ * @returns {Promise<Object>} ML summary payload
+ */
+async function getIncidentMlSummary(incidentId) {
+  const incident = await db.oneOrNone(
+    'SELECT incident_id, category, severity, status FROM incidents WHERE incident_id = $1',
+    [incidentId]
+  );
+
+  if (!incident) {
+    throw ServiceError.notFound('Incident');
+  }
+
+  const ml = await db.oneOrNone(
+    `SELECT rm.predicted_category, rm.confidence, rm.risk_score, rm.toxicity_score, rm.is_toxic, rm.created_at
+     FROM reports r
+     JOIN report_ml rm ON rm.report_id = r.report_id
+     WHERE r.incident_id = $1
+     ORDER BY rm.created_at DESC
+     LIMIT 1`,
+    [incidentId]
+  );
+
+  return {
+    incidentId,
+    currentCategory: incident.category,
+    currentSeverity: incident.severity,
+    currentStatus: incident.status,
+    predictedCategory: ml?.predicted_category || null,
+    categoryConfidence: ml?.confidence ? Number(ml.confidence) : 0,
+    riskScore: ml?.risk_score ? Number(ml.risk_score) : 0,
+    toxicityScore: ml?.toxicity_score ? Number(ml.toxicity_score) : 0,
+    isToxic: Boolean(ml?.is_toxic),
+    generatedAt: ml?.created_at || null,
+  };
+}
+
+/**
+ * Link a duplicate incident to a canonical incident
+ * @param {number} incidentId - Canonical incident
+ * @param {number} duplicateIncidentId - Duplicate incident
+ * @param {Object} requestingUser - The user making the request
+ */
+async function linkDuplicateIncident(incidentId, duplicateIncidentId, requestingUser) {
+  if (incidentId === duplicateIncidentId) {
+    throw ServiceError.badRequest('Incident cannot be linked to itself');
+  }
+
+  const [canonical, duplicate] = await Promise.all([
+    db.oneOrNone('SELECT * FROM incidents WHERE incident_id = $1', [incidentId]),
+    db.oneOrNone('SELECT * FROM incidents WHERE incident_id = $1', [duplicateIncidentId]),
+  ]);
+
+  if (!canonical || !duplicate) {
+    throw ServiceError.notFound('Incident');
+  }
+
+  const ensureReport = async (incident) => {
+    const existing = await db.oneOrNone('SELECT report_id FROM reports WHERE incident_id = $1', [incident.incident_id]);
+    if (existing) return existing.report_id;
+
+    const report = await db.one(
+      `INSERT INTO reports (incident_id, photo_urls, metadata)
+       VALUES ($1, $2, $3)
+       RETURNING report_id`,
+      [incident.incident_id, incident.photo_urls || null, { source: 'incident' }]
+    );
+
+    return report.report_id;
+  };
+
+  const [canonicalReportId, duplicateReportId] = await Promise.all([
+    ensureReport(canonical),
+    ensureReport(duplicate),
+  ]);
+
+  await db.none(
+    `INSERT INTO report_links (canonical_report_id, duplicate_report_id, link_type)
+     VALUES ($1, $2, 'duplicate')
+     ON CONFLICT (canonical_report_id, duplicate_report_id) DO NOTHING`,
+    [canonicalReportId, duplicateReportId]
+  );
+
+  const updatedDuplicate = await db.one(
+    `UPDATE incidents
+     SET status = 'merged', updated_at = CURRENT_TIMESTAMP
+     WHERE incident_id = $1
+     RETURNING *`,
+    [duplicateIncidentId]
+  );
+
+  await logAction(incidentId, requestingUser.userId, 'merged', `Merged duplicate incident ${duplicateIncidentId}`);
+  await logAction(duplicateIncidentId, requestingUser.userId, 'merged', `Marked as duplicate of ${incidentId}`);
+
+  emitToRoles(['moderator', 'admin'], 'incident:update', {
+    incidentId: updatedDuplicate.incident_id,
+    status: updatedDuplicate.status,
+    severity: updatedDuplicate.severity,
+  });
+
+  return {
+    canonicalIncidentId: incidentId,
+    duplicateIncidentId,
+    status: updatedDuplicate.status,
+  };
+}
+
+/**
+ * Update incident category for moderation feedback loop
+ * @param {number} incidentId
+ * @param {string} category
+ * @param {Object} requestingUser
+ */
+async function updateIncidentCategoryForModeration(incidentId, category, requestingUser) {
+  if (!VALID_CATEGORIES.includes(category)) {
+    throw ServiceError.badRequest('Invalid category');
+  }
+
+  const incident = await db.oneOrNone('SELECT * FROM incidents WHERE incident_id = $1', [incidentId]);
+  if (!incident) {
+    throw ServiceError.notFound('Incident');
+  }
+
+  const updatedIncident = await db.one(
+    `UPDATE incidents
+     SET category = $2, updated_at = CURRENT_TIMESTAMP
+     WHERE incident_id = $1
+     RETURNING *`,
+    [incidentId, category]
+  );
+
+  await logAction(
+    incidentId,
+    requestingUser.userId,
+    'status_changed',
+    `Category updated from ${incident.category} to ${category}`
+  );
+
+  emitToRoles(['moderator', 'admin'], 'incident:update', {
+    incidentId: updatedIncident.incident_id,
+    status: updatedIncident.status,
+    severity: updatedIncident.severity,
+  });
+
+  return updatedIncident;
 }
 
 /**
@@ -691,10 +1233,14 @@ module.exports = {
   getAllIncidents,
   getUserIncidents,
   getIncidentById,
+  getIncidentDedupCandidates,
+  getIncidentMlSummary,
   getIncidentsByUserId,
   updateIncident,
   patchIncident,
   deleteIncident,
+  updateIncidentCategoryForModeration,
+  linkDuplicateIncident,
   verifyIncident,
   rejectIncident,
   escalateIncident,

@@ -224,8 +224,20 @@ const initDatabase = async () => {
         confidence DECIMAL(3, 2),
         dedup_candidates JSONB,
         risk_score DECIMAL(3, 2),
+        toxicity_score DECIMAL(3, 2),
+        is_toxic BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+    `);
+
+    await db.none(`
+      ALTER TABLE report_ml
+      ADD COLUMN IF NOT EXISTS toxicity_score DECIMAL(3, 2);
+    `);
+
+    await db.none(`
+      ALTER TABLE report_ml
+      ADD COLUMN IF NOT EXISTS is_toxic BOOLEAN DEFAULT FALSE;
     `);
 
     // Create Incident_Comments table for timeline feature
@@ -257,6 +269,8 @@ const initDatabase = async () => {
       CREATE INDEX IF NOT EXISTS idx_report_actions_incident ON report_actions (incident_id);
       CREATE INDEX IF NOT EXISTS idx_report_actions_timestamp ON report_actions (timestamp);
       CREATE INDEX IF NOT EXISTS idx_report_ml_report ON report_ml (report_id);
+      CREATE INDEX IF NOT EXISTS idx_report_ml_risk ON report_ml (risk_score DESC);
+      CREATE INDEX IF NOT EXISTS idx_report_ml_toxic ON report_ml (is_toxic, created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_incident_comments_incident_id ON incident_comments (incident_id, created_at ASC);
       CREATE INDEX IF NOT EXISTS idx_incident_comments_user_id ON incident_comments (user_id);
       CREATE INDEX IF NOT EXISTS idx_incident_comments_visibility ON incident_comments (incident_id, is_internal, created_at ASC);

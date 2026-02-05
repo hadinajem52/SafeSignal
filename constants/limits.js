@@ -6,6 +6,16 @@ const LIMITS = {
     LAT: { MIN: -90, MAX: 90 },
     LNG: { MIN: -180, MAX: 180 },
   },
+  DEDUP: {
+    RADIUS_METERS: 500,
+    TIME_HOURS: 24,
+    MAX_CANDIDATES: 10,
+  },
+  ML: {
+    TOXICITY_THRESHOLD: 0.2,
+    RISK_HIGH: 0.5,
+    RISK_AUTOFLAG: 0.8,
+  },
 };
 
 module.exports = {
