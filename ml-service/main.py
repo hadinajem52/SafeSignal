@@ -195,6 +195,11 @@ class FullAnalysisResponse(BaseModel):
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
+    classifier_optimizations = (
+        classifier_model.optimization_status
+        if classifier_model is not None
+        else None
+    )
     return {
         "status": "healthy",
         "device": config.DEVICE,
@@ -203,6 +208,9 @@ async def health_check():
             "classifier": classifier_model is not None,
             "toxicity": toxicity_model is not None,
             "risk": risk_scorer is not None,
+        },
+        "optimizations": {
+            "classifier": classifier_optimizations,
         },
         "cache": cache.stats,
     }

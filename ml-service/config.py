@@ -24,13 +24,21 @@ else:
     print("[ML Service] No GPU detected, using CPU for all models")
 
 if USE_GPU and GPU_AVAILABLE:
-    # Hybrid: put lightweight models on GPU, heavy ones on CPU
-    CLASSIFIER_DEVICE = "cuda"   # DistilBERT ~260MB — biggest latency win
+    # Hybrid GPU/CPU strategy for 2GB VRAM (MX350):
+    #   BART-large fp16 ~800MB (or ~400MB with 8-bit) — main accurate classifier
+    #   DistilBERT fp16 ~260MB — fast cascade first-pass
+    #   MiniLM fp16 ~80MB — embeddings
+    #   CUDA overhead ~300MB
+    #   Total: ~1.4-1.5GB fp16 / ~1.0GB with 8-bit → fits in 2GB
+    #   Toxicity (Detoxify ~418MB) stays on CPU to save VRAM
+    CLASSIFIER_DEVICE = "cuda"   # BART-large + DistilBERT — biggest latency win
     EMBEDDING_DEVICE = "cuda"    # MiniLM ~80MB — small, fast on GPU
-    TOXICITY_DEVICE = "cpu"      # Detoxify ~418MB — already fast, save VRAM
-    est_vram = 0.26 + 0.08 + 0.4  # ~740MB with CUDA overhead
+    TOXICITY_DEVICE = "cpu"      # Detoxify ~418MB — offloaded to save VRAM
+    est_vram = 0.80 + 0.26 + 0.08 + 0.30  # ~1.44GB with CUDA overhead
     print(f"[ML Service] Hybrid mode: classifier+embeddings→GPU, toxicity→CPU")
     print(f"[ML Service] Estimated VRAM usage: ~{est_vram:.1f}GB / {vram_gb:.1f}GB")
+    if est_vram > vram_gb * 0.95:
+        print(f"[ML Service] WARNING: VRAM may be tight, 8-bit quantization recommended")
 else:
     CLASSIFIER_DEVICE = "cpu"
     EMBEDDING_DEVICE = "cpu"
@@ -46,6 +54,10 @@ DEVICE = "cuda" if (USE_GPU and GPU_AVAILABLE) else "cpu"
 # For speed-critical deployments, use: CLASSIFIER_MODEL=typeform/distilbert-base-uncased-mnli
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
 CLASSIFIER_MODEL = os.getenv("CLASSIFIER_MODEL", "facebook/bart-large-mnli")
+FAST_CLASSIFIER_MODEL = os.getenv(
+    "FAST_CLASSIFIER_MODEL",
+    "typeform/distilbert-base-uncased-mnli",
+)
 TOXICITY_MODEL = os.getenv("TOXICITY_MODEL", "original")
 
 # Performance: number of CPU threads for inference
@@ -77,7 +89,10 @@ USE_8BIT_QUANTIZATION = os.getenv("USE_8BIT_QUANTIZATION", "true").lower() == "t
 # Cascade classifier: use fast model first, accurate model only when needed
 # Reduces latency by 60-80% for high-confidence predictions
 USE_CASCADE_CLASSIFIER = os.getenv("USE_CASCADE_CLASSIFIER", "true").lower() == "true"
-CASCADE_CONFIDENCE_THRESHOLD = float(os.getenv("CASCADE_CONFIDENCE_THRESHOLD", 0.75))
+# Lowered from 0.75 → 0.60: lets DistilBERT handle ~70-80% of requests
+# (vs ~40-50% at 0.75), BART only fires on genuinely uncertain inputs.
+# Tradeoff: slightly lower accuracy on borderline cases, much lower avg latency.
+CASCADE_CONFIDENCE_THRESHOLD = float(os.getenv("CASCADE_CONFIDENCE_THRESHOLD", 0.60))
 
 # Zero-shot classification hypothesis template
 # Optimized for incident reports - more specific context improves entailment accuracy

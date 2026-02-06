@@ -204,6 +204,8 @@ async function createIncident(incidentData, reporterId) {
     isAnonymous,
     isDraft,
     photoUrls,
+    enableMlClassification,
+    enableMlRisk,
   } = incidentData;
 
   const incident = await db.one(
@@ -238,29 +240,36 @@ async function createIncident(incidentData, reporterId) {
       const latitudeValue = parseFloat(incident.latitude);
       const longitudeValue = parseFloat(incident.longitude);
       const mlText = `${incident.title} ${incident.description}`;
+      const allowMlClassification = enableMlClassification !== false;
+      const allowMlRisk = enableMlRisk !== false;
+      const allowExternalMl = allowMlClassification || allowMlRisk;
 
       // Try external ML service first, fallback to heuristics
       let mlResults = null;
       let useExternalMl = false;
-      try {
-        mlResults = await mlClient.analyzeIncident({
-          text: mlText,
-          category: incident.category,
-          severity: incident.severity,
-          duplicateCount: 0,
-        });
-        useExternalMl = mlResults !== null;
-        if (useExternalMl) {
-          logger.info(`Using external ML service for incident ${incident.incident_id}`);
+      if (allowExternalMl) {
+        try {
+          mlResults = await mlClient.analyzeIncident({
+            text: mlText,
+            category: incident.category,
+            severity: incident.severity,
+            duplicateCount: 0,
+          });
+          useExternalMl = mlResults !== null;
+          if (useExternalMl) {
+            logger.info(`Using external ML service for incident ${incident.incident_id}`);
+          }
+        } catch (mlError) {
+          logger.warn(`External ML service unavailable, using heuristics: ${mlError.message}`);
         }
-      } catch (mlError) {
-        logger.warn(`External ML service unavailable, using heuristics: ${mlError.message}`);
       }
 
       // Extract ML results or fallback to heuristics
-      const { predictedCategory, confidence: categoryConfidence } = useExternalMl && mlResults?.classification
-        ? { predictedCategory: mlResults.classification.predictedCategory, confidence: mlResults.classification.confidence }
-        : predictCategory(incident.title, incident.description);
+      const { predictedCategory, confidence: categoryConfidence } = allowMlClassification
+        ? (useExternalMl && mlResults?.classification
+          ? { predictedCategory: mlResults.classification.predictedCategory, confidence: mlResults.classification.confidence }
+          : predictCategory(incident.title, incident.description))
+        : { predictedCategory: null, confidence: null };
 
       const toxicity = useExternalMl && mlResults?.toxicity
         ? { score: mlResults.toxicity.toxicityScore, isToxic: mlResults.toxicity.isToxic }
@@ -303,7 +312,9 @@ async function createIncident(incidentData, reporterId) {
             incident.incident_id,
             incident.photo_urls || null,
             { source: 'incident' },
-            categoryConfidence || null,
+            categoryConfidence === null || categoryConfidence === undefined
+              ? null
+              : Number(categoryConfidence.toFixed(2)),
           ]
         );
 
@@ -359,14 +370,16 @@ async function createIncident(incidentData, reporterId) {
         const highConfidenceDuplicates = scoredCandidates.filter((candidate) => candidate.score >= 0.7).length;
 
         // Risk scoring: prefer ML if available
-        const riskScore = useExternalMl && mlResults?.risk
-          ? mlResults.risk.riskScore
-          : computeRiskScore({
-              severity: incident.severity,
-              category: incident.category,
-              text: mlText,
-              highConfidenceDuplicates,
-            });
+        const riskScore = allowMlRisk
+          ? (useExternalMl && mlResults?.risk
+            ? mlResults.risk.riskScore
+            : computeRiskScore({
+                severity: incident.severity,
+                category: incident.category,
+                text: mlText,
+                highConfidenceDuplicates,
+              }))
+          : null;
 
         await db.none(
           `INSERT INTO report_ml (
@@ -381,7 +394,9 @@ async function createIncident(incidentData, reporterId) {
           [
             report.report_id,
             predictedCategory,
-            Number((categoryConfidence || 0).toFixed(2)),
+            categoryConfidence === null || categoryConfidence === undefined
+              ? null
+              : Number(categoryConfidence.toFixed(2)),
             {
               generatedAt: new Date().toISOString(),
               radiusMeters: LIMITS.DEDUP.RADIUS_METERS,
@@ -390,15 +405,22 @@ async function createIncident(incidentData, reporterId) {
               candidates: scoredCandidates,
               mlEnhanced: useExternalMl,
             },
-            Number(riskScore.toFixed(2)),
+            riskScore === null || riskScore === undefined
+              ? null
+              : Number(riskScore.toFixed(2)),
             Number(toxicity.score.toFixed(2)),
             toxicity.isToxic,
           ]
         );
 
-        const shouldAutoFlag = toxicity.isToxic || riskScore >= LIMITS.ML.RISK_AUTOFLAG;
+        const shouldAutoFlag =
+          toxicity.isToxic ||
+          (allowMlRisk && riskScore !== null && riskScore >= LIMITS.ML.RISK_AUTOFLAG);
         if (shouldAutoFlag) {
-          const newSeverity = riskScore >= LIMITS.ML.RISK_AUTOFLAG ? 'critical' : incident.severity;
+          const newSeverity =
+            allowMlRisk && riskScore !== null && riskScore >= LIMITS.ML.RISK_AUTOFLAG
+              ? 'critical'
+              : incident.severity;
           const updatedIncident = await db.one(
             `UPDATE incidents
              SET status = 'auto_flagged',
