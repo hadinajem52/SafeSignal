@@ -1,12 +1,13 @@
 """
 Text embedding model using sentence-transformers.
 Provides semantic similarity for duplicate detection.
+Includes cross-encoder re-ranking for borderline candidates.
 """
 
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer, CrossEncoder
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 import logging
 
 import config
@@ -17,18 +18,34 @@ logger = logging.getLogger(__name__)
 class EmbeddingModel:
     _instance = None
     _model = None
+    _cross_encoder = None
 
-    def __new__(cls, model_name: str = "sentence-transformers/all-MiniLM-L6-v2"):
+    def __new__(cls, model_name: str = "sentence-transformers/all-MiniLM-L12-v2"):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self, model_name: str = "sentence-transformers/all-MiniLM-L6-v2"):
+    def __init__(self, model_name: str = "sentence-transformers/all-MiniLM-L12-v2"):
         if self._model is None:
             dev = config.EMBEDDING_DEVICE
             logger.info(f"Loading embedding model: {model_name} on {dev}")
             self._model = SentenceTransformer(model_name, device=dev)
             logger.info(f"Embedding model loaded successfully on {dev}")
+
+            # Load cross-encoder for re-ranking borderline duplicates
+            cross_model = getattr(config, "CROSS_ENCODER_MODEL", None)
+            cross_dev = getattr(config, "CROSS_ENCODER_DEVICE", "cpu")
+            if cross_model:
+                try:
+                    logger.info(f"Loading cross-encoder: {cross_model} on {cross_dev}")
+                    self._cross_encoder = CrossEncoder(
+                        cross_model,
+                        device=cross_dev,
+                    )
+                    logger.info("Cross-encoder loaded successfully")
+                except Exception as e:
+                    logger.warning(f"Cross-encoder failed to load: {e}")
+                    self._cross_encoder = None
 
     def encode(self, texts: List[str]) -> np.ndarray:
         """Encode texts into embeddings."""
@@ -77,6 +94,8 @@ class EmbeddingModel:
     ) -> List[float]:
         """
         Compute similarity between query and all candidates.
+        Uses bi-encoder for fast initial scoring, then cross-encoder
+        re-ranking for borderline cases (scores in the uncertain zone).
         Returns list of similarity scores in same order as candidates.
         """
         if not candidate_texts:
@@ -85,5 +104,42 @@ class EmbeddingModel:
         query_embedding = self.encode_single(query_text)
         candidate_embeddings = self.encode(candidate_texts)
 
-        similarities = cosine_similarity([query_embedding], candidate_embeddings)[0]
-        return [float(s) for s in similarities]
+        bi_scores = cosine_similarity([query_embedding], candidate_embeddings)[0]
+        final_scores = [float(s) for s in bi_scores]
+
+        # Cross-encoder re-ranking for borderline candidates
+        rerank_low = getattr(config, "RERANK_LOW", 0.45)
+        rerank_high = getattr(config, "RERANK_HIGH", 0.75)
+
+        if self._cross_encoder is not None:
+            borderline_indices = [
+                i for i, s in enumerate(final_scores)
+                if rerank_low <= s <= rerank_high
+            ]
+
+            if borderline_indices:
+                pairs = [(query_text, candidate_texts[i]) for i in borderline_indices]
+                try:
+                    cross_scores = self._cross_encoder.predict(pairs)
+                    # Cross-encoder outputs logits; normalize to [0, 1]
+                    cross_scores = self._sigmoid(cross_scores)
+
+                    for idx, bi_idx in enumerate(borderline_indices):
+                        ce_score = float(cross_scores[idx])
+                        bi_score = final_scores[bi_idx]
+                        # Blend: 70% cross-encoder (more accurate), 30% bi-encoder
+                        blended = 0.7 * ce_score + 0.3 * bi_score
+                        logger.debug(
+                            f"Re-ranked candidate {bi_idx}: "
+                            f"bi={bi_score:.3f} ce={ce_score:.3f} → {blended:.3f}"
+                        )
+                        final_scores[bi_idx] = blended
+                except Exception as e:
+                    logger.warning(f"Cross-encoder re-ranking failed: {e}")
+
+        return final_scores
+
+    @staticmethod
+    def _sigmoid(x):
+        """Apply sigmoid to convert logits to probabilities."""
+        return 1 / (1 + np.exp(-np.asarray(x)))

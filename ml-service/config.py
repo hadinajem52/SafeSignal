@@ -34,7 +34,9 @@ if USE_GPU and GPU_AVAILABLE:
     CLASSIFIER_DEVICE = "cuda"   # BART-large + DistilBERT — biggest latency win
     EMBEDDING_DEVICE = "cuda"    # MiniLM ~80MB — small, fast on GPU
     TOXICITY_DEVICE = "cpu"      # Detoxify ~418MB — offloaded to save VRAM
-    est_vram = 0.80 + 0.26 + 0.08 + 0.30  # ~1.44GB with CUDA overhead
+    # BART-large 8-bit ~400MB, DistilBERT fp16 ~260MB,
+    # MiniLM-L12 ~120MB, cross-encoder ~80MB, CUDA overhead ~300MB
+    est_vram = 0.40 + 0.26 + 0.12 + 0.08 + 0.30  # ~1.16GB with 8-bit BART
     print(f"[ML Service] Hybrid mode: classifier+embeddings→GPU, toxicity→CPU")
     print(f"[ML Service] Estimated VRAM usage: ~{est_vram:.1f}GB / {vram_gb:.1f}GB")
     if est_vram > vram_gb * 0.95:
@@ -52,7 +54,19 @@ DEVICE = "cuda" if (USE_GPU and GPU_AVAILABLE) else "cpu"
 # Upgraded to BART-large-MNLI (~1.6GB) for significantly better accuracy.
 # BART-large achieves ~20-30% higher accuracy than DistilBERT on complex categorization.
 # For speed-critical deployments, use: CLASSIFIER_MODEL=typeform/distilbert-base-uncased-mnli
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+# Upgraded from all-MiniLM-L6-v2 (6 layers) to L12 (12 layers) for better
+# semantic similarity — critical for duplicate detection accuracy.
+# Same architecture/speed class, ~20MB more VRAM, significantly better STS scores.
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L12-v2")
+
+# Cross-encoder for re-ranking borderline duplicate candidates.
+# Much more accurate than bi-encoder cosine similarity for pairwise comparison.
+# Only used on candidates in the "uncertain zone" — adds ~50ms per pair.
+CROSS_ENCODER_MODEL = os.getenv("CROSS_ENCODER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2")
+CROSS_ENCODER_DEVICE = EMBEDDING_DEVICE  # co-locate with embeddings
+# Bi-encoder scores in [RERANK_LOW, RERANK_HIGH] are re-scored by cross-encoder
+RERANK_LOW = float(os.getenv("RERANK_LOW", 0.20))
+RERANK_HIGH = float(os.getenv("RERANK_HIGH", 0.80))
 CLASSIFIER_MODEL = os.getenv("CLASSIFIER_MODEL", "facebook/bart-large-mnli")
 FAST_CLASSIFIER_MODEL = os.getenv(
     "FAST_CLASSIFIER_MODEL",
@@ -79,7 +93,7 @@ if DEVICE == "cuda":
 # Thresholds
 # Lowered similarity threshold from 0.7 to 0.65 to catch more near-duplicates
 # while avoiding false positives (validated against test data)
-SIMILARITY_THRESHOLD = float(os.getenv("SIMILARITY_THRESHOLD", 0.65))
+SIMILARITY_THRESHOLD = float(os.getenv("SIMILARITY_THRESHOLD", 0.60))
 TOXICITY_THRESHOLD = float(os.getenv("TOXICITY_THRESHOLD", 0.5))
 
 # Performance optimizations
