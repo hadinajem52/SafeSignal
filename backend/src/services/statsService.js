@@ -181,10 +181,10 @@ async function getUserDashboardStats(userId, { latitude, longitude, radius = 5 }
 
     const userStatsPromise = db.one(`
     SELECT 
-      COUNT(*) as totalReports,
-      SUM(CASE WHEN status = 'verified' THEN 1 ELSE 0 END) as verifiedReports,
-      SUM(CASE WHEN status IN ('resolved', 'police_closed') THEN 1 ELSE 0 END) as resolvedReports,
-      SUM(CASE WHEN status = 'submitted' THEN 1 ELSE 0 END) as pendingReports
+      COUNT(*)::int as "totalReports",
+      COALESCE(SUM(CASE WHEN status = 'verified' THEN 1 ELSE 0 END), 0)::int as "verifiedReports",
+      COALESCE(SUM(CASE WHEN status IN ('resolved', 'police_closed') THEN 1 ELSE 0 END), 0)::int as "resolvedReports",
+      COALESCE(SUM(CASE WHEN status = 'submitted' THEN 1 ELSE 0 END), 0)::int as "pendingReports"
     FROM incidents
     WHERE reporter_id = $1 AND is_draft = FALSE
   `, [userId]);

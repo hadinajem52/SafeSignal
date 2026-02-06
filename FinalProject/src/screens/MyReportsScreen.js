@@ -56,27 +56,8 @@ const MyReportsScreen = ({ navigation }) => {
       return;
     }
 
-    const outcomeLabel = incident.closure_outcome
-      ? incident.closure_outcome.replace('_', ' ')
-      : null;
-    const statusLabel = STATUS_LABELS[incident.status] || incident.status;
-    const resolvedLabel = outcomeLabel
-      ? `${statusLabel} - ${outcomeLabel.replace(/\b\w/g, (char) => char.toUpperCase())}`
-      : statusLabel;
-
-    Alert.alert(
-      incident.title,
-      `Status: ${resolvedLabel}\n\n${incident.description}`,
-      [
-        { text: 'OK' },
-        {
-          text: 'View Details',
-          onPress: () => {
-            navigation.navigate('IncidentDetail', { incident });
-          },
-        },
-      ]
-    );
+    // Navigate directly to details
+    navigation.navigate('IncidentDetail', { incident });
   };
 
   /**
