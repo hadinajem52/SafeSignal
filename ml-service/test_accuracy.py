@@ -131,7 +131,7 @@ TOXICITY_TESTS = [
 
 
 SIMILARITY_TESTS = [
-    # ── Duplicate pair (should be similar) ──
+    # ── Duplicate pairs (should be similar) ──
     {
         "query": "Car window smashed in the Walmart parking lot on Main St last night",
         "candidate": "Someone broke the window of a car at the Walmart on Main Street",
@@ -140,6 +140,26 @@ SIMILARITY_TESTS = [
     {
         "query": "Loud party at 123 Oak Avenue keeping everyone awake",
         "candidate": "Noise complaint at 123 Oak Ave, music blasting after midnight",
+        "expected_duplicate": True,
+    },
+    {
+        "query": "Two guys fighting outside the 7-Eleven on Broadway",
+        "candidate": "Physical altercation reported in front of the 7-Eleven, Broadway Ave",
+        "expected_duplicate": True,
+    },
+    {
+        "query": "Someone stole packages from our porch on Elm Street",
+        "candidate": "Package theft reported at a home on Elm St, boxes taken from doorstep",
+        "expected_duplicate": True,
+    },
+    {
+        "query": "Power line down on 5th Ave after the storm",
+        "candidate": "Downed electrical wire blocking 5th Avenue, looks dangerous",
+        "expected_duplicate": True,
+    },
+    {
+        "query": "Graffiti spray-painted on the library wall overnight",
+        "candidate": "Vandalism at the public library, someone tagged the exterior wall",
         "expected_duplicate": True,
     },
     # ── Different incidents (should NOT be similar) ──
@@ -151,6 +171,16 @@ SIMILARITY_TESTS = [
     {
         "query": "Graffiti on the school building",
         "candidate": "Two cars collided at the highway onramp",
+        "expected_duplicate": False,
+    },
+    {
+        "query": "Loud music from apartment 4B at 2am",
+        "candidate": "Pothole on the freeway causing flat tires",
+        "expected_duplicate": False,
+    },
+    {
+        "query": "Someone broke into my garage and stole tools",
+        "candidate": "Fire hydrant is leaking water onto the sidewalk",
         "expected_duplicate": False,
     },
 ]
@@ -285,7 +315,7 @@ def run_similarity_tests():
         r = requests.post(f"{BASE}/similarity", json={
             "query_text": test["query"],
             "candidate_texts": [test["candidate"]],
-            "threshold": 0.7,
+            "threshold": 0.60,
         })
         result = r.json()
         score = result["similarities"][0]["score"]

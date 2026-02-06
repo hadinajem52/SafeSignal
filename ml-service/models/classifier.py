@@ -16,7 +16,18 @@ import config
 logger = logging.getLogger(__name__)
 
 # Check for torch.compile availability (PyTorch 2.0+)
-TORCH_COMPILE_AVAILABLE = hasattr(torch, 'compile') and torch.__version__ >= '2.0'
+# Triton backend requires CUDA Capability >= 7.0 (Turing+)
+_has_compile = hasattr(torch, 'compile') and torch.__version__ >= '2.0'
+_cuda_cap_ok = False
+if _has_compile and torch.cuda.is_available():
+    major, _ = torch.cuda.get_device_capability(0)
+    _cuda_cap_ok = major >= 7
+    if not _cuda_cap_ok:
+        logger.info(
+            f"torch.compile disabled: GPU SM {major}.x < 7.0 "
+            f"(Triton requires Turing+)"
+        )
+TORCH_COMPILE_AVAILABLE = _has_compile and _cuda_cap_ok
 if TORCH_COMPILE_AVAILABLE:
     logger.info(f"torch.compile available (PyTorch {torch.__version__})")
 
@@ -242,15 +253,15 @@ class CategoryClassifier:
         # Short, clear, action-focused phrases work best with NLI models.
         # Avoid overlapping concepts between categories.
         label_map = {
-            "theft": "robbery or burglary where items were stolen",
-            "assault": "physical attack or violence against a person",
-            "vandalism": "intentional property damage or graffiti",
-            "suspicious_activity": "unusual behavior suggesting potential crime",
-            "traffic_incident": "vehicle collision or car accident",
-            "noise_complaint": "excessive loud noise or music disturbance",
-            "fire": "active fire with flames or heavy smoke",
-            "medical_emergency": "person needing immediate medical attention",
-            "hazard": "dangerous road condition or infrastructure damage",
+            "theft": "stealing, robbery, burglary, shoplifting, or snatching someone's belongings",
+            "assault": "physical attack, punching, kicking, or violence against a person",
+            "vandalism": "deliberate damage to parked vehicles, buildings, public property, or graffiti",
+            "suspicious_activity": "unusual behavior like lurking, watching, or casing a location",
+            "traffic_incident": "vehicle collision, car crash, or hit-and-run on the road",
+            "noise_complaint": "excessive loud noise, music, construction disturbance, or fireworks",
+            "fire": "active fire, flames, smoke, or something burning",
+            "medical_emergency": "person having a seizure, collapse, unconscious, or needing urgent medical help",
+            "hazard": "dangerous condition like broken glass, debris, pothole, or downed power line",
             "other": "unrelated incident or unclear situation",
         }
 
