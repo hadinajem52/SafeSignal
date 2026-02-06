@@ -70,4 +70,18 @@ Artifacts
 # generated native folders
 /ios
 /android
->>>>>>> 4d90936124c86f6ee8230746e178381d739a682c
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
