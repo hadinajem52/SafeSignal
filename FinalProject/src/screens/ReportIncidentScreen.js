@@ -25,6 +25,7 @@ import {
   IncidentPhotoUploader,
   IncidentTextFields,
   AnonymousToggle,
+  MlFeatureToggles,
 } from '../components/IncidentForm';
 
 const { INCIDENT_CATEGORIES, SEVERITY_LEVELS } = incidentConstants;
@@ -37,6 +38,8 @@ const ReportIncidentScreen = ({ navigation, route }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
   const hasAppliedDefaultAnonymous = useRef(false);
+  const [enableMlClassification, setEnableMlClassification] = useState(true);
+  const [enableMlRisk, setEnableMlRisk] = useState(true);
 
   // Form State Hook
   const {
@@ -93,6 +96,8 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     applyDraftForm(draft);
     applyDraftLocation(draft);
     setPhotos(draft?.photos || []);
+    setEnableMlClassification(draft?.enableMlClassification ?? true);
+    setEnableMlRisk(draft?.enableMlRisk ?? true);
     if (draft?.id) {
       setDraftId(draft.id);
     }
@@ -108,6 +113,8 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     incidentDate: incidentDate.toISOString(),
     severity,
     isAnonymous,
+    enableMlClassification,
+    enableMlRisk,
     photos,
   });
 
@@ -194,6 +201,8 @@ const ReportIncidentScreen = ({ navigation, route }) => {
         incidentDate: incidentDate.toISOString(),
         severity,
         isAnonymous,
+        enableMlClassification,
+        enableMlRisk,
         isDraft: asDraft,
         photoUrls: photos, // In production, upload these to cloud storage first
       };
@@ -330,6 +339,13 @@ const ReportIncidentScreen = ({ navigation, route }) => {
           levels={SEVERITY_LEVELS}
           severity={severity}
           onSelect={setSeverity}
+        />
+
+        <MlFeatureToggles
+          enableClassification={enableMlClassification}
+          onToggleClassification={setEnableMlClassification}
+          enableRisk={enableMlRisk}
+          onToggleRisk={setEnableMlRisk}
         />
 
         <IncidentDateTimePicker

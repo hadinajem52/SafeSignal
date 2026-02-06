@@ -31,6 +31,8 @@ const createIncidentValidation = [
   body('latitude').isFloat({ min: LIMITS.COORDINATES.LAT.MIN, max: LIMITS.COORDINATES.LAT.MAX }),
   body('longitude').isFloat({ min: LIMITS.COORDINATES.LNG.MIN, max: LIMITS.COORDINATES.LNG.MAX }),
   body('severity').isIn(VALID_SEVERITIES),
+  body('enableMlClassification').optional().isBoolean(),
+  body('enableMlRisk').optional().isBoolean(),
 ];
 
 /**
