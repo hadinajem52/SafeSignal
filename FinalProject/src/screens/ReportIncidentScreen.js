@@ -40,6 +40,8 @@ const ReportIncidentScreen = ({ navigation, route }) => {
   const hasAppliedDefaultAnonymous = useRef(false);
   const [enableMlClassification, setEnableMlClassification] = useState(true);
   const [enableMlRisk, setEnableMlRisk] = useState(true);
+  const showCategoryPicker = !enableMlClassification;
+  const showSeverityPicker = !enableMlRisk;
 
   // Form State Hook
   const {
@@ -159,6 +161,24 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     setIsAnonymous(!!preferences.defaultAnonymous);
     hasAppliedDefaultAnonymous.current = true;
   }, [isLoadingPreferences, preferences.defaultAnonymous, route?.params?.draft, setIsAnonymous]);
+
+  useEffect(() => {
+    if (enableMlClassification && !selectedCategory) {
+      setSelectedCategory('other');
+    }
+
+    if (enableMlClassification) {
+      setErrors((prev) => ({ ...prev, category: null }));
+    }
+  }, [enableMlClassification, selectedCategory, setErrors, setSelectedCategory]);
+
+  const handleToggleMlClassification = (value) => {
+    setEnableMlClassification(value);
+  };
+
+  const handleToggleMlRisk = (value) => {
+    setEnableMlRisk(value);
+  };
 
   /**
    * Handle incident submission
@@ -325,27 +345,31 @@ const ReportIncidentScreen = ({ navigation, route }) => {
           errors={errors}
         />
 
-        <IncidentCategoryPicker
-          categories={INCIDENT_CATEGORIES}
-          selectedCategory={selectedCategory}
-          onSelect={(value) => {
-            setSelectedCategory(value);
-            setErrors({ ...errors, category: null });
-          }}
-          error={errors.category}
-        />
+        {showCategoryPicker && (
+          <IncidentCategoryPicker
+            categories={INCIDENT_CATEGORIES}
+            selectedCategory={selectedCategory}
+            onSelect={(value) => {
+              setSelectedCategory(value);
+              setErrors({ ...errors, category: null });
+            }}
+            error={errors.category}
+          />
+        )}
 
-        <IncidentSeverityPicker
-          levels={SEVERITY_LEVELS}
-          severity={severity}
-          onSelect={setSeverity}
-        />
+        {showSeverityPicker && (
+          <IncidentSeverityPicker
+            levels={SEVERITY_LEVELS}
+            severity={severity}
+            onSelect={setSeverity}
+          />
+        )}
 
         <MlFeatureToggles
           enableClassification={enableMlClassification}
-          onToggleClassification={setEnableMlClassification}
+          onToggleClassification={handleToggleMlClassification}
           enableRisk={enableMlRisk}
-          onToggleRisk={setEnableMlRisk}
+          onToggleRisk={handleToggleMlRisk}
         />
 
         <IncidentDateTimePicker
