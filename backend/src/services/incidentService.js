@@ -25,7 +25,7 @@ const profanityFilter = new Filter();
 
 const CATEGORY_KEYWORDS = {
   theft: ['theft', 'stolen', 'robbery', 'burglary', 'break-in'],
-  assault: ['assault', 'fight', 'attack', 'battery'],
+  assault: ['assault', 'fight', 'attack', 'battery', 'shooting', 'shot', 'gun', 'weapon', 'stab', 'terrorist', 'terrorism'],
   vandalism: ['vandal', 'graffiti', 'damage', 'destroyed'],
   suspicious_activity: ['suspicious', 'loitering', 'prowler'],
   traffic_incident: ['traffic', 'crash', 'accident', 'collision', 'hit'],
@@ -36,6 +36,18 @@ const CATEGORY_KEYWORDS = {
 };
 
 const HIGH_RISK_KEYWORDS = ['weapon', 'gun', 'fire', 'shooting', 'blood', 'knife', 'explosion'];
+
+/**
+ * Map an ML risk score (0–1) to a severity level.
+ * Thresholds calibrated against the ML risk scorer's output range
+ * (category_risk * 0.35 + sev_mult * 0.35 + keywords * 0.20 + boosters).
+ */
+const mapRiskToSeverity = (riskScore) => {
+  if (riskScore >= 0.60) return 'critical';
+  if (riskScore >= 0.40) return 'high';
+  if (riskScore >= 0.25) return 'medium';
+  return 'low';
+};
 
 const normalizeText = (text) =>
   (text || '')
@@ -329,8 +341,14 @@ async function createIncident(incidentData, reporterId) {
 
         const [report, candidates] = await Promise.all([reportPromise, candidatePromise]);
 
+        // Use ML-predicted category for dedup matching instead of the
+        // frontend placeholder ('other') that hasn't been updated yet.
+        const dedupIncident = predictedCategory
+          ? { ...incident, category: predictedCategory }
+          : incident;
+
         // Compute dedup with optional ML-enhanced similarity
-        let scoredCandidates = buildDedupCandidates(incident, candidates);
+        let scoredCandidates = buildDedupCandidates(dedupIncident, candidates);
 
         // Try ML-based semantic similarity if external service available
         if (useExternalMl && candidates.length > 0) {
@@ -342,8 +360,10 @@ async function createIncident(incidentData, reporterId) {
               scoredCandidates = scoredCandidates.map((candidate, idx) => {
                 const mlSim = similarityResults.find((s) => s.index === idx);
                 if (mlSim) {
-                  // Blend heuristic and ML similarity (60% ML, 40% heuristic)
-                  const blendedTextSim = 0.6 * mlSim.score + 0.4 * candidate.textSimilarity;
+                  // Blend ML and Jaccard similarity (90% ML, 10% Jaccard).
+                  // Jaccard fails on paraphrased text (different words, same meaning)
+                  // so ML must dominate when available.
+                  const blendedTextSim = 0.9 * mlSim.score + 0.1 * candidate.textSimilarity;
                   const newScore = computeDedupScore({
                     textSimilarity: blendedTextSim,
                     distanceMeters: candidate.distanceMeters,
@@ -367,7 +387,7 @@ async function createIncident(incidentData, reporterId) {
         }
 
         const topScore = scoredCandidates[0]?.score || 0;
-        const highConfidenceDuplicates = scoredCandidates.filter((candidate) => candidate.score >= 0.7).length;
+        const highConfidenceDuplicates = scoredCandidates.filter((candidate) => candidate.score >= 0.55).length;
 
         // Risk scoring: prefer ML if available
         const riskScore = allowMlRisk
@@ -413,6 +433,87 @@ async function createIncident(incidentData, reporterId) {
           ]
         );
 
+        // ── Apply ML predictions back to the incident ──────────────────
+        // When ML classification/risk is enabled, the frontend sends placeholder
+        // defaults (category='other', severity='medium') since those pickers are
+        // hidden.  We now overwrite them with the ML-derived values.
+
+        const mlCategory = allowMlClassification && predictedCategory
+          && VALID_CATEGORIES.includes(predictedCategory)
+          ? predictedCategory
+          : null;
+
+        const mlSeverity = allowMlRisk && riskScore !== null
+          ? mapRiskToSeverity(riskScore)
+          : null;
+
+        if (mlCategory || mlSeverity) {
+          const updatedFields = await db.one(
+            `UPDATE incidents
+             SET category  = COALESCE($2, category),
+                 severity  = COALESCE($3, severity),
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE incident_id = $1
+             RETURNING category, severity`,
+            [incident.incident_id, mlCategory, mlSeverity]
+          );
+          incident.category = updatedFields.category;
+          incident.severity = updatedFields.severity;
+          logger.info(
+            `ML applied to incident ${incident.incident_id}: ` +
+            `category=${mlCategory || '(unchanged)'}, severity=${mlSeverity || '(unchanged)'}`
+          );
+        }
+
+        // ── Link high-confidence duplicates ────────────────────────────
+        if (highConfidenceDuplicates > 0) {
+          const topCandidate = scoredCandidates[0];
+          const canonicalReport = await db.oneOrNone(
+            'SELECT report_id FROM reports WHERE incident_id = $1 ORDER BY created_at DESC LIMIT 1',
+            [topCandidate.incidentId]
+          );
+          if (canonicalReport) {
+            await db.none(
+              `INSERT INTO report_links (canonical_report_id, duplicate_report_id, link_type)
+               VALUES ($1, $2, 'duplicate')
+               ON CONFLICT (canonical_report_id, duplicate_report_id) DO NOTHING`,
+              [canonicalReport.report_id, report.report_id]
+            );
+            logger.info(
+              `Duplicate link created: incident ${incident.incident_id} → ` +
+              `incident ${topCandidate.incidentId} (score: ${topCandidate.score})`
+            );
+          }
+
+          await db.none(
+            `UPDATE incidents
+             SET status = 'auto_processed', updated_at = CURRENT_TIMESTAMP
+             WHERE incident_id = $1 AND status = 'submitted'`,
+            [incident.incident_id]
+          );
+          // Re-read status only if it was actually changed
+          const refreshed = await db.one(
+            'SELECT status FROM incidents WHERE incident_id = $1',
+            [incident.incident_id]
+          );
+          incident.status = refreshed.status;
+
+          await logAction(
+            incident.incident_id,
+            null,
+            'merged',
+            `Auto-detected as potential duplicate of incident #${topCandidate.incidentId} (score: ${topCandidate.score})`
+          );
+
+          emitToRoles(['moderator', 'admin'], 'incident:duplicate', {
+            incidentId: incident.incident_id,
+            duplicateOf: topCandidate.incidentId,
+            score: topCandidate.score,
+            candidates: highConfidenceDuplicates,
+          });
+        }
+
+        // ── Auto-flag for toxicity / extreme risk ──────────────────────
         const shouldAutoFlag =
           toxicity.isToxic ||
           (allowMlRisk && riskScore !== null && riskScore >= LIMITS.ML.RISK_AUTOFLAG);
