@@ -9,3 +9,5 @@ scikit-learn==1.4.0
 detoxify==0.5.2
 python-dotenv==1.0.0
 httpx==0.26.0
+bitsandbytes==0.41.3
+accelerate==0.25.0
