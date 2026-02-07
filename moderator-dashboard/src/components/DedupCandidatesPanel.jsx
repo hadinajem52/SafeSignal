@@ -9,7 +9,7 @@ function DedupCandidatesPanel({ dedup, isLoading, onMerge, isMerging }) {
       <div className="flex items-center justify-between mb-3">
         <h4 className="font-bold text-gray-900">Potential Duplicates</h4>
         <span className="text-xs text-gray-500">
-          {meta.radiusMeters || 500}m • {meta.timeHours || 24}h
+          {meta.radiusMeters || 500}m • {meta.timeHours || 1}h
         </span>
       </div>
 
