@@ -135,11 +135,14 @@ const computeDedupScore = ({
   distanceMeters,
   timeHours,
   categoryMatch,
+  bothCategoriesOther,
   sameReporter,
 }) => {
   const distanceScore = clamp(1 - distanceMeters / LIMITS.DEDUP.RADIUS_METERS, 0, 1);
   const timeScore = clamp(1 - timeHours / LIMITS.DEDUP.TIME_HOURS, 0, 1);
-  const categoryScore = categoryMatch ? 1 : 0;
+  // Both being 'other' is a catch-all match, not a meaningful category signal.
+  // Give partial credit (0.3) instead of full (1.0) to avoid false positives.
+  const categoryScore = categoryMatch ? (bothCategoriesOther ? 0.3 : 1) : 0;
   const sameReporterScore = sameReporter ? 1 : 0;
 
   const score =
@@ -163,12 +166,14 @@ const buildDedupCandidates = (incident, candidates) => {
       const distanceMeters = Math.max(0, parseFloat(candidate.distance_meters || 0));
       const timeHours = Math.abs(incidentDate - new Date(candidate.incident_date)) / 36e5;
       const categoryMatch = incident.category === candidate.category;
+      const bothCategoriesOther = categoryMatch && incident.category === 'other';
       const sameReporter = incident.reporter_id === candidate.reporter_id;
       const score = computeDedupScore({
         textSimilarity,
         distanceMeters,
         timeHours,
         categoryMatch,
+        bothCategoriesOther,
         sameReporter,
       });
 
@@ -369,6 +374,8 @@ async function createIncident(incidentData, reporterId) {
                     distanceMeters: candidate.distanceMeters,
                     timeHours: candidate.timeHours,
                     categoryMatch: candidate.categoryMatch,
+                    bothCategoriesOther: candidate.categoryMatch
+                      && dedupIncident.category === 'other',
                     sameReporter: candidate.sameReporter,
                   });
                   return {
