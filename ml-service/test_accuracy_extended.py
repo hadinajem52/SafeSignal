@@ -137,7 +137,9 @@ def percentile(sorted_values, p):
 
 
 def post_json(path, payload):
-    return requests.post(f"{BASE}{path}", json=payload, timeout=TIMEOUT)
+    r = requests.post(f"{BASE}{path}", json=payload, timeout=TIMEOUT)
+    r.raise_for_status()  # Raise exception for HTTP errors
+    return r
 
 
 def run_classification():
@@ -155,22 +157,41 @@ def run_classification():
     for t in CLASSIFY_TESTS_EXT:
         per_class_total[t["expected"]] += 1
         start = time.perf_counter()
-        r = post_json("/classify", {"text": t["text"]})
-        elapsed = (time.perf_counter() - start) * 1000
-        latencies_ms.append(elapsed)
+        pred = "ERROR"
+        conf = 0.0
+        status = "ERROR"
+        
+        try:
+            r = post_json("/classify", {"text": t["text"]})
+            elapsed = (time.perf_counter() - start) * 1000
+            latencies_ms.append(elapsed)
 
-        data = r.json()
-        pred = data.get("predicted_category", "unknown")
-        conf = data.get("confidence", 0.0)
-        ok = pred == t["expected"]
+            data = r.json()
+            pred = data.get("predicted_category", "unknown")
+            conf = data.get("confidence", 0.0)
+            ok = pred == t["expected"]
 
-        if ok:
-            correct += 1
-            per_class_correct[t["expected"]] += 1
-            status = "PASS"
-        else:
-            status = "FAIL"
-            errors.append((t["expected"], pred, conf, t["text"][:90]))
+            if ok:
+                correct += 1
+                per_class_correct[t["expected"]] += 1
+                status = "PASS"
+            else:
+                status = "FAIL"
+                errors.append((t["expected"], pred, conf, t["text"][:90]))
+        except requests.exceptions.HTTPError as e:
+            elapsed = (time.perf_counter() - start) * 1000
+            latencies_ms.append(elapsed)
+            status = "ERROR"
+            error_msg = f"HTTP {e.response.status_code}: {e.response.text[:100]}"
+            print(f"  {error_msg}")
+            errors.append((t["expected"], "ERROR", 0.0, t["text"][:90]))
+        except (requests.exceptions.RequestException, ValueError) as e:
+            elapsed = (time.perf_counter() - start) * 1000
+            latencies_ms.append(elapsed)
+            status = "ERROR"
+            error_msg = f"Request Error: {str(e)[:100]}"
+            print(f"  {error_msg}")
+            errors.append((t["expected"], "ERROR", 0.0, t["text"][:90]))
 
         print(
             f"[{status}] expected={t['expected']:<20} predicted={pred:<20} "
@@ -210,15 +231,22 @@ def run_toxicity():
     total = len(TOXICITY_TESTS_EXT)
 
     for t in TOXICITY_TESTS_EXT:
-        r = post_json("/toxicity", {"text": t["text"]})
-        data = r.json()
-        pred = data.get("is_toxic", False)
-        score = data.get("toxicity_score", 0.0)
-        ok = pred == t["expected_toxic"]
-        correct += int(ok)
-        status = "PASS" if ok else "FAIL"
-        expected_label = "TOXIC" if t["expected_toxic"] else "CLEAN"
-        print(f"[{status}] expected={expected_label:<5} predicted={pred!s:<5} score={score:.3f}")
+        try:
+            r = post_json("/toxicity", {"text": t["text"]})
+            data = r.json()
+            pred = data.get("is_toxic", False)
+            score = data.get("toxicity_score", 0.0)
+            ok = pred == t["expected_toxic"]
+            correct += int(ok)
+            status = "PASS" if ok else "FAIL"
+            expected_label = "TOXIC" if t["expected_toxic"] else "CLEAN"
+            print(f"[{status}] expected={expected_label:<5} predicted={pred!s:<5} score={score:.3f}")
+        except requests.exceptions.HTTPError as e:
+            status = "ERROR"
+            print(f"[{status}] HTTP {e.response.status_code}: {e.response.text[:100]}")
+        except (requests.exceptions.RequestException, ValueError) as e:
+            status = "ERROR"
+            print(f"[{status}] Request Error: {str(e)[:100]}")
 
     acc = correct / total * 100
     print(f"\nToxicity result: {correct}/{total} ({acc:.1f}%)")
@@ -233,21 +261,28 @@ def run_similarity(threshold=0.65):
     total = len(SIMILARITY_TESTS_EXT)
 
     for t in SIMILARITY_TESTS_EXT:
-        r = post_json(
-            "/similarity",
-            {
-                "query_text": t["query"],
-                "candidate_texts": [t["candidate"]],
-                "threshold": threshold,
-            },
-        )
-        data = r.json()
-        score = data["similarities"][0]["score"]
-        pred = data["similarities"][0]["is_duplicate"]
-        ok = pred == t["expected_duplicate"]
-        correct += int(ok)
-        status = "PASS" if ok else "FAIL"
-        print(f"[{status}] score={score:.3f} predicted_dup={pred}")
+        try:
+            r = post_json(
+                "/similarity",
+                {
+                    "query_text": t["query"],
+                    "candidate_texts": [t["candidate"]],
+                    "threshold": threshold,
+                },
+            )
+            data = r.json()
+            score = data["similarities"][0]["score"]
+            pred = data["similarities"][0]["is_duplicate"]
+            ok = pred == t["expected_duplicate"]
+            correct += int(ok)
+            status = "PASS" if ok else "FAIL"
+            print(f"[{status}] score={score:.3f} predicted_dup={pred}")
+        except requests.exceptions.HTTPError as e:
+            status = "ERROR"
+            print(f"[{status}] HTTP {e.response.status_code}: {e.response.text[:100]}")
+        except (requests.exceptions.RequestException, ValueError) as e:
+            status = "ERROR"
+            print(f"[{status}] Request Error: {str(e)[:100]}")
 
     acc = correct / total * 100
     print(f"\nDuplicate result: {correct}/{total} ({acc:.1f}%) with threshold={threshold}")
@@ -262,21 +297,28 @@ def run_risk():
     total = len(RISK_TESTS_EXT)
 
     for t in RISK_TESTS_EXT:
-        r = post_json(
-            "/risk",
-            {
-                "text": t["text"],
-                "category": t["category"],
-                "severity": t["severity"],
-            },
-        )
-        data = r.json()
-        pred = data.get("is_high_risk", False)
-        score = data.get("risk_score", 0.0)
-        ok = pred == t["expected_high"]
-        correct += int(ok)
-        status = "PASS" if ok else "FAIL"
-        print(f"[{status}] predicted_high={pred} risk_score={score:.2f}")
+        try:
+            r = post_json(
+                "/risk",
+                {
+                    "text": t["text"],
+                    "category": t["category"],
+                    "severity": t["severity"],
+                },
+            )
+            data = r.json()
+            pred = data.get("is_high_risk", False)
+            score = data.get("risk_score", 0.0)
+            ok = pred == t["expected_high"]
+            correct += int(ok)
+            status = "PASS" if ok else "FAIL"
+            print(f"[{status}] predicted_high={pred} risk_score={score:.2f}")
+        except requests.exceptions.HTTPError as e:
+            status = "ERROR"
+            print(f"[{status}] HTTP {e.response.status_code}: {e.response.text[:100]}")
+        except (requests.exceptions.RequestException, ValueError) as e:
+            status = "ERROR"
+            print(f"[{status}] Request Error: {str(e)[:100]}")
 
     acc = correct / total * 100
     print(f"\nRisk result: {correct}/{total} ({acc:.1f}%)")
@@ -294,12 +336,19 @@ def run_analyze_smoke():
     ]
     for text in samples:
         start = time.perf_counter()
-        r = post_json("/analyze", {"text": text})
-        ms = (time.perf_counter() - start) * 1000
-        data = r.json()
-        category = (data.get("classification") or {}).get("predicted_category")
-        conf = (data.get("classification") or {}).get("confidence", 0.0)
-        print(f"category={category} confidence={conf:.2f} latency={ms:.0f}ms")
+        try:
+            r = post_json("/analyze", {"text": text})
+            ms = (time.perf_counter() - start) * 1000
+            data = r.json()
+            category = (data.get("classification") or {}).get("predicted_category")
+            conf = (data.get("classification") or {}).get("confidence", 0.0)
+            print(f"category={category} confidence={conf:.2f} latency={ms:.0f}ms")
+        except requests.exceptions.HTTPError as e:
+            ms = (time.perf_counter() - start) * 1000
+            print(f"ERROR: HTTP {e.response.status_code}: {e.response.text[:100]} latency={ms:.0f}ms")
+        except (requests.exceptions.RequestException, ValueError) as e:
+            ms = (time.perf_counter() - start) * 1000
+            print(f"ERROR: Request Error: {str(e)[:100]} latency={ms:.0f}ms")
 
 
 def main():

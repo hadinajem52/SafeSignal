@@ -6,10 +6,29 @@ Detects multiple types of toxic content.
 from detoxify import Detoxify
 from typing import Dict
 import logging
+import re
 
 import config
 
 logger = logging.getLogger(__name__)
+
+DEHUMANIZING_TERMS = (
+    "animals",
+    "savages",
+    "vermin",
+    "thugs",
+    "scum",
+    "filthy",
+    "criminals",
+)
+
+GROUP_REFERENCE_TERMS = (
+    "those",
+    "these",
+    "that group",
+    "people from",
+    "all those",
+)
 
 
 class ToxicityDetector:
@@ -70,10 +89,33 @@ class ToxicityDetector:
             or scores.get("threat", 0.0) >= severe_threshold
         )
 
+        # Backstop for dehumanizing group-targeting language that may get
+        # moderate toxicity scores but is still harmful in moderation workflows.
+        lowered = (text or "").lower()
+        dehumanizing_hits = sum(
+            1
+            for term in DEHUMANIZING_TERMS
+            if re.search(rf"\b{re.escape(term)}\b", lowered)
+        )
+        has_group_reference = any(term in lowered for term in GROUP_REFERENCE_TERMS)
+
+        contextual_hate = (
+            toxicity_score >= max(0.18, threshold * 0.40)
+            and dehumanizing_hits >= 1
+            and has_group_reference
+        )
+
+        # Secondary signal for insults/identity attacks that are not captured
+        # by the global toxicity score alone.
+        secondary_toxic = (
+            scores.get("identity_attack", 0.0) >= 0.12
+            or scores.get("insult", 0.0) >= 0.35
+        )
+
         return {
-            "is_toxic": is_toxic or is_severe,
+            "is_toxic": is_toxic or is_severe or contextual_hate or secondary_toxic,
             "toxicity_score": toxicity_score,
-            "is_severe": is_severe,
+            "is_severe": is_severe or contextual_hate,
             "details": scores,
         }
 

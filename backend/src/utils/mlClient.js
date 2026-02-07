@@ -8,7 +8,7 @@ const axios = require('axios');
 const logger = require('./logger');
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:5001';
-const ML_TIMEOUT_MS = parseInt(process.env.ML_TIMEOUT_MS, 10) || 5000;
+const ML_TIMEOUT_MS = parseInt(process.env.ML_TIMEOUT_MS, 10) || 10000;
 
 const mlClient = axios.create({
   baseURL: ML_SERVICE_URL,

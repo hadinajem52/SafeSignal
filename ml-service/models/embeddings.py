@@ -9,6 +9,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 from typing import List, Tuple, Optional
 import logging
+import torch
 
 import config
 
@@ -18,7 +19,9 @@ logger = logging.getLogger(__name__)
 class EmbeddingModel:
     _instance = None
     _model = None
+    _cpu_model = None
     _cross_encoder = None
+    _model_name = None
 
     def __new__(cls, model_name: str = "sentence-transformers/all-MiniLM-L12-v2"):
         if cls._instance is None:
@@ -27,6 +30,7 @@ class EmbeddingModel:
 
     def __init__(self, model_name: str = "sentence-transformers/all-MiniLM-L12-v2"):
         if self._model is None:
+            self._model_name = model_name
             dev = config.EMBEDDING_DEVICE
             logger.info(f"Loading embedding model: {model_name} on {dev}")
             self._model = SentenceTransformer(model_name, device=dev)
@@ -47,13 +51,55 @@ class EmbeddingModel:
                     logger.warning(f"Cross-encoder failed to load: {e}")
                     self._cross_encoder = None
 
+    @staticmethod
+    def _is_cuda_oom(error: Exception) -> bool:
+        msg = str(error).lower()
+        return (
+            "cuda out of memory" in msg
+            or "cublas_status_alloc_failed" in msg
+            or ("cuda" in msg and "alloc" in msg)
+        )
+
+    def _ensure_cpu_model(self) -> Optional[SentenceTransformer]:
+        if self._cpu_model is not None:
+            return self._cpu_model
+        try:
+            logger.warning(
+                "Embedding GPU memory pressure detected; loading CPU fallback model."
+            )
+            self._cpu_model = SentenceTransformer(self._model_name, device="cpu")
+            return self._cpu_model
+        except Exception as e:
+            logger.error(f"Failed to initialize CPU embedding fallback: {e}")
+            return None
+
     def encode(self, texts: List[str]) -> np.ndarray:
         """Encode texts into embeddings."""
-        return self._model.encode(texts, convert_to_numpy=True)
+        try:
+            return self._model.encode(texts, convert_to_numpy=True)
+        except RuntimeError as e:
+            if not self._is_cuda_oom(e):
+                raise
+            cpu_model = self._ensure_cpu_model()
+            if cpu_model is None:
+                raise
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            return cpu_model.encode(texts, convert_to_numpy=True)
 
     def encode_single(self, text: str) -> np.ndarray:
         """Encode a single text into an embedding."""
-        return self._model.encode([text], convert_to_numpy=True)[0]
+        try:
+            return self._model.encode([text], convert_to_numpy=True)[0]
+        except RuntimeError as e:
+            if not self._is_cuda_oom(e):
+                raise
+            cpu_model = self._ensure_cpu_model()
+            if cpu_model is None:
+                raise
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            return cpu_model.encode([text], convert_to_numpy=True)[0]
 
     def compute_similarity(self, text1: str, text2: str) -> float:
         """Compute cosine similarity between two texts."""
@@ -127,8 +173,10 @@ class EmbeddingModel:
                     for idx, bi_idx in enumerate(borderline_indices):
                         ce_score = float(cross_scores[idx])
                         bi_score = final_scores[bi_idx]
-                        # Blend: 70% cross-encoder (more accurate), 30% bi-encoder
-                        blended = 0.7 * ce_score + 0.3 * bi_score
+                        blend = getattr(config, "CROSS_ENCODER_BLEND", 0.85)
+                        blend = max(0.0, min(1.0, blend))
+                        # Blend with higher weight on cross-encoder in uncertain zone.
+                        blended = blend * ce_score + (1.0 - blend) * bi_score
                         logger.debug(
                             f"Re-ranked candidate {bi_idx}: "
                             f"bi={bi_score:.3f} ce={ce_score:.3f} → {blended:.3f}"

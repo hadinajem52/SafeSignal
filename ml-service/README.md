@@ -105,9 +105,19 @@ Environment variables (see `.env.example`):
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ML_SERVICE_PORT` | 5001 | Server port |
-| `EMBEDDING_MODEL` | sentence-transformers/all-MiniLM-L6-v2 | Embedding model |
+| `EMBEDDING_MODEL` | sentence-transformers/all-MiniLM-L12-v2 | Embedding model |
+| `CROSS_ENCODER_MODEL` | cross-encoder/ms-marco-MiniLM-L-6-v2 | Re-ranker for borderline duplicate candidates |
+| `CROSS_ENCODER_DEVICE` | cpu | Device for cross-encoder (`cpu` recommended for stability) |
 | `CLASSIFIER_MODEL` | facebook/bart-large-mnli | Classification model |
-| `SIMILARITY_THRESHOLD` | 0.7 | Duplicate threshold |
+| `FAST_CLASSIFIER_MODEL` | typeform/distilbert-base-uncased-mnli | Fast cascade classifier |
+| `CASCADE_CONFIDENCE_THRESHOLD` | 0.72 | Fast-model confidence gate |
+| `CASCADE_MARGIN_THRESHOLD` | 0.08 | Fast-model top1/top2 margin gate |
+| `RERANK_LOW` | 0.10 | Lower bound for cross-encoder re-ranking zone |
+| `RERANK_HIGH` | 0.80 | Upper bound for cross-encoder re-ranking zone |
+| `CROSS_ENCODER_BLEND` | 0.85 | Cross-encoder weighting in blended similarity score |
+| `CLASSIFICATION_CONFIDENCE_THRESHOLD` | 0.14 | Minimum confidence for non-`other` output |
+| `CLASSIFICATION_MARGIN_THRESHOLD` | 0.02 | Minimum top1/top2 separation |
+| `SIMILARITY_THRESHOLD` | 0.60 | Duplicate threshold |
 | `TOXICITY_THRESHOLD` | 0.5 | Toxicity threshold |
 
 ## Integration with Node.js Backend
@@ -117,5 +127,5 @@ The backend calls this service via `mlClient.js`. If unavailable, it falls back 
 Set in backend `.env`:
 ```
 ML_SERVICE_URL=http://localhost:5001
-ML_TIMEOUT_MS=5000
+ML_TIMEOUT_MS=10000
 ```

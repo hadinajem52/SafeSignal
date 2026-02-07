@@ -24,18 +24,24 @@ const LEI_STATUSES = ['verified', 'dispatched', 'on_scene', 'investigating', 'po
 const profanityFilter = new Filter();
 
 const CATEGORY_KEYWORDS = {
-  theft: ['theft', 'stolen', 'robbery', 'burglary', 'break-in'],
-  assault: ['assault', 'fight', 'attack', 'battery', 'shooting', 'shot', 'gun', 'weapon', 'stab', 'terrorist', 'terrorism'],
-  vandalism: ['vandal', 'graffiti', 'damage', 'destroyed'],
-  suspicious_activity: ['suspicious', 'loitering', 'prowler'],
-  traffic_incident: ['traffic', 'crash', 'accident', 'collision', 'hit'],
-  noise_complaint: ['noise', 'loud', 'party', 'music'],
-  fire: ['fire', 'smoke', 'flames', 'burning'],
-  medical_emergency: ['medical', 'injury', 'ambulance', 'unconscious'],
-  hazard: ['hazard', 'spill', 'gas', 'leak', 'danger'],
+  theft: ['theft', 'stolen', 'robbery', 'burglary', 'break-in', 'shoplift', 'snatch', 'package theft'],
+  assault: ['assault', 'fight', 'attack', 'battery', 'shooting', 'shot', 'gun', 'weapon', 'stab', 'knife', 'threat', 'terrorism'],
+  vandalism: ['vandal', 'graffiti', 'damage', 'destroyed', 'defaced', 'keyed', 'smashed'],
+  suspicious_activity: ['suspicious', 'loitering', 'prowler', 'lurking', 'casing', 'watching'],
+  traffic_incident: ['traffic', 'crash', 'accident', 'collision', 'hit', 'hit-and-run', 'pileup', 'rear-ended'],
+  noise_complaint: ['noise', 'loud', 'party', 'music', 'barking', 'fireworks', 'engine'],
+  fire: ['fire', 'smoke', 'flames', 'burning', 'explosion'],
+  medical_emergency: ['medical', 'injury', 'ambulance', 'unconscious', 'not breathing', 'seizure', 'choking', 'chest pain'],
+  hazard: ['hazard', 'spill', 'gas', 'leak', 'danger', 'manhole', 'downed power line', 'broken glass', 'debris'],
 };
 
-const HIGH_RISK_KEYWORDS = ['weapon', 'gun', 'fire', 'shooting', 'blood', 'knife', 'explosion'];
+const HIGH_RISK_KEYWORDS = [
+  'weapon', 'gun', 'active shooter', 'fire', 'shooting', 'blood', 'knife',
+  'explosion', 'not breathing', 'unconscious', 'heart attack', 'gas leak', 'hostage',
+];
+
+const URGENT_CONTEXT_KEYWORDS = ['trapped', 'children', 'child', 'school', 'crowd', 'multiple people', 'spreading'];
+const DEESCALATION_PHRASES = ['no injuries', 'already contained', 'already under control', 'resolved', 'fire is out'];
 
 /**
  * Map an ML risk score (0–1) to a severity level.
@@ -122,12 +128,28 @@ const computeRiskScore = ({ severity, category, text, highConfidenceDuplicates }
   };
 
   const baseScore = baseMap[severity] ?? 0.4;
+  const lowered = (text || '').toLowerCase();
   const keywordHits = countKeywordMatches(text, HIGH_RISK_KEYWORDS);
+  const urgentHits = countKeywordMatches(text, URGENT_CONTEXT_KEYWORDS);
+  const deescalationHits = countKeywordMatches(text, DEESCALATION_PHRASES);
   const keywordBoost = Math.min(0.3, keywordHits * 0.05);
+  const urgentBoost = Math.min(0.15, urgentHits * 0.04);
   const duplicateBoost = Math.min(0.2, (highConfidenceDuplicates || 0) * 0.05);
   const categoryBoost = ['fire', 'assault', 'medical_emergency'].includes(category) ? 0.1 : 0;
+  const deescalationPenalty = Math.min(0.12, deescalationHits * 0.06);
+  const toxicityLanguageBoost = (lowered.includes('kill') || lowered.includes('die')) ? 0.04 : 0;
 
-  return clamp(baseScore + keywordBoost + duplicateBoost + categoryBoost, 0, 1);
+  return clamp(
+    baseScore
+      + keywordBoost
+      + urgentBoost
+      + duplicateBoost
+      + categoryBoost
+      + toxicityLanguageBoost
+      - deescalationPenalty,
+    0,
+    1
+  );
 };
 
 const computeDedupScore = ({
