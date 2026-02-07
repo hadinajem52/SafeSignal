@@ -257,13 +257,13 @@ class CategoryClassifier:
         label_map = {
             "theft": "stealing, robbery, burglary, shoplifting, or snatching someone's belongings",
             "assault": "physical attack, shooting, stabbing, armed violence, terrorism, or threatening a person with a weapon",
-            "vandalism": "deliberate damage to parked vehicles, buildings, public property, or graffiti",
+            "vandalism": "deliberate damage to parked vehicles, buildings, public property, graffiti, or illegal dumping",
             "suspicious_activity": "unusual behavior like lurking, watching, or casing a location",
             "traffic_incident": "vehicle collision, car crash, or hit-and-run on the road",
             "noise_complaint": "excessive loud noise, music, construction disturbance, or fireworks",
             "fire": "building on fire, visible flames, thick smoke, or something actively burning",
             "medical_emergency": "person having a seizure, collapse, unconscious, or needing urgent medical help",
-            "hazard": "dangerous condition like broken glass, debris, pothole, or downed power line",
+            "hazard": "dangerous condition like broken glass, debris, pothole, downed power line, littering, trash dumping, or foul odor",
             "other": "unrelated incident or unclear situation",
         }
 
