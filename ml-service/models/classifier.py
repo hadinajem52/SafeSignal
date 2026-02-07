@@ -8,8 +8,8 @@ from transformers import pipeline, BitsAndBytesConfig
 import torch
 from typing import List, Dict, Optional
 import logging
-from functools import lru_cache
 import hashlib
+import re
 
 import config
 
@@ -38,6 +38,103 @@ try:
     logger.info("BetterTransformer available (Flash Attention)")
 except ImportError:
     BETTERTRANSFORMER_AVAILABLE = False
+
+
+CATEGORY_LABEL_MAP = {
+    "theft": (
+        "theft, robbery, burglary, pickpocketing, package theft, "
+        "or stealing someone's belongings"
+    ),
+    "assault": (
+        "physical attack, shooting, stabbing, armed violence, domestic violence, "
+        "or threatening a person with a weapon"
+    ),
+    "vandalism": (
+        "deliberate property damage like graffiti, keying cars, smashing windows, "
+        "or destroying public/private property"
+    ),
+    "suspicious_activity": (
+        "suspicious behavior like casing, lurking, repeated surveillance, "
+        "trying door handles, or trespassing"
+    ),
+    "traffic_incident": (
+        "vehicle crash, collision, hit-and-run, rollover, or road traffic accident"
+    ),
+    "noise_complaint": (
+        "excessive noise such as loud music, barking dogs, engine revving, "
+        "construction noise, fireworks, or late-night parties"
+    ),
+    "fire": (
+        "active fire emergency with flames, smoke, burning structure, "
+        "or explosion with fire"
+    ),
+    "medical_emergency": (
+        "urgent medical emergency like collapse, seizure, choking, "
+        "unconscious person, chest pain, or not breathing"
+    ),
+    "hazard": (
+        "dangerous hazard such as gas leak, oil spill, open manhole, "
+        "downed power line, broken glass, debris, or unsafe infrastructure"
+    ),
+    "other": "incident that does not clearly fit any listed category",
+}
+
+DOMAIN_HINT_KEYWORDS = {
+    "theft": (
+        "stolen", "robbery", "burglary", "shoplift", "snatch", "pickpocket",
+        "package theft", "porch pirate", "broke into", "break into",
+    ),
+    "assault": (
+        "assault", "attacked", "attack", "fight", "punched", "kicked", "threatened",
+        "knife", "gun", "weapon", "shooting", "stabbing", "domestic violence",
+    ),
+    "vandalism": (
+        "graffiti", "tagged", "spray paint", "keyed", "smashed", "destroyed",
+        "defaced", "property damage", "vandalized", "shattered", "mailboxes",
+        "knocked over", "trash cans", "burned and damaged", "bench",
+    ),
+    "suspicious_activity": (
+        "suspicious", "lurking", "casing", "watching", "peeking", "door handles",
+        "prowler", "following", "trespassing", "taking photos", "circling",
+        "no plates", "buzzers", "hoodie", "checking handles",
+    ),
+    "traffic_incident": (
+        "crash", "collision", "hit-and-run", "rear-ended", "pileup", "rollover",
+        "vehicle accident", "car accident", "motorcycle",
+    ),
+    "noise_complaint": (
+        "loud music", "noise complaint", "barking", "dog barking", "leaf blower",
+        "engine revving", "karaoke", "party", "construction noise", "fireworks",
+        "street racing", "after midnight", "next door", "amplified singing",
+    ),
+    "fire": (
+        "fire", "flames", "burning", "thick smoke", "smoke coming", "structure fire",
+        "apartment fire", "building fire",
+    ),
+    "medical_emergency": (
+        "collapsed", "collapse", "unconscious", "not breathing", "seizure",
+        "choking", "heart attack", "chest pain", "shortness of breath",
+        "unresponsive", "overdose", "fainted", "cannot breathe", "can't breathe",
+    ),
+    "hazard": (
+        "hazard", "gas leak", "oil spill", "open manhole", "pothole", "downed power line",
+        "broken glass", "debris", "exposed wire", "hanging tree limb", "foul odor",
+        "hanging loose", "downed wire", "traffic light is hanging", "slippery", "skid",
+    ),
+}
+
+DOMAIN_HINT_WEIGHT = {
+    "theft": 0.04,
+    "assault": 0.05,
+    "vandalism": 0.06,
+    "suspicious_activity": 0.06,
+    "traffic_incident": 0.04,
+    "noise_complaint": 0.06,
+    "fire": 0.05,
+    "medical_emergency": 0.05,
+    "hazard": 0.06,
+}
+DOMAIN_HINT_CAP = 0.24
 
 
 class CategoryClassifier:
@@ -233,6 +330,91 @@ class CategoryClassifier:
         """Generate cache key for LRU cache."""
         content = f"{text}:{','.join(sorted(categories))}"
         return hashlib.md5(content.encode()).hexdigest()
+
+    @staticmethod
+    def _contains_keyword(text: str, keyword: str) -> bool:
+        if " " in keyword:
+            return keyword in text
+        return re.search(rf"\b{re.escape(keyword)}\b", text) is not None
+
+    @staticmethod
+    def _normalize_scores(scores: Dict[str, float]) -> Dict[str, float]:
+        positive = {k: max(v, 0.0) for k, v in scores.items()}
+        total = sum(positive.values())
+        if total <= 0:
+            return scores
+        return {k: v / total for k, v in positive.items()}
+
+    @staticmethod
+    def _map_pipeline_scores(
+        labels: List[str],
+        scores: List[float],
+        label_map: Dict[str, str],
+    ) -> Dict[str, float]:
+        reverse_map = {v: k for k, v in label_map.items()}
+        mapped_scores = {}
+        for label, score in zip(labels, scores):
+            original_cat = reverse_map.get(label, label)
+            mapped_scores[original_cat] = float(score)
+        return mapped_scores
+
+    def _apply_domain_hints(self, text: str, scores: Dict[str, float]) -> Dict[str, float]:
+        """
+        Apply lightweight domain priors based on explicit incident phrasing.
+        This improves category stability on frequent public-safety report language.
+        """
+        if not getattr(config, "USE_DOMAIN_POSTPROCESSING", True):
+            return scores
+
+        lowered = (text or "").lower()
+        adjusted = dict(scores)
+
+        for category, keywords in DOMAIN_HINT_KEYWORDS.items():
+            if category not in adjusted:
+                continue
+            matches = sum(
+                1 for kw in keywords
+                if self._contains_keyword(lowered, kw)
+            )
+            if matches == 0:
+                continue
+            per_match = DOMAIN_HINT_WEIGHT.get(category, 0.04)
+            adjusted[category] += min(DOMAIN_HINT_CAP, matches * per_match)
+
+        # Common disambiguation: fireworks often generate noise reports,
+        # not structure-fire emergencies.
+        if "fireworks" in lowered and "noise_complaint" in adjusted:
+            adjusted["noise_complaint"] += 0.08
+            if "fire" in adjusted:
+                adjusted["fire"] = max(0.0, adjusted["fire"] - 0.05)
+
+        # Public-safety domain disambiguation rules for frequent confusion pairs.
+        if ("taking photos" in lowered or "circling" in lowered or "buzzers" in lowered) and "suspicious_activity" in adjusted:
+            adjusted["suspicious_activity"] += 0.10
+            if "other" in adjusted:
+                adjusted["other"] = max(0.0, adjusted["other"] - 0.04)
+
+        if ("leaf blower" in lowered or "karaoke" in lowered or "amplified" in lowered) and "noise_complaint" in adjusted:
+            adjusted["noise_complaint"] += 0.10
+            if "fire" in adjusted:
+                adjusted["fire"] = max(0.0, adjusted["fire"] - 0.04)
+
+        if ("oil spill" in lowered or "open manhole" in lowered or "tree limb" in lowered) and "hazard" in adjusted:
+            adjusted["hazard"] += 0.10
+            if "traffic_incident" in adjusted:
+                adjusted["traffic_incident"] = max(0.0, adjusted["traffic_incident"] - 0.05)
+
+        if ("seizure" in lowered or "choking" in lowered or "unresponsive" in lowered) and "medical_emergency" in adjusted:
+            adjusted["medical_emergency"] += 0.10
+            if "assault" in adjusted:
+                adjusted["assault"] = max(0.0, adjusted["assault"] - 0.04)
+
+        if ("keyed" in lowered or "spray paint" in lowered or "graffiti" in lowered) and "vandalism" in adjusted:
+            adjusted["vandalism"] += 0.08
+            if "fire" in adjusted and "fire" not in lowered:
+                adjusted["fire"] = max(0.0, adjusted["fire"] - 0.03)
+
+        return self._normalize_scores(adjusted)
     
     def predict(
         self,
@@ -249,24 +431,7 @@ class CategoryClassifier:
         if not text or not categories:
             return {}
 
-        # Refined labels optimized for zero-shot classification.
-        # Short, clear, action-focused phrases work best with NLI models.
-        # Avoid overlapping concepts between categories.
-        # IMPORTANT: "assault" must cover armed violence (shooting, stabbing,
-        #   terrorism) so the model doesn't confuse "shooting" with "fire".
-        label_map = {
-            "theft": "stealing, robbery, burglary, shoplifting, or snatching someone's belongings",
-            "assault": "physical attack, shooting, stabbing, armed violence, terrorism, or threatening a person with a weapon",
-            "vandalism": "deliberate damage to parked vehicles, buildings, public property, graffiti, or illegal dumping",
-            "suspicious_activity": "unusual behavior like lurking, watching, or casing a location",
-            "traffic_incident": "vehicle collision, car crash, or hit-and-run on the road",
-            "noise_complaint": "excessive loud noise, music, construction disturbance, or fireworks",
-            "fire": "building on fire, visible flames, thick smoke, or something actively burning",
-            "medical_emergency": "person having a seizure, collapse, unconscious, or needing urgent medical help",
-            "hazard": "dangerous condition like broken glass, debris, pothole, downed power line, littering, trash dumping, or foul odor",
-            "other": "unrelated incident or unclear situation",
-        }
-
+        label_map = CATEGORY_LABEL_MAP
         labels = [label_map.get(cat, cat) for cat in categories]
 
         # HYBRID CASCADE OPTIMIZATION:
@@ -283,18 +448,29 @@ class CategoryClassifier:
                 hypothesis_template=config.HYPOTHESIS_TEMPLATE,
             )
             
-            # If high confidence, return fast result
+            # If high confidence and clear separation from runner-up, return fast result
             top_score = fast_result["scores"][0]
-            if top_score >= config.CASCADE_CONFIDENCE_THRESHOLD:
-                logger.debug(f"Fast classifier confident ({top_score:.2f}), skipping slow model")
-                reverse_map = {v: k for k, v in label_map.items()}
-                scores = {}
-                for label, score in zip(fast_result["labels"], fast_result["scores"]):
-                    original_cat = reverse_map.get(label, label)
-                    scores[original_cat] = float(score)
-                return scores
+            second_score = fast_result["scores"][1] if len(fast_result["scores"]) > 1 else 0.0
+            margin = top_score - second_score
+            if (
+                top_score >= config.CASCADE_CONFIDENCE_THRESHOLD
+                and margin >= getattr(config, "CASCADE_MARGIN_THRESHOLD", 0.08)
+            ):
+                logger.debug(
+                    f"Fast classifier decisive (top={top_score:.2f}, margin={margin:.2f}), "
+                    "skipping slow model"
+                )
+                scores = self._map_pipeline_scores(
+                    fast_result["labels"],
+                    fast_result["scores"],
+                    label_map,
+                )
+                return self._apply_domain_hints(text, scores)
             
-            logger.debug(f"Fast classifier uncertain ({top_score:.2f}), using accurate model")
+            logger.debug(
+                f"Fast classifier uncertain (top={top_score:.2f}, margin={margin:.2f}), "
+                "using accurate model"
+            )
         
         # Use accurate BART classifier (with 8-bit quantization: ~400ms)
         result = self._classifier(
@@ -304,20 +480,15 @@ class CategoryClassifier:
             hypothesis_template=config.HYPOTHESIS_TEMPLATE,
         )
 
-        # Map back to original category names
-        reverse_map = {v: k for k, v in label_map.items()}
-        scores = {}
-        for label, score in zip(result["labels"], result["scores"]):
-            original_cat = reverse_map.get(label, label)
-            scores[original_cat] = float(score)
-
-        return scores
+        scores = self._map_pipeline_scores(result["labels"], result["scores"], label_map)
+        return self._apply_domain_hints(text, scores)
 
     def predict_top(
         self,
         text: str,
         categories: List[str],
-        confidence_threshold: float = 0.15,
+        confidence_threshold: Optional[float] = None,
+        margin_threshold: Optional[float] = None,
     ) -> Optional[Dict]:
         """
         Get top predicted category with confidence.
@@ -330,26 +501,45 @@ class CategoryClassifier:
         if not scores:
             return None
 
-        top_category = max(scores, key=scores.get)
-        top_confidence = scores[top_category]
+        conf_threshold = (
+            config.CLASSIFICATION_CONFIDENCE_THRESHOLD
+            if confidence_threshold is None
+            else confidence_threshold
+        )
+        ambiguity_threshold = (
+            config.CLASSIFICATION_MARGIN_THRESHOLD
+            if margin_threshold is None
+            else margin_threshold
+        )
+
+        ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+        top_category, top_confidence = ranked[0]
+        second_confidence = ranked[1][1] if len(ranked) > 1 else 0.0
+        confidence_margin = top_confidence - second_confidence
         
-        # Fallback to 'other' if confidence is too low
-        # This prevents misclassification of ambiguous incidents
-        if top_confidence < confidence_threshold and "other" in scores:
+        # Fallback to 'other' when confidence is too low or too ambiguous.
+        if (
+            (top_confidence < conf_threshold or confidence_margin < ambiguity_threshold)
+            and "other" in scores
+            and top_category != "other"
+        ):
             logger.warning(
-                f"Low confidence ({top_confidence:.3f}) for '{top_category}', "
-                f"using 'other' as fallback"
+                f"Uncertain classification for '{top_category}' "
+                f"(conf={top_confidence:.3f}, margin={confidence_margin:.3f}); "
+                "using 'other' as fallback"
             )
             return {
                 "category": "other",
                 "confidence": scores["other"],
                 "all_scores": scores,
                 "original_prediction": top_category,
-                "reason": "low_confidence_fallback",
+                "margin": confidence_margin,
+                "reason": "low_confidence_or_ambiguous",
             }
         
         return {
             "category": top_category,
             "confidence": top_confidence,
             "all_scores": scores,
+            "margin": confidence_margin,
         }

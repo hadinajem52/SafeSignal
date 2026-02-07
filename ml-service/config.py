@@ -8,10 +8,10 @@ load_dotenv()
 HOST = os.getenv("ML_SERVICE_HOST", "0.0.0.0")
 PORT = int(os.getenv("ML_SERVICE_PORT", 5001))
 
-# Device configuration — hybrid GPU/CPU strategy
-# Classifier + Embeddings (~340MB) → GPU for speed
-# Toxicity (~418MB) → CPU to save VRAM
-# Risk scorer → CPU (rule-based, no neural net)
+# Device configuration - hybrid GPU/CPU strategy
+# Classifier + Embeddings (~340MB) -> GPU for speed
+# Toxicity (~418MB) -> CPU to save VRAM
+# Risk scorer -> CPU (rule-based, no neural net)
 GPU_AVAILABLE = torch.cuda.is_available()
 USE_GPU = os.getenv("ML_USE_GPU", "true" if GPU_AVAILABLE else "false").lower() == "true"
 
@@ -25,19 +25,19 @@ else:
 
 if USE_GPU and GPU_AVAILABLE:
     # Hybrid GPU/CPU strategy for 2GB VRAM (MX350):
-    #   BART-large fp16 ~800MB (or ~400MB with 8-bit) — main accurate classifier
-    #   DistilBERT fp16 ~260MB — fast cascade first-pass
-    #   MiniLM fp16 ~80MB — embeddings
+    #   BART-large fp16 ~800MB (or ~400MB with 8-bit) - main accurate classifier
+    #   DistilBERT fp16 ~260MB - fast cascade first-pass
+    #   MiniLM fp16 ~80MB - embeddings
     #   CUDA overhead ~300MB
-    #   Total: ~1.4-1.5GB fp16 / ~1.0GB with 8-bit → fits in 2GB
+    #   Total: ~1.4-1.5GB fp16 / ~1.0GB with 8-bit -> fits in 2GB
     #   Toxicity (Detoxify ~418MB) stays on CPU to save VRAM
-    CLASSIFIER_DEVICE = "cuda"   # BART-large + DistilBERT — biggest latency win
-    EMBEDDING_DEVICE = "cuda"    # MiniLM ~80MB — small, fast on GPU
-    TOXICITY_DEVICE = "cpu"      # Detoxify ~418MB — offloaded to save VRAM
+    CLASSIFIER_DEVICE = "cuda"   # BART-large + DistilBERT - biggest latency win
+    EMBEDDING_DEVICE = "cuda"    # MiniLM ~80MB - small, fast on GPU
+    TOXICITY_DEVICE = "cpu"      # Detoxify ~418MB - offloaded to save VRAM
     # BART-large 8-bit ~400MB, DistilBERT fp16 ~260MB,
     # MiniLM-L12 ~120MB, cross-encoder ~80MB, CUDA overhead ~300MB
     est_vram = 0.40 + 0.26 + 0.12 + 0.08 + 0.30  # ~1.16GB with 8-bit BART
-    print(f"[ML Service] Hybrid mode: classifier+embeddings→GPU, toxicity→CPU")
+    print(f"[ML Service] Hybrid mode: classifier+embeddings->GPU, toxicity->CPU")
     print(f"[ML Service] Estimated VRAM usage: ~{est_vram:.1f}GB / {vram_gb:.1f}GB")
     if est_vram > vram_gb * 0.95:
         print(f"[ML Service] WARNING: VRAM may be tight, 8-bit quantization recommended")
@@ -55,18 +55,21 @@ DEVICE = "cuda" if (USE_GPU and GPU_AVAILABLE) else "cpu"
 # BART-large achieves ~20-30% higher accuracy than DistilBERT on complex categorization.
 # For speed-critical deployments, use: CLASSIFIER_MODEL=typeform/distilbert-base-uncased-mnli
 # Upgraded from all-MiniLM-L6-v2 (6 layers) to L12 (12 layers) for better
-# semantic similarity — critical for duplicate detection accuracy.
+# semantic similarity - critical for duplicate detection accuracy.
 # Same architecture/speed class, ~20MB more VRAM, significantly better STS scores.
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L12-v2")
 
 # Cross-encoder for re-ranking borderline duplicate candidates.
 # Much more accurate than bi-encoder cosine similarity for pairwise comparison.
-# Only used on candidates in the "uncertain zone" — adds ~50ms per pair.
+# Only used on candidates in the "uncertain zone" - adds ~50ms per pair.
 CROSS_ENCODER_MODEL = os.getenv("CROSS_ENCODER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2")
-CROSS_ENCODER_DEVICE = EMBEDDING_DEVICE  # co-locate with embeddings
+# Keep cross-encoder on CPU by default to avoid GPU memory pressure.
+CROSS_ENCODER_DEVICE = os.getenv("CROSS_ENCODER_DEVICE", "cpu")
 # Bi-encoder scores in [RERANK_LOW, RERANK_HIGH] are re-scored by cross-encoder
-RERANK_LOW = float(os.getenv("RERANK_LOW", 0.20))
+RERANK_LOW = float(os.getenv("RERANK_LOW", 0.10))
 RERANK_HIGH = float(os.getenv("RERANK_HIGH", 0.80))
+# Blend ratio for cross-encoder re-ranking in uncertain zone.
+CROSS_ENCODER_BLEND = float(os.getenv("CROSS_ENCODER_BLEND", 0.85))
 CLASSIFIER_MODEL = os.getenv("CLASSIFIER_MODEL", "facebook/bart-large-mnli")
 FAST_CLASSIFIER_MODEL = os.getenv(
     "FAST_CLASSIFIER_MODEL",
@@ -91,22 +94,34 @@ if DEVICE == "cuda":
     print("[ML Service] CUDA optimizations enabled (cudnn.benchmark, TF32)")
 
 # Thresholds
-# Lowered similarity threshold from 0.7 to 0.65 to catch more near-duplicates
+# Lowered similarity threshold from 0.7 to 0.60 to catch more near-duplicates
 # while avoiding false positives (validated against test data)
 SIMILARITY_THRESHOLD = float(os.getenv("SIMILARITY_THRESHOLD", 0.60))
 TOXICITY_THRESHOLD = float(os.getenv("TOXICITY_THRESHOLD", 0.5))
 
+# Classification quality controls
+# Use conservative abstention and ambiguity checks for safer category output.
+CLASSIFICATION_CONFIDENCE_THRESHOLD = float(
+    os.getenv("CLASSIFICATION_CONFIDENCE_THRESHOLD", 0.14)
+)
+CLASSIFICATION_MARGIN_THRESHOLD = float(
+    os.getenv("CLASSIFICATION_MARGIN_THRESHOLD", 0.02)
+)
+USE_DOMAIN_POSTPROCESSING = os.getenv("USE_DOMAIN_POSTPROCESSING", "true").lower() == "true"
+
 # Performance optimizations
 # 8-bit quantization: 2-3x speedup with <2% accuracy loss (requires accelerate package)
-USE_8BIT_QUANTIZATION = os.getenv("USE_8BIT_QUANTIZATION", "true").lower() == "true"
+# NOTE: Disabled on Windows due to bitsandbytes compatibility issues with CUDA
+# See: https://github.com/TimDettmers/bitsandbytes/issues/...
+USE_8BIT_QUANTIZATION = os.getenv("USE_8BIT_QUANTIZATION", "false").lower() == "true"
 
 # Cascade classifier: use fast model first, accurate model only when needed
 # Reduces latency by 60-80% for high-confidence predictions
 USE_CASCADE_CLASSIFIER = os.getenv("USE_CASCADE_CLASSIFIER", "true").lower() == "true"
-# Lowered from 0.75 → 0.60: lets DistilBERT handle ~70-80% of requests
-# (vs ~40-50% at 0.75), BART only fires on genuinely uncertain inputs.
-# Tradeoff: slightly lower accuracy on borderline cases, much lower avg latency.
-CASCADE_CONFIDENCE_THRESHOLD = float(os.getenv("CASCADE_CONFIDENCE_THRESHOLD", 0.60))
+# Raised to prioritize accuracy for public-safety incident routing.
+CASCADE_CONFIDENCE_THRESHOLD = float(os.getenv("CASCADE_CONFIDENCE_THRESHOLD", 0.72))
+# Require a clear top-1 vs top-2 separation before trusting fast model output.
+CASCADE_MARGIN_THRESHOLD = float(os.getenv("CASCADE_MARGIN_THRESHOLD", 0.08))
 
 # Zero-shot classification hypothesis template
 # Optimized for incident reports - more specific context improves entailment accuracy

@@ -1,49 +1,71 @@
-"""
-Risk scoring model combining multiple signals.
-"""
+"""Risk scoring model combining multiple public-safety signals."""
 
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 import re
 import logging
 
 logger = logging.getLogger(__name__)
 
-# High-risk keywords with weights
+# High-risk keywords with weights.
 HIGH_RISK_KEYWORDS = {
-    "gun": 0.15,
-    "weapon": 0.15,
-    "shooting": 0.2,
-    "shot": 0.1,
-    "fire": 0.12,
-    "flames": 0.12,
-    "explosion": 0.2,
-    "bomb": 0.25,
-    "knife": 0.1,
-    "stabbing": 0.15,
-    "blood": 0.1,
-    "bleeding": 0.1,
-    "unconscious": 0.12,
-    "not breathing": 0.15,
-    "heart attack": 0.15,
-    "dying": 0.12,
-    "dead": 0.15,
-    "hostage": 0.25,
-    "kidnap": 0.2,
-    "armed": 0.15,
-    "active shooter": 0.3,
+    "active shooter": 0.35,
+    "hostage": 0.30,
+    "bomb": 0.30,
+    "explosion": 0.25,
+    "gun": 0.20,
+    "weapon": 0.18,
+    "knife": 0.16,
+    "stabbing": 0.20,
+    "shooting": 0.22,
+    "shot": 0.12,
+    "fire": 0.14,
+    "burning": 0.16,
+    "blaze": 0.16,
+    "flames": 0.16,
+    "smoke": 0.10,
+    "gas leak": 0.18,
+    "unconscious": 0.16,
+    "not breathing": 0.20,
+    "choking": 0.16,
+    "seizure": 0.14,
+    "heart attack": 0.22,
+    "bleeding": 0.12,
+    "blood": 0.10,
+    "kidnap": 0.24,
 }
+
+URGENT_CONTEXT_KEYWORDS = {
+    "trapped": 0.18,
+    "family": 0.08,
+    "children": 0.12,
+    "child": 0.12,
+    "school": 0.10,
+    "crowd": 0.10,
+    "multiple people": 0.12,
+    "spreading": 0.10,
+    "escalating": 0.08,
+}
+
+DEESCALATION_PHRASES = (
+    "no injuries",
+    "minor injuries only",
+    "already contained",
+    "already under control",
+    "fire is out",
+    "resolved",
+)
 
 # Category base risk scores
 CATEGORY_RISK = {
-    "fire": 0.7,
-    "medical_emergency": 0.65,
-    "assault": 0.6,
-    "hazard": 0.5,
-    "traffic_incident": 0.45,
-    "theft": 0.4,
-    "suspicious_activity": 0.35,
-    "vandalism": 0.3,
-    "noise_complaint": 0.2,
+    "fire": 0.72,
+    "medical_emergency": 0.70,
+    "assault": 0.65,
+    "hazard": 0.52,
+    "traffic_incident": 0.48,
+    "theft": 0.40,
+    "suspicious_activity": 0.36,
+    "vandalism": 0.30,
+    "noise_complaint": 0.22,
     "other": 0.25,
 }
 
@@ -59,22 +81,33 @@ SEVERITY_MULTIPLIER = {
 class RiskScorer:
     def __init__(self):
         self.keywords = HIGH_RISK_KEYWORDS
+        self.urgent_keywords = URGENT_CONTEXT_KEYWORDS
+        self.deescalation_phrases = DEESCALATION_PHRASES
         self.category_risk = CATEGORY_RISK
         self.severity_mult = SEVERITY_MULTIPLIER
 
+    @staticmethod
+    def _contains_phrase(text: str, phrase: str) -> bool:
+        if " " in phrase:
+            return phrase in text
+        return re.search(rf"\b{re.escape(phrase)}\b", text) is not None
+
+    def _weighted_match_score(self, text: str, weighted_terms: Dict[str, float], cap: float) -> float:
+        total = 0.0
+        for term, weight in weighted_terms.items():
+            if self._contains_phrase(text, term):
+                total += weight
+        return min(total, cap)
+
+    def _deescalation_penalty(self, text: str) -> float:
+        matches = sum(1 for phrase in self.deescalation_phrases if phrase in text)
+        return min(0.12, matches * 0.06)
+
     def compute_keyword_score(self, text: str) -> float:
-        """Compute risk score from keyword presence."""
+        """Compute weighted keyword score from high-risk terms."""
         if not text:
             return 0.0
-
-        text_lower = text.lower()
-        total_score = 0.0
-
-        for keyword, weight in self.keywords.items():
-            if re.search(rf"\b{re.escape(keyword)}\b", text_lower):
-                total_score += weight
-
-        return min(total_score, 0.5)  # Cap keyword contribution
+        return self._weighted_match_score(text.lower(), self.keywords, cap=0.60)
 
     def compute_risk_score(
         self,
@@ -86,33 +119,43 @@ class RiskScorer:
     ) -> Dict:
         """
         Compute overall risk score from multiple signals.
-        Returns dict with score and breakdown.
+        Returns dict with score and component breakdown.
         """
+        text_lower = (text or "").lower()
+
         # Base score from category
         category_score = self.category_risk.get(category, 0.25) if category else 0.25
 
         # Severity multiplier
         sev_mult = self.severity_mult.get(severity, 0.5) if severity else 0.5
 
-        # Keyword analysis
-        keyword_score = self.compute_keyword_score(text)
+        # Content analysis
+        keyword_score = self.compute_keyword_score(text_lower)
+        urgency_score = self._weighted_match_score(text_lower, self.urgent_keywords, cap=0.25)
+        deescalation_penalty = self._deescalation_penalty(text_lower)
 
         # Duplicate burst detection (multiple reports = higher risk)
-        duplicate_boost = min(0.2, duplicate_count * 0.05)
+        duplicate_boost = min(0.18, max(0, duplicate_count) * 0.04)
 
         # Toxicity contribution (capped)
-        toxicity_boost = min(0.1, toxicity_score * 0.2)
+        toxicity_boost = min(0.12, max(0.0, toxicity_score) * 0.25)
 
-        # Weighted combination
-        # Category + severity are the primary signals (70%)
-        # Keywords are a strong secondary signal (20%)
-        # Duplicates + toxicity are boosters (10%)
+        # Consistency boost: urgent categories with explicit risk language
+        synergy_boost = 0.0
+        if category in {"fire", "assault", "medical_emergency"}:
+            if keyword_score >= 0.12 or urgency_score >= 0.12:
+                synergy_boost = 0.08
+
+        # Weighted combination tuned for incident triage.
         raw_score = (
-            category_score * 0.35
-            + sev_mult * 0.35
-            + keyword_score * 0.20
+            category_score * 0.28
+            + sev_mult * 0.26
+            + keyword_score * 0.28
+            + urgency_score * 0.10
             + duplicate_boost * 0.05
             + toxicity_boost * 0.05
+            + synergy_boost
+            - deescalation_penalty
         )
 
         # Normalize to 0-1
@@ -121,11 +164,14 @@ class RiskScorer:
         return {
             "risk_score": round(final_score, 3),
             "breakdown": {
-                "category_contribution": round(category_score * 0.3, 3),
-                "severity_contribution": round(sev_mult * 0.25, 3),
-                "keyword_contribution": round(keyword_score * 0.25, 3),
-                "duplicate_contribution": round(duplicate_boost * 0.1, 3),
-                "toxicity_contribution": round(toxicity_boost * 0.1, 3),
+                "category_contribution": round(category_score * 0.28, 3),
+                "severity_contribution": round(sev_mult * 0.26, 3),
+                "keyword_contribution": round(keyword_score * 0.28, 3),
+                "urgency_contribution": round(urgency_score * 0.10, 3),
+                "duplicate_contribution": round(duplicate_boost * 0.05, 3),
+                "toxicity_contribution": round(toxicity_boost * 0.05, 3),
+                "synergy_boost": round(synergy_boost, 3),
+                "deescalation_penalty": round(deescalation_penalty, 3),
             },
             "is_high_risk": final_score >= 0.5,
             "is_critical": final_score >= 0.8,
