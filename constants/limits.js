@@ -8,7 +8,7 @@ const LIMITS = {
   },
   DEDUP: {
     RADIUS_METERS: 500,
-    TIME_HOURS: 24,
+    TIME_HOURS: 1,
     MAX_CANDIDATES: 10,
   },
   ML: {

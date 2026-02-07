@@ -383,9 +383,17 @@ async function createIncident(incidentData, reporterId) {
             const candidateTexts = candidates.map((c) => `${c.title} ${c.description}`);
             const similarityResults = await mlClient.computeSimilarity(mlText, candidateTexts, 0.5);
             if (similarityResults && similarityResults.length > 0) {
+              // similarityResults indices are based on the original SQL candidate order.
+              // scoredCandidates may already be re-ordered, so map by incident id.
+              const similarityByIncidentId = new Map(
+                similarityResults
+                  .filter((s) => Number.isInteger(s.index) && s.index >= 0 && s.index < candidates.length)
+                  .map((s) => [candidates[s.index].incident_id, s])
+              );
+
               // Enhance scores with ML similarity
-              scoredCandidates = scoredCandidates.map((candidate, idx) => {
-                const mlSim = similarityResults.find((s) => s.index === idx);
+              scoredCandidates = scoredCandidates.map((candidate) => {
+                const mlSim = similarityByIncidentId.get(candidate.incidentId);
                 if (mlSim) {
                   // Blend ML and Jaccard similarity (90% ML, 10% Jaccard).
                   // Jaccard fails on paraphrased text (different words, same meaning)
