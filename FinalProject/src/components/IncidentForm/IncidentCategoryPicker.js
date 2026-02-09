@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 const IncidentCategoryPicker = ({
   categories,
@@ -7,10 +8,12 @@ const IncidentCategoryPicker = ({
   onSelect,
   error,
 }) => {
+  const { theme } = useTheme();
+
   return (
     <View style={styles.inputGroup}>
-      <Text style={styles.label}>
-        Category <Text style={styles.required}>*</Text>
+      <Text style={[styles.label, { color: theme.text }]}>
+        Category <Text style={[styles.required, { color: theme.error }]}>*</Text>
       </Text>
       <View style={styles.categoryGrid}>
         {categories.map((category) => (
@@ -18,7 +21,17 @@ const IncidentCategoryPicker = ({
             key={category.value}
             style={[
               styles.categoryButton,
-              selectedCategory === category.value && styles.categoryButtonSelected,
+              {
+                backgroundColor: theme.card,
+                borderColor: theme.border,
+              },
+              selectedCategory === category.value && [
+                styles.categoryButtonSelected,
+                {
+                  borderColor: theme.primary,
+                  backgroundColor: `${theme.primary}20`,
+                },
+              ],
             ]}
             onPress={() => onSelect(category.value)}
           >
@@ -26,7 +39,11 @@ const IncidentCategoryPicker = ({
             <Text
               style={[
                 styles.categoryLabel,
-                selectedCategory === category.value && styles.categoryLabelSelected,
+                { color: theme.text },
+                selectedCategory === category.value && [
+                  styles.categoryLabelSelected,
+                  { color: theme.primary },
+                ],
               ]}
             >
               {category.label}
@@ -34,7 +51,7 @@ const IncidentCategoryPicker = ({
           </TouchableOpacity>
         ))}
       </View>
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error && <Text style={[styles.errorText, { color: theme.error }]}>{error}</Text>}
     </View>
   );
 };
@@ -46,7 +63,6 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 8,
   },
   required: {
@@ -60,9 +76,7 @@ const styles = StyleSheet.create({
   categoryButton: {
     width: '31%',
     margin: '1%',
-    backgroundColor: '#fff',
     borderWidth: 2,
-    borderColor: '#ddd',
     borderRadius: 12,
     padding: 12,
     alignItems: 'center',
@@ -71,7 +85,6 @@ const styles = StyleSheet.create({
   },
   categoryButtonSelected: {
     borderColor: '#1a73e8',
-    backgroundColor: '#e8f4fd',
   },
   categoryIcon: {
     fontSize: 28,
@@ -79,7 +92,6 @@ const styles = StyleSheet.create({
   },
   categoryLabel: {
     fontSize: 12,
-    color: '#333',
     textAlign: 'center',
     fontWeight: '500',
   },

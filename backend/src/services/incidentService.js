@@ -44,6 +44,35 @@ const HIGH_RISK_KEYWORDS = [
 
 const URGENT_CONTEXT_KEYWORDS = ['trapped', 'children', 'child', 'school', 'crowd', 'multiple people', 'spreading'];
 const DEESCALATION_PHRASES = ['no injuries', 'already contained', 'already under control', 'resolved', 'fire is out'];
+const DEDUP_ENTITY_STOPWORDS = new Set([
+  'the', 'and', 'for', 'with', 'from', 'this', 'that', 'there', 'their', 'about',
+  'incident', 'reported', 'report', 'someone', 'person', 'people', 'near', 'around',
+  'outside', 'inside', 'street', 'avenue', 'road', 'boulevard', 'drive', 'lane',
+  'court', 'place', 'highway', 'parkway', 'branch',
+]);
+const STREET_SUFFIX_MAP = {
+  st: 'street',
+  street: 'street',
+  ave: 'avenue',
+  avenue: 'avenue',
+  rd: 'road',
+  road: 'road',
+  blvd: 'boulevard',
+  boulevard: 'boulevard',
+  dr: 'drive',
+  drive: 'drive',
+  ln: 'lane',
+  lane: 'lane',
+  ct: 'court',
+  court: 'court',
+  pl: 'place',
+  place: 'place',
+  hwy: 'highway',
+  highway: 'highway',
+  pkwy: 'parkway',
+  parkway: 'parkway',
+};
+const NORMALIZED_STREET_SUFFIXES = new Set(Object.values(STREET_SUFFIX_MAP));
 
 /**
  * Map an ML risk score (0–1) to a severity level.
@@ -97,6 +126,62 @@ const jaccardSimilarity = (setA, setB) => {
 };
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+const normalizeEntityToken = (token) => {
+  const cleaned = (token || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (!cleaned) {
+    return null;
+  }
+  return STREET_SUFFIX_MAP[cleaned] || cleaned;
+};
+
+const extractEntityTokens = (text) => {
+  const rawTokens = (text || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  const entities = new Set();
+
+  rawTokens.forEach((rawToken, index) => {
+    const token = normalizeEntityToken(rawToken);
+    if (!token) {
+      return;
+    }
+
+    const nextToken = normalizeEntityToken(rawTokens[index + 1]);
+    const nextNextToken = normalizeEntityToken(rawTokens[index + 2]);
+
+    // Capture "main st" and "main street" style references consistently.
+    if (
+      token.length >= 3
+      && nextToken
+      && NORMALIZED_STREET_SUFFIXES.has(nextToken)
+      && !DEDUP_ENTITY_STOPWORDS.has(token)
+    ) {
+      entities.add(`${token}_${nextToken}`);
+    }
+
+    // Capture simple address forms like "123 main st".
+    if (/^\d+$/.test(token) && nextToken && nextNextToken && NORMALIZED_STREET_SUFFIXES.has(nextNextToken)) {
+      entities.add(`${token}_${nextToken}_${nextNextToken}`);
+      entities.add(`${nextToken}_${nextNextToken}`);
+    }
+
+    if (token.length >= 4 && !DEDUP_ENTITY_STOPWORDS.has(token)) {
+      entities.add(token);
+    }
+  });
+
+  return entities;
+};
+
+const getSharedKeywordSignals = (baseEntityTokens, candidateEntityTokens, max = 8) => {
+  const shared = [...baseEntityTokens]
+    .filter((token) => candidateEntityTokens.has(token))
+    .filter((token) => !/^\d+$/.test(token))
+    .sort((a, b) => b.length - a.length)
+    .slice(0, max)
+    .map((token) => token.replace(/_/g, ' '));
+
+  return shared;
+};
 
 const countKeywordMatches = (text, keywords) => {
   const lowered = (text || '').toLowerCase();
@@ -170,6 +255,7 @@ const computeRiskScore = ({ severity, category, text, highConfidenceDuplicates }
 
 const computeDedupScore = ({
   textSimilarity,
+  entitySimilarity,
   distanceMeters,
   timeHours,
   categoryMatch,
@@ -178,29 +264,38 @@ const computeDedupScore = ({
 }) => {
   const distanceScore = clamp(1 - distanceMeters / LIMITS.DEDUP.RADIUS_METERS, 0, 1);
   const timeScore = clamp(1 - timeHours / LIMITS.DEDUP.TIME_HOURS, 0, 1);
+  const extremeProximityBoost = (distanceMeters < 50 && timeHours < 0.5) ? 0.15 : 0;
   // Both being 'other' is a catch-all match, not a meaningful category signal.
   // Give partial credit (0.3) instead of full (1.0) to avoid false positives.
   const categoryScore = categoryMatch ? (bothCategoriesOther ? 0.3 : 1) : 0;
   const sameReporterScore = sameReporter ? 1 : 0;
 
   const score =
-    0.45 * textSimilarity +
+    0.35 * textSimilarity +
+    0.1 * entitySimilarity +
     0.2 * distanceScore +
     0.2 * timeScore +
     0.1 * categoryScore +
-    0.05 * sameReporterScore;
+    0.05 * sameReporterScore +
+    extremeProximityBoost;
 
   return clamp(score, 0, 1);
 };
 
 const buildDedupCandidates = (incident, candidates) => {
-  const baseTokens = toTokenSet(`${incident.title} ${incident.description}`);
+  const baseText = `${incident.title} ${incident.description}`;
+  const baseTokens = toTokenSet(baseText);
+  const baseEntityTokens = extractEntityTokens(baseText);
   const incidentDate = new Date(incident.incident_date);
 
   return candidates
     .map((candidate) => {
-      const candidateTokens = toTokenSet(`${candidate.title} ${candidate.description}`);
+      const candidateText = `${candidate.title} ${candidate.description}`;
+      const candidateTokens = toTokenSet(candidateText);
+      const candidateEntityTokens = extractEntityTokens(candidateText);
       const textSimilarity = jaccardSimilarity(baseTokens, candidateTokens);
+      const entitySimilarity = jaccardSimilarity(baseEntityTokens, candidateEntityTokens);
+      const sharedKeywords = getSharedKeywordSignals(baseEntityTokens, candidateEntityTokens);
       const distanceMeters = Math.max(0, parseFloat(candidate.distance_meters || 0));
       const timeHours = Math.abs(incidentDate - new Date(candidate.incident_date)) / 36e5;
       const categoryMatch = incident.category === candidate.category;
@@ -208,6 +303,7 @@ const buildDedupCandidates = (incident, candidates) => {
       const sameReporter = incident.reporter_id === candidate.reporter_id;
       const score = computeDedupScore({
         textSimilarity,
+        entitySimilarity,
         distanceMeters,
         timeHours,
         categoryMatch,
@@ -217,12 +313,17 @@ const buildDedupCandidates = (incident, candidates) => {
 
       return {
         incidentId: candidate.incident_id,
+        title: candidate.title,
+        description: candidate.description,
         score: Number(score.toFixed(3)),
         distanceMeters: Math.round(distanceMeters),
         timeHours: Number(timeHours.toFixed(2)),
         textSimilarity: Number(textSimilarity.toFixed(3)),
+        namedEntitySimilarity: Number(entitySimilarity.toFixed(3)),
+        sharedKeywords,
         categoryMatch,
         sameReporter,
+        mlSimilarity: null,
       };
     })
     .sort((a, b) => b.score - a.score)
@@ -487,13 +588,14 @@ async function createIncident(incidentData, reporterId) {
               // Enhance scores with ML similarity
               scoredCandidates = scoredCandidates.map((candidate) => {
                 const mlSim = similarityByIncidentId.get(candidate.incidentId);
-                if (mlSim) {
+                if (mlSim && Number.isFinite(mlSim.score)) {
                   // Blend ML and Jaccard similarity (90% ML, 10% Jaccard).
                   // Jaccard fails on paraphrased text (different words, same meaning)
                   // so ML must dominate when available.
                   const blendedTextSim = 0.9 * mlSim.score + 0.1 * candidate.textSimilarity;
                   const newScore = computeDedupScore({
                     textSimilarity: blendedTextSim,
+                    entitySimilarity: candidate.namedEntitySimilarity,
                     distanceMeters: candidate.distanceMeters,
                     timeHours: candidate.timeHours,
                     categoryMatch: candidate.categoryMatch,
@@ -504,7 +606,7 @@ async function createIncident(incidentData, reporterId) {
                   return {
                     ...candidate,
                     textSimilarity: Number(blendedTextSim.toFixed(3)),
-                    mlSimilarity: mlSim.score,
+                    mlSimilarity: Number(mlSim.score.toFixed(3)),
                     score: Number(newScore.toFixed(3)),
                   };
                 }
@@ -555,6 +657,14 @@ async function createIncident(incidentData, reporterId) {
               topScore: Number(topScore.toFixed(2)),
               candidates: scoredCandidates,
               mlEnhanced: useExternalMl,
+              mlCandidatesWithSimilarity: scoredCandidates
+                .filter((candidate) => Number.isFinite(candidate.mlSimilarity))
+                .length,
+              sourceIncident: {
+                incidentId: incident.incident_id,
+                title: incident.title,
+                description: incident.description,
+              },
             },
             riskScore === null || riskScore === undefined
               ? null

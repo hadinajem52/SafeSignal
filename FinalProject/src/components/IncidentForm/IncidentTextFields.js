@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 const IncidentTextFields = ({
   title,
@@ -8,32 +9,52 @@ const IncidentTextFields = ({
   onDescriptionChange,
   errors,
 }) => {
+  const { theme } = useTheme();
+
   return (
     <>
       {/* Title Input */}
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>
-          Title <Text style={styles.required}>*</Text>
+        <Text style={[styles.label, { color: theme.text }]}>
+          Title <Text style={[styles.required, { color: theme.error }]}>*</Text>
         </Text>
         <TextInput
-          style={[styles.input, errors.title && styles.inputError]}
+          style={[
+            styles.input,
+            {
+              backgroundColor: theme.input,
+              borderColor: theme.inputBorder,
+              color: theme.text,
+            },
+            errors.title && [styles.inputError, { borderColor: theme.error }],
+          ]}
           placeholder="Brief summary of the incident"
+          placeholderTextColor={theme.inputPlaceholder}
           value={title}
           onChangeText={onTitleChange}
           maxLength={255}
         />
-        {errors.title && <Text style={styles.errorText}>{errors.title}</Text>}
-        <Text style={styles.charCount}>{title.length}/255</Text>
+        {errors.title && <Text style={[styles.errorText, { color: theme.error }]}>{errors.title}</Text>}
+        <Text style={[styles.charCount, { color: theme.textSecondary }]}>{title.length}/255</Text>
       </View>
 
       {/* Description Input */}
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>
-          Description <Text style={styles.required}>*</Text>
+        <Text style={[styles.label, { color: theme.text }]}>
+          Description <Text style={[styles.required, { color: theme.error }]}>*</Text>
         </Text>
         <TextInput
-          style={[styles.textArea, errors.description && styles.inputError]}
+          style={[
+            styles.textArea,
+            {
+              backgroundColor: theme.input,
+              borderColor: theme.inputBorder,
+              color: theme.text,
+            },
+            errors.description && [styles.inputError, { borderColor: theme.error }],
+          ]}
           placeholder="Provide detailed information about what happened, when, and any other relevant details..."
+          placeholderTextColor={theme.inputPlaceholder}
           value={description}
           onChangeText={onDescriptionChange}
           multiline
@@ -41,8 +62,8 @@ const IncidentTextFields = ({
           textAlignVertical="top"
           maxLength={5000}
         />
-        {errors.description && <Text style={styles.errorText}>{errors.description}</Text>}
-        <Text style={styles.charCount}>{description.length}/5000</Text>
+        {errors.description && <Text style={[styles.errorText, { color: theme.error }]}>{errors.description}</Text>}
+        <Text style={[styles.charCount, { color: theme.textSecondary }]}>{description.length}/5000</Text>
       </View>
     </>
   );
@@ -55,24 +76,19 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 8,
   },
   required: {
     color: '#dc3545',
   },
   input: {
-    backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
   },
   textArea: {
-    backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
@@ -88,7 +104,6 @@ const styles = StyleSheet.create({
   },
   charCount: {
     fontSize: 12,
-    color: '#666',
     textAlign: 'right',
     marginTop: 4,
   },

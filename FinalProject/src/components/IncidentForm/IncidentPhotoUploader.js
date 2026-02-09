@@ -1,20 +1,23 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 const IncidentPhotoUploader = ({
   photos,
   onAddPhoto,
   onRemovePhoto,
 }) => {
+  const { theme } = useTheme();
+
   return (
     <View style={styles.inputGroup}>
-      <Text style={styles.label}>Photos (Optional)</Text>
-      <Text style={styles.helperText}>Add up to 5 photos to support your report</Text>
+      <Text style={[styles.label, { color: theme.text }]}>Photos (Optional)</Text>
+      <Text style={[styles.helperText, { color: theme.textSecondary }]}>Add up to 5 photos to support your report</Text>
       
       <View style={styles.photosContainer}>
         {photos.map((photo, index) => (
           <View key={index} style={styles.photoWrapper}>
-            <Image source={{ uri: photo }} style={styles.photoThumbnail} />
+            <Image source={{ uri: photo }} style={[styles.photoThumbnail, { backgroundColor: theme.surface }]} />
             <TouchableOpacity
               style={styles.removePhotoButton}
               onPress={() => onRemovePhoto(index)}
@@ -25,9 +28,18 @@ const IncidentPhotoUploader = ({
         ))}
         
         {photos.length < 5 && (
-          <TouchableOpacity style={styles.addPhotoButton} onPress={onAddPhoto}>
+          <TouchableOpacity
+            style={[
+              styles.addPhotoButton,
+              {
+                borderColor: theme.inputBorder,
+                backgroundColor: theme.surface,
+              },
+            ]}
+            onPress={onAddPhoto}
+          >
             <Text style={styles.addPhotoIcon}>📷</Text>
-            <Text style={styles.addPhotoText}>Add Photo</Text>
+            <Text style={[styles.addPhotoText, { color: theme.textSecondary }]}>Add Photo</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -42,12 +54,10 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 8,
   },
   helperText: {
     fontSize: 12,
-    color: '#666',
     marginTop: 6,
     fontStyle: 'italic',
   },

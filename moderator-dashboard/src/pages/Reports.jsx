@@ -311,6 +311,11 @@ function Reports() {
                   dedup={dedupData}
                   isLoading={isDedupLoading}
                   isMerging={linkDuplicateMutation.isPending}
+                  sourceIncident={{
+                    incidentId: selectedReport.id,
+                    title: selectedReport.title,
+                    description: selectedReport.description,
+                  }}
                   onMerge={(duplicateIncidentId) => linkDuplicateMutation.mutate(duplicateIncidentId)}
                 />
 

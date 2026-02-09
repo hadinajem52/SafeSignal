@@ -2,19 +2,32 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import preferenceConstants from '../../../constants/preferences';
+import { useAuth } from '../context/AuthContext';
 
 const { DEFAULT_PREFERENCES, PREFERENCE_KEYS } = preferenceConstants;
+const DEFAULT_STORAGE_KEY = PREFERENCE_KEYS.STORAGE_KEY;
+
+const normalizeStorageSegment = (value) => {
+  return String(value || 'guest')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._@-]/g, '_');
+};
+
+const getPreferenceStorageKey = (user) => {
+  const userIdentity = user?.user_id || user?.userId || user?.email || 'guest';
+  return `${DEFAULT_STORAGE_KEY}_${normalizeStorageSegment(userIdentity)}`;
+};
 
 const useUserPreferences = () => {
+  const { user } = useAuth();
   const [preferences, setPreferences] = useState(DEFAULT_PREFERENCES);
   const [isLoading, setIsLoading] = useState(true);
+  const storageKey = getPreferenceStorageKey(user);
 
-  const persistPreferences = useCallback(async (nextPreferences) => {
+  const persistPreferences = useCallback(async (key, nextPreferences) => {
     try {
-      await AsyncStorage.setItem(
-        PREFERENCE_KEYS.STORAGE_KEY,
-        JSON.stringify(nextPreferences)
-      );
+      await AsyncStorage.setItem(key, JSON.stringify(nextPreferences));
     } catch (error) {
       console.error('Error saving preferences:', error);
       Alert.alert('Error', 'Failed to save preferences. Please try again.');
@@ -22,8 +35,11 @@ const useUserPreferences = () => {
   }, []);
 
   const loadPreferences = useCallback(async () => {
+    setIsLoading(true);
+    setPreferences(DEFAULT_PREFERENCES);
+
     try {
-      const stored = await AsyncStorage.getItem(PREFERENCE_KEYS.STORAGE_KEY);
+      const stored = await AsyncStorage.getItem(storageKey);
       if (stored) {
         const parsed = JSON.parse(stored);
         setPreferences({ ...DEFAULT_PREFERENCES, ...parsed });
@@ -33,7 +49,7 @@ const useUserPreferences = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [storageKey]);
 
   useEffect(() => {
     loadPreferences();
@@ -43,22 +59,22 @@ const useUserPreferences = () => {
     async (key, value) => {
       setPreferences((prev) => {
         const next = { ...prev, [key]: value };
-        persistPreferences(next);
+        persistPreferences(storageKey, next);
         return next;
       });
     },
-    [persistPreferences]
+    [persistPreferences, storageKey]
   );
 
   const updatePreferences = useCallback(
     async (updates) => {
       setPreferences((prev) => {
         const next = { ...prev, ...updates };
-        persistPreferences(next);
+        persistPreferences(storageKey, next);
         return next;
       });
     },
-    [persistPreferences]
+    [persistPreferences, storageKey]
   );
 
   return {
