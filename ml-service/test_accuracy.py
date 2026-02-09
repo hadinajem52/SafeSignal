@@ -421,9 +421,9 @@ def run_full_pipeline_test():
 # ══════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
-    print("╔══════════════════════════════════════════════════════════╗")
-    print("║        SafeSignal ML Accuracy Test Suite                ║")
-    print("╚══════════════════════════════════════════════════════════╝")
+    print("=" * 60)
+    print("SafeSignal ML Accuracy Test Suite")
+    print("=" * 60)
 
     # Warmup
     requests.post(f"{BASE}/classify", json={"text": "warmup", "categories": ["test"]})
