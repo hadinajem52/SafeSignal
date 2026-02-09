@@ -3,32 +3,15 @@ Toxicity detection using Detoxify (toxic-bert).
 Detects multiple types of toxic content.
 """
 
-from detoxify import Detoxify
-from typing import Dict
 import logging
 import re
+from typing import Dict
+
+from detoxify import Detoxify
 
 import config
 
 logger = logging.getLogger(__name__)
-
-DEHUMANIZING_TERMS = (
-    "animals",
-    "savages",
-    "vermin",
-    "thugs",
-    "scum",
-    "filthy",
-    "criminals",
-)
-
-GROUP_REFERENCE_TERMS = (
-    "those",
-    "these",
-    "that group",
-    "people from",
-    "all those",
-)
 
 
 class ToxicityDetector:
@@ -94,13 +77,19 @@ class ToxicityDetector:
         lowered = (text or "").lower()
         dehumanizing_hits = sum(
             1
-            for term in DEHUMANIZING_TERMS
+            for term in config.TOXICITY_DEHUMANIZING_TERMS
             if re.search(rf"\b{re.escape(term)}\b", lowered)
         )
-        has_group_reference = any(term in lowered for term in GROUP_REFERENCE_TERMS)
+        has_group_reference = any(
+            term in lowered for term in config.TOXICITY_GROUP_REFERENCE_TERMS
+        )
 
         contextual_hate = (
-            toxicity_score >= max(0.18, threshold * 0.40)
+            toxicity_score
+            >= max(
+                config.TOXICITY_CONTEXTUAL_MIN_SCORE,
+                threshold * config.TOXICITY_CONTEXTUAL_THRESHOLD_RATIO,
+            )
             and dehumanizing_hits >= 1
             and has_group_reference
         )
@@ -108,8 +97,9 @@ class ToxicityDetector:
         # Secondary signal for insults/identity attacks that are not captured
         # by the global toxicity score alone.
         secondary_toxic = (
-            scores.get("identity_attack", 0.0) >= 0.12
-            or scores.get("insult", 0.0) >= 0.35
+            scores.get("identity_attack", 0.0)
+            >= config.TOXICITY_IDENTITY_ATTACK_THRESHOLD
+            or scores.get("insult", 0.0) >= config.TOXICITY_INSULT_THRESHOLD
         )
 
         return {

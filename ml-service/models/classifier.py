@@ -1,15 +1,10 @@
-"""
-Zero-shot text classification for incident categorization.
-Implements hybrid cascade: fast DistilBERT first, escalate to BART only when needed.
-Uses 8-bit quantization and caching for optimal latency/accuracy tradeoff.
-"""
-
-from transformers import pipeline, BitsAndBytesConfig
-import torch
-from typing import List, Dict, Optional
-import logging
 import hashlib
+import logging
 import re
+from typing import Dict, List, Optional
+
+import torch
+from transformers import AutoTokenizer, BitsAndBytesConfig, pipeline
 
 import config
 
@@ -38,6 +33,13 @@ try:
     logger.info("BetterTransformer available (Flash Attention)")
 except ImportError:
     BETTERTRANSFORMER_AVAILABLE = False
+
+try:
+    from optimum.onnxruntime import ORTModelForSequenceClassification
+
+    ONNX_RUNTIME_AVAILABLE = True
+except ImportError:
+    ONNX_RUNTIME_AVAILABLE = False
 
 
 CATEGORY_LABEL_MAP = {
@@ -142,6 +144,7 @@ class CategoryClassifier:
     _classifier = None
     _fast_classifier = None  # DistilBERT for quick first-pass
     _use_cascade = None
+    _backend = "torch"
     _main_model_name = None
     _fast_model_name = None
     _quantization_requested = False
@@ -153,6 +156,37 @@ class CategoryClassifier:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
+
+    def _load_onnx_pipeline(self, model_name: str):
+        """Load zero-shot pipeline with ONNX Runtime backend when available."""
+        if not ONNX_RUNTIME_AVAILABLE:
+            logger.warning(
+                "ONNX backend requested, but optimum.onnxruntime is not installed. "
+                "Falling back to torch backend."
+            )
+            return None
+
+        try:
+            provider = getattr(config, "ONNX_EXECUTION_PROVIDER", "CPUExecutionProvider")
+            logger.info(
+                f"Loading ONNX classifier model: {model_name} "
+                f"(provider={provider})"
+            )
+            ort_model = ORTModelForSequenceClassification.from_pretrained(
+                model_name,
+                export=True,
+                provider=provider,
+            )
+            tokenizer = AutoTokenizer.from_pretrained(model_name)
+            return pipeline(
+                "zero-shot-classification",
+                model=ort_model,
+                tokenizer=tokenizer,
+                device=-1,
+            )
+        except Exception as e:
+            logger.warning(f"ONNX backend load failed for {model_name}: {e}")
+            return None
 
     def __init__(self, model_name: str = "typeform/distilbert-base-uncased-mnli"):
         if self._classifier is None:
@@ -177,121 +211,168 @@ class CategoryClassifier:
                 )
                 self._use_cascade = False
 
-            # Load main classifier (BART with 8-bit quantization if on GPU)
-            logger.info(f"Loading classifier model: {self._main_model_name} on {dev}")
+            # Load main classifier with selected backend.
+            self._backend = getattr(config, "CLASSIFIER_BACKEND_RESOLVED", "torch")
+            logger.info(
+                f"Loading classifier model: {self._main_model_name} on {dev} "
+                f"(backend={self._backend})"
+            )
             device = 0 if dev == "cuda" else -1
-            kwargs = {}
 
-            # 8-bit quantization for 2-3x speedup with minimal accuracy loss
-            self._quantization_requested = dev == "cuda" and config.USE_8BIT_QUANTIZATION
-            if self._quantization_requested:
-                logger.info("Enabling 8-bit quantization for faster inference")
-                try:
-                    quant_config = BitsAndBytesConfig(load_in_8bit=True)
-                    kwargs["model_kwargs"] = {
-                        "quantization_config": quant_config,
-                        "device_map": "auto",
-                    }
-                except Exception as e:
-                    logger.warning(
-                        f"BitsAndBytesConfig init failed ({e}), falling back to load_in_8bit flag"
-                    )
-                    kwargs["model_kwargs"] = {
-                        "load_in_8bit": True,
-                        "device_map": "auto",
-                    }
-            elif dev == "cuda":
-                kwargs["torch_dtype"] = torch.float16
+            if self._backend == "onnx":
+                self._quantization_requested = False
+                self._quantization_applied = False
+                self._classifier = self._load_onnx_pipeline(self._main_model_name)
+                if self._classifier is None:
+                    self._backend = "torch"
 
-            try:
-                self._classifier = pipeline(
-                    "zero-shot-classification",
-                    model=self._main_model_name,
-                    device=device,
-                    **kwargs,
+            if self._classifier is None:
+                kwargs = {}
+                self._quantization_requested = (
+                    dev == "cuda" and config.USE_8BIT_QUANTIZATION
                 )
-            except Exception as e:
-                # Fallback path when quantized loading fails (common on unsupported setups)
                 if self._quantization_requested:
-                    logger.warning(
-                        f"8-bit quantization failed ({e}). Falling back to non-quantized model load."
-                    )
-                    fallback_kwargs = {"torch_dtype": torch.float16} if dev == "cuda" else {}
+                    logger.info("Enabling 8-bit quantization for faster inference")
+                    try:
+                        quant_config = BitsAndBytesConfig(load_in_8bit=True)
+                        kwargs["model_kwargs"] = {
+                            "quantization_config": quant_config,
+                            "device_map": "auto",
+                        }
+                    except Exception as e:
+                        logger.warning(
+                            f"BitsAndBytesConfig init failed ({e}), falling back to load_in_8bit flag"
+                        )
+                        kwargs["model_kwargs"] = {
+                            "load_in_8bit": True,
+                            "device_map": "auto",
+                        }
+                elif dev == "cuda":
+                    kwargs["torch_dtype"] = torch.float16
+
+                try:
                     self._classifier = pipeline(
                         "zero-shot-classification",
                         model=self._main_model_name,
                         device=device,
-                        **fallback_kwargs,
+                        **kwargs,
                     )
-                else:
-                    raise
+                except Exception as e:
+                    # Fallback path when quantized loading fails (common on unsupported setups)
+                    if self._quantization_requested:
+                        logger.warning(
+                            f"8-bit quantization failed ({e}). Falling back to non-quantized model load."
+                        )
+                        fallback_kwargs = (
+                            {"torch_dtype": torch.float16} if dev == "cuda" else {}
+                        )
+                        self._classifier = pipeline(
+                            "zero-shot-classification",
+                            model=self._main_model_name,
+                            device=device,
+                            **fallback_kwargs,
+                        )
+                    else:
+                        raise
 
-            self._quantization_applied = self._is_8bit_loaded(self._classifier)
-            if self._quantization_requested:
-                if self._quantization_applied:
-                    logger.info("8-bit quantization status: APPLIED")
+                self._quantization_applied = self._is_8bit_loaded(self._classifier)
+                if self._quantization_requested:
+                    if self._quantization_applied:
+                        logger.info("8-bit quantization status: APPLIED")
+                    else:
+                        logger.warning(
+                            "8-bit quantization status: REQUESTED but NOT APPLIED"
+                        )
                 else:
-                    logger.warning("8-bit quantization status: REQUESTED but NOT APPLIED")
-            else:
-                reason = "GPU not active" if dev != "cuda" else "disabled by config"
-                logger.info(f"8-bit quantization status: DISABLED ({reason})")
-            
-            # Apply BetterTransformer for Flash Attention (20-30% speedup)
-            if BETTERTRANSFORMER_AVAILABLE and dev == "cuda" and not config.USE_8BIT_QUANTIZATION:
-                try:
-                    logger.info("Applying BetterTransformer for Flash Attention...")
-                    self._classifier.model = BetterTransformer.transform(self._classifier.model)
-                    logger.info("BetterTransformer applied successfully")
-                except Exception as e:
-                    logger.warning(f"BetterTransformer failed: {e}")
-            
-            # Apply torch.compile for graph optimization (15-25% speedup)
-            if TORCH_COMPILE_AVAILABLE and dev == "cuda":
-                try:
-                    logger.info("Applying torch.compile for graph optimization...")
-                    compile_mode = config.TORCH_COMPILE_MODE if hasattr(config, 'TORCH_COMPILE_MODE') else 'reduce-overhead'
-                    self._classifier.model = torch.compile(
-                        self._classifier.model,
-                        mode=compile_mode,
-                    )
-                    logger.info(f"torch.compile applied (mode={compile_mode})")
-                except Exception as e:
-                    logger.warning(f"torch.compile failed: {e}")
-            
-            logger.info(f"Classifier model loaded successfully on {dev}")
-            
-            # Load fast classifier for hybrid cascade
-            if self._use_cascade:
-                logger.info(f"Loading fast classifier for cascade: {self._fast_model_name}")
-                fast_kwargs = {}
-                if dev == "cuda":
-                    fast_kwargs["torch_dtype"] = torch.float16
-                self._fast_classifier = pipeline(
-                    "zero-shot-classification",
-                    model=self._fast_model_name,
-                    device=device,
-                    **fast_kwargs,
-                )
-                
-                # Apply optimizations to fast classifier too
-                if BETTERTRANSFORMER_AVAILABLE and dev == "cuda":
+                    reason = "GPU not active" if dev != "cuda" else "disabled by config"
+                    logger.info(f"8-bit quantization status: DISABLED ({reason})")
+
+                # Apply BetterTransformer for Flash Attention (20-30% speedup)
+                if (
+                    BETTERTRANSFORMER_AVAILABLE
+                    and dev == "cuda"
+                    and not config.USE_8BIT_QUANTIZATION
+                ):
                     try:
-                        self._fast_classifier.model = BetterTransformer.transform(self._fast_classifier.model)
-                        logger.info("BetterTransformer applied to fast classifier")
+                        logger.info("Applying BetterTransformer for Flash Attention...")
+                        self._classifier.model = BetterTransformer.transform(
+                            self._classifier.model
+                        )
+                        logger.info("BetterTransformer applied successfully")
                     except Exception as e:
-                        logger.warning(f"BetterTransformer failed on fast classifier: {e}")
-                
+                        logger.warning(f"BetterTransformer failed: {e}")
+
+                # Apply torch.compile for graph optimization (15-25% speedup)
                 if TORCH_COMPILE_AVAILABLE and dev == "cuda":
                     try:
-                        self._fast_classifier.model = torch.compile(
-                            self._fast_classifier.model,
-                            mode='reduce-overhead',
+                        logger.info("Applying torch.compile for graph optimization...")
+                        compile_mode = (
+                            config.TORCH_COMPILE_MODE
+                            if hasattr(config, "TORCH_COMPILE_MODE")
+                            else "reduce-overhead"
                         )
-                        logger.info("torch.compile applied to fast classifier")
+                        self._classifier.model = torch.compile(
+                            self._classifier.model,
+                            mode=compile_mode,
+                        )
+                        logger.info(f"torch.compile applied (mode={compile_mode})")
                     except Exception as e:
-                        logger.warning(f"torch.compile failed on fast classifier: {e}")
-                
-                logger.info("Fast classifier loaded successfully")
+                        logger.warning(f"torch.compile failed: {e}")
+
+            logger.info(
+                f"Classifier model loaded successfully on {dev} "
+                f"(backend={self._backend})"
+            )
+
+            # Load fast classifier for hybrid cascade
+            if self._use_cascade:
+                logger.info(
+                    f"Loading fast classifier for cascade: {self._fast_model_name}"
+                )
+                if self._backend == "onnx":
+                    self._fast_classifier = self._load_onnx_pipeline(
+                        self._fast_model_name
+                    )
+                    if self._fast_classifier is None:
+                        logger.warning(
+                            "Fast ONNX classifier unavailable; disabling cascade."
+                        )
+                        self._use_cascade = False
+                else:
+                    fast_kwargs = {}
+                    if dev == "cuda":
+                        fast_kwargs["torch_dtype"] = torch.float16
+                    self._fast_classifier = pipeline(
+                        "zero-shot-classification",
+                        model=self._fast_model_name,
+                        device=device,
+                        **fast_kwargs,
+                    )
+
+                    # Apply optimizations to fast classifier too
+                    if BETTERTRANSFORMER_AVAILABLE and dev == "cuda":
+                        try:
+                            self._fast_classifier.model = BetterTransformer.transform(
+                                self._fast_classifier.model
+                            )
+                            logger.info("BetterTransformer applied to fast classifier")
+                        except Exception as e:
+                            logger.warning(
+                                f"BetterTransformer failed on fast classifier: {e}"
+                            )
+
+                    if TORCH_COMPILE_AVAILABLE and dev == "cuda":
+                        try:
+                            self._fast_classifier.model = torch.compile(
+                                self._fast_classifier.model,
+                                mode="reduce-overhead",
+                            )
+                            logger.info("torch.compile applied to fast classifier")
+                        except Exception as e:
+                            logger.warning(f"torch.compile failed on fast classifier: {e}")
+
+                if self._fast_classifier is not None:
+                    logger.info("Fast classifier loaded successfully")
 
             self._cascade_applied = self._fast_classifier is not None
             if self._cascade_requested:
@@ -320,10 +401,15 @@ class CategoryClassifier:
             "main_model": self._main_model_name,
             "fast_model": self._fast_model_name if self._cascade_applied else None,
             "device": config.CLASSIFIER_DEVICE,
+            "backend": self._backend,
             "quantization_requested": self._quantization_requested,
             "quantization_applied": self._quantization_applied,
             "cascade_requested": self._cascade_requested,
             "cascade_applied": self._cascade_applied,
+            "version": getattr(config, "CLASSIFIER_MODEL_VERSION", self._main_model_name),
+            "release": getattr(config, "MODEL_RELEASE", "unversioned"),
+            "experiment": getattr(config, "MODEL_EXPERIMENT", "baseline"),
+            "variant": getattr(config, "EXPERIMENT_VARIANT", "A"),
         }
 
     def _get_cache_key(self, text: str, categories: tuple) -> str:

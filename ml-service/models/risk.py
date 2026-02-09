@@ -1,8 +1,8 @@
-"""Risk scoring model combining multiple public-safety signals."""
-
-from typing import Dict, Optional
-import re
 import logging
+import re
+from typing import Dict, Optional
+
+import config
 
 logger = logging.getLogger(__name__)
 
@@ -80,11 +80,43 @@ SEVERITY_MULTIPLIER = {
 
 class RiskScorer:
     def __init__(self):
-        self.keywords = HIGH_RISK_KEYWORDS
-        self.urgent_keywords = URGENT_CONTEXT_KEYWORDS
-        self.deescalation_phrases = DEESCALATION_PHRASES
-        self.category_risk = CATEGORY_RISK
-        self.severity_mult = SEVERITY_MULTIPLIER
+        self.keywords = getattr(config, "RISK_HIGH_RISK_KEYWORDS", HIGH_RISK_KEYWORDS)
+        self.urgent_keywords = getattr(
+            config, "RISK_URGENT_CONTEXT_KEYWORDS", URGENT_CONTEXT_KEYWORDS
+        )
+        self.deescalation_phrases = getattr(
+            config, "RISK_DEESCALATION_PHRASES", DEESCALATION_PHRASES
+        )
+        self.category_risk = getattr(config, "RISK_CATEGORY_BASE_SCORES", CATEGORY_RISK)
+        self.severity_mult = getattr(config, "RISK_SEVERITY_MULTIPLIER", SEVERITY_MULTIPLIER)
+        self.weights = getattr(
+            config,
+            "RISK_COMPONENT_WEIGHTS",
+            {
+                "category": 0.28,
+                "severity": 0.26,
+                "keyword": 0.28,
+                "urgency": 0.10,
+                "duplicate": 0.05,
+                "toxicity": 0.05,
+            },
+        )
+        self.caps = getattr(
+            config,
+            "RISK_CAPS",
+            {
+                "keyword": 0.60,
+                "urgency": 0.25,
+                "duplicate": 0.18,
+                "toxicity": 0.12,
+                "deescalation": 0.12,
+            },
+        )
+        self.duplicate_step = getattr(config, "RISK_DUPLICATE_STEP", 0.04)
+        self.toxicity_multiplier = getattr(config, "RISK_TOXICITY_MULTIPLIER", 0.25)
+        self.synergy_boost_value = getattr(config, "RISK_SYNERGY_BOOST", 0.08)
+        self.high_threshold = getattr(config, "RISK_HIGH_THRESHOLD", 0.5)
+        self.critical_threshold = getattr(config, "RISK_CRITICAL_THRESHOLD", 0.8)
 
     @staticmethod
     def _contains_phrase(text: str, phrase: str) -> bool:
@@ -101,13 +133,17 @@ class RiskScorer:
 
     def _deescalation_penalty(self, text: str) -> float:
         matches = sum(1 for phrase in self.deescalation_phrases if phrase in text)
-        return min(0.12, matches * 0.06)
+        return min(self.caps.get("deescalation", 0.12), matches * 0.06)
 
     def compute_keyword_score(self, text: str) -> float:
         """Compute weighted keyword score from high-risk terms."""
         if not text:
             return 0.0
-        return self._weighted_match_score(text.lower(), self.keywords, cap=0.60)
+        return self._weighted_match_score(
+            text.lower(),
+            self.keywords,
+            cap=self.caps.get("keyword", 0.60),
+        )
 
     def compute_risk_score(
         self,
@@ -131,29 +167,39 @@ class RiskScorer:
 
         # Content analysis
         keyword_score = self.compute_keyword_score(text_lower)
-        urgency_score = self._weighted_match_score(text_lower, self.urgent_keywords, cap=0.25)
+        urgency_score = self._weighted_match_score(
+            text_lower,
+            self.urgent_keywords,
+            cap=self.caps.get("urgency", 0.25),
+        )
         deescalation_penalty = self._deescalation_penalty(text_lower)
 
         # Duplicate burst detection (multiple reports = higher risk)
-        duplicate_boost = min(0.18, max(0, duplicate_count) * 0.04)
+        duplicate_boost = min(
+            self.caps.get("duplicate", 0.18),
+            max(0, duplicate_count) * self.duplicate_step,
+        )
 
         # Toxicity contribution (capped)
-        toxicity_boost = min(0.12, max(0.0, toxicity_score) * 0.25)
+        toxicity_boost = min(
+            self.caps.get("toxicity", 0.12),
+            max(0.0, toxicity_score) * self.toxicity_multiplier,
+        )
 
         # Consistency boost: urgent categories with explicit risk language
         synergy_boost = 0.0
         if category in {"fire", "assault", "medical_emergency"}:
             if keyword_score >= 0.12 or urgency_score >= 0.12:
-                synergy_boost = 0.08
+                synergy_boost = self.synergy_boost_value
 
         # Weighted combination tuned for incident triage.
         raw_score = (
-            category_score * 0.28
-            + sev_mult * 0.26
-            + keyword_score * 0.28
-            + urgency_score * 0.10
-            + duplicate_boost * 0.05
-            + toxicity_boost * 0.05
+            category_score * self.weights.get("category", 0.28)
+            + sev_mult * self.weights.get("severity", 0.26)
+            + keyword_score * self.weights.get("keyword", 0.28)
+            + urgency_score * self.weights.get("urgency", 0.10)
+            + duplicate_boost * self.weights.get("duplicate", 0.05)
+            + toxicity_boost * self.weights.get("toxicity", 0.05)
             + synergy_boost
             - deescalation_penalty
         )
@@ -164,15 +210,27 @@ class RiskScorer:
         return {
             "risk_score": round(final_score, 3),
             "breakdown": {
-                "category_contribution": round(category_score * 0.28, 3),
-                "severity_contribution": round(sev_mult * 0.26, 3),
-                "keyword_contribution": round(keyword_score * 0.28, 3),
-                "urgency_contribution": round(urgency_score * 0.10, 3),
-                "duplicate_contribution": round(duplicate_boost * 0.05, 3),
-                "toxicity_contribution": round(toxicity_boost * 0.05, 3),
+                "category_contribution": round(
+                    category_score * self.weights.get("category", 0.28), 3
+                ),
+                "severity_contribution": round(
+                    sev_mult * self.weights.get("severity", 0.26), 3
+                ),
+                "keyword_contribution": round(
+                    keyword_score * self.weights.get("keyword", 0.28), 3
+                ),
+                "urgency_contribution": round(
+                    urgency_score * self.weights.get("urgency", 0.10), 3
+                ),
+                "duplicate_contribution": round(
+                    duplicate_boost * self.weights.get("duplicate", 0.05), 3
+                ),
+                "toxicity_contribution": round(
+                    toxicity_boost * self.weights.get("toxicity", 0.05), 3
+                ),
                 "synergy_boost": round(synergy_boost, 3),
                 "deescalation_penalty": round(deescalation_penalty, 3),
             },
-            "is_high_risk": final_score >= 0.5,
-            "is_critical": final_score >= 0.8,
+            "is_high_risk": final_score >= self.high_threshold,
+            "is_critical": final_score >= self.critical_threshold,
         }

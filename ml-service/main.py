@@ -4,12 +4,13 @@ FastAPI service providing ML capabilities for incident analysis.
 """
 
 import hashlib
+import asyncio
 import logging
 import os
 import time
 from collections import OrderedDict
 from contextlib import asynccontextmanager
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -78,6 +79,44 @@ embedding_model: Optional[EmbeddingModel] = None
 classifier_model: Optional[CategoryClassifier] = None
 toxicity_model: Optional[ToxicityDetector] = None
 risk_scorer: Optional[RiskScorer] = None
+inference_semaphore = asyncio.Semaphore(max(1, config.INFERENCE_MAX_CONCURRENCY))
+
+
+async def run_inference(func, *args, **kwargs):
+    """
+    Execute blocking model inference without blocking the event loop.
+    Concurrency is bounded to protect process stability under load.
+    """
+    async with inference_semaphore:
+        return await asyncio.to_thread(func, *args, **kwargs)
+
+
+def build_model_metadata(component: str) -> Dict[str, object]:
+    metadata: Dict[str, object] = {
+        "service_version": config.SERVICE_VERSION,
+        "release": config.MODEL_RELEASE,
+        "experiment": config.MODEL_EXPERIMENT,
+        "variant": config.EXPERIMENT_VARIANT,
+        "component": component,
+        "model": config.MODEL_VERSION_MAP.get(component),
+    }
+
+    if component == "classifier" and classifier_model is not None:
+        metadata["runtime"] = classifier_model.optimization_status
+    return metadata
+
+
+def log_inference_event(endpoint: str, component: str, started_at: float):
+    duration_ms = (time.perf_counter() - started_at) * 1000.0
+    logger.info(
+        "inference endpoint=%s component=%s duration_ms=%.1f release=%s experiment=%s variant=%s",
+        endpoint,
+        component,
+        duration_ms,
+        config.MODEL_RELEASE,
+        config.MODEL_EXPERIMENT,
+        config.EXPERIMENT_VARIANT,
+    )
 
 
 @asynccontextmanager
@@ -105,7 +144,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="SafeSignal ML Service",
     description="Machine Learning microservice for incident analysis",
-    version="1.0.0",
+    version=config.SERVICE_VERSION,
     lifespan=lifespan,
 )
 
@@ -166,6 +205,7 @@ class ClassificationResponse(BaseModel):
     predicted_category: str
     confidence: float
     all_scores: dict
+    inference_metadata: Optional[dict] = None
 
 
 class ToxicityResponse(BaseModel):
@@ -173,6 +213,7 @@ class ToxicityResponse(BaseModel):
     toxicity_score: float
     is_severe: bool
     details: dict
+    inference_metadata: Optional[dict] = None
 
 
 class RiskResponse(BaseModel):
@@ -180,6 +221,7 @@ class RiskResponse(BaseModel):
     is_high_risk: bool
     is_critical: bool
     breakdown: dict
+    inference_metadata: Optional[dict] = None
 
 
 class FullAnalysisResponse(BaseModel):
@@ -203,6 +245,7 @@ async def health_check():
     return {
         "status": "healthy",
         "device": config.DEVICE,
+        "service_version": config.SERVICE_VERSION,
         "models_loaded": {
             "embedding": embedding_model is not None,
             "classifier": classifier_model is not None,
@@ -212,7 +255,32 @@ async def health_check():
         "optimizations": {
             "classifier": classifier_optimizations,
         },
+        "model_versions": config.MODEL_VERSION_MAP,
+        "release": {
+            "model_release": config.MODEL_RELEASE,
+            "experiment": config.MODEL_EXPERIMENT,
+            "variant": config.EXPERIMENT_VARIANT,
+        },
+        "inference_limits": {
+            "max_concurrency": config.INFERENCE_MAX_CONCURRENCY,
+        },
         "cache": cache.stats,
+    }
+
+
+@app.get("/models/versions")
+async def model_versions():
+    """Expose model/ruleset versions for observability and audits."""
+    classifier_runtime = (
+        classifier_model.optimization_status if classifier_model is not None else None
+    )
+    return {
+        "service_version": config.SERVICE_VERSION,
+        "release": config.MODEL_RELEASE,
+        "experiment": config.MODEL_EXPERIMENT,
+        "variant": config.EXPERIMENT_VARIANT,
+        "models": config.MODEL_VERSION_MAP,
+        "classifier_runtime": classifier_runtime,
     }
 
 
@@ -222,7 +290,9 @@ async def get_embedding(request: TextInput):
     if embedding_model is None:
         raise HTTPException(status_code=503, detail="Embedding model not loaded")
 
-    embedding = embedding_model.encode_single(request.text)
+    started_at = time.perf_counter()
+    embedding = await run_inference(embedding_model.encode_single, request.text)
+    log_inference_event("/embed", "embedding", started_at)
     return EmbeddingResponse(
         embedding=embedding.tolist(),
         dimensions=len(embedding),
@@ -235,7 +305,9 @@ async def compute_similarity(request: SimilarityRequest):
     if embedding_model is None:
         raise HTTPException(status_code=503, detail="Embedding model not loaded")
 
-    similarities = embedding_model.batch_similarity(
+    started_at = time.perf_counter()
+    similarities = await run_inference(
+        embedding_model.batch_similarity,
         request.query_text,
         request.candidate_texts,
     )
@@ -252,6 +324,7 @@ async def compute_similarity(request: SimilarityRequest):
         for idx, score in enumerate(similarities)
     ]
 
+    log_inference_event("/similarity", "embedding", started_at)
     return SimilarityResponse(
         similarities=sorted(results, key=lambda x: x["score"], reverse=True),
         threshold=request.threshold,
@@ -272,16 +345,20 @@ async def classify_text(request: ClassifyRequest):
     if cached:
         return cached
 
-    result = classifier_model.predict_top(request.text, categories)
+    started_at = time.perf_counter()
+    result = await run_inference(classifier_model.predict_top, request.text, categories)
     if not result:
         raise HTTPException(status_code=400, detail="Could not classify text")
 
+    model_metadata = build_model_metadata("classifier")
     response = ClassificationResponse(
         predicted_category=result["category"],
         confidence=round(result["confidence"], 4),
         all_scores={k: round(v, 4) for k, v in result["all_scores"].items()},
+        inference_metadata=model_metadata,
     )
     cache.set("classify", request.text, response, cats=cats_key)
+    log_inference_event("/classify", "classifier", started_at)
     return response
 
 
@@ -296,15 +373,22 @@ async def detect_toxicity(request: TextInput):
     if cached:
         return cached
 
-    result = toxicity_model.is_toxic(request.text, config.TOXICITY_THRESHOLD)
+    started_at = time.perf_counter()
+    result = await run_inference(
+        toxicity_model.is_toxic,
+        request.text,
+        config.TOXICITY_THRESHOLD,
+    )
 
     response = ToxicityResponse(
         is_toxic=result["is_toxic"],
         toxicity_score=round(result["toxicity_score"], 4),
         is_severe=result["is_severe"],
         details={k: round(v, 4) for k, v in result["details"].items()},
+        inference_metadata=build_model_metadata("toxicity"),
     )
     cache.set("toxicity", request.text, response)
+    log_inference_event("/toxicity", "toxicity", started_at)
     return response
 
 
@@ -314,7 +398,9 @@ async def compute_risk(request: RiskRequest):
     if risk_scorer is None:
         raise HTTPException(status_code=503, detail="Risk scorer not loaded")
 
-    result = risk_scorer.compute_risk_score(
+    started_at = time.perf_counter()
+    result = await run_inference(
+        risk_scorer.compute_risk_score,
         text=request.text,
         category=request.category,
         severity=request.severity,
@@ -322,11 +408,13 @@ async def compute_risk(request: RiskRequest):
         toxicity_score=request.toxicity_score,
     )
 
+    log_inference_event("/risk", "risk", started_at)
     return RiskResponse(
         risk_score=result["risk_score"],
         is_high_risk=result["is_high_risk"],
         is_critical=result["is_critical"],
         breakdown=result["breakdown"],
+        inference_metadata=build_model_metadata("risk"),
     )
 
 
@@ -341,13 +429,20 @@ async def full_analysis(request: FullAnalysisRequest):
     # Classification
     if classifier_model:
         try:
-            result = classifier_model.predict_top(request.text, config.INCIDENT_CATEGORIES)
+            started_at = time.perf_counter()
+            result = await run_inference(
+                classifier_model.predict_top,
+                request.text,
+                config.INCIDENT_CATEGORIES,
+            )
             if result:
                 response.classification = ClassificationResponse(
                     predicted_category=result["category"],
                     confidence=round(result["confidence"], 4),
                     all_scores={k: round(v, 4) for k, v in result["all_scores"].items()},
+                    inference_metadata=build_model_metadata("classifier"),
                 )
+                log_inference_event("/analyze", "classifier", started_at)
         except Exception as e:
             logger.warning(f"Classification failed: {e}")
 
@@ -355,14 +450,21 @@ async def full_analysis(request: FullAnalysisRequest):
     toxicity_score = 0.0
     if toxicity_model:
         try:
-            result = toxicity_model.is_toxic(request.text, config.TOXICITY_THRESHOLD)
+            started_at = time.perf_counter()
+            result = await run_inference(
+                toxicity_model.is_toxic,
+                request.text,
+                config.TOXICITY_THRESHOLD,
+            )
             toxicity_score = result["toxicity_score"]
             response.toxicity = ToxicityResponse(
                 is_toxic=result["is_toxic"],
                 toxicity_score=round(result["toxicity_score"], 4),
                 is_severe=result["is_severe"],
                 details={k: round(v, 4) for k, v in result["details"].items()},
+                inference_metadata=build_model_metadata("toxicity"),
             )
+            log_inference_event("/analyze", "toxicity", started_at)
         except Exception as e:
             logger.warning(f"Toxicity detection failed: {e}")
 
@@ -374,7 +476,9 @@ async def full_analysis(request: FullAnalysisRequest):
                 if response.classification
                 else request.category
             )
-            result = risk_scorer.compute_risk_score(
+            started_at = time.perf_counter()
+            result = await run_inference(
+                risk_scorer.compute_risk_score,
                 text=request.text,
                 category=predicted_cat or request.category,
                 severity=request.severity,
@@ -386,14 +490,18 @@ async def full_analysis(request: FullAnalysisRequest):
                 is_high_risk=result["is_high_risk"],
                 is_critical=result["is_critical"],
                 breakdown=result["breakdown"],
+                inference_metadata=build_model_metadata("risk"),
             )
+            log_inference_event("/analyze", "risk", started_at)
         except Exception as e:
             logger.warning(f"Risk scoring failed: {e}")
 
     # Similarity (if candidates provided)
     if embedding_model and request.candidate_texts:
         try:
-            similarities = embedding_model.batch_similarity(
+            started_at = time.perf_counter()
+            similarities = await run_inference(
+                embedding_model.batch_similarity,
                 request.text,
                 request.candidate_texts,
             )
@@ -409,6 +517,7 @@ async def full_analysis(request: FullAnalysisRequest):
                 similarities=sorted(results, key=lambda x: x["score"], reverse=True),
                 threshold=config.SIMILARITY_THRESHOLD,
             )
+            log_inference_event("/analyze", "embedding", started_at)
         except Exception as e:
             logger.warning(f"Similarity computation failed: {e}")
 
