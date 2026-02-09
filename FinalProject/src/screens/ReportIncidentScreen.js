@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
   Alert,
 } from 'react-native';
@@ -32,7 +31,7 @@ const { INCIDENT_CATEGORIES, SEVERITY_LEVELS } = incidentConstants;
 
 const ReportIncidentScreen = ({ navigation, route }) => {
   const { user } = useAuth();
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const userId = user?.user_id || user?.userId;
   const { preferences, isLoading: isLoadingPreferences } = useUserPreferences();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -302,24 +301,32 @@ const ReportIncidentScreen = ({ navigation, route }) => {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: theme.background }]}
+      contentContainerStyle={styles.contentContainer}
+    >
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
+      <View style={[styles.header, { backgroundColor: theme.primary }]}>
         <Text style={styles.headerTitle}>Report Incident</Text>
         {hasDraft && (
-          <View style={styles.draftBadge}>
-            <Text style={styles.draftBadgeText}>Draft</Text>
+          <View style={[styles.draftBadge, { backgroundColor: theme.warning }]}>
+            <Text style={[styles.draftBadgeText, { color: isDark ? '#111827' : '#000' }]}>Draft</Text>
           </View>
         )}
       </View>
 
       {/* Safety Notice */}
-      <View style={styles.noticeContainer}>
+      <View style={[
+        styles.noticeContainer,
+        {
+          backgroundColor: isDark ? '#3b2f0e' : '#fff3cd',
+          borderLeftColor: theme.warning,
+          borderColor: theme.warning,
+        },
+      ]}
+      >
         <Text style={styles.noticeIcon}>⚠️</Text>
-        <Text style={styles.noticeText}>
+        <Text style={[styles.noticeText, { color: isDark ? '#fde68a' : '#856404' }]}>
           If you are in immediate danger, call emergency services (911) immediately.
         </Text>
       </View>
@@ -419,7 +426,11 @@ const ReportIncidentScreen = ({ navigation, route }) => {
             onPress={() => handleSubmit(false)}
             loading={isSubmitting}
             disabled={isSubmitting}
-            style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+            style={[
+              styles.submitButton,
+              { backgroundColor: theme.primary },
+              isSubmitting && styles.submitButtonDisabled,
+            ]}
           />
         </View>
       </View>
@@ -430,23 +441,14 @@ const ReportIncidentScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   contentContainer: {
     paddingBottom: 40,
   },
   header: {
-    backgroundColor: '#1a73e8',
     paddingTop: 50,
     paddingBottom: 20,
     paddingHorizontal: 20,
-  },
-  backButton: {
-    marginBottom: 10,
-  },
-  backButtonText: {
-    color: '#fff',
-    fontSize: 16,
   },
   headerTitle: {
     fontSize: 28,
@@ -457,20 +459,17 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 20,
     top: 55,
-    backgroundColor: '#ffc107',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
   },
   draftBadgeText: {
-    color: '#000',
     fontSize: 12,
     fontWeight: '600',
   },
   noticeContainer: {
-    backgroundColor: '#fff3cd',
+    borderWidth: 1,
     borderLeftWidth: 4,
-    borderLeftColor: '#ffc107',
     padding: 15,
     margin: 20,
     marginBottom: 10,
@@ -484,7 +483,6 @@ const styles = StyleSheet.create({
   },
   noticeText: {
     flex: 1,
-    color: '#856404',
     fontSize: 14,
     lineHeight: 20,
   },
@@ -499,7 +497,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   submitButton: {
-    backgroundColor: '#1a73e8',
+    borderWidth: 0,
   },
   submitButtonDisabled: {
     opacity: 0.7,

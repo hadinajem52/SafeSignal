@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Modal } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
+import { useTheme } from '../../context/ThemeContext';
 
 const IncidentLocationPicker = ({
   location,
@@ -18,15 +19,21 @@ const IncidentLocationPicker = ({
   onMapPress,
   mapRef,
 }) => {
+  const { theme, isDark } = useTheme();
+
   return (
     <View style={styles.inputGroup}>
-      <Text style={styles.label}>
-        Location <Text style={styles.required}>*</Text>
+      <Text style={[styles.label, { color: theme.text }]}>
+        Location <Text style={[styles.required, { color: theme.error }]}>*</Text>
       </Text>
       
       <View style={styles.locationButtonsContainer}>
         <TouchableOpacity
-          style={[styles.locationButton, location && styles.locationButtonActive]}
+          style={[
+            styles.locationButton,
+            { backgroundColor: theme.primary },
+            location && [styles.locationButtonActive, { backgroundColor: theme.info }],
+          ]}
           onPress={onGetCurrentLocation}
           disabled={isLoadingLocation}
         >
@@ -43,16 +50,16 @@ const IncidentLocationPicker = ({
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.mapSelectButton}
+          style={[styles.mapSelectButton, { backgroundColor: theme.card, borderColor: theme.primary }]}
           onPress={onOpenMap}
         >
-          <Text style={styles.locationIcon}>🗺️</Text>
-          <Text style={styles.mapSelectButtonText}>Select on Map</Text>
+          <Text style={[styles.locationIcon, { color: theme.primary }]}>🗺️</Text>
+          <Text style={[styles.mapSelectButtonText, { color: theme.primary }]}>Select on Map</Text>
         </TouchableOpacity>
       </View>
 
       {location && (
-        <View style={styles.locationPreview}>
+        <View style={[styles.locationPreview, { borderColor: theme.inputBorder }]}>
           <MapView
             style={styles.miniMap}
             region={{
@@ -68,19 +75,19 @@ const IncidentLocationPicker = ({
           >
             <Marker coordinate={location} />
           </MapView>
-          <View style={styles.locationDetails}>
+          <View style={[styles.locationDetails, { backgroundColor: theme.card }]}>
             {locationName ? (
-              <Text style={styles.locationNameText}>{locationName}</Text>
+              <Text style={[styles.locationNameText, { color: theme.text }]}>{locationName}</Text>
             ) : null}
-            <Text style={styles.coordinatesText}>
+            <Text style={[styles.coordinatesText, { color: theme.textSecondary }]}>
               {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
             </Text>
           </View>
         </View>
       )}
       
-      {error && <Text style={styles.errorText}>{error}</Text>}
-      <Text style={styles.helperText}>
+      {error && <Text style={[styles.errorText, { color: theme.error }]}>{error}</Text>}
+      <Text style={[styles.helperText, { color: theme.textSecondary }]}>
         Your exact location will be slightly randomized for privacy
       </Text>
 
@@ -90,14 +97,14 @@ const IncidentLocationPicker = ({
         animationType="slide"
         onRequestClose={onCloseMapModal}
       >
-        <View style={styles.mapModalContainer}>
-          <View style={styles.mapModalHeader}>
+        <View style={[styles.mapModalContainer, { backgroundColor: theme.background }]}>
+          <View style={[styles.mapModalHeader, { borderBottomColor: theme.border, backgroundColor: theme.card }]}>
             <TouchableOpacity onPress={onCloseMapModal}>
-              <Text style={styles.mapModalCancel}>Cancel</Text>
+              <Text style={[styles.mapModalCancel, { color: theme.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>
-            <Text style={styles.mapModalTitle}>Select Location</Text>
+            <Text style={[styles.mapModalTitle, { color: theme.text }]}>Select Location</Text>
             <TouchableOpacity onPress={onConfirmMapLocation}>
-              <Text style={styles.mapModalConfirm}>Confirm</Text>
+              <Text style={[styles.mapModalConfirm, { color: theme.primary }]}>Confirm</Text>
             </TouchableOpacity>
           </View>
           
@@ -117,12 +124,20 @@ const IncidentLocationPicker = ({
             )}
           </MapView>
           
-          <View style={styles.mapInstructions}>
-            <Text style={styles.mapInstructionsText}>
+          <View
+            style={[
+              styles.mapInstructions,
+              {
+                backgroundColor: isDark ? 'rgba(17,24,39,0.9)' : 'rgba(255,255,255,0.9)',
+                shadowColor: theme.shadow,
+              },
+            ]}
+          >
+            <Text style={[styles.mapInstructionsText, { color: theme.text }]}>
               Tap on the map or drag the marker to select the incident location
             </Text>
             {selectedMapLocation && (
-              <Text style={styles.selectedLocationText}>
+              <Text style={[styles.selectedLocationText, { color: theme.primary }]}>
                 Selected: {selectedMapLocation.latitude.toFixed(6)}, {selectedMapLocation.longitude.toFixed(6)}
               </Text>
             )}
@@ -140,7 +155,6 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 8,
   },
   required: {
@@ -152,7 +166,6 @@ const styles = StyleSheet.create({
   },
   locationButton: {
     flex: 1,
-    backgroundColor: '#1a73e8',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -161,7 +174,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   locationButtonActive: {
-    backgroundColor: '#0d47a1',
+    opacity: 0.92,
   },
   locationIcon: {
     fontSize: 18,
@@ -175,9 +188,7 @@ const styles = StyleSheet.create({
   },
   mapSelectButton: {
     flex: 1,
-    backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#1a73e8',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -194,7 +205,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#ddd',
     marginTop: 8,
   },
   miniMap: {
@@ -203,17 +213,14 @@ const styles = StyleSheet.create({
   },
   locationDetails: {
     padding: 12,
-    backgroundColor: '#fff',
   },
   locationNameText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 4,
   },
   coordinatesText: {
     fontSize: 12,
-    color: '#666',
   },
   errorText: {
     color: '#dc3545',
@@ -222,13 +229,11 @@ const styles = StyleSheet.create({
   },
   helperText: {
     fontSize: 12,
-    color: '#666',
     marginTop: 6,
     fontStyle: 'italic',
   },
   mapModalContainer: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   mapModalHeader: {
     flexDirection: 'row',
@@ -238,8 +243,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    backgroundColor: '#fff',
     zIndex: 10,
   },
   mapModalTitle: {
@@ -247,11 +250,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   mapModalCancel: {
-    color: '#666',
     fontSize: 16,
   },
   mapModalConfirm: {
-    color: '#1a73e8',
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -274,12 +275,10 @@ const styles = StyleSheet.create({
   },
   mapInstructionsText: {
     textAlign: 'center',
-    color: '#333',
     marginBottom: 5,
   },
   selectedLocationText: {
     textAlign: 'center',
-    color: '#1a73e8',
     fontWeight: '600',
     fontSize: 12,
   },

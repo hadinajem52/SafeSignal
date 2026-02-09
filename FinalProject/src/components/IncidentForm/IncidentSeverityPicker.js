@@ -1,16 +1,18 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 const IncidentSeverityPicker = ({
   levels,
   severity,
   onSelect,
 }) => {
+  const { theme } = useTheme();
   const currentLevel = levels.find(l => l.value === severity);
 
   return (
     <View style={styles.inputGroup}>
-      <Text style={styles.label}>Severity Level</Text>
+      <Text style={[styles.label, { color: theme.text }]}>Severity Level</Text>
       <View style={styles.severityContainer}>
         {levels.map((level) => (
           <TouchableOpacity
@@ -18,6 +20,7 @@ const IncidentSeverityPicker = ({
             style={[
               styles.severityButton,
               { borderColor: level.color },
+              { backgroundColor: theme.card },
               severity === level.value && { backgroundColor: level.color },
             ]}
             onPress={() => onSelect(level.value)}
@@ -25,6 +28,7 @@ const IncidentSeverityPicker = ({
             <Text
               style={[
                 styles.severityLabel,
+                { color: theme.text },
                 severity === level.value && styles.severityLabelSelected,
               ]}
             >
@@ -33,7 +37,7 @@ const IncidentSeverityPicker = ({
           </TouchableOpacity>
         ))}
       </View>
-      <Text style={styles.helperText}>
+      <Text style={[styles.helperText, { color: theme.textSecondary }]}>
         {currentLevel?.description}
       </Text>
     </View>
@@ -47,7 +51,6 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 8,
   },
   severityContainer: {
@@ -61,19 +64,16 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 2,
     alignItems: 'center',
-    backgroundColor: '#fff',
   },
   severityLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
   },
   severityLabelSelected: {
     color: '#fff',
   },
   helperText: {
     fontSize: 12,
-    color: '#666',
     marginTop: 6,
     fontStyle: 'italic',
   },

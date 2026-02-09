@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Switch, StyleSheet } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 const MlFeatureToggles = ({
   enableClassification,
@@ -7,37 +8,39 @@ const MlFeatureToggles = ({
   enableRisk,
   onToggleRisk,
 }) => {
+  const { theme } = useTheme();
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>AI Assistance (Optional)</Text>
+    <View style={[styles.container, { backgroundColor: theme.card, borderColor: theme.border }]}>
+      <Text style={[styles.header, { color: theme.text }]}>AI Assistance (Optional)</Text>
 
       <View style={styles.toggleSection}>
         <View style={styles.toggleInfo}>
-          <Text style={styles.toggleLabel}>Category Suggestion</Text>
-          <Text style={styles.toggleDescription}>
+          <Text style={[styles.toggleLabel, { color: theme.text }]}>Category Suggestion</Text>
+          <Text style={[styles.toggleDescription, { color: theme.textSecondary }]}>
             Helps validate your chosen category using ML.
           </Text>
         </View>
         <Switch
           value={enableClassification}
           onValueChange={onToggleClassification}
-          trackColor={{ false: '#ddd', true: '#81b0ff' }}
-          thumbColor={enableClassification ? '#1a73e8' : '#f4f3f4'}
+          trackColor={{ false: theme.border, true: theme.primary }}
+          thumbColor={enableClassification ? '#FFFFFF' : theme.surface}
         />
       </View>
 
       <View style={styles.toggleSection}>
         <View style={styles.toggleInfo}>
-          <Text style={styles.toggleLabel}>Risk Scoring</Text>
-          <Text style={styles.toggleDescription}>
+          <Text style={[styles.toggleLabel, { color: theme.text }]}>Risk Scoring</Text>
+          <Text style={[styles.toggleDescription, { color: theme.textSecondary }]}>
             Uses ML to assess urgency for faster response.
           </Text>
         </View>
         <Switch
           value={enableRisk}
           onValueChange={onToggleRisk}
-          trackColor={{ false: '#ddd', true: '#81b0ff' }}
-          thumbColor={enableRisk ? '#1a73e8' : '#f4f3f4'}
+          trackColor={{ false: theme.border, true: theme.primary }}
+          thumbColor={enableRisk ? '#FFFFFF' : theme.surface}
         />
       </View>
     </View>
@@ -46,17 +49,14 @@ const MlFeatureToggles = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
     padding: 16,
     borderRadius: 12,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
   },
   header: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#333',
     marginBottom: 12,
   },
   toggleSection: {
@@ -72,12 +72,10 @@ const styles = StyleSheet.create({
   toggleLabel: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 4,
   },
   toggleDescription: {
     fontSize: 12,
-    color: '#666',
   },
 });
 
