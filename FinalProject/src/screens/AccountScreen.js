@@ -17,6 +17,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import useUserPreferences from '../hooks/useUserPreferences';
+import { sendTestNotification } from '../services/mobileNotifications';
 import { Button, Card } from '../components';
 
 const AccountScreen = () => {
@@ -162,6 +163,18 @@ const AccountScreen = () => {
     }
   };
 
+  const handleSendTestNotification = async () => {
+    if (!preferences.pushNotifications) {
+      Alert.alert('Notifications Disabled', 'Enable Push Notifications first.');
+      return;
+    }
+
+    const success = await sendTestNotification();
+    if (!success) {
+      Alert.alert('Notification Failed', 'Notification permission may be denied on this device.');
+    }
+  };
+
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: theme.background }]}
@@ -262,6 +275,11 @@ const AccountScreen = () => {
             thumbColor={preferences.defaultAnonymous ? '#d97706' : '#f4f3f4'}
           />
         </View>
+
+        <TouchableOpacity style={[styles.linkRow, { borderBottomColor: theme.divider }]} onPress={handleSendTestNotification}>
+          <Text style={[styles.linkText, { color: theme.text }]}>Send Test Notification</Text>
+          <Text style={styles.linkArrow}>›</Text>
+        </TouchableOpacity>
       </Card>
 
       <Card style={[styles.settingsContainer, { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1 }]}>

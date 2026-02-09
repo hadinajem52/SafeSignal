@@ -2,8 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import * as Location from 'expo-location';
 import { statsAPI } from '../services/api';
+import useUserPreferences from './useUserPreferences';
 
 const useDashboardData = () => {
+  const { preferences } = useUserPreferences();
   const [location, setLocation] = useState(null);
   const queryKey = ['dashboard', location?.latitude, location?.longitude, location?.radius];
 
@@ -36,6 +38,13 @@ const useDashboardData = () => {
     let isMounted = true;
 
     const requestLocation = async () => {
+      if (!preferences.locationServices) {
+        if (isMounted) {
+          setLocation(null);
+        }
+        return;
+      }
+
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
@@ -57,7 +66,7 @@ const useDashboardData = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [preferences.locationServices]);
 
   const onRefresh = useCallback(() => {
     refetch();

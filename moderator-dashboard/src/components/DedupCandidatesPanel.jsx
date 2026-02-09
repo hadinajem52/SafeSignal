@@ -1,9 +1,31 @@
 import React from 'react'
+import GoogleMapPanel from './GoogleMapPanel'
 
 function DedupCandidatesPanel({ dedup, isLoading, onMerge, isMerging, sourceIncident }) {
   const candidates = dedup?.dedupCandidates?.candidates || []
   const meta = dedup?.dedupCandidates || {}
   const source = sourceIncident || meta.sourceIncident || {}
+  const hasSourceCoords = Number.isFinite(Number(source.latitude)) && Number.isFinite(Number(source.longitude))
+  const plottedCandidates = candidates.filter((candidate) => (
+    Number.isFinite(Number(candidate.latitude)) && Number.isFinite(Number(candidate.longitude))
+  ))
+  const dedupMapMarkers = hasSourceCoords
+    ? [
+        {
+          id: `source-${source.incidentId || 'incident'}`,
+          lat: source.latitude,
+          lng: source.longitude,
+          title: source.title || 'Current Incident',
+        },
+        ...plottedCandidates.map((candidate) => ({
+          id: `candidate-${candidate.incidentId}`,
+          lat: candidate.latitude,
+          lng: candidate.longitude,
+          title: candidate.title || `Candidate #${candidate.incidentId}`,
+          weight: Math.max(1, Number(candidate.score) || 1),
+        })),
+      ]
+    : []
 
   return (
     <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
@@ -22,6 +44,22 @@ function DedupCandidatesPanel({ dedup, isLoading, onMerge, isMerging, sourceInci
       {!isLoading && candidates.length > 0 && (
         <div className="mb-3 text-xs text-gray-600">
           ML semantic similarity: {meta.mlEnhanced ? 'enabled' : 'fallback'} ({meta.mlCandidatesWithSimilarity ?? 0}/{candidates.length} candidates)
+        </div>
+      )}
+      {!isLoading && dedupMapMarkers.length > 1 && (
+        <div className="mb-3">
+          <GoogleMapPanel
+            markers={dedupMapMarkers}
+            center={{ lat: source.latitude, lng: source.longitude }}
+            radiusMeters={meta.radiusMeters}
+            height={230}
+            zoom={15}
+            showClusters
+            emptyMessage="Not enough coordinate data to render duplicate proximity map."
+          />
+          <div className="mt-1 text-xs text-gray-500">
+            Proximity view: 1 source incident + {plottedCandidates.length} candidates within {meta.radiusMeters || 500}m.
+          </div>
         </div>
       )}
 

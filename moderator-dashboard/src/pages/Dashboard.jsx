@@ -1,6 +1,6 @@
 import React from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { statsAPI } from '../services/api'
+import { reportsAPI, statsAPI } from '../services/api'
 import { 
   TrendingUp, 
   AlertCircle, 
@@ -11,6 +11,7 @@ import {
   FileText
 } from 'lucide-react'
 import { getTimeAgo } from '../utils/dateUtils'
+import GoogleMapPanel from '../components/GoogleMapPanel'
 
 function StatCard({ icon: Icon, label, value, change, color }) {
   return (
@@ -40,6 +41,17 @@ function Dashboard() {
       throw new Error(result.error)
     },
     retry: 1,
+  })
+
+  const { data: mapIncidents = [] } = useQuery({
+    queryKey: ['dashboard-active-map-incidents'],
+    queryFn: async () => {
+      const result = await reportsAPI.getAll({ limit: 200 })
+      if (!result.success) {
+        return []
+      }
+      return result.data || []
+    },
   })
 
   if (isLoading) {
@@ -76,6 +88,29 @@ function Dashboard() {
     suspendedUsers: 0,
     recentIncidents: [],
   }
+
+  const activeStatuses = new Set([
+    'submitted',
+    'in_review',
+    'verified',
+    'dispatched',
+    'on_scene',
+    'investigating',
+    'needs_info',
+    'auto_processed',
+    'auto_flagged',
+  ])
+  const mapMarkers = mapIncidents
+    .filter((incident) => activeStatuses.has(incident.status))
+    .filter((incident) => Number.isFinite(Number(incident.latitude)) && Number.isFinite(Number(incident.longitude)))
+    .map((incident) => ({
+      id: incident.incident_id,
+      lat: incident.latitude,
+      lng: incident.longitude,
+      title: incident.title || `Incident #${incident.incident_id}`,
+      weight: incident.severity === 'critical' ? 4 : incident.severity === 'high' ? 3 : incident.severity === 'medium' ? 2 : 1,
+    }))
+  const criticalCount = mapIncidents.filter((incident) => incident.severity === 'critical').length
 
   return (
     <div>
@@ -132,6 +167,22 @@ function Dashboard() {
           label="Suspended Users"
           value={displayStats.suspendedUsers}
           color="bg-orange-500"
+        />
+      </div>
+
+      <div className="bg-white rounded-lg shadow p-6 mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-gray-900">Operational Map Overview</h2>
+          <div className="text-sm text-gray-600">
+            {mapMarkers.length} active incidents · {criticalCount} critical
+          </div>
+        </div>
+        <GoogleMapPanel
+          markers={mapMarkers}
+          height={420}
+          showClusters
+          showHeatmap
+          emptyMessage="No active incidents with coordinates to display."
         />
       </div>
 

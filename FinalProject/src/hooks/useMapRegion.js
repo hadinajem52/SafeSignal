@@ -2,12 +2,21 @@ import { useCallback, useState } from 'react';
 import { Alert } from 'react-native';
 import * as Location from 'expo-location';
 
-const useMapRegion = ({ defaultRegion, mapRef }) => {
+const useMapRegion = ({ defaultRegion, mapRef, locationServicesEnabled = true }) => {
   const [region, setRegion] = useState(defaultRegion);
   const [userLocation, setUserLocation] = useState(null);
   const [locationLoading, setLocationLoading] = useState(false);
 
   const goToMyLocation = useCallback(async () => {
+    if (!locationServicesEnabled) {
+      Alert.alert(
+        'Location Disabled',
+        'Location services are disabled in account settings. Enable them to use My Location.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     try {
       setLocationLoading(true);
 
@@ -42,7 +51,7 @@ const useMapRegion = ({ defaultRegion, mapRef }) => {
     } finally {
       setLocationLoading(false);
     }
-  }, [mapRef]);
+  }, [locationServicesEnabled, mapRef]);
 
   const resetToDefaultRegion = useCallback(() => {
     mapRef?.current?.animateToRegion(defaultRegion, 1000);
