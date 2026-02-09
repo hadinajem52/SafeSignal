@@ -19,6 +19,8 @@ const incidentsRoutes = require('./routes/incidents');
 const statsRoutes = require('./routes/stats');
 const usersRoutes = require('./routes/users');
 const mapRoutes = require('./routes/map');
+const settingsRoutes = require('./routes/settings');
+const { startWeeklyDigestScheduler } = require('./services/notificationService');
 const jwt = require('jsonwebtoken');
 const { setSocketServer } = require('./utils/socketService');
 
@@ -61,6 +63,10 @@ io.on('connection', (socket) => {
   // Join role-based rooms
   if (role) {
     socket.join(role);
+  }
+
+  if (userId) {
+    socket.join(`user_${userId}`);
   }
 
   if (role === 'admin') {
@@ -193,6 +199,7 @@ app.use('/api/incidents', incidentsRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/map', mapRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -213,6 +220,7 @@ app.use(errorHandler);
 
 // Start server
 server.listen(PORT, () => {
+  startWeeklyDigestScheduler();
   logger.info(`🚀 SafeSignal Backend running on http://localhost:${PORT}`);
   logger.info(`📚 API Docs: http://localhost:${PORT}/api/docs`);
   logger.info(`🏥 Health Check: http://localhost:${PORT}/api/health`);
