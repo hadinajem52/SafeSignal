@@ -50,6 +50,7 @@ Service runs at http://localhost:5001
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/health` | GET | Health check |
+| `/models/versions` | GET | Model/ruleset versions + runtime optimization status |
 | `/embed` | POST | Get text embedding |
 | `/similarity` | POST | Compare texts for duplicates |
 | `/classify` | POST | Categorize incident |
@@ -105,11 +106,16 @@ Environment variables (see `.env.example`):
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ML_SERVICE_PORT` | 5001 | Server port |
+| `ML_SERVICE_VERSION` | 1.1.0 | Service version reported by API |
 | `EMBEDDING_MODEL` | sentence-transformers/all-MiniLM-L12-v2 | Embedding model |
 | `CROSS_ENCODER_MODEL` | cross-encoder/ms-marco-MiniLM-L-6-v2 | Re-ranker for borderline duplicate candidates |
 | `CROSS_ENCODER_DEVICE` | cpu | Device for cross-encoder (`cpu` recommended for stability) |
 | `CLASSIFIER_MODEL` | facebook/bart-large-mnli | Classification model |
 | `FAST_CLASSIFIER_MODEL` | typeform/distilbert-base-uncased-mnli | Fast cascade classifier |
+| `CLASSIFIER_BACKEND` | auto | `auto`, `torch`, or `onnx` backend |
+| `USE_ONNX_ON_WINDOWS` | true | Prefer ONNX backend on Windows when backend is `auto` |
+| `ONNX_EXECUTION_PROVIDER` | CPUExecutionProvider | ONNX Runtime execution provider |
+| `INFERENCE_MAX_CONCURRENCY` | 2 on GPU / 4 on CPU | Async inference concurrency cap |
 | `CASCADE_CONFIDENCE_THRESHOLD` | 0.72 | Fast-model confidence gate |
 | `CASCADE_MARGIN_THRESHOLD` | 0.08 | Fast-model top1/top2 margin gate |
 | `RERANK_LOW` | 0.10 | Lower bound for cross-encoder re-ranking zone |
@@ -119,6 +125,13 @@ Environment variables (see `.env.example`):
 | `CLASSIFICATION_MARGIN_THRESHOLD` | 0.02 | Minimum top1/top2 separation |
 | `SIMILARITY_THRESHOLD` | 0.60 | Duplicate threshold |
 | `TOXICITY_THRESHOLD` | 0.5 | Toxicity threshold |
+| `TOXICITY_CONTEXTUAL_MIN_SCORE` | 0.18 | Min score for contextual hate backstop |
+| `TOXICITY_CONTEXTUAL_THRESHOLD_RATIO` | 0.40 | Threshold scaling factor for contextual hate |
+| `TOXICITY_IDENTITY_ATTACK_THRESHOLD` | 0.12 | Identity attack secondary toxic signal |
+| `TOXICITY_INSULT_THRESHOLD` | 0.35 | Insult secondary toxic signal |
+| `MODEL_RELEASE` | unversioned | Release identifier attached to inferences |
+| `MODEL_EXPERIMENT` | baseline | Experiment bucket/tag for A/B analysis |
+| `EXPERIMENT_VARIANT` | A | Variant tag logged with predictions |
 
 ## Integration with Node.js Backend
 
