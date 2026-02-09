@@ -19,6 +19,8 @@ const {
 } = require('../../../constants/incident');
 const { LIMITS } = require('../../../constants/limits');
 const { emitToRoles } = require('../utils/socketService');
+const settingsService = require('./settingsService');
+const notificationService = require('./notificationService');
 
 const LEI_STATUSES = ['verified', 'dispatched', 'on_scene', 'investigating', 'police_closed'];
 const profanityFilter = new Filter();
@@ -53,6 +55,20 @@ const mapRiskToSeverity = (riskScore) => {
   if (riskScore >= 0.40) return 'high';
   if (riskScore >= 0.25) return 'medium';
   return 'low';
+};
+
+const emitLeiAlertIfNeeded = (incident) => {
+  if (!incident || !['high', 'critical'].includes(incident.severity)) {
+    return;
+  }
+
+  emitToRoles(['law_enforcement', 'admin'], 'lei_alert', {
+    incidentId: incident.incident_id,
+    title: incident.title,
+    severity: incident.severity,
+    status: incident.status,
+    incidentDate: incident.incident_date,
+  });
 };
 
 const normalizeText = (text) =>
@@ -213,6 +229,71 @@ const buildDedupCandidates = (incident, candidates) => {
     .slice(0, LIMITS.DEDUP.MAX_CANDIDATES);
 };
 
+async function applyAutoVerificationIfEligible(incident, context = {}) {
+  if (!incident || incident.is_draft) {
+    return { autoVerified: false, reason: 'draft_or_missing' };
+  }
+
+  if (incident.status !== 'submitted') {
+    return { autoVerified: false, reason: 'not_submitted' };
+  }
+
+  const confidencePercent = Number(context.confidencePercent);
+  if (!Number.isFinite(confidencePercent)) {
+    return { autoVerified: false, reason: 'no_confidence' };
+  }
+
+  if (context.isToxic) {
+    return { autoVerified: false, reason: 'toxic' };
+  }
+
+  if ((context.highConfidenceDuplicates || 0) > 0) {
+    return { autoVerified: false, reason: 'possible_duplicate' };
+  }
+
+  const policy = await settingsService.getAutoVerificationPolicy();
+  if (!policy.enabled || confidencePercent < policy.minConfidenceScore) {
+    return { autoVerified: false, reason: 'policy_threshold' };
+  }
+
+  const updated = await db.one(
+    `UPDATE incidents
+     SET status = 'verified',
+         updated_at = CURRENT_TIMESTAMP
+     WHERE incident_id = $1
+     RETURNING *`,
+    [incident.incident_id]
+  );
+
+  incident.status = updated.status;
+
+  await logAction(
+    incident.incident_id,
+    null,
+    'verified',
+    `Auto-verified at ${confidencePercent}% confidence (threshold ${policy.minConfidenceScore}%)`
+  );
+
+  emitToRoles(['moderator', 'admin'], 'incident:update', {
+    incidentId: updated.incident_id,
+    status: updated.status,
+    severity: updated.severity,
+  });
+
+  emitLeiAlertIfNeeded(updated);
+
+  await notificationService.notifyStaffIncidentEvent('incident:auto_verified', updated, {
+    confidencePercent,
+    threshold: policy.minConfidenceScore,
+  });
+
+  return {
+    autoVerified: true,
+    confidencePercent,
+    threshold: policy.minConfidenceScore,
+  };
+}
+
 /**
  * Create a new incident
  * @param {Object} incidentData - The incident data
@@ -274,6 +355,12 @@ async function createIncident(incidentData, reporterId) {
     ]
   );
 
+  const autoVerificationContext = {
+    confidencePercent: null,
+    highConfidenceDuplicates: 0,
+    isToxic: false,
+  };
+
   if (!incident.is_draft) {
     try {
       const latitudeValue = parseFloat(incident.latitude);
@@ -313,6 +400,12 @@ async function createIncident(incidentData, reporterId) {
       const toxicity = useExternalMl && mlResults?.toxicity
         ? { score: mlResults.toxicity.toxicityScore, isToxic: mlResults.toxicity.isToxic }
         : assessToxicity(mlText);
+
+      autoVerificationContext.confidencePercent =
+        categoryConfidence === null || categoryConfidence === undefined
+          ? null
+          : Number((Number(categoryConfidence) * 100).toFixed(2));
+      autoVerificationContext.isToxic = Boolean(toxicity.isToxic);
 
       if (!Number.isNaN(latitudeValue) && !Number.isNaN(longitudeValue)) {
         const candidateQuery = `
@@ -425,6 +518,7 @@ async function createIncident(incidentData, reporterId) {
 
         const topScore = scoredCandidates[0]?.score || 0;
         const highConfidenceDuplicates = scoredCandidates.filter((candidate) => candidate.score >= 0.55).length;
+        autoVerificationContext.highConfidenceDuplicates = highConfidenceDuplicates;
 
         // Risk scoring: prefer ML if available
         const riskScore = allowMlRisk
@@ -594,6 +688,12 @@ async function createIncident(incidentData, reporterId) {
   }
 
   if (!incident.is_draft) {
+    try {
+      await applyAutoVerificationIfEligible(incident, autoVerificationContext);
+    } catch (error) {
+      logger.warn(`Auto-verification failed for incident ${incident.incident_id}: ${error.message}`);
+    }
+
     emitToRoles(['moderator', 'admin'], 'incident:new', {
       incidentId: incident.incident_id,
       title: incident.title,
@@ -601,6 +701,12 @@ async function createIncident(incidentData, reporterId) {
       status: incident.status,
       incidentDate: incident.incident_date,
     });
+
+    try {
+      await notificationService.notifyStaffIncidentEvent('incident:new', incident);
+    } catch (error) {
+      logger.warn(`Staff notification failed for incident ${incident.incident_id}: ${error.message}`);
+    }
   }
 
   return incident;
@@ -865,6 +971,16 @@ async function linkDuplicateIncident(incidentId, duplicateIncidentId, requesting
     severity: updatedDuplicate.severity,
   });
 
+  try {
+    await notificationService.notifyStaffIncidentEvent('incident:status_update', updatedDuplicate, {
+      previousStatus: duplicate.status,
+      nextStatus: updatedDuplicate.status,
+      actorRole: requestingUser.role,
+    });
+  } catch (error) {
+    logger.warn(`Failed to notify staff for duplicate merge on incident ${duplicateIncidentId}: ${error.message}`);
+  }
+
   return {
     canonicalIncidentId: incidentId,
     duplicateIncidentId,
@@ -908,6 +1024,15 @@ async function updateIncidentCategoryForModeration(incidentId, category, request
     status: updatedIncident.status,
     severity: updatedIncident.severity,
   });
+
+  try {
+    await notificationService.notifyStaffIncidentEvent('incident:status_update', updatedIncident, {
+      actorRole: requestingUser.role,
+      notes: `Category updated from ${incident.category} to ${category}`,
+    });
+  } catch (error) {
+    logger.warn(`Failed to notify staff for category update on incident ${incidentId}: ${error.message}`);
+  }
 
   return updatedIncident;
 }
@@ -1012,6 +1137,16 @@ async function updateIncident(incidentId, updateData, requestingUser) {
     severity: updatedIncident.severity,
   });
 
+  try {
+    await notificationService.notifyStaffIncidentEvent('incident:status_update', updatedIncident, {
+      previousStatus: incident.status,
+      nextStatus: updatedIncident.status,
+      actorRole: requestingUser.role,
+    });
+  } catch (error) {
+    logger.warn(`Failed to notify staff for incident update ${incidentId}: ${error.message}`);
+  }
+
   return updatedIncident;
 }
 
@@ -1060,6 +1195,16 @@ async function patchIncident(incidentId, updateData, requestingUser) {
     status: updatedIncident.status,
     severity: updatedIncident.severity,
   });
+
+  try {
+    await notificationService.notifyStaffIncidentEvent('incident:status_update', updatedIncident, {
+      previousStatus: incident.status,
+      nextStatus: updatedIncident.status,
+      actorRole: requestingUser.role,
+    });
+  } catch (error) {
+    logger.warn(`Failed to notify staff for patch update on incident ${incidentId}: ${error.message}`);
+  }
 
   return updatedIncident;
 }
@@ -1263,6 +1408,16 @@ async function updateLEIStatus(incidentId, status, closureOutcome, closureDetail
     severity: updatedIncident.severity,
   });
 
+  try {
+    await notificationService.notifyStaffIncidentEvent('incident:status_update', updatedIncident, {
+      previousStatus: incident.status,
+      nextStatus: updatedIncident.status,
+      actorRole: requestingUser.role,
+    });
+  } catch (error) {
+    logger.warn(`Failed to notify staff for LEI status update on incident ${incidentId}: ${error.message}`);
+  }
+
   return updatedIncident;
 }
 
@@ -1297,14 +1452,16 @@ async function verifyIncident(incidentId, requestingUser) {
     severity: updated.severity,
   });
 
-  if (['high', 'critical'].includes(updated.severity)) {
-    emitToRoles(['law_enforcement', 'admin'], 'lei_alert', {
-      incidentId: updated.incident_id,
-      title: updated.title,
-      severity: updated.severity,
-      status: updated.status,
-      incidentDate: updated.incident_date,
+  emitLeiAlertIfNeeded(updated);
+
+  try {
+    await notificationService.notifyStaffIncidentEvent('incident:status_update', updated, {
+      previousStatus: incident.status,
+      nextStatus: updated.status,
+      actorRole: requestingUser.role,
     });
+  } catch (error) {
+    logger.warn(`Failed to notify staff for verify action on incident ${incidentId}: ${error.message}`);
   }
 
   return updated;
@@ -1340,6 +1497,16 @@ async function rejectIncident(incidentId, requestingUser) {
     status: updated.status,
     severity: updated.severity,
   });
+
+  try {
+    await notificationService.notifyStaffIncidentEvent('incident:status_update', updated, {
+      previousStatus: incident.status,
+      nextStatus: updated.status,
+      actorRole: requestingUser.role,
+    });
+  } catch (error) {
+    logger.warn(`Failed to notify staff for rejection on incident ${incidentId}: ${error.message}`);
+  }
 
   return updated;
 }
@@ -1378,6 +1545,17 @@ async function escalateIncident(incidentId, requestingUser, reason) {
     status: updated.status,
     severity: updated.severity,
   });
+
+  try {
+    await notificationService.notifyStaffIncidentEvent('incident:status_update', updated, {
+      previousStatus: incident.status,
+      nextStatus: updated.status,
+      actorRole: requestingUser.role,
+      notes: reason,
+    });
+  } catch (error) {
+    logger.warn(`Failed to notify staff for escalation on incident ${incidentId}: ${error.message}`);
+  }
 
   return updated;
 }

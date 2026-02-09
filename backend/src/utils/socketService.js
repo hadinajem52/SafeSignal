@@ -15,6 +15,16 @@ const emitToRoles = (roles, event, payload) => {
   roleList.forEach((role) => ioInstance.to(role).emit(event, payload));
 };
 
+const emitToUser = (userId, event, payload) => {
+  if (!ioInstance || !userId) return;
+  ioInstance.to(`user_${userId}`).emit(event, payload);
+};
+
+const emitToUsers = (userIds, event, payload) => {
+  if (!ioInstance || !Array.isArray(userIds)) return;
+  userIds.forEach((userId) => emitToUser(userId, event, payload));
+};
+
 /**
  * Emit event to a specific incident room
  * @param {number} incidentId - The incident ID
@@ -61,8 +71,9 @@ module.exports = {
   setSocketServer,
   emitEvent,
   emitToRoles,
+  emitToUser,
+  emitToUsers,
   emitToIncident,
   emitToIncidentInternal,
   emitComment,
 };
-

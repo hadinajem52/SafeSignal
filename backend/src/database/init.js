@@ -253,6 +253,22 @@ const initDatabase = async () => {
       );
     `);
 
+    // Create Moderator_Settings table for dashboard preferences
+    await db.none(`
+      CREATE TABLE IF NOT EXISTS moderator_settings (
+        settings_id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE UNIQUE,
+        email_notifications BOOLEAN NOT NULL DEFAULT TRUE,
+        report_alerts BOOLEAN NOT NULL DEFAULT TRUE,
+        weekly_digest BOOLEAN NOT NULL DEFAULT FALSE,
+        auto_verify BOOLEAN NOT NULL DEFAULT FALSE,
+        min_confidence_score INTEGER NOT NULL DEFAULT 80 CHECK (min_confidence_score BETWEEN 0 AND 100),
+        last_weekly_digest_sent_at TIMESTAMP,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     // Create indexes for performance
     await db.none(`
       CREATE INDEX IF NOT EXISTS idx_incidents_location ON incidents (latitude, longitude);
@@ -274,6 +290,7 @@ const initDatabase = async () => {
       CREATE INDEX IF NOT EXISTS idx_incident_comments_incident_id ON incident_comments (incident_id, created_at ASC);
       CREATE INDEX IF NOT EXISTS idx_incident_comments_user_id ON incident_comments (user_id);
       CREATE INDEX IF NOT EXISTS idx_incident_comments_visibility ON incident_comments (incident_id, is_internal, created_at ASC);
+      CREATE INDEX IF NOT EXISTS idx_moderator_settings_user_id ON moderator_settings (user_id);
     `);
 
     console.log('✓ Database schema initialized successfully');

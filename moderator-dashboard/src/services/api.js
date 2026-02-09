@@ -150,6 +150,45 @@ export const statsAPI = {
   },
 }
 
+// Settings API
+export const settingsAPI = {
+  get: async () => {
+    try {
+      const response = await api.get('/settings')
+      return { success: true, data: response.data.data }
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Failed to fetch settings' }
+    }
+  },
+
+  update: async (settings) => {
+    try {
+      const response = await api.put('/settings', settings)
+      return { success: true, data: response.data.data }
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Failed to save settings' }
+    }
+  },
+
+  reset: async () => {
+    try {
+      const response = await api.post('/settings/reset')
+      return { success: true, data: response.data.data }
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Failed to reset settings' }
+    }
+  },
+
+  sendWeeklyDigestNow: async () => {
+    try {
+      const response = await api.post('/settings/weekly-digest/send')
+      return { success: true, data: response.data.data }
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Failed to send weekly digest' }
+    }
+  },
+}
+
 // Law Enforcement Interface API
 export const leiAPI = {
   getAll: async (params = {}) => {
