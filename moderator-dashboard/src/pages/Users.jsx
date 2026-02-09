@@ -88,8 +88,9 @@ function Users() {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="all">All Users</option>
-              <option value="user">Regular Users</option>
+              <option value="citizen">Regular Users</option>
               <option value="moderator">Moderators</option>
+              <option value="law_enforcement">Law Enforcement</option>
               <option value="admin">Administrators</option>
             </select>
           </div>

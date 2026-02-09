@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { io } from 'socket.io-client'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../context/AuthContext'
 import Navigation from './Navigation'
 
 function Layout({ children }) {
   const { user } = useAuth()
+  const queryClient = useQueryClient()
   const [notifications, setNotifications] = useState([])
 
   const activeNotifications = useMemo(() => notifications.slice(0, 4), [notifications])
@@ -25,9 +27,35 @@ function Layout({ children }) {
       }, 6000)
     }
 
+    const refreshRealtimeQueries = () => {
+      queryClient.invalidateQueries({ queryKey: ['dashboardStats'] })
+      queryClient.invalidateQueries({ queryKey: ['reports'] })
+      queryClient.invalidateQueries({ queryKey: ['lei-incidents'] })
+      queryClient.invalidateQueries({ queryKey: ['lei-incident'] })
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-applications'] })
+    }
+
+    socket.on('incident:new', () => {
+      refreshRealtimeQueries()
+    })
+
+    socket.on('incident:update', () => {
+      refreshRealtimeQueries()
+    })
+
+    socket.on('incident:duplicate', () => {
+      refreshRealtimeQueries()
+    })
+
+    socket.on('lei_alert', () => {
+      refreshRealtimeQueries()
+    })
+
     socket.on('notification:report_alert', (payload) => {
       const severity = payload?.severity ? payload.severity.toUpperCase() : 'HIGH'
       pushNotification(`[${severity}] ${payload?.title || 'High-priority report received'}`, 'alert')
+      refreshRealtimeQueries()
     })
 
     socket.on('notification:weekly_digest', (payload) => {
@@ -36,10 +64,20 @@ function Layout({ children }) {
       pushNotification(`Weekly digest: ${total} reports, ${highPriority} high-priority.`, 'digest')
     })
 
+    socket.on('staff_application:new', (payload) => {
+      pushNotification(
+        `New ${payload?.role === 'law_enforcement' ? 'LE' : 'moderator'} application: ${payload?.username || 'Unknown user'}`,
+        'info'
+      )
+      queryClient.invalidateQueries({ queryKey: ['admin-applications'] })
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboardStats'] })
+    })
+
     return () => {
       socket.disconnect()
     }
-  }, [user])
+  }, [queryClient, user])
 
   return (
     <div className="flex h-screen bg-gray-50">

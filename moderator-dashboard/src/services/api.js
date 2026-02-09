@@ -15,6 +15,26 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+// Auth API
+export const authAPI = {
+  register: async ({ username, email, password, role = 'citizen' }) => {
+    try {
+      const response = await api.post('/auth/register', {
+        username,
+        email,
+        password,
+        role,
+      })
+      return { success: true, data: response.data.data, message: response.data.message }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to submit application',
+      }
+    }
+  },
+}
+
 // Reports API
 export const reportsAPI = {
   getAll: async (params = {}) => {
@@ -215,6 +235,109 @@ export const leiAPI = {
       return { success: true, data: response.data.data }
     } catch (error) {
       return { success: false, error: error.response?.data?.message || 'Failed to update LEI status' }
+    }
+  },
+}
+
+// Admin API
+export const adminAPI = {
+  getPendingApplications: async () => {
+    try {
+      const response = await api.get('/admin/applications/pending')
+      return { success: true, data: response.data.data }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch pending applications',
+      }
+    }
+  },
+
+  approveApplication: async (id) => {
+    try {
+      const response = await api.post(`/admin/applications/${id}/approve`)
+      return { success: true, data: response.data.data }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to approve application',
+      }
+    }
+  },
+
+  rejectApplication: async (id) => {
+    try {
+      const response = await api.delete(`/admin/applications/${id}/reject`)
+      return { success: true, data: response.data.data }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to reject application',
+      }
+    }
+  },
+
+  getDatabaseTables: async () => {
+    try {
+      const response = await api.get('/admin/database/tables')
+      return { success: true, data: response.data.data }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch database tables',
+      }
+    }
+  },
+
+  getTableRows: async (tableName, limit = 50) => {
+    try {
+      const response = await api.get(`/admin/database/tables/${encodeURIComponent(tableName)}/rows`, {
+        params: { limit },
+      })
+      return { success: true, data: response.data.data }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch table rows',
+      }
+    }
+  },
+
+  deleteTableRow: async (tableName, rowId) => {
+    try {
+      const response = await api.delete(
+        `/admin/database/tables/${encodeURIComponent(tableName)}/rows/${rowId}`
+      )
+      return { success: true, data: response.data.data }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to delete row',
+      }
+    }
+  },
+
+  clearTable: async (tableName) => {
+    try {
+      const response = await api.delete(`/admin/database/tables/${encodeURIComponent(tableName)}`)
+      return { success: true, data: response.data.data }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to clear table',
+      }
+    }
+  },
+
+  clearAllData: async () => {
+    try {
+      const response = await api.delete('/admin/database/all')
+      return { success: true, data: response.data.data }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to clear all data',
+      }
     }
   },
 }

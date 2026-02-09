@@ -88,13 +88,14 @@ router.post(
     body('username').trim().isLength({ min: 3, max: 50 }),
     body('email').isEmail().normalizeEmail(),
     body('password').isLength({ min: 6 }),
+    body('role').optional().isIn(['citizen', 'moderator', 'law_enforcement']),
   ],
   async (req, res) => {
     if (handleValidationErrors(req, res)) return;
 
     try {
-      const { username, email, password } = req.body;
-      const user = await authService.register(username, email, password);
+      const { username, email, password, role } = req.body;
+      const user = await authService.register(username, email, password, role);
 
       res.status(201).json({
         status: 'OK',

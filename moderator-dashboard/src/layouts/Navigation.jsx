@@ -7,7 +7,8 @@ import {
   Users, 
   Settings, 
   LogOut,
-  Shield
+  Shield,
+  ShieldCheck
 } from 'lucide-react'
 
 function Navigation() {
@@ -26,6 +27,9 @@ function Navigation() {
       : []),
     ...(user?.role === 'admin' || user?.role === 'moderator'
       ? [{ path: '/users', label: 'Users', icon: Users }]
+      : []),
+    ...(user?.role === 'admin'
+      ? [{ path: '/admin', label: 'Admin', icon: ShieldCheck }]
       : []),
     { path: '/settings', label: 'Settings', icon: Settings },
   ]

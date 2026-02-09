@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Settings, Save, AlertCircle, RotateCcw } from 'lucide-react'
 import { settingsAPI } from '../services/api'
+import { useAuth } from '../context/AuthContext'
 
 const DEFAULT_SETTINGS = {
   emailNotifications: true,
@@ -12,6 +13,8 @@ const DEFAULT_SETTINGS = {
 }
 
 function SettingsPage() {
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'admin'
   const queryClient = useQueryClient()
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [saved, setSaved] = useState(false)
@@ -92,11 +95,19 @@ function SettingsPage() {
 
   const digestMutation = useMutation({
     mutationFn: async () => {
+      if (hasChanges) {
+        const updateResult = await settingsAPI.update(settings)
+        if (!updateResult.success) {
+          throw new Error(updateResult.error || 'Failed to save settings before sending digest')
+        }
+      }
+
       const result = await settingsAPI.sendWeeklyDigestNow()
       if (result.success) return result.data
       throw new Error(result.error)
     },
     onSuccess: (digestResult) => {
+      queryClient.invalidateQueries({ queryKey: ['dashboardSettings'] })
       setSuccessMessage(
         `Weekly digest sent. ${digestResult?.summary?.total_reports ?? 0} reports in the last 7 days.`
       )
@@ -113,6 +124,13 @@ function SettingsPage() {
 
   const updateSetting = (key, value) => {
     setSettings((prev) => ({ ...prev, [key]: value }))
+  }
+
+  const handleWeeklyDigestToggle = (isEnabled) => {
+    const nextSettings = { ...settings, weeklyDigest: isEnabled }
+    setSettings(nextSettings)
+    setSaved(false)
+    saveMutation.mutate(nextSettings)
   }
 
   const handleSave = () => {
@@ -214,7 +232,7 @@ function SettingsPage() {
                 <input
                   type="checkbox"
                   checked={settings.weeklyDigest}
-                  onChange={(e) => updateSetting('weeklyDigest', e.target.checked)}
+                  onChange={(e) => handleWeeklyDigestToggle(e.target.checked)}
                   className="sr-only peer"
                   disabled={isMutating}
                 />
@@ -237,48 +255,49 @@ function SettingsPage() {
           </div>
         </div>
 
-        {/* Moderation Settings */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <Settings size={24} />
-            Moderation Settings
-          </h2>
+        {isAdmin && (
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <Settings size={24} />
+              Moderation Settings
+            </h2>
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-              <div>
-                <p className="font-medium text-gray-900">Auto-Verify Reports</p>
-                <p className="text-sm text-gray-600">Automatically verify reports with high confidence</p>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <p className="font-medium text-gray-900">Auto-Verify Reports</p>
+                  <p className="text-sm text-gray-600">Automatically verify reports with high confidence</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={settings.autoVerify}
+                    onChange={(e) => updateSetting('autoVerify', e.target.checked)}
+                    className="sr-only peer"
+                    disabled={isMutating}
+                  />
+                  <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
+
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <label className="block text-sm font-medium text-gray-900 mb-3">
+                  Minimum Confidence Score for Auto-Verification: {settings.minConfidenceScore}%
+                </label>
                 <input
-                  type="checkbox"
-                  checked={settings.autoVerify}
-                  onChange={(e) => updateSetting('autoVerify', e.target.checked)}
-                  className="sr-only peer"
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={settings.minConfidenceScore}
+                  onChange={(e) => updateSetting('minConfidenceScore', parseInt(e.target.value, 10))}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                   disabled={isMutating}
                 />
-                <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
-            </div>
-
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <label className="block text-sm font-medium text-gray-900 mb-3">
-                Minimum Confidence Score for Auto-Verification: {settings.minConfidenceScore}%
-              </label>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={settings.minConfidenceScore}
-                onChange={(e) => updateSetting('minConfidenceScore', parseInt(e.target.value, 10))}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                disabled={isMutating}
-              />
-              <p className="text-sm text-gray-600 mt-2">Only reports above this score will be auto-verified</p>
+                <p className="text-sm text-gray-600 mt-2">Only reports above this score will be auto-verified</p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* System Information */}
         <div className="bg-white rounded-lg shadow p-6">

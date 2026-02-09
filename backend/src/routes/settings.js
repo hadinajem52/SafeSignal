@@ -58,7 +58,11 @@ router.get('/', authenticateToken, requireRole(['moderator', 'admin', 'law_enfor
  */
 router.put('/', authenticateToken, requireRole(['moderator', 'admin', 'law_enforcement']), async (req, res) => {
   try {
-    const settings = await settingsService.saveSettingsForUser(req.user.userId, req.body);
+    const settings = await settingsService.saveSettingsForUser(
+      req.user.userId,
+      req.user.role,
+      req.body
+    );
 
     res.json({
       status: 'OK',
@@ -77,7 +81,7 @@ router.put('/', authenticateToken, requireRole(['moderator', 'admin', 'law_enfor
  */
 router.post('/reset', authenticateToken, requireRole(['moderator', 'admin', 'law_enforcement']), async (req, res) => {
   try {
-    const settings = await settingsService.resetSettingsForUser(req.user.userId);
+    const settings = await settingsService.resetSettingsForUser(req.user.userId, req.user.role);
 
     res.json({
       status: 'OK',

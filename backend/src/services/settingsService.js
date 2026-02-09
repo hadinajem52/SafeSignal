@@ -58,29 +58,53 @@ function mapDbRowToSettings(row) {
   };
 }
 
-function validateSettingsPayload(payload) {
+function validateSettingsPayload(payload, existingSettings = DEFAULT_SETTINGS) {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
     throw ServiceError.badRequest('Settings payload is required');
   }
 
   const booleanKeys = ['emailNotifications', 'reportAlerts', 'weeklyDigest', 'autoVerify'];
+  const mergedSettings = {
+    emailNotifications: existingSettings.emailNotifications,
+    reportAlerts: existingSettings.reportAlerts,
+    weeklyDigest: existingSettings.weeklyDigest,
+    autoVerify: existingSettings.autoVerify,
+    minConfidenceScore: existingSettings.minConfidenceScore,
+  };
+
   for (const key of booleanKeys) {
+    if (payload[key] === undefined) {
+      continue;
+    }
+
     if (typeof payload[key] !== 'boolean') {
       throw ServiceError.badRequest(`${key} must be a boolean`);
     }
+
+    mergedSettings[key] = payload[key];
   }
 
-  const score = Number(payload.minConfidenceScore);
-  if (!Number.isInteger(score) || score < 0 || score > 100) {
-    throw ServiceError.badRequest('minConfidenceScore must be an integer between 0 and 100');
+  if (payload.minConfidenceScore !== undefined) {
+    const score = Number(payload.minConfidenceScore);
+    if (!Number.isInteger(score) || score < 0 || score > 100) {
+      throw ServiceError.badRequest('minConfidenceScore must be an integer between 0 and 100');
+    }
+
+    mergedSettings.minConfidenceScore = score;
+  }
+
+  return mergedSettings;
+}
+
+function enforceRolePolicyOnSettings(validatedSettings, existingSettings, userRole) {
+  if (userRole === 'admin') {
+    return validatedSettings;
   }
 
   return {
-    emailNotifications: payload.emailNotifications,
-    reportAlerts: payload.reportAlerts,
-    weeklyDigest: payload.weeklyDigest,
-    autoVerify: payload.autoVerify,
-    minConfidenceScore: score,
+    ...validatedSettings,
+    autoVerify: existingSettings.autoVerify,
+    minConfidenceScore: existingSettings.minConfidenceScore,
   };
 }
 
@@ -145,13 +169,17 @@ async function getSettingsForUser(userId) {
   return upsertSettings(userId, DEFAULT_SETTINGS);
 }
 
-async function saveSettingsForUser(userId, payload) {
-  const validatedSettings = validateSettingsPayload(payload);
-  return upsertSettings(userId, validatedSettings);
+async function saveSettingsForUser(userId, userRole, payload) {
+  const existingSettings = await getSettingsForUser(userId);
+  const validatedSettings = validateSettingsPayload(payload, existingSettings);
+  const scopedSettings = enforceRolePolicyOnSettings(validatedSettings, existingSettings, userRole);
+  return upsertSettings(userId, scopedSettings);
 }
 
-async function resetSettingsForUser(userId) {
-  return upsertSettings(userId, DEFAULT_SETTINGS);
+async function resetSettingsForUser(userId, userRole) {
+  const existingSettings = await getSettingsForUser(userId);
+  const resetPayload = enforceRolePolicyOnSettings(DEFAULT_SETTINGS, existingSettings, userRole);
+  return upsertSettings(userId, resetPayload);
 }
 
 async function getAutoVerificationPolicy() {
@@ -166,7 +194,7 @@ async function getAutoVerificationPolicy() {
       ) AS min_confidence_score
     FROM users u
     LEFT JOIN moderator_settings ms ON ms.user_id = u.user_id
-    WHERE u.role IN ('moderator', 'admin')`,
+    WHERE u.role = 'admin'`,
     [DEFAULT_SETTINGS.minConfidenceScore]
   );
 

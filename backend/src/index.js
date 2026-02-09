@@ -20,6 +20,7 @@ const statsRoutes = require('./routes/stats');
 const usersRoutes = require('./routes/users');
 const mapRoutes = require('./routes/map');
 const settingsRoutes = require('./routes/settings');
+const adminRoutes = require('./routes/admin');
 const { startWeeklyDigestScheduler } = require('./services/notificationService');
 const jwt = require('jsonwebtoken');
 const { setSocketServer } = require('./utils/socketService');
@@ -200,6 +201,7 @@ app.use('/api/users', usersRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/map', mapRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/admin', adminRoutes);
 
 // 404 handler
 app.use((req, res) => {
