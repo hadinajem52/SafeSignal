@@ -8,6 +8,7 @@ import Users from './pages/Users'
 import Settings from './pages/Settings'
 import Login from './pages/Login'
 import LawEnforcement from './pages/LawEnforcement'
+import AdminPanel from './pages/AdminPanel'
 import { AuthProvider, useAuth } from './context/AuthContext'
 
 const queryClient = new QueryClient({
@@ -89,6 +90,14 @@ function AppRoutes() {
                   element={
                     <RoleProtectedRoute allowedRoles={['admin', 'moderator']}>
                       <Users />
+                    </RoleProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin"
+                  element={
+                    <RoleProtectedRoute allowedRoles={['admin']}>
+                      <AdminPanel />
                     </RoleProtectedRoute>
                   }
                 />

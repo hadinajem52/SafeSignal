@@ -8,6 +8,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../config/database');
 const ServiceError = require('../utils/ServiceError');
+const { emitToRoles } = require('../utils/socketService');
 
 // JWT configuration - centralized here, not in routes
 const JWT_SECRET = process.env.JWT_SECRET || 'safesignal-jwt-secret-change-in-production';
@@ -66,6 +67,11 @@ async function login(email, password) {
     throw ServiceError.unauthorized('Invalid credentials');
   }
 
+  const isStaffRole = ['moderator', 'law_enforcement'].includes(user.role);
+  if (isStaffRole && !user.is_verified) {
+    throw ServiceError.forbidden('Account pending admin approval');
+  }
+
   // Generate token and return
   const token = generateToken(user);
 
@@ -77,14 +83,14 @@ async function login(email, password) {
 
 /**
  * Register a new user
- * @param {Object} userData - Registration data
- * @param {string} userData.username - Desired username
- * @param {string} userData.email - User's email
- * @param {string} userData.password - User's plain text password
+ * @param {string} username - Desired username
+ * @param {string} email - User's email
+ * @param {string} password - User's plain text password
+ * @param {string} [requestedRole='citizen'] - Desired role from registration form
  * @returns {Promise<Object>} Created user data
  * @throws {ServiceError} If user already exists
  */
-async function register(username, email, password) {
+async function register(username, email, password, requestedRole = 'citizen') {
   // Check if user already exists
   const existingUser = await db.oneOrNone(
     'SELECT user_id FROM users WHERE email = $1 OR username = $2',
@@ -95,6 +101,12 @@ async function register(username, email, password) {
     throw ServiceError.conflict('User already exists');
   }
 
+  const allowedRequestedRoles = ['citizen', 'moderator', 'law_enforcement'];
+  const normalizedRequestedRole = allowedRequestedRoles.includes(requestedRole)
+    ? requestedRole
+    : 'citizen';
+  const requiresAdminApproval = ['moderator', 'law_enforcement'].includes(normalizedRequestedRole);
+
   // Hash password
   const salt = await bcrypt.genSalt(BCRYPT_SALT_ROUNDS);
   const passwordHash = await bcrypt.hash(password, salt);
@@ -102,10 +114,26 @@ async function register(username, email, password) {
   // Create user
   const newUser = await db.one(
     `INSERT INTO users (username, email, password_hash, role, is_verified)
-     VALUES ($1, $2, $3, 'citizen', TRUE)
+     VALUES ($1, $2, $3, $4, $5)
      RETURNING user_id, username, email, role`,
-    [username, email, passwordHash]
+    [
+      username,
+      email,
+      passwordHash,
+      normalizedRequestedRole,
+      !requiresAdminApproval,
+    ]
   );
+
+  if (requiresAdminApproval) {
+    emitToRoles('admin', 'staff_application:new', {
+      userId: newUser.user_id,
+      username: newUser.username,
+      email: newUser.email,
+      role: newUser.role,
+      appliedAt: new Date().toISOString(),
+    });
+  }
 
   return formatUserResponse(newUser);
 }
