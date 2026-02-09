@@ -10,6 +10,7 @@ const DEFAULT_SETTINGS = Object.freeze({
   emailNotifications: true,
   reportAlerts: true,
   weeklyDigest: false,
+  darkMode: false,
   autoVerify: false,
   minConfidenceScore: 80,
 });
@@ -28,6 +29,7 @@ async function ensureSettingsTable() {
       email_notifications BOOLEAN NOT NULL DEFAULT TRUE,
       report_alerts BOOLEAN NOT NULL DEFAULT TRUE,
       weekly_digest BOOLEAN NOT NULL DEFAULT FALSE,
+      dark_mode BOOLEAN NOT NULL DEFAULT FALSE,
       auto_verify BOOLEAN NOT NULL DEFAULT FALSE,
       min_confidence_score INTEGER NOT NULL DEFAULT 80 CHECK (min_confidence_score BETWEEN 0 AND 100),
       last_weekly_digest_sent_at TIMESTAMP,
@@ -42,6 +44,11 @@ async function ensureSettingsTable() {
   `);
 
   await db.none(`
+    ALTER TABLE moderator_settings
+    ADD COLUMN IF NOT EXISTS dark_mode BOOLEAN NOT NULL DEFAULT FALSE;
+  `);
+
+  await db.none(`
     CREATE INDEX IF NOT EXISTS idx_moderator_settings_user_id ON moderator_settings (user_id);
   `);
 
@@ -53,6 +60,7 @@ function mapDbRowToSettings(row) {
     emailNotifications: row.email_notifications,
     reportAlerts: row.report_alerts,
     weeklyDigest: row.weekly_digest,
+    darkMode: row.dark_mode,
     autoVerify: row.auto_verify,
     minConfidenceScore: parseInt(row.min_confidence_score, 10),
   };
@@ -63,11 +71,12 @@ function validateSettingsPayload(payload, existingSettings = DEFAULT_SETTINGS) {
     throw ServiceError.badRequest('Settings payload is required');
   }
 
-  const booleanKeys = ['emailNotifications', 'reportAlerts', 'weeklyDigest', 'autoVerify'];
+  const booleanKeys = ['emailNotifications', 'reportAlerts', 'weeklyDigest', 'darkMode', 'autoVerify'];
   const mergedSettings = {
     emailNotifications: existingSettings.emailNotifications,
     reportAlerts: existingSettings.reportAlerts,
     weeklyDigest: existingSettings.weeklyDigest,
+    darkMode: existingSettings.darkMode,
     autoVerify: existingSettings.autoVerify,
     minConfidenceScore: existingSettings.minConfidenceScore,
   };
@@ -117,14 +126,16 @@ async function upsertSettings(userId, settings) {
       email_notifications,
       report_alerts,
       weekly_digest,
+      dark_mode,
       auto_verify,
       min_confidence_score
-    ) VALUES ($1, $2, $3, $4, $5, $6)
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
     ON CONFLICT (user_id)
     DO UPDATE SET
       email_notifications = EXCLUDED.email_notifications,
       report_alerts = EXCLUDED.report_alerts,
       weekly_digest = EXCLUDED.weekly_digest,
+      dark_mode = EXCLUDED.dark_mode,
       auto_verify = EXCLUDED.auto_verify,
       min_confidence_score = EXCLUDED.min_confidence_score,
       updated_at = CURRENT_TIMESTAMP
@@ -132,6 +143,7 @@ async function upsertSettings(userId, settings) {
       email_notifications,
       report_alerts,
       weekly_digest,
+      dark_mode,
       auto_verify,
       min_confidence_score`,
     [
@@ -139,6 +151,7 @@ async function upsertSettings(userId, settings) {
       settings.emailNotifications,
       settings.reportAlerts,
       settings.weeklyDigest,
+      settings.darkMode,
       settings.autoVerify,
       settings.minConfidenceScore,
     ]
@@ -155,6 +168,7 @@ async function getSettingsForUser(userId) {
       email_notifications,
       report_alerts,
       weekly_digest,
+      dark_mode,
       auto_verify,
       min_confidence_score
     FROM moderator_settings

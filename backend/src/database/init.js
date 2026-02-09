@@ -261,6 +261,7 @@ const initDatabase = async () => {
         email_notifications BOOLEAN NOT NULL DEFAULT TRUE,
         report_alerts BOOLEAN NOT NULL DEFAULT TRUE,
         weekly_digest BOOLEAN NOT NULL DEFAULT FALSE,
+        dark_mode BOOLEAN NOT NULL DEFAULT FALSE,
         auto_verify BOOLEAN NOT NULL DEFAULT FALSE,
         min_confidence_score INTEGER NOT NULL DEFAULT 80 CHECK (min_confidence_score BETWEEN 0 AND 100),
         last_weekly_digest_sent_at TIMESTAMP,

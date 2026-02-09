@@ -1,0 +1,20 @@
+const THEME_STORAGE_KEY = 'moderator_dark_mode'
+
+function normalizeStoredValue(value) {
+  if (value === '1' || value === 'true') return true
+  if (value === '0' || value === 'false') return false
+  return null
+}
+
+export function readStoredDarkMode() {
+  const stored = normalizeStoredValue(localStorage.getItem(THEME_STORAGE_KEY))
+  return stored ?? false
+}
+
+export function persistDarkMode(enabled) {
+  localStorage.setItem(THEME_STORAGE_KEY, enabled ? '1' : '0')
+}
+
+export function applyDarkMode(enabled) {
+  document.documentElement.classList.toggle('dark', Boolean(enabled))
+}

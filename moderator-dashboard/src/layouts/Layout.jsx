@@ -1,15 +1,33 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { io } from 'socket.io-client'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../context/AuthContext'
+import { settingsAPI } from '../services/api'
+import { applyDarkMode, persistDarkMode } from '../utils/theme'
 import Navigation from './Navigation'
 
 function Layout({ children }) {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const [notifications, setNotifications] = useState([])
+  const { data: dashboardSettings } = useQuery({
+    queryKey: ['dashboardSettings'],
+    queryFn: async () => {
+      const result = await settingsAPI.get()
+      if (!result.success) return null
+      return result.data
+    },
+    enabled: Boolean(user),
+    staleTime: 60 * 1000,
+  })
 
   const activeNotifications = useMemo(() => notifications.slice(0, 4), [notifications])
+
+  useEffect(() => {
+    if (typeof dashboardSettings?.darkMode !== 'boolean') return
+    applyDarkMode(dashboardSettings.darkMode)
+    persistDarkMode(dashboardSettings.darkMode)
+  }, [dashboardSettings?.darkMode])
 
   useEffect(() => {
     const token = localStorage.getItem('moderator_token')

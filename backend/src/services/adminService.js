@@ -227,6 +227,25 @@ async function clearAllManagedTables() {
   };
 }
 
+async function resetAllReports() {
+  const countsBeforeReset = await db.one(`
+    SELECT
+      COUNT(*)::int AS incidents,
+      COUNT(*) FILTER (WHERE is_draft = FALSE)::int AS submitted_incidents
+    FROM incidents
+  `);
+
+  await db.none('TRUNCATE TABLE incidents RESTART IDENTITY CASCADE');
+
+  return {
+    incidentsBeforeReset: parseInt(countsBeforeReset.incidents, 10) || 0,
+    submittedIncidentsBeforeReset: parseInt(countsBeforeReset.submitted_incidents, 10) || 0,
+    incidentsAfterReset: 0,
+    submittedIncidentsAfterReset: 0,
+    status: 'cleared',
+  };
+}
+
 module.exports = {
   getPendingApplications,
   approveApplication,
@@ -236,5 +255,6 @@ module.exports = {
   deleteRow,
   clearTable,
   clearAllManagedTables,
+  resetAllReports,
   MANAGED_TABLES,
 };

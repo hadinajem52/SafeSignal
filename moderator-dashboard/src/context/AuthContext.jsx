@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
+import { applyDarkMode, readStoredDarkMode } from '../utils/theme'
 
 const AuthContext = createContext(null)
 
@@ -8,6 +9,8 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    applyDarkMode(readStoredDarkMode())
+
     // Check if user is logged in (check localStorage)
     const storedUser = localStorage.getItem('moderator_user')
     const token = localStorage.getItem('moderator_token')
