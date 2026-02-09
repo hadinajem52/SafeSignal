@@ -15,25 +15,7 @@ import { timelineAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import io from 'socket.io-client';
 import { tokenStorage } from '../services/api';
-import Constants from 'expo-constants';
-
-const getSocketUrl = () => {
-  if (!__DEV__) {
-    return 'https://your-production-api.com';
-  }
-  
-  const debuggerHost = Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost;
-  if (debuggerHost) {
-    const host = debuggerHost.split(':')[0];
-    return `http://${host}:3000`;
-  }
-  
-  if (Platform.OS === 'android') {
-    return 'http://localhost:3000';
-  }
-  
-  return 'http://localhost:3000';
-};
+import getSocketUrl from '../utils/socketUrl';
 
 const IncidentTimeline = ({ incidentId, incidentStatus }) => {
   const { theme } = useTheme();

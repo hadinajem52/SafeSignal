@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import useRealtimeNotifications from '../hooks/useRealtimeNotifications';
 
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
@@ -57,6 +58,7 @@ const LoadingScreen = ({ theme }) => (
 const AppNavigator = () => {
   const { isAuthenticated, isLoading } = useAuth();
   const { theme, isDark } = useTheme();
+  useRealtimeNotifications();
 
   const navigationTheme = {
     ...(isDark ? DarkTheme : DefaultTheme),

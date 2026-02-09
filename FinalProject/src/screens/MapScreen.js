@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { incidentAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
+import useUserPreferences from '../hooks/useUserPreferences';
 import incidentConstants from '../../../constants/incident';
 import useIncidentFilters from '../hooks/useIncidentFilters';
 import useMapRegion from '../hooks/useMapRegion';
@@ -43,6 +44,7 @@ const DEFAULT_REGION = {
 const MapScreen = () => {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const { preferences } = useUserPreferences();
   const mapRef = useRef(null);
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -66,7 +68,11 @@ const MapScreen = () => {
     locationLoading,
     goToMyLocation,
     resetToDefaultRegion,
-  } = useMapRegion({ defaultRegion: DEFAULT_REGION, mapRef });
+  } = useMapRegion({
+    defaultRegion: DEFAULT_REGION,
+    mapRef,
+    locationServicesEnabled: preferences.locationServices,
+  });
 
   // Fetch incidents from API
   const fetchIncidents = useCallback(async (isRefresh = false) => {
@@ -205,7 +211,7 @@ const MapScreen = () => {
         provider={PROVIDER_GOOGLE}
         initialRegion={region}
         onRegionChangeComplete={setRegion}
-        showsUserLocation
+        showsUserLocation={preferences.locationServices}
         showsMyLocationButton={false}
         showsCompass
         showsScale

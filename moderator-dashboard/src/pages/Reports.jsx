@@ -13,6 +13,7 @@ import { io } from 'socket.io-client'
 import { STATUS_COLORS, STATUS_LABELS, MODERATOR_STATUS_FILTERS } from '../constants/incident'
 import IncidentTimeline from '../components/IncidentTimeline'
 import DedupCandidatesPanel from '../components/DedupCandidatesPanel'
+import GoogleMapPanel from '../components/GoogleMapPanel'
 
 function Reports() {
   const [searchTerm, setSearchTerm] = useState('')
@@ -114,7 +115,7 @@ function Reports() {
     ...report,
     id: report.incident_id,
     reporter: report.username || 'Anonymous',
-    location: report.location_name ? `${report.latitude}, ${report.longitude}` : 'Unknown Location',
+    location: report.location_name || `${report.latitude}, ${report.longitude}`,
     createdAt: report.created_at || report.incident_date,
   }))
 
@@ -139,6 +140,9 @@ function Reports() {
         return 'text-gray-600'
     }
   }
+
+  const openMapsUrl = (latitude, longitude) =>
+    `https://www.google.com/maps?q=${latitude},${longitude}`
 
   return (
     <div>
@@ -261,6 +265,35 @@ function Reports() {
 
                 <div className="border border-gray-200 rounded-lg p-4 bg-white">
                   <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-bold text-gray-900">Location Context</h4>
+                    <a
+                      href={openMapsUrl(selectedReport.latitude, selectedReport.longitude)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs font-semibold text-blue-700 hover:underline"
+                    >
+                      Open in Google Maps
+                    </a>
+                  </div>
+                  <GoogleMapPanel
+                    markers={[
+                      {
+                        id: `report-${selectedReport.id}`,
+                        lat: selectedReport.latitude,
+                        lng: selectedReport.longitude,
+                        title: selectedReport.title || `Incident #${selectedReport.id}`,
+                      },
+                    ]}
+                    center={{ lat: selectedReport.latitude, lng: selectedReport.longitude }}
+                    height={220}
+                    zoom={15}
+                    autoFit={false}
+                    emptyMessage="No coordinates available for this report."
+                  />
+                </div>
+
+                <div className="border border-gray-200 rounded-lg p-4 bg-white">
+                  <div className="flex items-center justify-between mb-3">
                     <h4 className="font-bold text-gray-900">ML Insights</h4>
                     {isMlLoading && <span className="text-xs text-gray-500">Loading...</span>}
                   </div>
@@ -315,6 +348,8 @@ function Reports() {
                     incidentId: selectedReport.id,
                     title: selectedReport.title,
                     description: selectedReport.description,
+                    latitude: selectedReport.latitude,
+                    longitude: selectedReport.longitude,
                   }}
                   onMerge={(duplicateIncidentId) => linkDuplicateMutation.mutate(duplicateIncidentId)}
                 />

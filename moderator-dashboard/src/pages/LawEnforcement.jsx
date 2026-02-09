@@ -6,6 +6,7 @@ import { leiAPI } from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import { STATUS_COLORS, STATUS_LABELS, LEI_STATUS_FILTERS, CLOSURE_OUTCOMES } from '../constants/incident'
 import IncidentTimeline from '../components/IncidentTimeline'
+import GoogleMapPanel from '../components/GoogleMapPanel'
 
 const STATUS_TRANSITIONS = {
   verified: ['dispatched', 'investigating', 'police_closed'],
@@ -182,6 +183,35 @@ function LawEnforcement() {
               <div>
                 <p className="font-semibold">Critical alert: {alert.title}</p>
                 <p className="text-sm">Severity: {alert.severity?.toUpperCase()} · Status: {formatStatusLabel(alert.status)}</p>
+                {Number.isFinite(Number(alert.latitude)) && Number.isFinite(Number(alert.longitude)) && (
+                  <div className="mt-2">
+                    <a
+                      href={openMapsUrl(alert.latitude, alert.longitude)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-sm font-medium text-red-700 hover:underline"
+                    >
+                      <MapPin size={14} /> Locate Alert
+                    </a>
+                    <div className="mt-2 max-w-md">
+                      <GoogleMapPanel
+                        markers={[
+                          {
+                            id: `alert-${alert.incidentId}`,
+                            lat: alert.latitude,
+                            lng: alert.longitude,
+                            title: alert.title || `Incident #${alert.incidentId}`,
+                          },
+                        ]}
+                        center={{ lat: alert.latitude, lng: alert.longitude }}
+                        zoom={15}
+                        height={150}
+                        autoFit={false}
+                        emptyMessage="No alert coordinates available."
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -346,10 +376,21 @@ function LawEnforcement() {
 
               <div className="bg-white border border-gray-200 rounded-lg p-4">
                 <h4 className="font-bold text-gray-900 mb-3">Operational Map</h4>
-                <div className="bg-gray-100 rounded-lg p-6 text-sm text-gray-600 flex items-center gap-3">
-                  <MapPin className="text-blue-600" />
-                  Tactical map view unavailable in this environment. Use the map link above for navigation.
-                </div>
+                <GoogleMapPanel
+                  markers={[
+                    {
+                      id: `lei-${selectedIncident.incident_id}`,
+                      lat: selectedIncident.latitude,
+                      lng: selectedIncident.longitude,
+                      title: selectedIncident.title || `Incident #${selectedIncident.incident_id}`,
+                    },
+                  ]}
+                  center={{ lat: selectedIncident.latitude, lng: selectedIncident.longitude }}
+                  zoom={15}
+                  height={260}
+                  autoFit={false}
+                  emptyMessage="No coordinates available for this incident."
+                />
               </div>
 
               <div className="bg-white border border-gray-200 rounded-lg p-4">

@@ -97,6 +97,9 @@ const emitLeiAlertIfNeeded = (incident) => {
     severity: incident.severity,
     status: incident.status,
     incidentDate: incident.incident_date,
+    latitude: incident.latitude,
+    longitude: incident.longitude,
+    locationName: incident.location_name || null,
   });
 };
 
@@ -315,6 +318,8 @@ const buildDedupCandidates = (incident, candidates) => {
         incidentId: candidate.incident_id,
         title: candidate.title,
         description: candidate.description,
+        latitude: Number.isFinite(Number(candidate.latitude)) ? Number(candidate.latitude) : null,
+        longitude: Number.isFinite(Number(candidate.longitude)) ? Number(candidate.longitude) : null,
         score: Number(score.toFixed(3)),
         distanceMeters: Math.round(distanceMeters),
         timeHours: Number(timeHours.toFixed(2)),
@@ -514,6 +519,8 @@ async function createIncident(incidentData, reporterId) {
             i.incident_id,
             i.title,
             i.description,
+            i.latitude,
+            i.longitude,
             i.category,
             i.incident_date,
             i.reporter_id,
@@ -664,6 +671,8 @@ async function createIncident(incidentData, reporterId) {
                 incidentId: incident.incident_id,
                 title: incident.title,
                 description: incident.description,
+                latitude: incident.latitude,
+                longitude: incident.longitude,
               },
             },
             riskScore === null || riskScore === undefined
