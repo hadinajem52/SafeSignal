@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   CircleF,
   GoogleMap,
@@ -10,13 +10,54 @@ import {
 
 const GOOGLE_MAPS_LIBRARIES = ['visualization']
 const FALLBACK_CENTER = { lat: 37.0902, lng: -95.7129 }
+const DARK_MAP_STYLES = [
+  { elementType: 'geometry', stylers: [{ color: '#1f2937' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#111827' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#d1d5db' }] },
+  { featureType: 'administrative', elementType: 'geometry', stylers: [{ color: '#374151' }] },
+  { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#111827' }] },
+  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#9ca3af' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#374151' }] },
+  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#1f2937' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#d1d5db' }] },
+  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#111827' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0b1220' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#93c5fd' }] },
+]
 
 const toNumber = (value) => {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : null
 }
 
-function GoogleMapPanel({
+class MapErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false }
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
+
+  componentDidCatch(error) {
+    console.error('GoogleMapPanel error:', error)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          Map failed to render.
+        </div>
+      )
+    }
+
+    return this.props.children
+  }
+}
+
+function GoogleMapPanelContent({
   markers = [],
   center = null,
   height = 220,
@@ -27,12 +68,35 @@ function GoogleMapPanel({
   autoFit = true,
   emptyMessage = 'No location data available.',
 }) {
+  const [isDarkMode, setIsDarkMode] = useState(() =>
+    Boolean(
+      typeof document !== 'undefined' &&
+      document.documentElement?.classList.contains('dark')
+    )
+  )
   const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'safesignal-google-maps-script',
     googleMapsApiKey,
     libraries: GOOGLE_MAPS_LIBRARIES,
   })
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined
+    if (typeof MutationObserver === 'undefined') return undefined
+
+    const root = document.documentElement
+    if (!root) return undefined
+
+    setIsDarkMode(root.classList.contains('dark'))
+
+    const observer = new MutationObserver(() => {
+      setIsDarkMode(root.classList.contains('dark'))
+    })
+
+    observer.observe(root, { attributes: true, attributeFilter: ['class'] })
+    return () => observer.disconnect()
+  }, [])
 
   const validMarkers = useMemo(() => {
     return markers
@@ -58,17 +122,25 @@ function GoogleMapPanel({
     return FALLBACK_CENTER
   }, [center, validMarkers])
 
+  const canRenderHeatmap = useMemo(
+    () =>
+      Boolean(
+        isLoaded &&
+        typeof window !== 'undefined' &&
+        window.google?.maps?.visualization?.HeatmapLayer
+      ),
+    [isLoaded]
+  )
+
   const heatmapData = useMemo(() => {
-    if (!isLoaded || !showHeatmap || validMarkers.length === 0) {
+    if (!showHeatmap || !canRenderHeatmap || validMarkers.length === 0) {
       return []
     }
-    return validMarkers.map(
-      (marker) => ({
-        location: new window.google.maps.LatLng(marker.lat, marker.lng),
-        weight: marker.weight,
-      })
-    )
-  }, [isLoaded, showHeatmap, validMarkers])
+    return validMarkers.map((marker) => ({
+      location: new window.google.maps.LatLng(marker.lat, marker.lng),
+      weight: marker.weight,
+    }))
+  }, [canRenderHeatmap, showHeatmap, validMarkers])
 
   if (!googleMapsApiKey) {
     return (
@@ -109,6 +181,7 @@ function GoogleMapPanel({
     streetViewControl: false,
     fullscreenControl: false,
     clickableIcons: false,
+    styles: isDarkMode ? DARK_MAP_STYLES : undefined,
   }
 
   const onMapLoad = (map) => {
@@ -149,7 +222,7 @@ function GoogleMapPanel({
         onLoad={onMapLoad}
         options={mapOptions}
       >
-        {showHeatmap && heatmapData.length > 0 && (
+        {showHeatmap && canRenderHeatmap && heatmapData.length > 0 && (
           <HeatmapLayerF
             data={heatmapData}
             options={{
@@ -201,6 +274,14 @@ function GoogleMapPanel({
         )}
       </GoogleMap>
     </div>
+  )
+}
+
+function GoogleMapPanel(props) {
+  return (
+    <MapErrorBoundary>
+      <GoogleMapPanelContent {...props} />
+    </MapErrorBoundary>
   )
 }
 

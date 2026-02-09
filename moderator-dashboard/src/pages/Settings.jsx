@@ -1,13 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Settings, Save, AlertCircle, RotateCcw } from 'lucide-react'
+import { Settings, Save, AlertCircle, RotateCcw, Moon } from 'lucide-react'
 import { settingsAPI } from '../services/api'
 import { useAuth } from '../context/AuthContext'
+import { applyDarkMode, persistDarkMode } from '../utils/theme'
 
 const DEFAULT_SETTINGS = {
   emailNotifications: true,
   reportAlerts: true,
   weeklyDigest: false,
+  darkMode: false,
   autoVerify: false,
   minConfidenceScore: 80,
 }
@@ -39,6 +41,10 @@ function SettingsPage() {
   useEffect(() => {
     if (persistedSettings) {
       setSettings(persistedSettings)
+      if (typeof persistedSettings.darkMode === 'boolean') {
+        applyDarkMode(persistedSettings.darkMode)
+        persistDarkMode(persistedSettings.darkMode)
+      }
       setErrorMessage('')
     }
   }, [persistedSettings])
@@ -64,6 +70,10 @@ function SettingsPage() {
     onSuccess: (updatedSettings) => {
       queryClient.setQueryData(['dashboardSettings'], updatedSettings)
       setSettings(updatedSettings)
+      if (typeof updatedSettings.darkMode === 'boolean') {
+        applyDarkMode(updatedSettings.darkMode)
+        persistDarkMode(updatedSettings.darkMode)
+      }
       setSuccessMessage('Settings saved successfully!')
       setErrorMessage('')
       setSaved(true)
@@ -83,6 +93,10 @@ function SettingsPage() {
     onSuccess: (resetSettings) => {
       queryClient.setQueryData(['dashboardSettings'], resetSettings)
       setSettings(resetSettings)
+      if (typeof resetSettings.darkMode === 'boolean') {
+        applyDarkMode(resetSettings.darkMode)
+        persistDarkMode(resetSettings.darkMode)
+      }
       setSuccessMessage('Settings reset to defaults.')
       setErrorMessage('')
       setSaved(true)
@@ -120,10 +134,63 @@ function SettingsPage() {
     },
   })
 
-  const isMutating = saveMutation.isPending || resetMutation.isPending || digestMutation.isPending
+  const darkModeMutation = useMutation({
+    mutationFn: async (isEnabled) => {
+      const result = await settingsAPI.update({ darkMode: isEnabled })
+      if (result.success) return result.data
+      throw new Error(result.error)
+    },
+    onMutate: async (isEnabled) => {
+      await queryClient.cancelQueries({ queryKey: ['dashboardSettings'] })
+      const previousSettings = queryClient.getQueryData(['dashboardSettings'])
+
+      queryClient.setQueryData(['dashboardSettings'], (current) => (
+        current ? { ...current, darkMode: isEnabled } : current
+      ))
+
+      return { previousSettings }
+    },
+    onSuccess: (updatedSettings) => {
+      queryClient.setQueryData(['dashboardSettings'], updatedSettings)
+      setSettings(updatedSettings)
+      applyDarkMode(updatedSettings.darkMode)
+      persistDarkMode(updatedSettings.darkMode)
+      setSuccessMessage('Dark mode preference saved.')
+      setErrorMessage('')
+      setSaved(true)
+    },
+    onError: (mutationError, _isEnabled, context) => {
+      const previousDarkMode = context?.previousSettings?.darkMode
+      if (typeof previousDarkMode === 'boolean') {
+        applyDarkMode(previousDarkMode)
+        persistDarkMode(previousDarkMode)
+        setSettings((prev) => ({ ...prev, darkMode: previousDarkMode }))
+      }
+      if (context?.previousSettings) {
+        queryClient.setQueryData(['dashboardSettings'], context.previousSettings)
+      }
+      setSaved(false)
+      setErrorMessage(mutationError.message || 'Failed to update dark mode')
+    },
+  })
+
+  const isMutating =
+    saveMutation.isPending ||
+    resetMutation.isPending ||
+    digestMutation.isPending ||
+    darkModeMutation.isPending
 
   const updateSetting = (key, value) => {
+    setSaved(false)
     setSettings((prev) => ({ ...prev, [key]: value }))
+  }
+
+  const handleDarkModeToggle = (isEnabled) => {
+    setSaved(false)
+    applyDarkMode(isEnabled)
+    persistDarkMode(isEnabled)
+    setSettings((prev) => ({ ...prev, darkMode: isEnabled }))
+    darkModeMutation.mutate(isEnabled)
   }
 
   const handleWeeklyDigestToggle = (isEnabled) => {
@@ -252,6 +319,32 @@ function SettingsPage() {
                 {digestMutation.isPending ? 'Sending Digest...' : 'Send Weekly Digest Now'}
               </button>
             </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <Moon size={24} />
+            Appearance
+          </h2>
+
+          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div>
+              <p className="font-medium text-gray-900">Dark Mode</p>
+              <p className="text-sm text-gray-600">
+                Use a dark interface theme across the dashboard.
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.darkMode}
+                onChange={(e) => handleDarkModeToggle(e.target.checked)}
+                className="sr-only peer"
+                disabled={isMutating}
+              />
+              <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
           </div>
         </div>
 

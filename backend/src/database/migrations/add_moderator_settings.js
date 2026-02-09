@@ -11,6 +11,7 @@ async function migrate() {
         email_notifications BOOLEAN NOT NULL DEFAULT TRUE,
         report_alerts BOOLEAN NOT NULL DEFAULT TRUE,
         weekly_digest BOOLEAN NOT NULL DEFAULT FALSE,
+        dark_mode BOOLEAN NOT NULL DEFAULT FALSE,
         auto_verify BOOLEAN NOT NULL DEFAULT FALSE,
         min_confidence_score INTEGER NOT NULL DEFAULT 80 CHECK (min_confidence_score BETWEEN 0 AND 100),
         last_weekly_digest_sent_at TIMESTAMP,
@@ -22,6 +23,11 @@ async function migrate() {
     await db.none(`
       ALTER TABLE moderator_settings
       ADD COLUMN IF NOT EXISTS last_weekly_digest_sent_at TIMESTAMP;
+    `);
+
+    await db.none(`
+      ALTER TABLE moderator_settings
+      ADD COLUMN IF NOT EXISTS dark_mode BOOLEAN NOT NULL DEFAULT FALSE;
     `);
 
     await db.none(`

@@ -17,6 +17,7 @@ function AdminPanel() {
   const [activeTab, setActiveTab] = useState('applications')
   const [selectedTable, setSelectedTable] = useState('')
   const [allDataConfirmation, setAllDataConfirmation] = useState('')
+  const [reportsResetConfirmation, setReportsResetConfirmation] = useState('')
   const [actionError, setActionError] = useState('')
   const [actionMessage, setActionMessage] = useState('')
 
@@ -142,6 +143,28 @@ function AdminPanel() {
     },
   })
 
+  const resetReportsMutation = useMutation({
+    mutationFn: async () =>
+      ensureSuccess(await adminAPI.resetAllReports(), 'Failed to reset reports'),
+    onSuccess: async (result) => {
+      setActionError('')
+      setActionMessage(
+        `All reports reset to 0 (${result.submittedIncidentsBeforeReset || 0} reports cleared)`
+      )
+      setReportsResetConfirmation('')
+      await queryClient.invalidateQueries({ queryKey: ['admin-database-tables'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin-table-rows'] })
+      await queryClient.invalidateQueries({ queryKey: ['dashboardStats'] })
+      await queryClient.invalidateQueries({ queryKey: ['reports'] })
+      await queryClient.invalidateQueries({ queryKey: ['lei-incidents'] })
+      await queryClient.invalidateQueries({ queryKey: ['users'] })
+    },
+    onError: (error) => {
+      setActionMessage('')
+      setActionError(error.message || 'Failed to reset reports')
+    },
+  })
+
   const renderApplications = () => {
     if (applicationsLoading) {
       return (
@@ -223,7 +246,7 @@ function AdminPanel() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           <div className="rounded-lg border border-gray-200 bg-white p-4 lg:col-span-1">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-900">Managed Tables</h3>
@@ -250,7 +273,13 @@ function AdminPanel() {
                         : 'border-gray-200 hover:bg-gray-50'
                     }`}
                   >
-                    <div className="font-medium text-gray-900">{table.tableName}</div>
+                    <div
+                      className={`font-medium ${
+                        selectedTable === table.tableName ? 'text-black' : 'text-gray-900'
+                      }`}
+                    >
+                      {table.tableName}
+                    </div>
                     <div className="text-xs text-gray-500">
                       Rows: {table.rowCount} | PK: {table.primaryKey}
                     </div>
@@ -327,6 +356,30 @@ function AdminPanel() {
                 })}
               </div>
             )}
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-red-300 bg-red-50 p-5">
+          <h3 className="text-red-800 font-semibold mb-2">Danger Zone: Reset All Reports to 0</h3>
+          <p className="text-sm text-red-700 mb-3">
+            This clears all incidents and report records while keeping user accounts and settings.
+          </p>
+          <p className="text-sm text-red-700 mb-2">Type <strong>RESET REPORTS</strong> to enable this action.</p>
+          <div className="flex flex-wrap gap-2 mb-5">
+            <input
+              type="text"
+              value={reportsResetConfirmation}
+              onChange={(event) => setReportsResetConfirmation(event.target.value)}
+              placeholder="RESET REPORTS"
+              className="px-3 py-2 border border-red-300 rounded w-56"
+            />
+            <button
+              onClick={() => resetReportsMutation.mutate()}
+              disabled={reportsResetConfirmation !== 'RESET REPORTS' || resetReportsMutation.isPending}
+              className="px-4 py-2 rounded bg-red-700 text-white font-medium hover:bg-red-800 disabled:opacity-50"
+            >
+              {resetReportsMutation.isPending ? 'Resetting Reports...' : 'Reset All Reports'}
+            </button>
           </div>
         </div>
 

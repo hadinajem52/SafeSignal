@@ -188,4 +188,17 @@ router.delete('/database/all', requireAdmin, async (req, res) => {
   }
 });
 
+router.post('/reports/reset', requireAdmin, async (req, res) => {
+  try {
+    const result = await adminService.resetAllReports();
+    res.json({
+      status: 'OK',
+      message: 'All reports reset to 0',
+      data: result,
+    });
+  } catch (error) {
+    handleServiceError(error, res, 'Failed to reset reports');
+  }
+});
+
 module.exports = router;
