@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: safesignal-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 1gb
+      --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    environment:
+      - REDIS_REPLICATION_DISKLESS_SYNC=yes
+    networks:
+      - safesignal
+
+  # Optional: Redis Commander for GUI inspection
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: safesignal-redis-commander
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - safesignal
+
+  # The ML service (optional, include if developing locally)
+  # ml-service:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: safesignal-ml
+  #   ports:
+  #     - "8000:8000"
+  #   environment:
+  #     - REDIS_URL=redis://redis:6379/0
+  #     - CACHE_TTL_CLASSIFY=3600
+  #     - CACHE_TTL_TOXICITY=1800
+  #     - CACHE_TTL_RISK=1800
+  #     - CACHE_TTL_EMBEDDING=7200
+  #     - CACHE_TTL_SIMILARITY=600
+  #   depends_on:
+  #     redis:
+  #       condition: service_healthy
+  #   networks:
+  #     - safesignal
+  #   # Uncomment for development with hot-reload
+  #   # volumes:
+  #   #   - .:/app
+
+volumes:
+  redis_data:
+    driver: local
+
+networks:
+  safesignal:
+    driver: bridge

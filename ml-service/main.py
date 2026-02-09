@@ -3,12 +3,10 @@ SafeSignal ML Microservice
 FastAPI service providing ML capabilities for incident analysis.
 """
 
-import hashlib
 import asyncio
 import logging
 import os
 import time
-from collections import OrderedDict
 from contextlib import asynccontextmanager
 from typing import Dict, List, Optional
 
@@ -17,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 import config
+from cache_manager import RedisCacheManager, InMemoryLRUCache
 from models.embeddings import EmbeddingModel
 from models.classifier import CategoryClassifier
 from models.toxicity import ToxicityDetector
@@ -30,49 +29,27 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# ============== LRU Cache ==============
+# ============== Cache Manager ==============
 
-class LRUCache:
-    """Simple LRU cache for ML inference results."""
+# Initialize cache manager (Redis with in-memory fallback)
+redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+ttl_config = {
+    "classify": int(os.getenv("CACHE_TTL_CLASSIFY", 3600)),      # 1 hour
+    "toxicity": int(os.getenv("CACHE_TTL_TOXICITY", 1800)),      # 30 min
+    "risk": int(os.getenv("CACHE_TTL_RISK", 1800)),              # 30 min
+    "embedding": int(os.getenv("CACHE_TTL_EMBEDDING", 7200)),    # 2 hours
+    "similarity": int(os.getenv("CACHE_TTL_SIMILARITY", 600)),   # 10 min
+}
 
-    def __init__(self, max_size: int = 512, ttl_seconds: int = 300):
-        self._cache: OrderedDict = OrderedDict()
-        self._max_size = max_size
-        self._ttl = ttl_seconds
-        self._hits = 0
-        self._misses = 0
+# Fallback in-memory cache for Redis outages
+fallback_cache = InMemoryLRUCache(max_size=128, ttl_seconds=300)
 
-    def _make_key(self, prefix: str, text: str, **kwargs) -> str:
-        raw = f"{prefix}:{text}:{sorted(kwargs.items())}"
-        return hashlib.md5(raw.encode()).hexdigest()
-
-    def get(self, prefix: str, text: str, **kwargs):
-        key = self._make_key(prefix, text, **kwargs)
-        if key in self._cache:
-            value, ts = self._cache[key]
-            if time.time() - ts < self._ttl:
-                self._cache.move_to_end(key)
-                self._hits += 1
-                return value
-            del self._cache[key]
-        self._misses += 1
-        return None
-
-    def set(self, prefix: str, text: str, value, **kwargs):
-        key = self._make_key(prefix, text, **kwargs)
-        self._cache[key] = (value, time.time())
-        self._cache.move_to_end(key)
-        if len(self._cache) > self._max_size:
-            self._cache.popitem(last=False)
-
-    @property
-    def stats(self):
-        total = self._hits + self._misses
-        rate = (self._hits / total * 100) if total > 0 else 0.0
-        return {"hits": self._hits, "misses": self._misses, "hit_rate": f"{rate:.1f}%", "size": len(self._cache)}
-
-
-cache = LRUCache(max_size=512, ttl_seconds=300)
+# Initialize Redis cache manager
+cache = RedisCacheManager(
+    redis_url=redis_url,
+    ttl_map=ttl_config,
+    fallback_cache=fallback_cache,
+)
 
 # Global model instances (lazy loaded)
 embedding_model: Optional[EmbeddingModel] = None
@@ -125,20 +102,22 @@ async def lifespan(app: FastAPI):
     global embedding_model, classifier_model, toxicity_model, risk_scorer
 
     logger.info("Loading ML models...")
+    logger.info(f"Cache backend: {cache.stats.get('backend', 'unknown')}")
 
     try:
         embedding_model = EmbeddingModel(config.EMBEDDING_MODEL)
         classifier_model = CategoryClassifier(config.CLASSIFIER_MODEL)
         toxicity_model = ToxicityDetector()
         risk_scorer = RiskScorer()
-        logger.info("All models loaded successfully")
+        logger.info("✅ All models loaded successfully")
     except Exception as e:
-        logger.error(f"Failed to load models: {e}")
+        logger.error(f"❌ Failed to load models: {e}")
         raise
 
     yield
 
     logger.info("Shutting down ML service")
+    logger.info(f"Cache stats: {cache.stats}")
 
 
 app = FastAPI(
@@ -281,6 +260,69 @@ async def model_versions():
         "variant": config.EXPERIMENT_VARIANT,
         "models": config.MODEL_VERSION_MAP,
         "classifier_runtime": classifier_runtime,
+    }
+
+
+@app.get("/cache/stats")
+async def cache_stats():
+    """Get cache statistics and backend info."""
+    return {
+        "stats": cache.stats,
+        "ttl_config": {
+            "classify": ttl_config["classify"],
+            "toxicity": ttl_config["toxicity"],
+            "risk": ttl_config["risk"],
+            "embedding": ttl_config["embedding"],
+            "similarity": ttl_config["similarity"],
+        },
+    }
+
+
+@app.post("/cache/invalidate/{model_name}")
+async def invalidate_cache(model_name: str):
+    """
+    Invalidate cache for a specific model when it's been retrained.
+    
+    Models: classifier, toxicity, risk, embedding
+    """
+    valid_models = {"classifier", "toxicity", "risk", "embedding"}
+    if model_name not in valid_models:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid model: {model_name}. Valid options: {valid_models}",
+        )
+
+    count = cache.invalidate_on_model_update(model_name)
+    return {
+        "model": model_name,
+        "invalidated_count": count,
+        "message": f"Cache invalidated for {model_name}",
+    }
+
+
+@app.post("/cache/clear")
+async def clear_all_cache():
+    """Clear entire cache (use with caution)."""
+    prefixes = ["classify", "toxicity", "risk", "embedding", "similarity"]
+    total_cleared = 0
+    for prefix in prefixes:
+        total_cleared += cache.clear_prefix(prefix)
+
+    logger.warning(f"⚠️ Cache completely cleared: {total_cleared} entries removed")
+    return {
+        "message": "Entire cache cleared",
+        "entries_removed": total_cleared,
+    }
+
+
+@app.post("/cache/reconnect")
+async def reconnect_redis():
+    """Attempt to reconnect to Redis (for debugging)."""
+    success = cache.reconnect()
+    return {
+        "success": success,
+        "backend": "redis" if success else "in-memory (fallback)",
+        "stats": cache.stats,
     }
 
 
