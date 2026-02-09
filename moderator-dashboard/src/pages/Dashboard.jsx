@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { statsAPI } from '../services/api'
 import { 
@@ -32,7 +32,7 @@ function StatCard({ icon: Icon, label, value, change, color }) {
 }
 
 function Dashboard() {
-  const { data: stats, isLoading, error } = useQuery({
+  const { data: stats, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['dashboardStats'],
     queryFn: async () => {
       const result = await statsAPI.getDashboardStats()
@@ -46,6 +46,21 @@ function Dashboard() {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="bg-white rounded-lg shadow p-6">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
+        <p className="text-red-600 mb-4">{error?.message || 'Failed to load dashboard stats'}</p>
+        <button
+          onClick={() => refetch()}
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+        >
+          Retry
+        </button>
       </div>
     )
   }

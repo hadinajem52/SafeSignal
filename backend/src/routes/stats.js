@@ -34,10 +34,10 @@ function handleServiceError(error, res, defaultMessage) {
 
 /**
  * @route   GET /api/stats/moderator/dashboard
- * @desc    Get dashboard statistics for moderators
- * @access  Private (Moderator/Admin)
+ * @desc    Get dashboard statistics for staff dashboard
+ * @access  Private (Moderator/Admin/Law Enforcement)
  */
-router.get('/moderator/dashboard', authenticateToken, requireRole(['moderator', 'admin']), async (req, res) => {
+router.get('/moderator/dashboard', authenticateToken, requireRole(['moderator', 'admin', 'law_enforcement']), async (req, res) => {
   try {
     const stats = await statsService.getModeratorStats();
 
