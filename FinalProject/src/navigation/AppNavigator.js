@@ -6,9 +6,9 @@ import { useTheme } from '../context/ThemeContext';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import useRealtimeNotifications from '../hooks/useRealtimeNotifications';
 
-import LoginScreen from '../screens/LoginScreen';
-import RegisterScreen from '../screens/RegisterScreen';
-import VerificationScreen from '../screens/VerificationScreen';
+import LoginScreen from '../screens/Auth/LoginScreen';
+import RegisterScreen from '../screens/Auth/RegisterScreen';
+import VerificationScreen from '../screens/Auth/VerificationScreen';
 import TabNavigator from './TabNavigator';
 
 const Stack = createNativeStackNavigator();
