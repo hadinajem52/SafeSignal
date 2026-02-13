@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 
 // Screens
-import HomeScreen from '../screens/HomeScreen';
+import HomeScreen from '../screens/Home/HomeScreen';
 import MyReportsScreen from '../screens/MyReportsScreen';
 import ReportIncidentScreen from '../screens/ReportIncidentScreen';
 import MapScreen from '../screens/MapScreen';
