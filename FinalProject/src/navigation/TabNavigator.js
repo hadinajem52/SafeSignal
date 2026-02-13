@@ -7,7 +7,7 @@ import { useTheme } from '../context/ThemeContext';
 
 // Screens
 import HomeScreen from '../screens/Home/HomeScreen';
-import MyReportsScreen from '../screens/MyReportsScreen';
+import MyReportsScreen from '../screens/MyReports/MyReportsScreen';
 import ReportIncidentScreen from '../screens/ReportIncidentScreen';
 import MapScreen from '../screens/Map/MapScreen';
 import AccountScreen from '../screens/Account/AccountScreen';
