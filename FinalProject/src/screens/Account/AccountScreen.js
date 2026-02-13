@@ -1,0 +1,222 @@
+import React, { useMemo, useState } from 'react';
+import { Alert, Linking, ScrollView, Text } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
+import useUserPreferences from '../../hooks/useUserPreferences';
+import { sendTestNotification } from '../../services/mobileNotifications';
+import DangerZone from './DangerZone';
+import EditNameModal from './EditNameModal';
+import PreferencesSection from './PreferencesSection';
+import ProfileHeader from './ProfileHeader';
+import SupportSection from './SupportSection';
+import styles from './accountStyles';
+import ThemeSection from './ThemeSection';
+
+const AccountScreen = () => {
+  const { logout, user } = useAuth();
+  const { theme, isDark, mode, setThemeMode } = useTheme();
+  const { preferences, updatePreference } = useUserPreferences();
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [pendingName, setPendingName] = useState('');
+
+  const displayName = useMemo(() => {
+    const savedName = preferences.displayName?.trim();
+    return savedName || user?.username || user?.email || 'User';
+  }, [preferences.displayName, user]);
+
+  const avatarUri = preferences.avatarUri || '';
+  const memberSince = user?.created_at
+    ? new Date(user.created_at).toLocaleString('en-US', { month: 'long', year: 'numeric' })
+    : 'January 2026';
+  const initials =
+    displayName
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join('') || 'U';
+
+  const confirmDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'This action is permanent and cannot be undone. Do you want to continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            const email = 'support@safesignal.org';
+            const subject = encodeURIComponent('Account Deletion Request');
+            const body = encodeURIComponent(
+              `Please delete my SafeSignal account.\n\nUser: ${user?.email || 'Unknown'}`
+            );
+            Linking.openURL(`mailto:${email}?subject=${subject}&body=${body}`).catch(() => {
+              Alert.alert('Error', 'Unable to open mail app. Please contact support.');
+            });
+          },
+        },
+      ]
+    );
+  };
+
+  const openLink = (url) => {
+    Linking.openURL(url).catch(() => {});
+  };
+
+  const contactSupport = () => {
+    const email = 'support@safesignal.org';
+    const subject = encodeURIComponent('SafeSignal Support Request');
+    const body = encodeURIComponent('Describe your issue or question here.');
+    Linking.openURL(`mailto:${email}?subject=${subject}&body=${body}`).catch(() => {});
+  };
+
+  const handleAvatarPress = () => {
+    Alert.alert('Profile Photo', 'Update your profile photo', [
+      {
+        text: 'Choose Photo',
+        onPress: async () => {
+          try {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== 'granted') {
+              Alert.alert(
+                'Permission Required',
+                'Photo library permission is needed to choose a photo.'
+              );
+              return;
+            }
+
+            const result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ['images'],
+              allowsEditing: true,
+              aspect: [1, 1],
+              quality: 0.8,
+            });
+
+            if (!result.canceled && result.assets[0]) {
+              updatePreference('avatarUri', result.assets[0].uri);
+            }
+          } catch (error) {
+            console.error('Error picking avatar:', error);
+            Alert.alert('Error', 'Failed to update profile photo.');
+          }
+        },
+      },
+      {
+        text: 'Remove Photo',
+        style: 'destructive',
+        onPress: () => updatePreference('avatarUri', ''),
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
+  const openEditName = () => {
+    setPendingName(displayName);
+    setIsEditingName(true);
+  };
+
+  const handleSaveName = () => {
+    const trimmed = pendingName.trim();
+    if (!trimmed) {
+      Alert.alert('Invalid Name', 'Please enter a display name.');
+      return;
+    }
+
+    updatePreference('displayName', trimmed);
+    setIsEditingName(false);
+  };
+
+  const handleLocationToggle = (value) => {
+    updatePreference('locationServices', value);
+    if (!value) {
+      Alert.alert(
+        'Location Disabled',
+        'Location access is disabled for the app. You can re-enable it in system settings.',
+        [
+          { text: 'Open Settings', onPress: () => Linking.openSettings?.() },
+          { text: 'OK' },
+        ]
+      );
+    }
+  };
+
+  const handleNotificationsToggle = (value) => {
+    updatePreference('pushNotifications', value);
+    if (!value) {
+      Alert.alert(
+        'Notifications Disabled',
+        'Notification permissions can be managed in system settings.',
+        [
+          { text: 'Open Settings', onPress: () => Linking.openSettings?.() },
+          { text: 'OK' },
+        ]
+      );
+    }
+  };
+
+  const handleSendTestNotification = async () => {
+    if (!preferences.pushNotifications) {
+      Alert.alert('Notifications Disabled', 'Enable Push Notifications first.');
+      return;
+    }
+
+    const success = await sendTestNotification();
+    if (!success) {
+      Alert.alert('Notification Failed', 'Notification permission may be denied on this device.');
+    }
+  };
+
+  return (
+    <ScrollView
+      style={[styles.container, { backgroundColor: theme.background }]}
+      contentContainerStyle={styles.contentContainer}
+    >
+      <Text style={[styles.title, { color: theme.text }]}>Account</Text>
+
+      <ProfileHeader
+        avatarUri={avatarUri}
+        initials={initials}
+        displayName={displayName}
+        memberSince={memberSince}
+        email={user?.email || 'User'}
+        onAvatarPress={handleAvatarPress}
+        onEditNamePress={openEditName}
+      />
+
+      <ThemeSection
+        isDark={isDark}
+        mode={mode}
+        onThemeToggle={(value) => setThemeMode(value ? 'dark' : 'light')}
+      />
+
+      <PreferencesSection
+        preferences={preferences}
+        onLocationToggle={handleLocationToggle}
+        onNotificationsToggle={handleNotificationsToggle}
+        onDefaultAnonymousToggle={(value) => updatePreference('defaultAnonymous', value)}
+        onSendTestNotification={handleSendTestNotification}
+      />
+
+      <SupportSection
+        onHelp={() => openLink('https://safesignal.org/help')}
+        onTerms={() => openLink('https://safesignal.org/terms')}
+        onPrivacy={() => openLink('https://safesignal.org/privacy')}
+        onContactSupport={contactSupport}
+      />
+
+      <DangerZone onLogout={logout} onDeleteAccount={confirmDeleteAccount} />
+
+      <EditNameModal
+        visible={isEditingName}
+        pendingName={pendingName}
+        onChangeName={setPendingName}
+        onCancel={() => setIsEditingName(false)}
+        onSave={handleSaveName}
+      />
+    </ScrollView>
+  );
+};
+
+export default AccountScreen;

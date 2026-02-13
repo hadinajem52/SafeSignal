@@ -10,7 +10,7 @@ import HomeScreen from '../screens/Home/HomeScreen';
 import MyReportsScreen from '../screens/MyReportsScreen';
 import ReportIncidentScreen from '../screens/ReportIncidentScreen';
 import MapScreen from '../screens/MapScreen';
-import AccountScreen from '../screens/AccountScreen';
+import AccountScreen from '../screens/Account/AccountScreen';
 import IncidentDetailScreen from '../screens/IncidentDetailScreen';
 
 const Tab = createBottomTabNavigator();
