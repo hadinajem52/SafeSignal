@@ -15,10 +15,10 @@ const ContributionsGrid = ({ userStats }) => {
           <Text style={[styles.contributionNumber, { color: theme.text }]}>
             {userStats?.totalReports || 0}
           </Text>
-          <Text style={[styles.contributionLabel, { color: theme.textSecondary }]}>Total{'
+          <Text style={[styles.contributionLabel, { color: theme.textSecondary }]}>Total{'\n'}Reports</Text>
         </View>
         <View style={styles.contributionCard}>
-          <Text style={[styles.contributionNumber, { color: theme.accentGreen }]}>
+          <Text style={[styles.contributionNumber, { color: theme.accentGreen }]}> 
             {userStats?.verifiedReports || 0}
           </Text>
           <Text style={[styles.contributionLabel, { color: theme.textSecondary }]}>Verified</Text>
