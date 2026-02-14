@@ -6,9 +6,9 @@ import {
   Filter, 
   Ban, 
   RotateCcw,
-  Shield,
   AlertTriangle
 } from 'lucide-react'
+import { getStatusColor } from '../utils/incident'
 
 function Users() {
   const [searchTerm, setSearchTerm] = useState('')
@@ -50,9 +50,9 @@ function Users() {
     return matchesSearch && matchesRole
   })
 
-  const getStatusColor = (status, isSuspended) => {
+  const getUserStatusColor = (status, isSuspended) => {
     if (isSuspended) return 'bg-red-100 text-red-800'
-    return status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+    return status === 'active' ? 'bg-green-100 text-green-800' : getStatusColor(status)
   }
 
   return (
@@ -130,7 +130,7 @@ function Users() {
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(user.status, user.isSuspended)}`}>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getUserStatusColor(user.status, user.isSuspended)}`}>
                       {user.isSuspended ? 'SUSPENDED' : user.status.toUpperCase()}
                     </span>
                   </td>
@@ -188,7 +188,7 @@ function Users() {
                   </span>
                 </div>
                 <div>
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(selectedUser.status, selectedUser.isSuspended)}`}>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getUserStatusColor(selectedUser.status, selectedUser.isSuspended)}`}>
                     {selectedUser.isSuspended ? 'SUSPENDED' : selectedUser.status.toUpperCase()}
                   </span>
                 </div>

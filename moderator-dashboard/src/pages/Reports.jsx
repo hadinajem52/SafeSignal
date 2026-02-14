@@ -10,10 +10,16 @@ import {
   AlertTriangle
 } from 'lucide-react'
 import { io } from 'socket.io-client'
-import { STATUS_COLORS, STATUS_LABELS, MODERATOR_STATUS_FILTERS } from '../constants/incident'
+import { MODERATOR_STATUS_FILTERS } from '../constants/incident'
 import IncidentTimeline from '../components/IncidentTimeline'
 import DedupCandidatesPanel from '../components/DedupCandidatesPanel'
 import GoogleMapPanel from '../components/GoogleMapPanel'
+import {
+  formatStatusLabel,
+  getSeverityColor,
+  getStatusColor,
+  openMapsUrl,
+} from '../utils/incident'
 
 function Reports() {
   const [searchTerm, setSearchTerm] = useState('')
@@ -118,31 +124,6 @@ function Reports() {
     location: report.location_name || `${report.latitude}, ${report.longitude}`,
     createdAt: report.created_at || report.incident_date,
   }))
-
-  const getStatusColor = (status) => STATUS_COLORS[status] || STATUS_COLORS.default
-
-  const formatStatusLabel = (status) => {
-    if (STATUS_LABELS[status]) {
-      return STATUS_LABELS[status]
-    }
-    return status.replace('_', ' ').toUpperCase()
-  }
-
-  const getSeverityColor = (severity) => {
-    switch(severity) {
-      case 'low':
-        return 'text-green-600'
-      case 'medium':
-        return 'text-yellow-600'
-      case 'high':
-        return 'text-red-600'
-      default:
-        return 'text-gray-600'
-    }
-  }
-
-  const openMapsUrl = (latitude, longitude) =>
-    `https://www.google.com/maps?q=${latitude},${longitude}`
 
   return (
     <div>
