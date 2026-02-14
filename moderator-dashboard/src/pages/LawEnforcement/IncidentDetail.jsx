@@ -6,7 +6,12 @@ import IncidentTimeline from '../../components/IncidentTimeline'
 import GoogleMapPanel from '../../components/GoogleMapPanel'
 import StatusBadge from '../../components/StatusBadge'
 import { CLOSURE_OUTCOMES } from '../../constants/incident'
-import { getSeverityColor, openMapsUrl, SEVERITY_VARIANTS } from '../../utils/incident'
+import {
+  formatCategoryLabel,
+  getSeverityColor,
+  openMapsUrl,
+  SEVERITY_VARIANTS,
+} from '../../utils/incident'
 import CaseActions from './CaseActions'
 
 function IncidentDetail({
@@ -44,7 +49,7 @@ function IncidentDetail({
           <div className="flex flex-wrap gap-3">
             <StatusBadge status={incident.status} size="sm" />
             <span className="px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
-              {incident.category.replace('_', ' ').toUpperCase()}
+              {formatCategoryLabel(incident.category)}
             </span>
             <span
               className={`px-4 py-2 rounded-full text-sm font-medium bg-gray-50 ${getSeverityColor(incident.severity, SEVERITY_VARIANTS.LAW_ENFORCEMENT)}`}
@@ -148,7 +153,7 @@ function IncidentDetail({
                   <BadgeCheck className="text-blue-600 mt-0.5" size={16} />
                   <div>
                     <p className="text-sm text-gray-800">
-                      {entry.action_type.replace('_', ' ')}
+                      {entry.action_type.replace(/_/g, ' ')}
                       {entry.moderator_name ? ` · ${entry.moderator_name}` : ''}
                     </p>
                     {entry.notes ? <p className="text-xs text-gray-500">{entry.notes}</p> : null}

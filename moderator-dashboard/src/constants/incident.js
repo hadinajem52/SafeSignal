@@ -28,6 +28,28 @@ export const STATUS_COLORS = {
   default: 'bg-gray-100 text-gray-800',
 };
 
+export const STATUS_COLORS_HEX = {
+  submitted: '#6c757d',
+  auto_processed: '#17a2b8',
+  in_review: '#ffc107',
+  verified: '#28a745',
+  dispatched: '#0d6efd',
+  on_scene: '#6610f2',
+  investigating: '#6f42c1',
+  police_closed: '#198754',
+  rejected: '#dc3545',
+  needs_info: '#fd7e14',
+  published: '#007bff',
+  resolved: '#20c997',
+  archived: '#6c757d',
+  auto_flagged: '#e83e8c',
+  merged: '#6610f2',
+  draft: '#6f42c1',
+  default: '#6c757d',
+};
+
+export const STATUS_BADGE_COLORS = STATUS_COLORS_HEX;
+
 export const INCIDENT_STATUSES = [
   { value: 'draft', label: 'Draft' },
   { value: 'submitted', label: 'Pending' },

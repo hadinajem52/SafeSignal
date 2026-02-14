@@ -1,4 +1,5 @@
 import React from 'react'
+import DetailSection from '../../components/DetailSection'
 
 function CaseActions({
   userRole,
@@ -16,8 +17,7 @@ function CaseActions({
   closureOutcomes,
 }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4">
-      <h4 className="font-bold text-gray-900 mb-3">Status Management</h4>
+    <DetailSection title="Status Management">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {(userRole === 'law_enforcement' || userRole === 'admin') && (
           <button
@@ -88,7 +88,7 @@ function CaseActions({
           <p className="text-sm text-red-600 mt-2">Case ID is required for report filed.</p>
         )}
       </div>
-    </div>
+    </DetailSection>
   )
 }
 
