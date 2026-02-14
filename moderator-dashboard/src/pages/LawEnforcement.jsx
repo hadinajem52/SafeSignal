@@ -4,9 +4,15 @@ import { AlertTriangle, BadgeCheck, MapPin, Search, Shield } from 'lucide-react'
 import { io } from 'socket.io-client'
 import { leiAPI } from '../services/api'
 import { useAuth } from '../context/AuthContext'
-import { STATUS_COLORS, STATUS_LABELS, LEI_STATUS_FILTERS, CLOSURE_OUTCOMES } from '../constants/incident'
+import { LEI_STATUS_FILTERS, CLOSURE_OUTCOMES } from '../constants/incident'
 import IncidentTimeline from '../components/IncidentTimeline'
 import GoogleMapPanel from '../components/GoogleMapPanel'
+import {
+  formatStatusLabel,
+  getSeverityColor,
+  getStatusColor,
+  openMapsUrl,
+} from '../utils/incident'
 
 const STATUS_TRANSITIONS = {
   verified: ['dispatched', 'investigating', 'police_closed'],
@@ -78,33 +84,6 @@ function LawEnforcement() {
 
   const selectedIncident = incidentDetail?.incident
   const actionLog = incidentDetail?.actions || []
-
-  const getStatusColor = (status) => STATUS_COLORS[status] || STATUS_COLORS.default
-
-  const formatStatusLabel = (status) => {
-    if (STATUS_LABELS[status]) {
-      return STATUS_LABELS[status]
-    }
-    return status.replace('_', ' ').toUpperCase()
-  }
-
-  const getSeverityColor = (severity) => {
-    switch (severity) {
-      case 'critical':
-        return 'text-red-600'
-      case 'high':
-        return 'text-orange-600'
-      case 'medium':
-        return 'text-yellow-600'
-      case 'low':
-        return 'text-green-600'
-      default:
-        return 'text-gray-600'
-    }
-  }
-
-  const openMapsUrl = (latitude, longitude) =>
-    `https://www.google.com/maps?q=${latitude},${longitude}`
 
   const canTransitionTo = (currentStatus, nextStatus) =>
     (STATUS_TRANSITIONS[currentStatus] || []).includes(nextStatus)
@@ -278,7 +257,7 @@ function LawEnforcement() {
                     <span>📅 {new Date(incident.createdAt).toLocaleString()}</span>
                   </div>
                 </div>
-                <div className={`text-3xl font-bold ml-4 ${getSeverityColor(incident.severity)}`}>
+                <div className={`text-3xl font-bold ml-4 ${getSeverityColor(incident.severity, 'lawEnforcement')}`}>
                   {incident.severity.charAt(0).toUpperCase()}
                 </div>
               </div>
@@ -319,7 +298,7 @@ function LawEnforcement() {
                   <span className="px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
                     {selectedIncident.category.replace('_', ' ').toUpperCase()}
                   </span>
-                  <span className={`px-4 py-2 rounded-full text-sm font-medium bg-gray-50 ${getSeverityColor(selectedIncident.severity)}`}>
+                  <span className={`px-4 py-2 rounded-full text-sm font-medium bg-gray-50 ${getSeverityColor(selectedIncident.severity, 'lawEnforcement')}`}>
                     {selectedIncident.severity.toUpperCase()} SEVERITY
                   </span>
                 </div>
