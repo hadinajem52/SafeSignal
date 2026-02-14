@@ -12,25 +12,10 @@ import {
 } from 'lucide-react'
 import { getTimeAgo } from '../utils/dateUtils'
 import GoogleMapPanel from '../components/GoogleMapPanel'
-
-function StatCard({ icon: Icon, label, value, change, color }) {
-  return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-gray-600 text-sm">{label}</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">{value}</p>
-          {change && (
-            <p className="text-sm text-green-600 mt-2">↑ {change}% from last week</p>
-          )}
-        </div>
-        <div className={`p-3 rounded-lg ${color}`}>
-          <Icon size={32} className="text-white" />
-        </div>
-      </div>
-    </div>
-  )
-}
+import LoadingState from '../components/LoadingState'
+import PageHeader from '../components/PageHeader'
+import StatCard from '../components/StatCard'
+import StatusBadge from '../components/StatusBadge'
 
 function Dashboard() {
   const { data: stats, isLoading, isError, error, refetch } = useQuery({
@@ -55,11 +40,7 @@ function Dashboard() {
   })
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    )
+    return <LoadingState />
   }
 
   if (isError) {
@@ -115,10 +96,10 @@ function Dashboard() {
   return (
     <div>
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600 mt-2">Welcome back! Here's what's happening with SafeSignal.</p>
-      </div>
+      <PageHeader
+        title="Dashboard"
+        description="Welcome back! Here's what's happening with SafeSignal."
+      />
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -202,13 +183,7 @@ function Dashboard() {
                     <p className="font-medium text-gray-900">{report.title}</p>
                     <p className="text-sm text-gray-600">{getTimeAgo(report.created_at)}</p>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    report.status === 'submitted' ? 'bg-yellow-100 text-yellow-800' :
-                    report.status === 'verified' ? 'bg-green-100 text-green-800' :
-                    'bg-red-100 text-red-800'
-                  }`}>
-                    {report.status.charAt(0).toUpperCase() + report.status.slice(1)}
-                  </span>
+                  <StatusBadge status={report.status} />
                 </div>
               ))
             ) : (
