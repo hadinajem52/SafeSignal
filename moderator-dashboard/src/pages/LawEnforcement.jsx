@@ -10,6 +10,7 @@ import GoogleMapPanel from '../components/GoogleMapPanel'
 import {
   formatStatusLabel,
   getSeverityColor,
+  SEVERITY_VARIANTS,
   getStatusColor,
   openMapsUrl,
 } from '../utils/incident'
@@ -257,7 +258,7 @@ function LawEnforcement() {
                     <span>📅 {new Date(incident.createdAt).toLocaleString()}</span>
                   </div>
                 </div>
-                <div className={`text-3xl font-bold ml-4 ${getSeverityColor(incident.severity, 'lawEnforcement')}`}>
+                <div className={`text-3xl font-bold ml-4 ${getSeverityColor(incident.severity, SEVERITY_VARIANTS.LAW_ENFORCEMENT)}`}>
                   {incident.severity.charAt(0).toUpperCase()}
                 </div>
               </div>
@@ -298,7 +299,7 @@ function LawEnforcement() {
                   <span className="px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
                     {selectedIncident.category.replace('_', ' ').toUpperCase()}
                   </span>
-                  <span className={`px-4 py-2 rounded-full text-sm font-medium bg-gray-50 ${getSeverityColor(selectedIncident.severity, 'lawEnforcement')}`}>
+                  <span className={`px-4 py-2 rounded-full text-sm font-medium bg-gray-50 ${getSeverityColor(selectedIncident.severity, SEVERITY_VARIANTS.LAW_ENFORCEMENT)}`}>
                     {selectedIncident.severity.toUpperCase()} SEVERITY
                   </span>
                 </div>
