@@ -1,4 +1,4 @@
-import { STATUS_COLORS, STATUS_LABELS } from '../constants/incident'
+import { STATUS_COLORS, STATUS_COLORS_HEX, STATUS_LABELS } from '../constants/incident'
 
 export const SEVERITY_VARIANTS = {
   REPORTS: 'reports',
@@ -6,6 +6,9 @@ export const SEVERITY_VARIANTS = {
 }
 
 export const getStatusColor = (status) => STATUS_COLORS[status] || STATUS_COLORS.default
+
+export const getStatusHexColor = (status) =>
+  STATUS_COLORS_HEX[status] || STATUS_COLORS_HEX.default
 
 export const formatStatusLabel = (status) => {
   if (!status || typeof status !== 'string') {
@@ -17,6 +20,14 @@ export const formatStatusLabel = (status) => {
   }
 
   return status.replace(/_/g, ' ').toUpperCase()
+}
+
+export const formatCategoryLabel = (category) => {
+  if (!category || typeof category !== 'string') {
+    return 'N/A'
+  }
+
+  return category.replace(/_/g, ' ').toUpperCase()
 }
 
 export const getSeverityColor = (severity, variant = SEVERITY_VARIANTS.REPORTS) => {

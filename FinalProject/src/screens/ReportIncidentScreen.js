@@ -307,7 +307,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     >
       {/* Header */}
       <View style={[styles.header, { backgroundColor: theme.primary }]}>
-        <Text style={styles.headerTitle}>Report Incident</Text>
+        <Text style={[styles.headerTitle, { color: theme.card }]}>Report Incident</Text>
         {hasDraft && (
           <View style={[styles.draftBadge, { backgroundColor: theme.warning }]}>
             <Text style={[styles.draftBadgeText, { color: theme.warningContrastText }]}>Draft</Text>
@@ -453,7 +453,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#fff',
   },
   draftBadge: {
     position: 'absolute',

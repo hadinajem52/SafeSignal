@@ -1,7 +1,7 @@
 import React from 'react'
 import { AlertTriangle, MapPin } from 'lucide-react'
 import GoogleMapPanel from '../../components/GoogleMapPanel'
-import { formatStatusLabel, openMapsUrl } from '../../utils/incident'
+import { formatStatusLabel, getStatusHexColor, openMapsUrl } from '../../utils/incident'
 
 function AlertsPanel({ alerts }) {
   if (!alerts.length) {
@@ -19,7 +19,8 @@ function AlertsPanel({ alerts }) {
           <div>
             <p className="font-semibold">Critical alert: {alert.title}</p>
             <p className="text-sm">
-              Severity: {alert.severity?.toUpperCase()} · Status: {formatStatusLabel(alert.status)}
+              Severity: {alert.severity?.toUpperCase()} · Status:{' '}
+              <span style={{ color: getStatusHexColor(alert.status) }}>{formatStatusLabel(alert.status)}</span>
             </p>
             {Number.isFinite(Number(alert.latitude)) && Number.isFinite(Number(alert.longitude)) && (
               <div className="mt-2">

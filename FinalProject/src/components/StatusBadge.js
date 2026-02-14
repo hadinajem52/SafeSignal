@@ -1,16 +1,15 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { useTheme } from '../context/ThemeContext';
 import incidentConstants from '../../../constants/incident';
 import colors from '../../../constants/colors';
 
 const { STATUS_LABELS } = incidentConstants;
-const { STATUS_BADGE_COLORS } = colors;
+const { STATUS_COLORS_HEX, STATUS_BADGE_COLORS } = colors;
+const statusBadgeColors = STATUS_COLORS_HEX || STATUS_BADGE_COLORS;
 
 const StatusBadge = ({ status, style, textStyle }) => {
-  const { theme } = useTheme();
   const label = STATUS_LABELS[status] || status;
-  const badgeColor = STATUS_BADGE_COLORS[status] || STATUS_BADGE_COLORS.default;
+  const badgeColor = statusBadgeColors[status] || statusBadgeColors.default;
 
   return (
     <View style={[styles.badge, { backgroundColor: badgeColor }, style]}>

@@ -6,7 +6,7 @@ import DedupCandidatesPanel from '../../components/DedupCandidatesPanel'
 import GoogleMapPanel from '../../components/GoogleMapPanel'
 import SeverityBadge from '../../components/SeverityBadge'
 import StatusBadge from '../../components/StatusBadge'
-import { openMapsUrl } from '../../utils/incident'
+import { formatCategoryLabel, openMapsUrl } from '../../utils/incident'
 import ReportActions from './ReportActions'
 
 function ReportDetail({
@@ -43,7 +43,7 @@ function ReportDetail({
             <div className="flex gap-3">
               <StatusBadge status={report.status} size="sm" />
               <span className="px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
-                {report.category.replace('_', ' ').toUpperCase()}
+                {formatCategoryLabel(report.category)}
               </span>
             </div>
           </div>

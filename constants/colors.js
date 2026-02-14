@@ -5,7 +5,7 @@ const SEVERITY_COLORS = {
   critical: '#dc3545',
 };
 
-const STATUS_COLORS = {
+const STATUS_TAILWIND = {
   submitted: 'bg-yellow-100 text-yellow-800',
   in_review: 'bg-blue-100 text-blue-800',
   verified: 'bg-green-100 text-green-800',
@@ -25,7 +25,7 @@ const STATUS_COLORS = {
   default: 'bg-gray-100 text-gray-800',
 };
 
-const STATUS_BADGE_COLORS = {
+const STATUS_COLORS_HEX = {
   submitted: '#6c757d',
   auto_processed: '#17a2b8',
   in_review: '#ffc107',
@@ -45,8 +45,13 @@ const STATUS_BADGE_COLORS = {
   default: '#6c757d',
 };
 
+const STATUS_COLORS = STATUS_TAILWIND;
+const STATUS_BADGE_COLORS = STATUS_COLORS_HEX;
+
 module.exports = {
   SEVERITY_COLORS,
+  STATUS_TAILWIND,
   STATUS_COLORS,
   STATUS_BADGE_COLORS,
+  STATUS_COLORS_HEX,
 };

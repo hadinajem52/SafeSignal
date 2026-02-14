@@ -1,4 +1,4 @@
-const { SEVERITY_COLORS, STATUS_COLORS } = require('./colors');
+const { SEVERITY_COLORS, STATUS_COLORS, STATUS_COLORS_HEX } = require('./colors');
 
 const INCIDENT_CATEGORIES = [
   { value: 'theft', label: 'Theft', icon: '💰' },
@@ -158,6 +158,7 @@ module.exports = {
   VALID_STATUSES,
   STATUS_LABELS,
   STATUS_COLORS,
+  STATUS_COLORS_HEX,
   MODERATOR_STATUS_FILTERS,
   LEI_STATUS_FILTERS,
   CLOSURE_OUTCOMES,
