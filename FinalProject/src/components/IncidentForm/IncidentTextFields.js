@@ -79,7 +79,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   required: {
-    color: '#dc3545',
   },
   input: {
     borderWidth: 1,
@@ -95,10 +94,8 @@ const styles = StyleSheet.create({
     minHeight: 120,
   },
   inputError: {
-    borderColor: '#dc3545',
   },
   errorText: {
-    color: '#dc3545',
     fontSize: 12,
     marginTop: 4,
   },

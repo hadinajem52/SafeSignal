@@ -106,6 +106,11 @@ const authStyles = StyleSheet.create({
   backButtonText: {
     fontSize: 14,
   },
+  verificationEmail: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 4,
+  },
 });
 
 export default authStyles;

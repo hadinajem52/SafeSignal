@@ -159,7 +159,7 @@ const VerificationScreen = ({ navigation, route }) => {
           subtitle="We've sent a 6-digit code to"
           marginBottom={40}
         >
-          <Text style={{ color: theme.codeBorder, fontSize: 16, fontWeight: '600', marginTop: 4 }}>{email}</Text>
+          <Text style={[authStyles.verificationEmail, { color: theme.codeBorder }]}>{email}</Text>
         </AuthHeader>
 
         <View style={authStyles.codeContainer}>

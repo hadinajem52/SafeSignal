@@ -1,12 +1,15 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
 
 const CategoryFilter = ({
   categoryDisplay,
   selectedCategory,
   onSelectCategory,
 }) => {
+  const { theme } = useTheme();
+
   return (
     <ScrollView
       horizontal
@@ -14,10 +17,14 @@ const CategoryFilter = ({
       contentContainerStyle={styles.filterScrollContent}
     >
       <TouchableOpacity
-        style={[styles.filterChip, !selectedCategory && styles.filterChipActive]}
+        style={[
+          styles.filterChip,
+          { backgroundColor: theme.surface, borderColor: theme.border },
+          !selectedCategory && [styles.filterChipActive, { backgroundColor: theme.mapMarkerDefault, borderColor: theme.mapMarkerDefault }],
+        ]}
         onPress={() => onSelectCategory(null)}
       >
-        <Text style={[styles.filterChipText, !selectedCategory && styles.filterChipTextActive]}>
+        <Text style={[styles.filterChipText, { color: theme.textSecondary }, !selectedCategory && styles.filterChipTextActive]}>
           All
         </Text>
       </TouchableOpacity>
@@ -27,6 +34,7 @@ const CategoryFilter = ({
           key={key}
           style={[
             styles.filterChip,
+            { backgroundColor: theme.surface, borderColor: theme.border },
             selectedCategory === key && styles.filterChipActive,
             selectedCategory === key && { backgroundColor: config.mapColor },
           ]}
@@ -41,6 +49,7 @@ const CategoryFilter = ({
           <Text
             style={[
               styles.filterChipText,
+              { color: theme.textSecondary },
               selectedCategory === key && styles.filterChipTextActive,
             ]}
           >
@@ -63,21 +72,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: '#f5f5f5',
     marginHorizontal: 4,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
   },
   filterChipActive: {
-    backgroundColor: '#1976D2',
-    borderColor: '#1976D2',
+    borderColor: 'transparent',
   },
   filterChipIcon: {
     marginRight: 4,
   },
   filterChipText: {
     fontSize: 12,
-    color: '#666',
     fontWeight: '500',
   },
   filterChipTextActive: {

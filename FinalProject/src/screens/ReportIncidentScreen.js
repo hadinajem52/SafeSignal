@@ -31,7 +31,7 @@ const { INCIDENT_CATEGORIES, SEVERITY_LEVELS } = incidentConstants;
 
 const ReportIncidentScreen = ({ navigation, route }) => {
   const { user } = useAuth();
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const userId = user?.user_id || user?.userId;
   const { preferences, isLoading: isLoadingPreferences } = useUserPreferences();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -310,7 +310,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
         <Text style={styles.headerTitle}>Report Incident</Text>
         {hasDraft && (
           <View style={[styles.draftBadge, { backgroundColor: theme.warning }]}>
-            <Text style={[styles.draftBadgeText, { color: isDark ? '#111827' : '#000' }]}>Draft</Text>
+            <Text style={[styles.draftBadgeText, { color: theme.warningContrastText }]}>Draft</Text>
           </View>
         )}
       </View>
@@ -319,14 +319,14 @@ const ReportIncidentScreen = ({ navigation, route }) => {
       <View style={[
         styles.noticeContainer,
         {
-          backgroundColor: isDark ? '#3b2f0e' : '#fff3cd',
+          backgroundColor: theme.warningNoticeBg,
           borderLeftColor: theme.warning,
           borderColor: theme.warning,
         },
       ]}
       >
         <Text style={styles.noticeIcon}>⚠️</Text>
-        <Text style={[styles.noticeText, { color: isDark ? '#fde68a' : '#856404' }]}>
+        <Text style={[styles.noticeText, { color: theme.warningNoticeText }]}> 
           If you are in immediate danger, call emergency services (911) immediately.
         </Text>
       </View>

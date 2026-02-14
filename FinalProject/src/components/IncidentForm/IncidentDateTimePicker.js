@@ -61,7 +61,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   setNowButtonText: {
-    color: '#1a73e8',
     fontWeight: '600',
   },
   helperText: {
