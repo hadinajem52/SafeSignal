@@ -4,12 +4,12 @@
 node_modules/
 .pnp
 .pnp.js
-
+.opencode
 # Build and dist
 dist/
 build/
 web-build/
-
+AGENTS.md
 # Expo
 .expo/
 expo-env.d.ts

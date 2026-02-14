@@ -66,7 +66,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   required: {
-    color: '#dc3545',
   },
   categoryGrid: {
     flexDirection: 'row',
@@ -84,7 +83,6 @@ const styles = StyleSheet.create({
     minHeight: 90,
   },
   categoryButtonSelected: {
-    borderColor: '#1a73e8',
   },
   categoryIcon: {
     fontSize: 28,
@@ -96,11 +94,9 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   categoryLabelSelected: {
-    color: '#1a73e8',
     fontWeight: '700',
   },
   errorText: {
-    color: '#dc3545',
     fontSize: 12,
     marginTop: 4,
   },

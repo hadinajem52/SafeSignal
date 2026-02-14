@@ -73,6 +73,11 @@ export const lightTheme = {
   inputPlaceholder: '#9CA3AF',
   inputError: '#e74c3c',
 
+  // Warning notice surfaces
+  warningNoticeBg: '#fff3cd',
+  warningNoticeText: '#856404',
+  warningContrastText: '#000000',
+
   // Switch state colors
   switchTrackOff: '#d1d5db',
   switchThumbOff: '#f4f3f4',
@@ -152,6 +157,11 @@ export const darkTheme = {
   inputBorder: '#1F2937',
   inputPlaceholder: '#6B7280',
   inputError: '#F87171',
+
+  // Warning notice surfaces
+  warningNoticeBg: '#3b2f0e',
+  warningNoticeText: '#fde68a',
+  warningContrastText: '#111827',
 
   // Switch state colors
   switchTrackOff: '#4B5563',

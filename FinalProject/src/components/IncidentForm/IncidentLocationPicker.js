@@ -158,7 +158,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   required: {
-    color: '#dc3545',
   },
   locationButtonsContainer: {
     flexDirection: 'row',
@@ -197,7 +196,6 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   mapSelectButtonText: {
-    color: '#1a73e8',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -223,7 +221,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   errorText: {
-    color: '#dc3545',
     fontSize: 12,
     marginTop: 4,
   },

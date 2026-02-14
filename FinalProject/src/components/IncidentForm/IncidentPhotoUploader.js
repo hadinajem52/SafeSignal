@@ -78,7 +78,6 @@ const styles = StyleSheet.create({
   photoThumbnail: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#eee',
   },
   removePhotoButton: {
     position: 'absolute',
@@ -102,12 +101,10 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ddd',
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
-    backgroundColor: '#f9f9f9',
   },
   addPhotoIcon: {
     fontSize: 24,
@@ -115,7 +112,6 @@ const styles = StyleSheet.create({
   },
   addPhotoText: {
     fontSize: 10,
-    color: '#666',
   },
 });
 
