@@ -21,10 +21,10 @@ const QuickStatsRow = ({ quickStats, onMapPress }) => {
         onPress={onMapPress}
       >
         <Text style={styles.quickStatIcon}>🚨</Text>
-        <Text style={[styles.quickStatNumber, { color: theme.text }]}>
+        <Text style={[styles.quickStatNumber, { color: theme.text }]}> 
           {quickStats?.activeNearby || 0}
         </Text>
-        <Text style={[styles.quickStatLabel, { color: theme.text }]}>Active{'
+        <Text style={[styles.quickStatLabel, { color: theme.text }]}>Active{'\n'}Nearby</Text>
       </TouchableOpacity>
 
       <View
@@ -39,10 +39,10 @@ const QuickStatsRow = ({ quickStats, onMapPress }) => {
         ]}
       >
         <Text style={styles.quickStatIcon}>✅</Text>
-        <Text style={[styles.quickStatNumber, { color: theme.text }]}>
+        <Text style={[styles.quickStatNumber, { color: theme.text }]}> 
           {quickStats?.resolvedThisWeek || 0}
         </Text>
-        <Text style={[styles.quickStatLabel, { color: theme.text }]}>Resolved{'
+        <Text style={[styles.quickStatLabel, { color: theme.text }]}>Resolved{'\n'}This Week</Text>
       </View>
     </View>
   );
