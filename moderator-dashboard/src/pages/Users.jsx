@@ -8,6 +8,14 @@ import {
   RotateCcw,
   AlertTriangle
 } from 'lucide-react'
+import DataTable from '../components/DataTable'
+import DetailPanel from '../components/DetailPanel'
+import EmptyState from '../components/EmptyState'
+import FilterDropdown from '../components/FilterDropdown'
+import LoadingState from '../components/LoadingState'
+import PageHeader from '../components/PageHeader'
+import SearchInput from '../components/SearchInput'
+import StatusBadge from '../components/StatusBadge'
 import { getStatusColor } from '../utils/incident'
 
 function Users() {
@@ -58,63 +66,40 @@ function Users() {
   return (
     <div>
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Users Management</h1>
-        <p className="text-gray-600 mt-2">Manage user accounts and permissions</p>
-      </div>
+      <PageHeader title="Users Management" description="Manage user accounts and permissions" />
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="col-span-1 md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Search className="inline mr-2" size={18} /> Search Users
-            </label>
-            <input
-              type="text"
+            <SearchInput
+              label="Search Users"
+              icon={Search}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search by name or email..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Filter className="inline mr-2" size={18} /> Filter by Role
-            </label>
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="all">All Users</option>
-              <option value="citizen">Regular Users</option>
-              <option value="moderator">Moderators</option>
-              <option value="law_enforcement">Law Enforcement</option>
-              <option value="admin">Administrators</option>
-            </select>
-          </div>
+          <FilterDropdown
+            label={<><Filter className="inline mr-2" size={18} /> Filter by Role</>}
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            options={[
+              { value: 'all', label: 'All Users' },
+              { value: 'citizen', label: 'Regular Users' },
+              { value: 'moderator', label: 'Moderators' },
+              { value: 'law_enforcement', label: 'Law Enforcement' },
+              { value: 'admin', label: 'Administrators' },
+            ]}
+          />
         </div>
       </div>
 
       {/* Users List */}
       {isLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        </div>
+        <LoadingState />
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-3 text-left text-sm font-bold text-gray-900">User</th>
-                <th className="px-6 py-3 text-left text-sm font-bold text-gray-900">Role</th>
-                <th className="px-6 py-3 text-left text-sm font-bold text-gray-900">Status</th>
-                <th className="px-6 py-3 text-left text-sm font-bold text-gray-900">Reports</th>
-                <th className="px-6 py-3 text-left text-sm font-bold text-gray-900">Joined</th>
-                <th className="px-6 py-3 text-left text-sm font-bold text-gray-900">Actions</th>
-              </tr>
-            </thead>
+        <DataTable headers={['User', 'Role', 'Status', 'Reports', 'Joined', 'Actions']}>
             <tbody className="divide-y divide-gray-200">
               {filteredUsers.map(user => (
                 <tr key={user.id} className="hover:bg-gray-50">
@@ -130,9 +115,10 @@ function Users() {
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getUserStatusColor(user.status, user.isSuspended)}`}>
-                      {user.isSuspended ? 'SUSPENDED' : user.status.toUpperCase()}
-                    </span>
+                    <StatusBadge
+                      className={getUserStatusColor(user.status, user.isSuspended)}
+                      label={user.isSuspended ? 'SUSPENDED' : user.status.toUpperCase()}
+                    />
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
                     {user.totalReports} total ({user.verifiedReports} verified)
@@ -151,29 +137,21 @@ function Users() {
                 </tr>
               ))}
             </tbody>
-          </table>
           {filteredUsers.length === 0 && (
-            <div className="p-12 text-center">
-              <AlertTriangle size={48} className="mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-600">No users found matching your criteria</p>
-            </div>
+            <EmptyState icon={AlertTriangle} message="No users found matching your criteria" />
           )}
-        </div>
+        </DataTable>
       )}
 
       {/* Detail Modal */}
       {selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-screen overflow-y-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-purple-600 to-purple-700 text-white p-6 flex justify-between items-center">
-              <h2 className="text-2xl font-bold">User Details</h2>
-              <button
-                onClick={() => setSelectedUser(null)}
-                className="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2"
-              >
-                ✕
-              </button>
-            </div>
+        <DetailPanel
+          visible={!!selectedUser}
+          title="User Details"
+          headerClassName="from-purple-600 to-purple-700"
+          onClose={() => setSelectedUser(null)}
+          maxWidthClass="max-w-2xl"
+        >
 
             <div className="p-6 space-y-6">
               <div>
@@ -188,9 +166,11 @@ function Users() {
                   </span>
                 </div>
                 <div>
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getUserStatusColor(selectedUser.status, selectedUser.isSuspended)}`}>
-                    {selectedUser.isSuspended ? 'SUSPENDED' : selectedUser.status.toUpperCase()}
-                  </span>
+                  <StatusBadge
+                    size="sm"
+                    className={getUserStatusColor(selectedUser.status, selectedUser.isSuspended)}
+                    label={selectedUser.isSuspended ? 'SUSPENDED' : selectedUser.status.toUpperCase()}
+                  />
                 </div>
               </div>
 
@@ -242,8 +222,7 @@ function Users() {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+        </DetailPanel>
       )}
     </div>
   )

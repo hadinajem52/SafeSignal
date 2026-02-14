@@ -6,18 +6,22 @@ import {
   Filter, 
   CheckCircle, 
   XCircle, 
-  Clock,
   AlertTriangle
 } from 'lucide-react'
 import { io } from 'socket.io-client'
 import { MODERATOR_STATUS_FILTERS } from '../constants/incident'
+import DetailPanel from '../components/DetailPanel'
 import IncidentTimeline from '../components/IncidentTimeline'
 import DedupCandidatesPanel from '../components/DedupCandidatesPanel'
+import EmptyState from '../components/EmptyState'
+import FilterDropdown from '../components/FilterDropdown'
 import GoogleMapPanel from '../components/GoogleMapPanel'
+import LoadingState from '../components/LoadingState'
+import PageHeader from '../components/PageHeader'
+import SearchInput from '../components/SearchInput'
+import SeverityBadge from '../components/SeverityBadge'
+import StatusBadge from '../components/StatusBadge'
 import {
-  formatStatusLabel,
-  getSeverityColor,
-  getStatusColor,
   openMapsUrl,
 } from '../utils/incident'
 
@@ -128,50 +132,32 @@ function Reports() {
   return (
     <div>
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Reports Management</h1>
-        <p className="text-gray-600 mt-2">Review and manage incident reports</p>
-      </div>
+      <PageHeader title="Reports Management" description="Review and manage incident reports" />
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="col-span-1 md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Search className="inline mr-2" size={18} /> Search Reports
-            </label>
-            <input
-              type="text"
+            <SearchInput
+              label="Search Reports"
+              icon={Search}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search by title or description..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Filter className="inline mr-2" size={18} /> Filter by Status
-            </label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              {MODERATOR_STATUS_FILTERS.map((filter) => (
-                <option key={filter.value} value={filter.value}>
-                  {filter.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <FilterDropdown
+            label={<><Filter className="inline mr-2" size={18} /> Filter by Status</>}
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            options={MODERATOR_STATUS_FILTERS}
+          />
         </div>
       </div>
 
       {/* Reports List */}
       {isLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        </div>
+        <LoadingState />
       ) : (
         <div className="grid gap-4">
           {filteredReports.map(report => (
@@ -184,9 +170,7 @@ function Reports() {
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="text-lg font-bold text-gray-900">{report.title}</h3>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(report.status)}`}>
-                      {formatStatusLabel(report.status)}
-                    </span>
+                    <StatusBadge status={report.status} />
                   </div>
                   <p className="text-gray-600 text-sm mb-3">{report.description}</p>
                   <div className="flex items-center gap-4 text-sm text-gray-600">
@@ -195,34 +179,24 @@ function Reports() {
                     <span>📅 {new Date(report.createdAt).toLocaleDateString()}</span>
                   </div>
                 </div>
-                <div className={`text-3xl font-bold ml-4 ${getSeverityColor(report.severity)}`}>
-                  {report.severity.charAt(0).toUpperCase()}
-                </div>
+                <SeverityBadge severity={report.severity} display="initial" />
               </div>
             </div>
           ))}
           {filteredReports.length === 0 && (
-            <div className="bg-white rounded-lg shadow p-12 text-center">
-              <AlertTriangle size={48} className="mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-600">No reports found matching your criteria</p>
-            </div>
+            <EmptyState icon={AlertTriangle} message="No reports found matching your criteria" />
           )}
         </div>
       )}
 
       {/* Detail Modal */}
       {selectedReport && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] flex flex-col">
-            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 flex justify-between items-center rounded-t-lg">
-              <h2 className="text-2xl font-bold">Report Details</h2>
-              <button
-                onClick={() => setSelectedReport(null)}
-                className="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2"
-              >
-                ✕
-              </button>
-            </div>
+        <DetailPanel
+          visible={!!selectedReport}
+          title="Report Details"
+          onClose={() => setSelectedReport(null)}
+          maxWidthClass="max-w-6xl"
+        >
 
             <div className="flex-1 overflow-hidden flex">
               {/* Left side - Report details */}
@@ -230,9 +204,7 @@ function Reports() {
                 <div>
                   <h3 className="text-2xl font-bold text-gray-900 mb-4">{selectedReport.title}</h3>
                   <div className="flex gap-3">
-                    <span className={`px-4 py-2 rounded-full text-sm font-medium ${getStatusColor(selectedReport.status)}`}>
-                      {formatStatusLabel(selectedReport.status)}
-                    </span>
+                    <StatusBadge status={selectedReport.status} size="sm" />
                     <span className={`px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-800`}>
                       {selectedReport.category.replace('_', ' ').toUpperCase()}
                     </span>
@@ -350,9 +322,7 @@ function Reports() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Severity Level</p>
-                    <p className={`font-medium capitalize ${getSeverityColor(selectedReport.severity)}`}>
-                      {selectedReport.severity}
-                    </p>
+                    <SeverityBadge severity={selectedReport.severity} display="text" />
                   </div>
                 </div>
 
@@ -393,8 +363,7 @@ function Reports() {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
+        </DetailPanel>
       )}
     </div>
   )

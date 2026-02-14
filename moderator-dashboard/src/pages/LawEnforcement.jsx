@@ -5,8 +5,16 @@ import { io } from 'socket.io-client'
 import { leiAPI } from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import { LEI_STATUS_FILTERS, CLOSURE_OUTCOMES } from '../constants/incident'
+import DetailPanel from '../components/DetailPanel'
+import EmptyState from '../components/EmptyState'
+import FilterDropdown from '../components/FilterDropdown'
 import IncidentTimeline from '../components/IncidentTimeline'
 import GoogleMapPanel from '../components/GoogleMapPanel'
+import LoadingState from '../components/LoadingState'
+import PageHeader from '../components/PageHeader'
+import SearchInput from '../components/SearchInput'
+import SeverityBadge from '../components/SeverityBadge'
+import StatusBadge from '../components/StatusBadge'
 import {
   formatStatusLabel,
   getSeverityColor,
@@ -144,13 +152,11 @@ function LawEnforcement() {
 
   return (
     <div>
-      <div className="mb-8">
-        <div className="flex items-center gap-3">
-          <Shield className="text-blue-600" size={28} />
-          <h1 className="text-3xl font-bold text-gray-900">Law Enforcement Interface</h1>
-        </div>
-        <p className="text-gray-600 mt-2">Operational response and case resolution</p>
-      </div>
+      <PageHeader
+        icon={Shield}
+        title="Law Enforcement Interface"
+        description="Operational response and case resolution"
+      />
 
       {leiAlerts.length > 0 && (
         <div className="mb-6 space-y-3">
@@ -201,40 +207,25 @@ function LawEnforcement() {
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="col-span-1 md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Search className="inline mr-2" size={18} /> Search Incidents
-            </label>
-            <input
-              type="text"
+            <SearchInput
+              label="Search Incidents"
+              icon={Search}
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
               placeholder="Search by title or description..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Filter by Status
-            </label>
-            <select
-              value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              {LEI_STATUS_FILTERS.map((filter) => (
-                <option key={filter.value} value={filter.value}>
-                  {filter.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <FilterDropdown
+            label="Filter by Status"
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+            options={LEI_STATUS_FILTERS}
+          />
         </div>
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        </div>
+        <LoadingState />
       ) : (
         <div className="grid gap-4">
           {filteredIncidents.map((incident) => (
@@ -247,9 +238,7 @@ function LawEnforcement() {
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="text-lg font-bold text-gray-900">{incident.title}</h3>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(incident.status)}`}>
-                      {formatStatusLabel(incident.status)}
-                    </span>
+                    <StatusBadge status={incident.status} />
                   </div>
                   <p className="text-gray-600 text-sm mb-3">{incident.description}</p>
                   <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
@@ -258,48 +247,41 @@ function LawEnforcement() {
                     <span>📅 {new Date(incident.createdAt).toLocaleString()}</span>
                   </div>
                 </div>
-                <div className={`text-3xl font-bold ml-4 ${getSeverityColor(incident.severity, SEVERITY_VARIANTS.LAW_ENFORCEMENT)}`}>
-                  {incident.severity.charAt(0).toUpperCase()}
-                </div>
+                <SeverityBadge
+                  severity={incident.severity}
+                  variant={SEVERITY_VARIANTS.LAW_ENFORCEMENT}
+                  display="initial"
+                />
               </div>
             </div>
           ))}
           {filteredIncidents.length === 0 && (
-            <div className="bg-white rounded-lg shadow p-12 text-center">
-              <AlertTriangle size={48} className="mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-600">No incidents found matching your criteria</p>
-            </div>
+            <EmptyState icon={AlertTriangle} message="No incidents found matching your criteria" />
           )}
         </div>
       )}
 
       {selectedIncident && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-screen overflow-y-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-blue-700 to-blue-800 text-white p-6 flex justify-between items-center">
-              <div>
-                <h2 className="text-2xl font-bold">Incident Detail</h2>
-                <p className="text-sm text-blue-100">Operational view for responders</p>
-              </div>
-              <button
-                onClick={() => setSelectedIncidentId(null)}
-                className="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2"
-              >
-                ✕
-              </button>
-            </div>
+        <DetailPanel
+          visible={!!selectedIncident}
+          title="Incident Detail"
+          subtitle="Operational view for responders"
+          headerClassName="from-blue-700 to-blue-800"
+          onClose={() => setSelectedIncidentId(null)}
+          maxWidthClass="max-w-3xl"
+        >
 
             <div className="p-6 space-y-6">
               <div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-3">{selectedIncident.title}</h3>
                 <div className="flex flex-wrap gap-3">
-                  <span className={`px-4 py-2 rounded-full text-sm font-medium ${getStatusColor(selectedIncident.status)}`}>
-                    {formatStatusLabel(selectedIncident.status)}
-                  </span>
+                  <StatusBadge status={selectedIncident.status} size="sm" />
                   <span className="px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
                     {selectedIncident.category.replace('_', ' ').toUpperCase()}
                   </span>
-                  <span className={`px-4 py-2 rounded-full text-sm font-medium bg-gray-50 ${getSeverityColor(selectedIncident.severity, SEVERITY_VARIANTS.LAW_ENFORCEMENT)}`}>
+                  <span
+                    className={`px-4 py-2 rounded-full text-sm font-medium bg-gray-50 ${getSeverityColor(selectedIncident.severity, SEVERITY_VARIANTS.LAW_ENFORCEMENT)}`}
+                  >
                     {selectedIncident.severity.toUpperCase()} SEVERITY
                   </span>
                 </div>
@@ -475,8 +457,7 @@ function LawEnforcement() {
                 )}
               </div>
             </div>
-          </div>
-        </div>
+        </DetailPanel>
       )}
     </div>
   )
