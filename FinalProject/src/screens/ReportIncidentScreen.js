@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
   Alert,
@@ -15,7 +14,7 @@ import useIncidentForm from '../hooks/useIncidentForm';
 import useLocationPicker from '../hooks/useLocationPicker';
 import useUserPreferences from '../hooks/useUserPreferences';
 import incidentConstants from '../../../constants/incident';
-import { Button } from '../components';
+import { AppText, Button } from '../components';
 import {
   IncidentCategoryPicker,
   IncidentSeverityPicker,
@@ -306,11 +305,11 @@ const ReportIncidentScreen = ({ navigation, route }) => {
       contentContainerStyle={styles.contentContainer}
     >
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: theme.primary }]}>
-        <Text style={[styles.headerTitle, { color: theme.card }]}>Report Incident</Text>
+      <View style={[styles.header, { backgroundColor: theme.primary }]}> 
+        <AppText variant="h1" style={[styles.headerTitle, { color: theme.card }]}>Report Incident</AppText>
         {hasDraft && (
-          <View style={[styles.draftBadge, { backgroundColor: theme.warning }]}>
-            <Text style={[styles.draftBadgeText, { color: theme.warningContrastText }]}>Draft</Text>
+          <View style={[styles.draftBadge, { backgroundColor: theme.warning }]}> 
+            <AppText variant="caption" style={[styles.draftBadgeText, { color: theme.warningContrastText }]}>Draft</AppText>
           </View>
         )}
       </View>
@@ -325,10 +324,10 @@ const ReportIncidentScreen = ({ navigation, route }) => {
         },
       ]}
       >
-        <Text style={styles.noticeIcon}>⚠️</Text>
-        <Text style={[styles.noticeText, { color: theme.warningNoticeText }]}> 
+        <AppText style={styles.noticeIcon}>⚠️</AppText>
+        <AppText variant="body" style={[styles.noticeText, { color: theme.warningNoticeText }]}> 
           If you are in immediate danger, call emergency services (911) immediately.
-        </Text>
+        </AppText>
       </View>
 
       {/* Form */}
@@ -451,8 +450,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
   },
   draftBadge: {
     position: 'absolute',
@@ -463,8 +460,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   draftBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
   },
   noticeContainer: {
     borderWidth: 1,
@@ -482,8 +477,6 @@ const styles = StyleSheet.create({
   },
   noticeText: {
     flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
   },
   formContainer: {
     padding: 20,

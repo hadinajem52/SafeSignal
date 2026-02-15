@@ -1,6 +1,9 @@
 import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import { createText, useTheme as useRestyleTheme } from '@shopify/restyle';
+
+const ThemedText = createText();
 
 const Button = ({
   title,
@@ -12,31 +15,38 @@ const Button = ({
   textStyle,
 }) => {
   const { theme } = useTheme();
+  const restyleTheme = useRestyleTheme();
   const isDisabled = disabled || loading;
 
   const variantStyles = {
     primary: {
       backgroundColor: theme.primary,
-      text: '#fff',
+      textColor: '#fff',
     },
     secondary: {
       backgroundColor: 'transparent',
       borderWidth: 2,
       borderColor: theme.primary,
-      text: theme.primary,
+      textColor: theme.primary,
     },
     ghost: {
       backgroundColor: 'transparent',
-      text: theme.primary,
+      textColor: theme.primary,
     },
   };
 
-  const selected = variantStyles[variant];
+  const selected = variantStyles[variant] || variantStyles.primary;
+  const baseStyle = {
+    paddingVertical: restyleTheme?.spacing?.md || 12,
+    paddingHorizontal: restyleTheme?.spacing?.lg || 16,
+    borderRadius: restyleTheme?.borderRadii?.md || 8,
+  };
 
   return (
     <TouchableOpacity
       style={[
         styles.base,
+        baseStyle,
         selected,
         isDisabled && styles.disabled,
         style,
@@ -46,11 +56,14 @@ const Button = ({
       activeOpacity={0.8}
     >
       {loading ? (
-        <ActivityIndicator color={selected.text} />
+        <ActivityIndicator color={selected.textColor} />
       ) : (
-        <Text style={[styles.baseText, { color: selected.text }, textStyle]}>
+        <ThemedText
+          variant="button"
+          style={[styles.baseText, { color: selected.textColor }, textStyle]}
+        >
           {title}
-        </Text>
+        </ThemedText>
       )}
     </TouchableOpacity>
   );
@@ -58,15 +71,11 @@ const Button = ({
 
 const styles = StyleSheet.create({
   base: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   baseText: {
-    fontSize: 16,
-    fontWeight: '600',
+    includeFontPadding: false,
   },
   disabled: {
     opacity: 0.6,

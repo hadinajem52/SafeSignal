@@ -4,13 +4,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { Button } from '../../components';
+import { AppText, Button } from '../../components';
 import { configureGoogleAuth, signInWithGoogle, statusCodes } from '../../services/googleAuth';
 import AuthDivider from './AuthDivider';
 import AuthFormInput from './AuthFormInput';
@@ -118,9 +117,9 @@ const LoginScreen = ({ navigation }) => {
       <ScrollView contentContainerStyle={authStyles.scrollContent} keyboardShouldPersistTaps="handled">
         <AuthHeader subtitle="Community Safety Network" />
 
-        <View style={[authStyles.formContainer, { backgroundColor: theme.card }]}>
-          <Text style={[authStyles.formTitle, { color: theme.text }]}>Welcome Back</Text>
-          <Text style={[authStyles.formSubtitle, { color: theme.textSecondary }]}>Sign in to your account</Text>
+        <View style={[authStyles.formContainer, { backgroundColor: theme.card }]}> 
+          <AppText variant="h2" style={[authStyles.formTitle, { color: theme.text }]}>Welcome Back</AppText>
+          <AppText variant="body" style={[authStyles.formSubtitle, { color: theme.textSecondary }]}>Sign in to your account</AppText>
 
           <AuthFormInput
             label="Email"
@@ -172,9 +171,9 @@ const LoginScreen = ({ navigation }) => {
           />
 
           <View style={authStyles.footerContainer}>
-            <Text style={[authStyles.footerText, { color: theme.textSecondary }]}>Don't have an account? </Text>
+            <AppText variant="bodySmall" style={[authStyles.footerText, { color: theme.textSecondary }]}>Don't have an account? </AppText>
             <TouchableOpacity onPress={() => navigation.navigate('Register')} disabled={isLoading || isGoogleLoading}>
-              <Text style={[authStyles.linkText, { color: theme.primary }]}>Sign Up</Text>
+              <AppText variant="label" style={[authStyles.linkText, { color: theme.primary }]}>Sign Up</AppText>
             </TouchableOpacity>
           </View>
         </View>

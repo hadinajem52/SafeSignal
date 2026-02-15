@@ -1,30 +1,34 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { createBox } from '@shopify/restyle';
 import { useTheme } from '../context/ThemeContext';
+
+const Box = createBox();
 
 const Card = ({ children, style }) => {
   const { theme } = useTheme();
   return (
-    <View
+    <Box
+      backgroundColor="card"
+      borderColor="border"
+      borderRadius="lg"
+      padding="lg"
+      borderWidth={1}
       style={[
         styles.card,
         {
-          backgroundColor: theme.card,
           shadowColor: theme.shadow,
-          borderColor: theme.border,
         },
         style,
       ]}
     >
       {children}
-    </View>
+    </Box>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 12,
-    padding: 16,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 6,
