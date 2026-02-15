@@ -19,12 +19,9 @@ const authStyles = StyleSheet.create({
     elevation: 4,
   },
   formTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
     marginBottom: 4,
   },
   formSubtitle: {
-    fontSize: 14,
     marginBottom: 20,
   },
   button: {
@@ -42,11 +39,8 @@ const authStyles = StyleSheet.create({
     marginTop: 20,
   },
   footerText: {
-    fontSize: 14,
   },
   linkText: {
-    fontSize: 14,
-    fontWeight: '600',
   },
   termsText: {
     textAlign: 'center',

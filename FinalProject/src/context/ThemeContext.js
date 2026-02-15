@@ -1,7 +1,9 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { useColorScheme } from 'react-native';
+import { ThemeProvider as RestyleThemeProvider } from '@shopify/restyle';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { lightTheme, darkTheme } from '../../../constants/theme';
+import { buildRestyleTheme } from '../theme/restyleTheme';
 
 const ThemeContext = createContext(null);
 
@@ -17,6 +19,7 @@ export const ThemeProvider = ({ children }) => {
   // Resolve actual theme based on mode
   const isDark = mode === 'system' ? systemColorScheme === 'dark' : mode === 'dark';
   const theme = isDark ? darkTheme : lightTheme;
+  const restyleTheme = useMemo(() => buildRestyleTheme(theme), [theme]);
 
   // Load theme preference from storage on app start
   useEffect(() => {
@@ -56,7 +59,11 @@ export const ThemeProvider = ({ children }) => {
     isLoadingTheme,
   };
 
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={value}>
+      <RestyleThemeProvider theme={restyleTheme}>{children}</RestyleThemeProvider>
+    </ThemeContext.Provider>
+  );
 };
 
 /**

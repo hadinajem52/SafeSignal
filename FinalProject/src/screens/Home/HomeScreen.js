@@ -3,11 +3,10 @@ import {
   ActivityIndicator,
   RefreshControl,
   ScrollView,
-  Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Card } from '../../components';
+import { AppText, Card } from '../../components';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import useDashboardData from '../../hooks/useDashboardData';
@@ -35,7 +34,7 @@ const HomeScreen = ({ navigation }) => {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
         <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Loading dashboard...</Text>
+        <AppText variant="body" style={[styles.loadingText, { color: theme.textSecondary }]}>Loading dashboard...</AppText>
       </View>
     );
   }
@@ -50,11 +49,11 @@ const HomeScreen = ({ navigation }) => {
     >
       <View style={styles.header}>
         <View>
-          <Text style={[styles.greeting, { color: theme.text }]}>Hello, {user?.username}! 👋</Text>
-          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>Stay informed, stay safe</Text>
+          <AppText variant="h3" style={[styles.greeting, { color: theme.text }]}>Hello, {user?.username}! 👋</AppText>
+          <AppText variant="body" style={[styles.subtitle, { color: theme.textSecondary }]}>Stay informed, stay safe</AppText>
         </View>
         <View style={[styles.logoContainer, { backgroundColor: `${theme.primary}15` }]}>
-          <Text style={styles.logo}>🛡️</Text>
+          <AppText style={styles.logo}>🛡️</AppText>
         </View>
       </View>
 
@@ -78,9 +77,9 @@ const HomeScreen = ({ navigation }) => {
 
       {error ? (
         <Card style={[styles.errorContainer, { backgroundColor: `${theme.error}15` }]}>
-          <Text style={[styles.errorText, { color: theme.error }]}>{error}</Text>
+          <AppText variant="bodySmall" style={[styles.errorText, { color: theme.error }]}>{error}</AppText>
           <TouchableOpacity onPress={onRefresh}>
-            <Text style={[styles.retryText, { color: theme.primary }]}>Tap to retry</Text>
+            <AppText variant="label" style={[styles.retryText, { color: theme.primary }]}>Tap to retry</AppText>
           </TouchableOpacity>
         </Card>
       ) : null}

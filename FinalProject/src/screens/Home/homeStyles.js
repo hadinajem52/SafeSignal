@@ -16,7 +16,6 @@ const homeStyles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 16,
   },
   header: {
     flexDirection: 'row',
@@ -26,11 +25,8 @@ const homeStyles = StyleSheet.create({
     marginBottom: 20,
   },
   greeting: {
-    fontSize: 24,
-    fontWeight: 'bold',
   },
   subtitle: {
-    fontSize: 14,
     marginTop: 4,
   },
   logoContainer: {
@@ -283,12 +279,9 @@ const homeStyles = StyleSheet.create({
     marginVertical: 16,
   },
   errorText: {
-    fontSize: 14,
   },
   retryText: {
-    fontSize: 14,
     marginTop: 8,
-    fontWeight: '500',
   },
   bottomSpacing: {
     height: 20,
