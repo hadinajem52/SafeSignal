@@ -1,5 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import styles from './homeStyles';
@@ -21,7 +22,7 @@ const QuickStatsRow = ({ quickStats, onMapPress }) => {
         ]}
         onPress={onMapPress}
       >
-        <AppText style={styles.quickStatIcon}>🚨</AppText>
+        <Ionicons name="warning-outline" size={22} color={theme.safetyPoor} style={styles.quickStatIcon} />
         <AppText variant="h1" style={[styles.quickStatNumber, { color: theme.text }]}>
           {quickStats?.activeNearby || 0}
         </AppText>
@@ -41,7 +42,7 @@ const QuickStatsRow = ({ quickStats, onMapPress }) => {
           },
         ]}
       >
-        <AppText style={styles.quickStatIcon}>✅</AppText>
+        <Ionicons name="checkmark-circle-outline" size={22} color={theme.safetyGood} style={styles.quickStatIcon} />
         <AppText variant="h1" style={[styles.quickStatNumber, { color: theme.text }]}>
           {quickStats?.resolvedThisWeek || 0}
         </AppText>

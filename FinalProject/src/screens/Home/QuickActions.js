@@ -1,5 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import styles from './homeStyles';
@@ -9,7 +10,10 @@ const QuickActions = ({ navigation }) => {
 
   return (
     <View style={styles.section}>
-      <AppText variant="h4" style={[styles.sectionTitle, { color: theme.text }]}>⚡ Quick Actions</AppText>
+      <View style={styles.sectionTitleRow}>
+        <Ionicons name="flash" size={18} color={theme.text} style={styles.sectionTitleIcon} />
+        <AppText variant="h4" style={[styles.sectionTitle, { color: theme.text }]}>Quick Actions</AppText>
+      </View>
       <View style={styles.actionsRow}>
         <TouchableOpacity
           style={styles.actionButton}
@@ -18,7 +22,7 @@ const QuickActions = ({ navigation }) => {
           <View
             style={[styles.actionIconContainer, { backgroundColor: `${theme.accentRed}15` }]}
           >
-            <AppText style={styles.actionIcon}>📝</AppText>
+            <Ionicons name="create-outline" size={22} color={theme.accentRed} />
           </View>
           <AppText variant="caption" style={[styles.actionText, { color: theme.text }]}>Report</AppText>
         </TouchableOpacity>
@@ -27,7 +31,7 @@ const QuickActions = ({ navigation }) => {
           <View
             style={[styles.actionIconContainer, { backgroundColor: `${theme.accentBlue}15` }]}
           >
-            <AppText style={styles.actionIcon}>🗺️</AppText>
+            <Ionicons name="map-outline" size={22} color={theme.accentBlue} />
           </View>
           <AppText variant="caption" style={[styles.actionText, { color: theme.text }]}>Map</AppText>
         </TouchableOpacity>
@@ -42,7 +46,7 @@ const QuickActions = ({ navigation }) => {
               { backgroundColor: `${theme.accentPurple}15` },
             ]}
           >
-            <AppText style={styles.actionIcon}>📊</AppText>
+            <Ionicons name="stats-chart-outline" size={22} color={theme.accentPurple} />
           </View>
           <AppText variant="caption" style={[styles.actionText, { color: theme.text }]}>My Reports</AppText>
         </TouchableOpacity>
@@ -54,7 +58,7 @@ const QuickActions = ({ navigation }) => {
           <View
             style={[styles.actionIconContainer, { backgroundColor: `${theme.accentTeal}15` }]}
           >
-            <AppText style={styles.actionIcon}>👤</AppText>
+            <Ionicons name="person-outline" size={22} color={theme.accentTeal} />
           </View>
           <AppText variant="caption" style={[styles.actionText, { color: theme.text }]}>Account</AppText>
         </TouchableOpacity>

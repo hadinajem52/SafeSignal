@@ -59,9 +59,14 @@ const homeStyles = StyleSheet.create({
   safetyTitle: {
   },
   locationBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
+  },
+  locationBadgeText: {
+    marginLeft: 4,
   },
   safetyContent: {
     flexDirection: 'row',
@@ -126,6 +131,14 @@ const homeStyles = StyleSheet.create({
     marginBottom: 20,
   },
   sectionTitle: {
+    marginBottom: 12,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sectionTitleIcon: {
+    marginRight: 8,
     marginBottom: 12,
   },
   trendingContainer: {

@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { AppText, Card } from '../../components';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -49,11 +50,11 @@ const HomeScreen = ({ navigation }) => {
     >
       <View style={styles.header}>
         <View>
-          <AppText variant="h3" style={[styles.greeting, { color: theme.text }]}>Hello, {user?.username}! 👋</AppText>
+          <AppText variant="h3" style={[styles.greeting, { color: theme.text }]}>Hello, {user?.username}!</AppText>
           <AppText variant="body" style={[styles.subtitle, { color: theme.textSecondary }]}>Stay informed, stay safe</AppText>
         </View>
-        <View style={[styles.logoContainer, { backgroundColor: `${theme.primary}15` }]}>
-          <AppText style={styles.logo}>🛡️</AppText>
+        <View style={[styles.logoContainer, { backgroundColor: `${theme.primary}15` }]}> 
+          <Ionicons name="shield-checkmark" size={26} color={theme.primary} />
         </View>
       </View>
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { AppText, Card } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import incidentConstants from '../../../../constants/incident';
@@ -35,7 +36,10 @@ const TrendingSection = ({ trendingCategories }) => {
 
   return (
     <View style={styles.section}>
-      <AppText variant="h4" style={[styles.sectionTitle, { color: theme.text }]}>📈 Trending This Week</AppText>
+      <View style={styles.sectionTitleRow}>
+        <Ionicons name="trending-up" size={18} color={theme.text} style={styles.sectionTitleIcon} />
+        <AppText variant="h4" style={[styles.sectionTitle, { color: theme.text }]}>Trending This Week</AppText>
+      </View>
       <Card style={styles.trendingContainer}>
         {trendingCategories.map((cat, index) => {
           const config = CATEGORY_DISPLAY[cat.category] || CATEGORY_DISPLAY.other;
@@ -43,8 +47,8 @@ const TrendingSection = ({ trendingCategories }) => {
 
           return (
               <View key={index} style={[styles.trendingItem, { borderBottomColor: theme.divider }]}>
-                <View style={[styles.trendingIcon, { backgroundColor: `${config.trendColor}15` }]}>
-                  <AppText style={styles.trendingEmoji}>{config.trendIcon}</AppText>
+                <View style={[styles.trendingIcon, { backgroundColor: `${config.trendColor}15` }]}> 
+                  <Ionicons name={config.mapIcon || 'help-circle-outline'} size={18} color={config.trendColor} />
                 </View>
                 <View style={styles.trendingInfo}>
                   <AppText variant="label" style={[styles.trendingCategory, { color: theme.text }]}> 

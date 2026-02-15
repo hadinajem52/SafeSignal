@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { AppText, Card } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import styles from './homeStyles';
@@ -24,15 +25,20 @@ const SafetyScoreCard = ({ safetyScore, location }) => {
       <View style={styles.safetyHeader}>
         <AppText variant="label" style={[styles.safetyTitle, { color: theme.text }]}>Area Safety Score</AppText>
         {location ? (
-          <AppText
-            variant="caption"
+          <View
             style={[
               styles.locationBadge,
-              { color: theme.textSecondary, backgroundColor: theme.surface },
+              { backgroundColor: theme.surface },
             ]}
           >
-            📍 Your Location
-          </AppText>
+            <Ionicons name="location-outline" size={12} color={theme.textSecondary} />
+            <AppText
+              variant="caption"
+              style={[styles.locationBadgeText, { color: theme.textSecondary }]}
+            >
+              Your Location
+            </AppText>
+          </View>
         ) : null}
       </View>
       <View style={styles.safetyContent}>
