@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { AppText, Card } from '../../components';
+import { AppText, Button, Card } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import styles from './homeStyles';
 
@@ -11,11 +11,31 @@ const getSafetyScoreColor = (theme, score) => {
   return theme.safetyPoor;
 };
 
-const SafetyScoreCard = ({ safetyScore, location }) => {
+const SafetyScoreCard = ({ safetyScore, location, unavailableReason, ctaLabel, onCtaPress }) => {
   const { theme } = useTheme();
 
   if (!safetyScore) {
-    return null;
+    return (
+      <Card style={[styles.safetyCard, { borderLeftColor: theme.warning }]}> 
+        <View style={styles.safetyHeader}>
+          <AppText variant="label" style={[styles.safetyTitle, { color: theme.text }]}>Area Safety Score</AppText>
+        </View>
+        <AppText variant="body" style={[styles.safetyDescription, { color: theme.text }]}> 
+          Safety score unavailable
+        </AppText>
+        <AppText variant="bodySmall" style={[styles.safetyNote, { color: theme.textSecondary }]}> 
+          {unavailableReason || 'We could not determine safety conditions for your area right now.'}
+        </AppText>
+        {ctaLabel && onCtaPress ? (
+          <Button
+            title={ctaLabel}
+            onPress={onCtaPress}
+            variant="secondary"
+            style={styles.safetyCtaButton}
+          />
+        ) : null}
+      </Card>
+    );
   }
 
   const scoreColor = getSafetyScoreColor(theme, safetyScore.score);

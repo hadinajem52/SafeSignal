@@ -25,11 +25,29 @@ const HomeScreen = ({ navigation }) => {
   const {
     loading,
     refreshing,
+    locationLoading,
     location,
+    locationIssue,
     dashboardData,
     error,
     onRefresh,
   } = useDashboardData();
+  const safetyScore = dashboardData?.safetyScore;
+  const locationIssueLower = (locationIssue || '').toLowerCase();
+  const showEnableLocationCta =
+    !location &&
+    !locationLoading &&
+    (locationIssueLower.includes('disabled in app preferences') ||
+      locationIssueLower.includes('permission'));
+  const safetyScoreUnavailableReason = error
+    ? `We could not load safety data right now. ${error}`
+    : locationLoading
+      ? 'Detecting your current location...'
+    : locationIssue
+      ? locationIssue
+      : location
+        ? 'Safety data for your current area is temporarily unavailable from the server.'
+        : 'Location is temporarily unavailable, so nearby safety cannot be calculated right now.';
 
   if (loading) {
     return (
@@ -58,7 +76,13 @@ const HomeScreen = ({ navigation }) => {
         </View>
       </View>
 
-      <SafetyScoreCard safetyScore={dashboardData?.safetyScore} location={location} />
+      <SafetyScoreCard
+        safetyScore={safetyScore}
+        location={location}
+        unavailableReason={safetyScoreUnavailableReason}
+        ctaLabel={showEnableLocationCta ? 'Manage Location' : undefined}
+        onCtaPress={showEnableLocationCta ? () => navigation.navigate('Account') : undefined}
+      />
 
       <QuickStatsRow
         quickStats={dashboardData?.quickStats}

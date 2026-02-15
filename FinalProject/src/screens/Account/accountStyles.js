@@ -114,6 +114,39 @@ const accountStyles = StyleSheet.create({
   settingHint: {
     fontSize: 12,
   },
+  accessStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+  },
+  accessStatusLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 12,
+  },
+  accessStatusIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  accessStatusLabel: {
+    marginBottom: 2,
+  },
+  accessStatusHint: {
+  },
+  accessStatusValue: {
+    textTransform: 'uppercase',
+  },
+  accessStatusFooter: {
+    alignItems: 'flex-start',
+    paddingTop: 12,
+  },
   dangerSpacing: {
     height: 10,
   },

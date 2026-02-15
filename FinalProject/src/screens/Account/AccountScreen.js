@@ -1,10 +1,13 @@
-import React, { useMemo, useState } from 'react';
-import { Alert, Linking, ScrollView, Text } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { Alert, Linking, PermissionsAndroid, Platform, ScrollView, Text } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import useUserPreferences from '../../hooks/useUserPreferences';
 import { sendTestNotification } from '../../services/mobileNotifications';
+import AccessStatusSection from './AccessStatusSection';
 import DangerZone from './DangerZone';
 import EditNameModal from './EditNameModal';
 import PreferencesSection from './PreferencesSection';
@@ -19,6 +22,12 @@ const AccountScreen = () => {
   const { preferences, updatePreference } = useUserPreferences();
   const [isEditingName, setIsEditingName] = useState(false);
   const [pendingName, setPendingName] = useState('');
+  const [accessStatus, setAccessStatus] = useState({
+    location: { status: 'unknown', detail: '' },
+    notifications: { status: 'unknown', detail: '' },
+    camera: { status: 'unknown', detail: '' },
+    photos: { status: 'unknown', detail: '' },
+  });
 
   const displayName = useMemo(() => {
     const savedName = preferences.displayName?.trim();
@@ -168,6 +177,74 @@ const AccountScreen = () => {
     }
   };
 
+  const refreshAccessStatus = useCallback(async () => {
+    try {
+      const [locationPermission, cameraPermission, mediaPermission] = await Promise.all([
+        Location.getForegroundPermissionsAsync(),
+        ImagePicker.getCameraPermissionsAsync(),
+        ImagePicker.getMediaLibraryPermissionsAsync(),
+      ]);
+
+      let notificationsStatus = 'unknown';
+      let notificationsDetail = preferences.pushNotifications
+        ? 'App notifications are enabled'
+        : 'App notifications are disabled';
+
+      if (Platform.OS === 'android' && Platform.Version >= 33) {
+        const granted = await PermissionsAndroid.check(
+          PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+        );
+        notificationsStatus = granted ? 'granted' : 'denied';
+        notificationsDetail = granted
+          ? 'System permission is granted'
+          : 'System notification permission is blocked';
+      } else {
+        notificationsStatus = preferences.pushNotifications ? 'enabled' : 'disabled';
+      }
+
+      setAccessStatus({
+        location: {
+          status: locationPermission.status || 'unknown',
+          detail:
+            locationPermission.status === 'granted'
+              ? 'Nearby safety scoring is available'
+              : 'Required for nearby safety score and map context',
+        },
+        notifications: {
+          status: notificationsStatus,
+          detail: notificationsDetail,
+        },
+        camera: {
+          status: cameraPermission.status || 'unknown',
+          detail:
+            cameraPermission.status === 'granted'
+              ? 'Camera can be used for incident photos'
+              : 'Required to capture incident photos',
+        },
+        photos: {
+          status: mediaPermission.status || 'unknown',
+          detail:
+            mediaPermission.status === 'granted'
+              ? 'Photo library access is available'
+              : 'Required to attach photos from your library',
+        },
+      });
+    } catch (error) {
+      setAccessStatus({
+        location: { status: 'unknown', detail: 'Could not read location permission status' },
+        notifications: { status: 'unknown', detail: 'Could not read notification permission status' },
+        camera: { status: 'unknown', detail: 'Could not read camera permission status' },
+        photos: { status: 'unknown', detail: 'Could not read media permission status' },
+      });
+    }
+  }, [preferences.pushNotifications]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshAccessStatus();
+    }, [refreshAccessStatus])
+  );
+
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: theme.background }]}
@@ -190,6 +267,8 @@ const AccountScreen = () => {
         mode={mode}
         onThemeToggle={(value) => setThemeMode(value ? 'dark' : 'light')}
       />
+
+      <AccessStatusSection accessStatus={accessStatus} onOpenSettings={() => Linking.openSettings?.()} />
 
       <PreferencesSection
         preferences={preferences}
