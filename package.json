@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@shopify/restyle": "^2.4.5"
+  }
+}
