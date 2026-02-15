@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 import MapView, { Callout, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
@@ -17,6 +17,7 @@ const MapCanvas = ({
   onMarkerPress,
 }) => {
   const { theme } = useTheme();
+  const nativeUserLocationEnabled = Platform.OS === 'ios' ? showsUserLocation : false;
 
   return (
     <MapView
@@ -25,7 +26,7 @@ const MapCanvas = ({
       provider={PROVIDER_GOOGLE}
       initialRegion={region}
       onRegionChangeComplete={onRegionChange}
-      showsUserLocation={showsUserLocation}
+      showsUserLocation={nativeUserLocationEnabled}
       showsMyLocationButton={false}
       showsCompass
       showsScale
@@ -34,7 +35,6 @@ const MapCanvas = ({
       loadingEnabled
       loadingIndicatorColor={theme.mapMarkerDefault}
       loadingBackgroundColor={theme.card}
-      onUserLocationChange={null}
     >
       {incidents.map((incident) => {
         const markerColor = getMarkerColor(incident.category, categoryDisplay, theme.mapMarkerDefault);

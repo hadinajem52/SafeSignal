@@ -93,6 +93,10 @@ const homeStyles = StyleSheet.create({
   safetyNote: {
     marginTop: 8,
   },
+  safetyCtaButton: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+  },
   quickStatsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
