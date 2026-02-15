@@ -1,6 +1,6 @@
 import React from 'react';
-import { Text, View } from 'react-native';
-import { Card } from '../../components';
+import { View } from 'react-native';
+import { AppText, Card } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import styles from './homeStyles';
 
@@ -9,31 +9,31 @@ const ContributionsGrid = ({ userStats }) => {
 
   return (
     <View style={styles.section}>
-      <Text style={[styles.sectionTitle, { color: theme.text }]}>🏆 Your Contributions</Text>
+      <AppText variant="h4" style={[styles.sectionTitle, { color: theme.text }]}>🏆 Your Contributions</AppText>
       <Card style={styles.contributionsGrid}>
         <View style={styles.contributionCard}>
-          <Text style={[styles.contributionNumber, { color: theme.text }]}>
+          <AppText variant="h2" style={[styles.contributionNumber, { color: theme.text }]}> 
             {userStats?.totalReports || 0}
-          </Text>
-          <Text style={[styles.contributionLabel, { color: theme.textSecondary }]}>Total{'\n'}Reports</Text>
+          </AppText>
+          <AppText variant="small" style={[styles.contributionLabel, { color: theme.textSecondary }]}>Total{`\n`}Reports</AppText>
         </View>
         <View style={styles.contributionCard}>
-          <Text style={[styles.contributionNumber, { color: theme.accentGreen }]}> 
+          <AppText variant="h2" style={[styles.contributionNumber, { color: theme.accentGreen }]}> 
             {userStats?.verifiedReports || 0}
-          </Text>
-          <Text style={[styles.contributionLabel, { color: theme.textSecondary }]}>Verified</Text>
+          </AppText>
+          <AppText variant="small" style={[styles.contributionLabel, { color: theme.textSecondary }]}>Verified</AppText>
         </View>
         <View style={styles.contributionCard}>
-          <Text style={[styles.contributionNumber, { color: theme.accentBlue }]}>
+          <AppText variant="h2" style={[styles.contributionNumber, { color: theme.accentBlue }]}> 
             {userStats?.resolvedReports || 0}
-          </Text>
-          <Text style={[styles.contributionLabel, { color: theme.textSecondary }]}>Resolved</Text>
+          </AppText>
+          <AppText variant="small" style={[styles.contributionLabel, { color: theme.textSecondary }]}>Resolved</AppText>
         </View>
         <View style={styles.contributionCard}>
-          <Text style={[styles.contributionNumber, { color: theme.accentOrange }]}>
+          <AppText variant="h2" style={[styles.contributionNumber, { color: theme.accentOrange }]}> 
             {userStats?.pendingReports || 0}
-          </Text>
-          <Text style={[styles.contributionLabel, { color: theme.textSecondary }]}>Pending</Text>
+          </AppText>
+          <AppText variant="small" style={[styles.contributionLabel, { color: theme.textSecondary }]}>Pending</AppText>
         </View>
       </Card>
     </View>

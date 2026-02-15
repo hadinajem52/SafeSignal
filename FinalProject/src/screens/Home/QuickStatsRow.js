@@ -1,5 +1,6 @@
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { TouchableOpacity, View } from 'react-native';
+import { AppText } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import styles from './homeStyles';
 
@@ -20,11 +21,13 @@ const QuickStatsRow = ({ quickStats, onMapPress }) => {
         ]}
         onPress={onMapPress}
       >
-        <Text style={styles.quickStatIcon}>🚨</Text>
-        <Text style={[styles.quickStatNumber, { color: theme.text }]}> 
+        <AppText style={styles.quickStatIcon}>🚨</AppText>
+        <AppText variant="h1" style={[styles.quickStatNumber, { color: theme.text }]}>
           {quickStats?.activeNearby || 0}
-        </Text>
-        <Text style={[styles.quickStatLabel, { color: theme.text }]}>Active{'\n'}Nearby</Text>
+        </AppText>
+        <AppText variant="caption" style={[styles.quickStatLabel, { color: theme.text }]}>
+          Active{`\n`}Nearby
+        </AppText>
       </TouchableOpacity>
 
       <View
@@ -38,11 +41,13 @@ const QuickStatsRow = ({ quickStats, onMapPress }) => {
           },
         ]}
       >
-        <Text style={styles.quickStatIcon}>✅</Text>
-        <Text style={[styles.quickStatNumber, { color: theme.text }]}> 
+        <AppText style={styles.quickStatIcon}>✅</AppText>
+        <AppText variant="h1" style={[styles.quickStatNumber, { color: theme.text }]}>
           {quickStats?.resolvedThisWeek || 0}
-        </Text>
-        <Text style={[styles.quickStatLabel, { color: theme.text }]}>Resolved{'\n'}This Week</Text>
+        </AppText>
+        <AppText variant="caption" style={[styles.quickStatLabel, { color: theme.text }]}>
+          Resolved{`\n`}This Week
+        </AppText>
       </View>
     </View>
   );

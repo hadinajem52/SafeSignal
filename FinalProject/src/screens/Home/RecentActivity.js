@@ -1,6 +1,6 @@
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
-import { Card } from '../../components';
+import { TouchableOpacity, View } from 'react-native';
+import { AppText, Card } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import styles from './homeStyles';
 
@@ -13,7 +13,7 @@ const RecentActivity = ({ recentActivity, onPress }) => {
 
   return (
     <View style={styles.section}>
-      <Text style={[styles.sectionTitle, { color: theme.text }]}>🕐 Recent Activity</Text>
+      <AppText variant="h4" style={[styles.sectionTitle, { color: theme.text }]}>🕐 Recent Activity</AppText>
       <Card style={styles.activityContainer}>
         {recentActivity.slice(0, 3).map((activity, index) => (
           <TouchableOpacity
@@ -23,16 +23,16 @@ const RecentActivity = ({ recentActivity, onPress }) => {
           >
             <View style={[styles.activityDot, { backgroundColor: theme.primary }]} />
             <View style={styles.activityContent}>
-              <Text style={[styles.activityTitle, { color: theme.text }]} numberOfLines={1}>
+              <AppText variant="body" style={[styles.activityTitle, { color: theme.text }]} numberOfLines={1}>
                 {activity.incidentTitle}
-              </Text>
-              <Text style={[styles.activityType, { color: theme.textSecondary }]}>
+              </AppText>
+              <AppText variant="caption" style={[styles.activityType, { color: theme.textSecondary }]}> 
                 {activity.type.replace(/_/g, ' ')}
-              </Text>
+              </AppText>
             </View>
-            <Text style={[styles.activityTime, { color: theme.textTertiary }]}>
+            <AppText variant="small" style={[styles.activityTime, { color: theme.textTertiary }]}> 
               {new Date(activity.timestamp).toLocaleDateString()}
-            </Text>
+            </AppText>
           </TouchableOpacity>
         ))}
       </Card>

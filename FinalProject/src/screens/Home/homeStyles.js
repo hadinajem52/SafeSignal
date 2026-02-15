@@ -57,11 +57,8 @@ const homeStyles = StyleSheet.create({
     marginBottom: 16,
   },
   safetyTitle: {
-    fontSize: 16,
-    fontWeight: '600',
   },
   locationBadge: {
-    fontSize: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -79,22 +76,16 @@ const homeStyles = StyleSheet.create({
     marginRight: 16,
   },
   scoreNumber: {
-    fontSize: 28,
-    fontWeight: 'bold',
   },
   scoreLabel: {
-    fontSize: 12,
     marginTop: 2,
   },
   safetyInfo: {
     flex: 1,
   },
   safetyDescription: {
-    fontSize: 14,
-    lineHeight: 20,
   },
   safetyNote: {
-    fontSize: 12,
     marginTop: 8,
   },
   quickStatsRow: {
@@ -126,11 +117,8 @@ const homeStyles = StyleSheet.create({
     marginBottom: 8,
   },
   quickStatNumber: {
-    fontSize: 28,
-    fontWeight: 'bold',
   },
   quickStatLabel: {
-    fontSize: 12,
     textAlign: 'center',
     marginTop: 4,
   },
@@ -138,8 +126,6 @@ const homeStyles = StyleSheet.create({
     marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
     marginBottom: 12,
   },
   trendingContainer: {
@@ -172,11 +158,8 @@ const homeStyles = StyleSheet.create({
     flex: 1,
   },
   trendingCategory: {
-    fontSize: 14,
-    fontWeight: '600',
   },
   trendingCount: {
-    fontSize: 12,
     marginTop: 2,
   },
   trendBadge: {
@@ -185,8 +168,6 @@ const homeStyles = StyleSheet.create({
     borderRadius: 12,
   },
   trendText: {
-    fontSize: 12,
-    fontWeight: '600',
   },
   contributionsGrid: {
     flexDirection: 'row',
@@ -205,11 +186,8 @@ const homeStyles = StyleSheet.create({
     paddingVertical: 16,
   },
   contributionNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
   },
   contributionLabel: {
-    fontSize: 11,
     textAlign: 'center',
     marginTop: 4,
   },
@@ -233,8 +211,6 @@ const homeStyles = StyleSheet.create({
     fontSize: 24,
   },
   actionText: {
-    fontSize: 12,
-    fontWeight: '500',
   },
   activityContainer: {
     borderRadius: 16,
@@ -261,16 +237,12 @@ const homeStyles = StyleSheet.create({
     flex: 1,
   },
   activityTitle: {
-    fontSize: 14,
-    fontWeight: '500',
   },
   activityType: {
-    fontSize: 12,
     marginTop: 2,
     textTransform: 'capitalize',
   },
   activityTime: {
-    fontSize: 11,
   },
   errorContainer: {
     borderRadius: 12,
