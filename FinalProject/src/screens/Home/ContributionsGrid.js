@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { AppText, Card } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import styles from './homeStyles';
@@ -9,7 +10,10 @@ const ContributionsGrid = ({ userStats }) => {
 
   return (
     <View style={styles.section}>
-      <AppText variant="h4" style={[styles.sectionTitle, { color: theme.text }]}>🏆 Your Contributions</AppText>
+      <View style={styles.sectionTitleRow}>
+        <Ionicons name="trophy-outline" size={18} color={theme.text} style={styles.sectionTitleIcon} />
+        <AppText variant="h4" style={[styles.sectionTitle, { color: theme.text }]}>Your Contributions</AppText>
+      </View>
       <Card style={styles.contributionsGrid}>
         <View style={styles.contributionCard}>
           <AppText variant="h2" style={[styles.contributionNumber, { color: theme.text }]}> 

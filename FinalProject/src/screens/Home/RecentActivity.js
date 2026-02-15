@@ -1,5 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { AppText, Card } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import styles from './homeStyles';
@@ -13,7 +14,10 @@ const RecentActivity = ({ recentActivity, onPress }) => {
 
   return (
     <View style={styles.section}>
-      <AppText variant="h4" style={[styles.sectionTitle, { color: theme.text }]}>🕐 Recent Activity</AppText>
+      <View style={styles.sectionTitleRow}>
+        <Ionicons name="time-outline" size={18} color={theme.text} style={styles.sectionTitleIcon} />
+        <AppText variant="h4" style={[styles.sectionTitle, { color: theme.text }]}>Recent Activity</AppText>
+      </View>
       <Card style={styles.activityContainer}>
         {recentActivity.slice(0, 3).map((activity, index) => (
           <TouchableOpacity
