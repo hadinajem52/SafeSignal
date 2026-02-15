@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import MapView, { Callout, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
@@ -17,7 +17,7 @@ const MapCanvas = ({
   onMarkerPress,
 }) => {
   const { theme } = useTheme();
-  const nativeUserLocationEnabled = Platform.OS === 'ios' ? showsUserLocation : false;
+  const nativeUserLocationEnabled = showsUserLocation;
 
   return (
     <MapView
