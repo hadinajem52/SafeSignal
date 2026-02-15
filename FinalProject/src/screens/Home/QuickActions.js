@@ -1,5 +1,6 @@
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { TouchableOpacity, View } from 'react-native';
+import { AppText } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import styles from './homeStyles';
 
@@ -8,7 +9,7 @@ const QuickActions = ({ navigation }) => {
 
   return (
     <View style={styles.section}>
-      <Text style={[styles.sectionTitle, { color: theme.text }]}>⚡ Quick Actions</Text>
+      <AppText variant="h4" style={[styles.sectionTitle, { color: theme.text }]}>⚡ Quick Actions</AppText>
       <View style={styles.actionsRow}>
         <TouchableOpacity
           style={styles.actionButton}
@@ -17,18 +18,18 @@ const QuickActions = ({ navigation }) => {
           <View
             style={[styles.actionIconContainer, { backgroundColor: `${theme.accentRed}15` }]}
           >
-            <Text style={styles.actionIcon}>📝</Text>
+            <AppText style={styles.actionIcon}>📝</AppText>
           </View>
-          <Text style={[styles.actionText, { color: theme.text }]}>Report</Text>
+          <AppText variant="caption" style={[styles.actionText, { color: theme.text }]}>Report</AppText>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('Map')}>
           <View
             style={[styles.actionIconContainer, { backgroundColor: `${theme.accentBlue}15` }]}
           >
-            <Text style={styles.actionIcon}>🗺️</Text>
+            <AppText style={styles.actionIcon}>🗺️</AppText>
           </View>
-          <Text style={[styles.actionText, { color: theme.text }]}>Map</Text>
+          <AppText variant="caption" style={[styles.actionText, { color: theme.text }]}>Map</AppText>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -41,9 +42,9 @@ const QuickActions = ({ navigation }) => {
               { backgroundColor: `${theme.accentPurple}15` },
             ]}
           >
-            <Text style={styles.actionIcon}>📊</Text>
+            <AppText style={styles.actionIcon}>📊</AppText>
           </View>
-          <Text style={[styles.actionText, { color: theme.text }]}>My Reports</Text>
+          <AppText variant="caption" style={[styles.actionText, { color: theme.text }]}>My Reports</AppText>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -53,9 +54,9 @@ const QuickActions = ({ navigation }) => {
           <View
             style={[styles.actionIconContainer, { backgroundColor: `${theme.accentTeal}15` }]}
           >
-            <Text style={styles.actionIcon}>👤</Text>
+            <AppText style={styles.actionIcon}>👤</AppText>
           </View>
-          <Text style={[styles.actionText, { color: theme.text }]}>Account</Text>
+          <AppText variant="caption" style={[styles.actionText, { color: theme.text }]}>Account</AppText>
         </TouchableOpacity>
       </View>
     </View>

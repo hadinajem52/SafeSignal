@@ -1,6 +1,6 @@
 import React from 'react';
-import { Text, View } from 'react-native';
-import { Card } from '../../components';
+import { View } from 'react-native';
+import { AppText, Card } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import styles from './homeStyles';
 
@@ -22,30 +22,31 @@ const SafetyScoreCard = ({ safetyScore, location }) => {
   return (
     <Card style={[styles.safetyCard, { borderLeftColor: scoreColor }]}>
       <View style={styles.safetyHeader}>
-        <Text style={[styles.safetyTitle, { color: theme.text }]}>Area Safety Score</Text>
+        <AppText variant="label" style={[styles.safetyTitle, { color: theme.text }]}>Area Safety Score</AppText>
         {location ? (
-          <Text
+          <AppText
+            variant="caption"
             style={[
               styles.locationBadge,
               { color: theme.textSecondary, backgroundColor: theme.surface },
             ]}
           >
             📍 Your Location
-          </Text>
+          </AppText>
         ) : null}
       </View>
       <View style={styles.safetyContent}>
         <View style={[styles.scoreCircle, { backgroundColor: theme.surface }]}>
-          <Text style={[styles.scoreNumber, { color: scoreColor }]}>{safetyScore.score}</Text>
-          <Text style={[styles.scoreLabel, { color: theme.textSecondary }]}>{safetyScore.label}</Text>
+          <AppText variant="h1" style={[styles.scoreNumber, { color: scoreColor }]}>{safetyScore.score}</AppText>
+          <AppText variant="caption" style={[styles.scoreLabel, { color: theme.textSecondary }]}>{safetyScore.label}</AppText>
         </View>
         <View style={styles.safetyInfo}>
-          <Text style={[styles.safetyDescription, { color: theme.text }]}>
+          <AppText variant="body" style={[styles.safetyDescription, { color: theme.text }]}>
             {safetyScore.description}
-          </Text>
-          <Text style={[styles.safetyNote, { color: theme.textTertiary }]}>
+          </AppText>
+          <AppText variant="bodySmall" style={[styles.safetyNote, { color: theme.textTertiary }]}>
             Based on incidents within 5km radius
-          </Text>
+          </AppText>
         </View>
       </View>
     </Card>
