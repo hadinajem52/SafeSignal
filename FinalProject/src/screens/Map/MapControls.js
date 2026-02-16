@@ -1,6 +1,7 @@
 import React from 'react';
-import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { AppText } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import styles from './mapStyles';
 
@@ -51,11 +52,11 @@ const MapControls = ({
         </TouchableOpacity>
       </View>
 
-      <View style={[styles.countBadge, { backgroundColor: theme.mapMarkerDefault }]}>
-        <Ionicons name="flag" size={16} color={theme.card} />
-        <Text style={[styles.countText, { color: theme.card }]}>
+      <View style={[styles.countBadge, { backgroundColor: theme.surface2, borderColor: theme.border }]}> 
+        <Ionicons name="alert-circle-outline" size={16} color={theme.primary} />
+        <AppText variant="caption" style={[styles.countText, { color: theme.text }]}> 
           {incidentsCount} {incidentsCount === 1 ? 'incident' : 'incidents'}
-        </Text>
+        </AppText>
       </View>
     </>
   );

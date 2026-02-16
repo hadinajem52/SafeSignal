@@ -1,13 +1,14 @@
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { TouchableOpacity, View } from 'react-native';
+import { AppText } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import styles from './mapStyles';
 
 const TIMEFRAME_OPTIONS = [
-  { value: '24h', label: '24 Hours' },
-  { value: '7d', label: '7 Days' },
-  { value: '30d', label: '30 Days' },
-  { value: '90d', label: '90 Days' },
+  { value: '24h', label: '24h' },
+  { value: '7d', label: '7d' },
+  { value: '30d', label: '30d' },
+  { value: '90d', label: '90d' },
 ];
 
 const TimeframeSelector = ({ selectedTimeframe, onSelectTimeframe }) => {
@@ -27,14 +28,15 @@ const TimeframeSelector = ({ selectedTimeframe, onSelectTimeframe }) => {
             ]}
             onPress={() => onSelectTimeframe(option.value)}
           >
-            <Text
+            <AppText
+              variant="caption"
               style={[
                 styles.timeframeText,
-                { color: isActive ? theme.card : theme.textSecondary },
+                { color: isActive ? '#FFFFFF' : theme.textSecondary },
               ]}
             >
               {option.label}
-            </Text>
+            </AppText>
           </TouchableOpacity>
         );
       })}

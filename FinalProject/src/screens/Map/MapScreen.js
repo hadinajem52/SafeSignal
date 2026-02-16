@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { incidentAPI } from '../../services/api';
@@ -8,7 +8,7 @@ import useUserPreferences from '../../hooks/useUserPreferences';
 import incidentConstants from '../../../../constants/incident';
 import useIncidentFilters from '../../hooks/useIncidentFilters';
 import useMapRegion from '../../hooks/useMapRegion';
-import { Button, MapLegend } from '../../components';
+import { AppText, Button, MapLegend } from '../../components';
 import CategoryFilterBar from './CategoryFilterBar';
 import IncidentMapDetail from './IncidentMapDetail';
 import MapControls from './MapControls';
@@ -126,7 +126,9 @@ const MapScreen = () => {
     return (
       <View style={[mapStyles.centerContainer, { backgroundColor: theme.background }]}>
         <Ionicons name="alert-circle" size={64} color={theme.error} />
-        <Text style={[mapStyles.errorText, { color: theme.textSecondary }]}>{error}</Text>
+        <AppText variant="body" style={[mapStyles.errorText, { color: theme.textSecondary }]}>
+          {error}
+        </AppText>
         <Button
           title="Retry"
           onPress={() => fetchIncidents()}
@@ -177,9 +179,11 @@ const MapScreen = () => {
 
       {loading ? (
         <View style={[mapStyles.loadingOverlay, { backgroundColor: `${theme.background}bf` }]}>
-          <View style={[mapStyles.loadingContainer, { backgroundColor: theme.card }]}>
+          <View style={[mapStyles.loadingContainer, { backgroundColor: theme.card }]}> 
             <ActivityIndicator size="large" color={theme.mapMarkerDefault} />
-            <Text style={[mapStyles.loadingText, { color: theme.text }]}>Loading incidents...</Text>
+            <AppText variant="body" style={[mapStyles.loadingText, { color: theme.text }]}> 
+              Loading incidents...
+            </AppText>
           </View>
         </View>
       ) : null}
