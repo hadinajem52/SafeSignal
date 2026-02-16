@@ -1,12 +1,12 @@
 import React from 'react';
 import {
-  ActivityIndicator,
   RefreshControl,
   ScrollView,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { AppText, Card } from '../../components';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -33,6 +33,7 @@ const HomeScreen = ({ navigation }) => {
     onRefresh,
   } = useDashboardData();
   const safetyScore = dashboardData?.safetyScore;
+  const activeNearbyCount = dashboardData?.quickStats?.activeNearby || 0;
   const locationIssueLower = (locationIssue || '').toLowerCase();
   const showEnableLocationCta =
     !location &&
@@ -51,9 +52,17 @@ const HomeScreen = ({ navigation }) => {
 
   if (loading) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
-        <ActivityIndicator size="large" color={theme.primary} />
-        <AppText variant="body" style={[styles.loadingText, { color: theme.textSecondary }]}>Loading dashboard...</AppText>
+      <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}> 
+        <View style={[styles.skeletonHeader, { backgroundColor: theme.surface2 }]} />
+        <View style={[styles.skeletonCardLarge, { backgroundColor: theme.surface }]} />
+        <View style={styles.skeletonRow}>
+          <View style={[styles.skeletonCardSmall, { backgroundColor: theme.surface }]} />
+          <View style={[styles.skeletonCardSmall, { backgroundColor: theme.surface }]} />
+        </View>
+        <View style={[styles.skeletonCardLarge, { backgroundColor: theme.surface }]} />
+        <AppText variant="bodySmall" style={[styles.loadingText, { color: theme.textSecondary }]}> 
+          Building your dashboard...
+        </AppText>
       </View>
     );
   }
@@ -66,15 +75,33 @@ const HomeScreen = ({ navigation }) => {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} />
       }
     >
-      <View style={styles.header}>
+      <LinearGradient
+        colors={[theme.primaryLight || 'rgba(29,78,216,0.14)', 'rgba(255,255,255,0)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.header, { borderColor: theme.border }]}
+      >
         <View>
-          <AppText variant="h3" style={[styles.greeting, { color: theme.text }]}>Hello, {user?.username}!</AppText>
-          <AppText variant="body" style={[styles.subtitle, { color: theme.textSecondary }]}>Stay informed, stay safe</AppText>
+          <AppText variant="h2" style={[styles.greeting, { color: theme.text }]}>Hello, {user?.username || 'there'}!</AppText>
+          <AppText variant="body" style={[styles.subtitle, { color: theme.textSecondary }]}> 
+            Stay informed. Stay safe.
+          </AppText>
         </View>
-        <View style={[styles.logoContainer, { backgroundColor: `${theme.primary}15` }]}> 
-          <Ionicons name="shield-checkmark" size={26} color={theme.primary} />
+        <View style={[styles.logoContainer, { backgroundColor: theme.primary }]}> 
+          <Ionicons name="shield-checkmark" size={24} color="#FFFFFF" />
         </View>
-      </View>
+      </LinearGradient>
+
+      {activeNearbyCount > 0 ? (
+        <Card style={[styles.alertBanner, { backgroundColor: `${theme.warning}18`, borderColor: `${theme.warning}40` }]}> 
+          <View style={styles.alertBannerRow}>
+            <Ionicons name="warning-outline" size={16} color={theme.warning} />
+            <AppText variant="bodySmall" style={[styles.alertBannerText, { color: theme.warningNoticeText || theme.warning }]}> 
+              {activeNearbyCount} active incident{activeNearbyCount > 1 ? 's' : ''} nearby. Review map details now.
+            </AppText>
+          </View>
+        </Card>
+      ) : null}
 
       <SafetyScoreCard
         safetyScore={safetyScore}
@@ -93,7 +120,11 @@ const HomeScreen = ({ navigation }) => {
 
       <ContributionsGrid userStats={dashboardData?.userStats} />
 
-      <QuickActions navigation={navigation} />
+      <QuickActions
+        navigation={navigation}
+        quickStats={dashboardData?.quickStats}
+        userStats={dashboardData?.userStats}
+      />
 
       <RecentActivity
         recentActivity={dashboardData?.recentActivity}

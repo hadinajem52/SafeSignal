@@ -1,6 +1,4 @@
-import { Dimensions, StyleSheet } from 'react-native';
-
-const { width } = Dimensions.get('window');
+import { StyleSheet } from 'react-native';
 
 const homeStyles = StyleSheet.create({
   container: {
@@ -8,62 +6,81 @@ const homeStyles = StyleSheet.create({
   },
   contentContainer: {
     padding: 16,
+    paddingBottom: 24,
   },
+
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 80,
   },
   loadingText: {
-    marginTop: 12,
+    marginTop: 14,
+    textAlign: 'center',
   },
+  skeletonHeader: {
+    height: 88,
+    borderRadius: 18,
+    marginBottom: 14,
+  },
+  skeletonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  skeletonCardLarge: {
+    height: 146,
+    borderRadius: 16,
+    marginBottom: 14,
+  },
+  skeletonCardSmall: {
+    width: '48.5%',
+    height: 104,
+    borderRadius: 16,
+  },
+
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 40,
-    marginBottom: 20,
+    marginTop: 34,
+    marginBottom: 16,
+    borderRadius: 18,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
-  greeting: {
-  },
+  greeting: {},
   subtitle: {
     marginTop: 4,
   },
   logoContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 48,
+    height: 48,
+    borderRadius: 999,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  logo: {
-    fontSize: 28,
-  },
+
   safetyCard: {
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 18,
+    padding: 18,
     marginBottom: 16,
-    borderLeftWidth: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+    borderWidth: 1,
   },
   safetyHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 14,
   },
-  safetyTitle: {
-  },
+  safetyTitle: {},
   locationBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
   },
   locationBadgeText: {
     marginLeft: 4,
@@ -72,24 +89,32 @@ const homeStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  scoreCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  scoreRing: {
+    width: 92,
+    height: 92,
+    borderRadius: 999,
+    borderWidth: 4,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: 14,
+  },
+  scoreCircle: {
+    width: 78,
+    height: 78,
+    borderRadius: 999,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   scoreNumber: {
+    lineHeight: 30,
   },
   scoreLabel: {
-    marginTop: 2,
+    marginTop: 1,
   },
   safetyInfo: {
     flex: 1,
   },
-  safetyDescription: {
-  },
+  safetyDescription: {},
   safetyNote: {
     marginTop: 8,
   },
@@ -97,23 +122,22 @@ const homeStyles = StyleSheet.create({
     marginTop: 12,
     alignSelf: 'flex-start',
   },
+
   quickStatsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 18,
+  },
+  quickStatPressable: {
+    width: '48.5%',
   },
   quickStatCard: {
-    flex: 1,
+    width: '100%',
     borderRadius: 16,
-    padding: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
     alignItems: 'center',
-    marginHorizontal: 4,
     borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
   },
   activeCard: {
     borderTopWidth: 3,
@@ -121,21 +145,28 @@ const homeStyles = StyleSheet.create({
   resolvedCard: {
     borderTopWidth: 3,
   },
-  quickStatIcon: {
-    fontSize: 24,
+  quickStatIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 8,
   },
+  quickStatIcon: {},
   quickStatNumber: {
+    lineHeight: 32,
   },
   quickStatLabel: {
     textAlign: 'center',
-    marginTop: 4,
+    marginTop: 3,
   },
+
   section: {
-    marginBottom: 20,
+    marginBottom: 18,
   },
   sectionTitle: {
-    marginBottom: 12,
+    marginBottom: 10,
   },
   sectionTitleRow: {
     flexDirection: 'row',
@@ -143,124 +174,137 @@ const homeStyles = StyleSheet.create({
   },
   sectionTitleIcon: {
     marginRight: 8,
-    marginBottom: 12,
+    marginBottom: 10,
   },
-  trendingContainer: {
-    borderRadius: 16,
-    padding: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+
+  trendingScrollContent: {
+    paddingRight: 6,
   },
   trendingItem: {
+    width: 250,
+    marginRight: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderLeftWidth: 3,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    borderBottomWidth: 1,
   },
   trendingIcon: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
-  },
-  trendingEmoji: {
-    fontSize: 20,
+    marginRight: 10,
   },
   trendingInfo: {
     flex: 1,
   },
-  trendingCategory: {
-  },
+  trendingCategory: {},
   trendingCount: {
     marginTop: 2,
   },
   trendBadge: {
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: 5,
+    borderRadius: 999,
   },
-  trendText: {
-  },
+  trendText: {},
+
   contributionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    borderRadius: 16,
-    padding: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+    paddingVertical: 10,
   },
   contributionCard: {
-    width: '25%',
+    width: '50%',
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: 12,
   },
-  contributionNumber: {
+  contributionIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
   },
+  contributionNumber: {},
   contributionLabel: {
     textAlign: 'center',
     marginTop: 4,
   },
-  actionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  actionButton: {
-    alignItems: 'center',
-    width: (width - 64) / 4,
-  },
-  actionIconContainer: {
-    width: 56,
-    height: 56,
+
+  suggestionCard: {
+    borderWidth: 1,
     borderRadius: 16,
-    justifyContent: 'center',
+    padding: 14,
+  },
+  suggestionHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
   },
-  actionIcon: {
-    fontSize: 24,
+  suggestionIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
   },
-  actionText: {
+  suggestionTitle: {
+    flex: 1,
   },
+  suggestionDescription: {},
+  suggestionFooter: {
+    marginTop: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
   activityContainer: {
     borderRadius: 16,
-    padding: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+    paddingVertical: 6,
   },
   activityItem: {
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
+    alignItems: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderBottomWidth: 1,
+  },
+  activityTimelineColumn: {
+    width: 14,
+    alignItems: 'center',
+    marginRight: 10,
   },
   activityDot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
-    marginRight: 12,
+    borderRadius: 999,
+    marginTop: 5,
+  },
+  activityConnector: {
+    width: 2,
+    height: 26,
+    marginTop: 3,
+    borderRadius: 999,
   },
   activityContent: {
     flex: 1,
   },
-  activityTitle: {
-  },
+  activityTitle: {},
   activityType: {
     marginTop: 2,
     textTransform: 'capitalize',
   },
   activityTime: {
+    marginLeft: 8,
+    marginTop: 2,
   },
+
   errorContainer: {
     borderRadius: 12,
     padding: 16,
@@ -268,12 +312,28 @@ const homeStyles = StyleSheet.create({
     marginVertical: 16,
   },
   errorText: {
+    textAlign: 'center',
   },
   retryText: {
     marginTop: 8,
   },
+  alertBanner: {
+    borderWidth: 1,
+    borderRadius: 14,
+    marginBottom: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  alertBannerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  alertBannerText: {
+    marginLeft: 8,
+    flex: 1,
+  },
   bottomSpacing: {
-    height: 20,
+    height: 14,
   },
 });
 
