@@ -1,6 +1,6 @@
 import React from 'react';
-import { Modal, Text, TextInput, View } from 'react-native';
-import { Button } from '../../components';
+import { Modal, TextInput, View } from 'react-native';
+import { AppText, Button } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import styles from './accountStyles';
 
@@ -10,8 +10,8 @@ const EditNameModal = ({ visible, pendingName, onChangeName, onCancel, onSave })
   return (
     <Modal transparent visible={visible} animationType="fade">
       <View style={[styles.modalOverlay, { backgroundColor: theme.overlay }]}> 
-        <View style={[styles.modalCard, { backgroundColor: theme.card }]}>
-          <Text style={[styles.modalTitle, { color: theme.text }]}>Edit Display Name</Text>
+        <View style={[styles.modalCard, { backgroundColor: theme.card }]}> 
+          <AppText variant="h4" style={[styles.modalTitle, { color: theme.text }]}>Edit Display Name</AppText>
           <TextInput
             style={[
               styles.modalInput,

@@ -9,11 +9,8 @@ const accountStyles = StyleSheet.create({
     paddingBottom: 24,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
     marginBottom: 30,
     marginTop: 20,
-    textAlign: 'center',
   },
   profileHeader: {
     marginBottom: 16,
@@ -31,8 +28,6 @@ const accountStyles = StyleSheet.create({
     marginRight: 16,
   },
   avatarText: {
-    fontSize: 20,
-    fontWeight: '700',
   },
   avatarImage: {
     width: 64,
@@ -58,27 +53,20 @@ const accountStyles = StyleSheet.create({
     alignItems: 'center',
   },
   username: {
-    fontSize: 18,
-    fontWeight: '700',
   },
   editButton: {
     marginLeft: 8,
   },
   memberSince: {
     marginTop: 4,
-    fontSize: 12,
   },
   emailValue: {
     marginTop: 4,
-    fontSize: 14,
-    fontWeight: '500',
   },
   settingsContainer: {
     marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
     marginBottom: 12,
   },
   settingRow: {
@@ -96,23 +84,17 @@ const accountStyles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   linkText: {
-    fontSize: 15,
-    fontWeight: '600',
   },
   linkArrow: {
-    fontSize: 18,
   },
   settingInfo: {
     flex: 1,
     marginRight: 12,
   },
   settingLabel: {
-    fontSize: 15,
-    fontWeight: '600',
     marginBottom: 4,
   },
   settingHint: {
-    fontSize: 12,
   },
   accessStatusRow: {
     flexDirection: 'row',
@@ -162,8 +144,6 @@ const accountStyles = StyleSheet.create({
     width: '100%',
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
     marginBottom: 12,
   },
   modalInput: {
@@ -171,7 +151,6 @@ const accountStyles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    fontSize: 16,
     marginBottom: 16,
   },
   modalActions: {

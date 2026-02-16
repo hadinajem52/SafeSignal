@@ -39,13 +39,14 @@ const mapStyles = StyleSheet.create({
   },
   timeframeButton: {
     paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingVertical: 7,
     marginHorizontal: 4,
-    borderRadius: 12,
+    borderRadius: 999,
+    borderWidth: 1,
   },
   timeframeText: {
-    fontSize: 11,
-    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   markerContainer: {
     alignItems: 'center',
@@ -84,20 +85,15 @@ const mapStyles = StyleSheet.create({
     elevation: 4,
   },
   calloutTitle: {
-    fontSize: 14,
-    fontWeight: '600',
     marginBottom: 4,
   },
   calloutCategory: {
-    fontSize: 12,
     marginBottom: 2,
   },
   calloutTime: {
-    fontSize: 11,
     marginBottom: 4,
   },
   calloutTap: {
-    fontSize: 10,
     fontStyle: 'italic',
   },
   fabContainer: {
@@ -127,11 +123,11 @@ const mapStyles = StyleSheet.create({
     borderRadius: 20,
     flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1,
   },
   countText: {
     marginLeft: 6,
-    fontSize: 12,
-    fontWeight: '600',
+    textTransform: 'capitalize',
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -150,10 +146,8 @@ const mapStyles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 14,
   },
   errorText: {
-    fontSize: 16,
     textAlign: 'center',
     marginTop: 16,
     marginBottom: 20,

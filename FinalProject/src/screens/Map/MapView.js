@@ -1,7 +1,8 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import MapView, { Callout, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
+import { AppText } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import { formatTimeAgo } from '../../utils/dateUtils';
 import { getCategoryLabel, getMarkerColor } from '../../utils/mapCategory';
@@ -61,17 +62,17 @@ const MapCanvas = ({
               <View style={[styles.markerArrow, { borderTopColor: markerColor }]} />
             </View>
             <Callout tooltip onPress={() => onMarkerPress(incident)}>
-              <View style={[styles.calloutContainer, { backgroundColor: theme.card }]}>
-                <Text style={[styles.calloutTitle, { color: theme.text }]} numberOfLines={2}>
+              <View style={[styles.calloutContainer, { backgroundColor: theme.card }]}> 
+                <AppText variant="label" style={[styles.calloutTitle, { color: theme.text }]} numberOfLines={2}>
                   {incident.title}
-                </Text>
-                <Text style={[styles.calloutCategory, { color: theme.textSecondary }]}> 
+                </AppText>
+                <AppText variant="caption" style={[styles.calloutCategory, { color: theme.textSecondary }]}> 
                   {categoryLabel}
-                </Text>
-                <Text style={[styles.calloutTime, { color: theme.textTertiary }]}>
+                </AppText>
+                <AppText variant="small" style={[styles.calloutTime, { color: theme.textTertiary }]}> 
                   {formatTimeAgo(incident.createdAt)}
-                </Text>
-                <Text style={[styles.calloutTap, { color: theme.mapMarkerDefault }]}>Tap for details</Text>
+                </AppText>
+                <AppText variant="small" style={[styles.calloutTap, { color: theme.mapMarkerDefault }]}>Tap for details</AppText>
               </View>
             </Callout>
           </Marker>

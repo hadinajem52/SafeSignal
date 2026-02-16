@@ -1,8 +1,9 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Alert, Linking, PermissionsAndroid, Platform, ScrollView, Text } from 'react-native';
+import { Alert, Linking, PermissionsAndroid, Platform, ScrollView } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
+import { AppText } from '../../components';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import useUserPreferences from '../../hooks/useUserPreferences';
@@ -250,7 +251,7 @@ const AccountScreen = () => {
       style={[styles.container, { backgroundColor: theme.background }]}
       contentContainerStyle={styles.contentContainer}
     >
-      <Text style={[styles.title, { color: theme.text }]}>Account</Text>
+      <AppText variant="h1" style={[styles.title, { color: theme.text }]}>Account</AppText>
 
       <ProfileHeader
         avatarUri={avatarUri}

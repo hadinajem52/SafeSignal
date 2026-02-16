@@ -1,7 +1,7 @@
 import React from 'react';
-import { Image, Text, TouchableOpacity, View } from 'react-native';
+import { Image, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Card } from '../../components';
+import { AppText, Card } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import styles from './accountStyles';
 
@@ -23,7 +23,7 @@ const ProfileHeader = ({
           {avatarUri ? (
             <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
           ) : (
-            <Text style={[styles.avatarText, { color: theme.card }]}>{initials}</Text>
+            <AppText variant="h4" style={[styles.avatarText, { color: theme.card }]}>{initials}</AppText>
           )}
           <TouchableOpacity
             style={[
@@ -38,13 +38,13 @@ const ProfileHeader = ({
 
         <View style={styles.profileInfo}>
           <View style={styles.usernameRow}>
-            <Text style={[styles.username, { color: theme.text }]}>{displayName}</Text>
+            <AppText variant="h4" style={[styles.username, { color: theme.text }]}>{displayName}</AppText>
             <TouchableOpacity style={styles.editButton} onPress={onEditNamePress}>
               <Ionicons name="pencil" size={16} color={theme.textSecondary} />
             </TouchableOpacity>
           </View>
-          <Text style={[styles.memberSince, { color: theme.textSecondary }]}>Joined {memberSince}</Text>
-          <Text style={[styles.emailValue, { color: theme.text }]}>{email}</Text>
+          <AppText variant="caption" style={[styles.memberSince, { color: theme.textSecondary }]}>Joined {memberSince}</AppText>
+          <AppText variant="body" style={[styles.emailValue, { color: theme.text }]}>{email}</AppText>
         </View>
       </View>
     </Card>
