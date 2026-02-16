@@ -1,14 +1,15 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { AppText } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 
-const AuthDivider = ({ label = 'or' }) => {
+const AuthDivider = ({ label = 'or sign in with email' }) => {
   const { theme } = useTheme();
 
   return (
     <View style={styles.container}>
       <View style={[styles.divider, { borderColor: theme.border }]} />
-      <Text style={[styles.text, { color: theme.textTertiary }]}>{label}</Text>
+      <AppText variant="small" style={[styles.text, { color: theme.textTertiary }]}>{label}</AppText>
       <View style={[styles.divider, { borderColor: theme.border }]} />
     </View>
   );
@@ -27,7 +28,8 @@ const styles = StyleSheet.create({
   },
   text: {
     paddingHorizontal: 16,
-    fontSize: 14,
+    textTransform: 'uppercase',
+    letterSpacing: 0.7,
   },
 });
 

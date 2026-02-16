@@ -4,13 +4,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { Button } from '../../components';
+import { AppText, Button } from '../../components';
 import { configureGoogleAuth, signInWithGoogle, statusCodes } from '../../services/googleAuth';
 import AuthDivider from './AuthDivider';
 import AuthFormInput from './AuthFormInput';
@@ -35,7 +35,7 @@ const RegisterScreen = ({ navigation }) => {
 
   const clearError = (field) => {
     if (errors[field]) {
-      setErrors({ ...errors, [field]: null });
+      setErrors((prev) => ({ ...prev, [field]: null }));
     }
   };
 
@@ -142,69 +142,99 @@ const RegisterScreen = ({ navigation }) => {
     <KeyboardAvoidingView
       style={[authStyles.container, { backgroundColor: theme.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0}
     >
+      <View style={authStyles.backgroundLayer} pointerEvents="none">
+        <LinearGradient
+          colors={[theme.primaryLight || 'rgba(29,78,216,0.14)', 'rgba(255,255,255,0)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={authStyles.bgOrbTop}
+        />
+        <LinearGradient
+          colors={[theme.primaryLight || 'rgba(29,78,216,0.14)', 'rgba(255,255,255,0)']}
+          start={{ x: 1, y: 1 }}
+          end={{ x: 0, y: 0 }}
+          style={authStyles.bgOrbBottom}
+        />
+      </View>
       <ScrollView contentContainerStyle={authStyles.scrollContent} keyboardShouldPersistTaps="handled">
-        <AuthHeader subtitle="Join the Community" />
+        <AuthHeader subtitle="Join the community" />
 
-        <View style={[authStyles.formContainer, { backgroundColor: theme.card }]}>
-          <Text style={[authStyles.formTitle, { color: theme.text }]}>Create Account</Text>
-          <Text style={[authStyles.formSubtitle, { color: theme.textSecondary }]}>Sign up to report and track incidents</Text>
+        <View style={[authStyles.formContainer, { backgroundColor: theme.card, borderColor: theme.border }]}> 
+          <AppText variant="h2" style={[authStyles.formTitle, { color: theme.text }]}>Create Account</AppText>
+          <AppText variant="body" style={[authStyles.formSubtitle, { color: theme.textSecondary }]}> 
+            Sign up to report and track incidents
+          </AppText>
 
-          <AuthFormInput
-            label="Username"
-            placeholder="Choose a username"
-            value={username}
-            onChangeText={(text) => {
-              setUsername(text);
-              clearError('username');
-            }}
-            autoCapitalize="none"
-            autoCorrect={false}
-            editable={!isLoading}
-            error={errors.username}
+          <GoogleSignInButton
+            title="Sign up with Google"
+            loading={isGoogleLoading}
+            onPress={handleGoogleSignUp}
+            disabled={isLoading || isGoogleLoading}
           />
 
-          <AuthFormInput
-            label="Email"
-            placeholder="Enter your email"
-            value={email}
-            onChangeText={(text) => {
-              setEmail(text);
-              clearError('email');
-            }}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            editable={!isLoading}
-            error={errors.email}
-          />
+          <AuthDivider label="or continue with email" />
 
-          <AuthFormInput
-            label="Password"
-            placeholder="Create a password"
-            value={password}
-            onChangeText={(text) => {
-              setPassword(text);
-              clearError('password');
-            }}
-            secureTextEntry
-            editable={!isLoading}
-            error={errors.password}
-          />
-          <Text style={[authStyles.hintText, { color: theme.textTertiary }]}>At least 6 characters with one number</Text>
+          <View style={authStyles.emailSectionSpacing}>
+            <AuthFormInput
+              label="Username"
+              placeholder="Choose a username"
+              value={username}
+              onChangeText={(text) => {
+                setUsername(text);
+                clearError('username');
+              }}
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!isLoading}
+              error={errors.username}
+            />
 
-          <AuthFormInput
-            label="Confirm Password"
-            placeholder="Confirm your password"
-            value={confirmPassword}
-            onChangeText={(text) => {
-              setConfirmPassword(text);
-              clearError('confirmPassword');
-            }}
-            secureTextEntry
-            editable={!isLoading}
-            error={errors.confirmPassword}
-          />
+            <AuthFormInput
+              label="Email"
+              placeholder="Enter your email"
+              value={email}
+              onChangeText={(text) => {
+                setEmail(text);
+                clearError('email');
+              }}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!isLoading}
+              error={errors.email}
+            />
+
+            <AuthFormInput
+              label="Password"
+              placeholder="Create a password"
+              value={password}
+              onChangeText={(text) => {
+                setPassword(text);
+                clearError('password');
+              }}
+              secureTextEntry
+              editable={!isLoading}
+              error={errors.password}
+            />
+            <AppText variant="small" style={[authStyles.hintText, { color: theme.textTertiary }]}> 
+              At least 6 characters with one number
+            </AppText>
+
+            <AuthFormInput
+              label="Confirm Password"
+              placeholder="Confirm your password"
+              value={confirmPassword}
+              onChangeText={(text) => {
+                setConfirmPassword(text);
+                clearError('confirmPassword');
+              }}
+              secureTextEntry
+              editable={!isLoading}
+              error={errors.confirmPassword}
+            />
+          </View>
 
           <Button
             title="Create Account"
@@ -214,24 +244,19 @@ const RegisterScreen = ({ navigation }) => {
             style={[authStyles.button, isLoading && authStyles.buttonDisabled]}
           />
 
-          <AuthDivider />
-
-          <GoogleSignInButton
-            title="Sign up with Google"
-            loading={isGoogleLoading}
-            onPress={handleGoogleSignUp}
-            disabled={isLoading || isGoogleLoading}
-          />
-
           <View style={authStyles.footerContainer}>
-            <Text style={[authStyles.footerText, { color: theme.textSecondary }]}>Already have an account? </Text>
+            <AppText variant="bodySmall" style={[authStyles.footerText, { color: theme.textSecondary }]}> 
+              Already have an account? 
+            </AppText>
             <TouchableOpacity onPress={() => navigation.navigate('Login')} disabled={isLoading || isGoogleLoading}>
-              <Text style={[authStyles.linkText, { color: theme.primary }]}>Sign In</Text>
+              <AppText variant="label" style={[authStyles.linkText, { color: theme.primary }]}>Sign In</AppText>
             </TouchableOpacity>
           </View>
         </View>
 
-        <Text style={[authStyles.termsText, { color: theme.textTertiary }]}>By creating an account, you agree to our Terms of Service and Privacy Policy</Text>
+        <AppText variant="small" style={[authStyles.termsText, { color: theme.textTertiary }]}> 
+          By creating an account, you agree to our Terms of Service and Privacy Policy
+        </AppText>
       </ScrollView>
     </KeyboardAvoidingView>
   );
