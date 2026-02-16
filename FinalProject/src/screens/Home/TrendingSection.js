@@ -1,5 +1,5 @@
 import React from 'react';
-import { View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText, Card } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
@@ -40,13 +40,19 @@ const TrendingSection = ({ trendingCategories }) => {
         <Ionicons name="trending-up" size={18} color={theme.text} style={styles.sectionTitleIcon} />
         <AppText variant="h4" style={[styles.sectionTitle, { color: theme.text }]}>Trending This Week</AppText>
       </View>
-      <Card style={styles.trendingContainer}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.trendingScrollContent}>
         {trendingCategories.map((cat, index) => {
           const config = CATEGORY_DISPLAY[cat.category] || CATEGORY_DISPLAY.other;
           const trendColor = getTrendColor(theme, cat.changePercentage);
 
           return (
-              <View key={index} style={[styles.trendingItem, { borderBottomColor: theme.divider }]}>
+              <Card
+                key={`${cat.category}-${cat.count}-${index}`}
+                style={[
+                  styles.trendingItem,
+                  { borderColor: theme.border, borderLeftColor: trendColor },
+                ]}
+              >
                 <View style={[styles.trendingIcon, { backgroundColor: `${config.trendColor}15` }]}> 
                   <Ionicons name={config.mapIcon || 'help-circle-outline'} size={18} color={config.trendColor} />
                 </View>
@@ -58,15 +64,15 @@ const TrendingSection = ({ trendingCategories }) => {
                     {cat.count} reports
                   </AppText>
                 </View>
-                <View style={[styles.trendBadge, { backgroundColor: `${trendColor}15` }]}>
+                <View style={[styles.trendBadge, { backgroundColor: `${trendColor}15` }]}> 
                   <AppText variant="caption" style={[styles.trendText, { color: trendColor }]}> 
                     {getTrendIcon(cat.changePercentage)} {Math.abs(cat.changePercentage)}%
                   </AppText>
                 </View>
-              </View>
+              </Card>
           );
         })}
-      </Card>
+      </ScrollView>
     </View>
   );
 };
