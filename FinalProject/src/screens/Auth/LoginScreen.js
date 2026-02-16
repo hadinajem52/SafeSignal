@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { AppText, Button } from '../../components';
@@ -113,45 +114,71 @@ const LoginScreen = ({ navigation }) => {
     <KeyboardAvoidingView
       style={[authStyles.container, { backgroundColor: theme.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0}
     >
+      <View style={authStyles.backgroundLayer} pointerEvents="none">
+        <LinearGradient
+          colors={[theme.primaryLight || 'rgba(29,78,216,0.14)', 'rgba(255,255,255,0)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={authStyles.bgOrbTop}
+        />
+        <LinearGradient
+          colors={[theme.primaryLight || 'rgba(29,78,216,0.14)', 'rgba(255,255,255,0)']}
+          start={{ x: 1, y: 1 }}
+          end={{ x: 0, y: 0 }}
+          style={authStyles.bgOrbBottom}
+        />
+      </View>
       <ScrollView contentContainerStyle={authStyles.scrollContent} keyboardShouldPersistTaps="handled">
-        <AuthHeader subtitle="Community Safety Network" />
+        <AuthHeader subtitle="Community safety network" />
 
-        <View style={[authStyles.formContainer, { backgroundColor: theme.card }]}> 
+        <View style={[authStyles.formContainer, { backgroundColor: theme.card, borderColor: theme.border }]}> 
           <AppText variant="h2" style={[authStyles.formTitle, { color: theme.text }]}>Welcome Back</AppText>
           <AppText variant="body" style={[authStyles.formSubtitle, { color: theme.textSecondary }]}>Sign in to your account</AppText>
 
-          <AuthFormInput
-            label="Email"
-            placeholder="Enter your email"
-            value={email}
-            onChangeText={(text) => {
-              setEmail(text);
-              if (errors.email) {
-                setErrors({ ...errors, email: null });
-              }
-            }}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            editable={!isLoading}
-            error={errors.email}
+          <GoogleSignInButton
+            title="Continue with Google"
+            loading={isGoogleLoading}
+            onPress={handleGoogleSignIn}
+            disabled={isLoading || isGoogleLoading}
           />
 
-          <AuthFormInput
-            label="Password"
-            placeholder="Enter your password"
-            value={password}
-            onChangeText={(text) => {
-              setPassword(text);
-              if (errors.password) {
-                setErrors({ ...errors, password: null });
-              }
-            }}
-            secureTextEntry
-            editable={!isLoading}
-            error={errors.password}
-          />
+          <AuthDivider />
+
+          <View style={authStyles.emailSectionSpacing}>
+            <AuthFormInput
+              label="Email"
+              placeholder="Enter your email"
+              value={email}
+              onChangeText={(text) => {
+                setEmail(text);
+                if (errors.email) {
+                  setErrors((prev) => ({ ...prev, email: null }));
+                }
+              }}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!isLoading}
+              error={errors.email}
+            />
+
+            <AuthFormInput
+              label="Password"
+              placeholder="Enter your password"
+              value={password}
+              onChangeText={(text) => {
+                setPassword(text);
+                if (errors.password) {
+                  setErrors((prev) => ({ ...prev, password: null }));
+                }
+              }}
+              secureTextEntry
+              editable={!isLoading}
+              error={errors.password}
+            />
+          </View>
 
           <Button
             title="Sign In"
@@ -159,15 +186,6 @@ const LoginScreen = ({ navigation }) => {
             loading={isLoading}
             disabled={isLoading || isGoogleLoading}
             style={[authStyles.button, isLoading && authStyles.buttonDisabled]}
-          />
-
-          <AuthDivider />
-
-          <GoogleSignInButton
-            title="Continue with Google"
-            loading={isGoogleLoading}
-            onPress={handleGoogleSignIn}
-            disabled={isLoading || isGoogleLoading}
           />
 
           <View style={authStyles.footerContainer}>

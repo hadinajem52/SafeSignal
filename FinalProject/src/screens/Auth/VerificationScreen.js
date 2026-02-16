@@ -2,23 +2,27 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   KeyboardAvoidingView,
   Platform,
-  Text,
+  ScrollView,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import { LinearGradient } from 'expo-linear-gradient';
+import { fontFamilies } from '../../../../constants/typography';
+import { AppText, Button } from '../../components';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { authAPI } from '../../services/api';
-import { Button } from '../../components';
 import AuthHeader from './AuthHeader';
 import authStyles from './authStyles';
 
 const VerificationScreen = ({ navigation, route }) => {
-  const { email } = route.params;
+  const email = route?.params?.email ?? '';
   const { checkAuthStatus } = useAuth();
   const { theme } = useTheme();
   const [code, setCode] = useState(['', '', '', '', '', '']);
@@ -26,17 +30,34 @@ const VerificationScreen = ({ navigation, route }) => {
   const [isResending, setIsResending] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const inputRefs = useRef([]);
+  const pulse = useRef(new Animated.Value(0.6)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0.6, duration: 700, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
 
   useEffect(() => {
     if (countdown <= 0) {
       return undefined;
     }
 
-    const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+    const timer = setTimeout(() => setCountdown((prev) => prev - 1), 1000);
     return () => clearTimeout(timer);
   }, [countdown]);
 
   const handleVerify = async (verificationCode = null) => {
+    if (!email) {
+      Alert.alert('Error', 'Missing verification email. Please register again.');
+      return;
+    }
+
     const codeToVerify = verificationCode || code.join('');
 
     if (codeToVerify.length !== 6) {
@@ -63,11 +84,28 @@ const VerificationScreen = ({ navigation, route }) => {
   };
 
   const handleCodeChange = (text, index) => {
-    const digit = text.replace(/[^0-9]/g, '');
-    if (digit.length > 1) {
+    const digits = text.replace(/[^0-9]/g, '');
+
+    if (digits.length > 1) {
+      const nextCode = [...code];
+      for (let i = 0; i < digits.length && index + i < 6; i += 1) {
+        nextCode[index + i] = digits[i];
+      }
+      setCode(nextCode);
+
+      const fullCode = nextCode.join('');
+      if (fullCode.length === 6 && !nextCode.includes('')) {
+        handleVerify(fullCode);
+      } else {
+        const nextEmpty = nextCode.findIndex((value) => !value);
+        if (nextEmpty !== -1) {
+          inputRefs.current[nextEmpty]?.focus();
+        }
+      }
       return;
     }
 
+    const digit = digits;
     const nextCode = [...code];
     nextCode[index] = digit;
     setCode(nextCode);
@@ -123,6 +161,11 @@ const VerificationScreen = ({ navigation, route }) => {
   };
 
   const handleResendCode = async () => {
+    if (!email) {
+      Alert.alert('Error', 'Missing verification email. Please register again.');
+      return;
+    }
+
     if (countdown > 0) {
       return;
     }
@@ -148,80 +191,129 @@ const VerificationScreen = ({ navigation, route }) => {
 
   return (
     <KeyboardAvoidingView
-      style={[authStyles.container, { backgroundColor: theme.surface }]}
+      style={[authStyles.container, { backgroundColor: theme.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0}
     >
-      <View style={authStyles.verificationContent}>
-        <AuthHeader
-          icon="✉️"
-          title="Verify Your Email"
-          titleColor={theme.text}
-          subtitle="We've sent a 6-digit code to"
-          marginBottom={40}
-        >
-          <Text style={[authStyles.verificationEmail, { color: theme.codeBorder }]}>{email}</Text>
-        </AuthHeader>
+      <View style={authStyles.backgroundLayer} pointerEvents="none">
+        <LinearGradient
+          colors={[theme.primaryLight || 'rgba(29,78,216,0.14)', 'rgba(255,255,255,0)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={authStyles.bgOrbTop}
+        />
+        <LinearGradient
+          colors={[theme.primaryLight || 'rgba(29,78,216,0.14)', 'rgba(255,255,255,0)']}
+          start={{ x: 1, y: 1 }}
+          end={{ x: 0, y: 0 }}
+          style={authStyles.bgOrbBottom}
+        />
+      </View>
 
-        <View style={authStyles.codeContainer}>
-          {code.map((digit, index) => (
-            <TextInput
-              key={index}
-              ref={(ref) => {
-                inputRefs.current[index] = ref;
-              }}
+      <ScrollView contentContainerStyle={authStyles.verificationScroll} keyboardShouldPersistTaps="handled">
+        <View style={[authStyles.verificationContent, { backgroundColor: theme.card, borderColor: theme.border }]}> 
+          <AuthHeader
+            iconName="mail-unread"
+            title="Verify your email"
+            titleColor={theme.text}
+            subtitle="Enter the 6-digit code we sent to"
+            marginBottom={20}
+          >
+            <View
               style={[
-                authStyles.codeInput,
+                authStyles.verificationEmailPill,
                 {
-                  borderColor: digit ? theme.codeBorder : theme.border,
-                  backgroundColor: digit ? theme.codeInputBg : theme.card,
-                  color: theme.text,
+                  backgroundColor: theme.codeInputBg,
+                  borderColor: theme.codeBorder,
                 },
               ]}
-              value={digit}
-              onChangeText={(text) => handleCodeChange(text, index)}
-              onKeyPress={(event) => handleKeyPress(event, index)}
-              keyboardType="number-pad"
-              maxLength={1}
-              selectTextOnFocus
-              editable={!isLoading}
-            />
-          ))}
-        </View>
+            >
+              <AppText variant="label" style={[authStyles.verificationEmail, { color: theme.codeBorder }]}> 
+                {email}
+              </AppText>
+            </View>
+          </AuthHeader>
 
-        <TouchableOpacity style={authStyles.pasteButton} onPress={handlePasteCode} disabled={isLoading}>
-          <Text style={[authStyles.pasteButtonText, { color: theme.codeBorder }]}>📋 Paste Code</Text>
-        </TouchableOpacity>
+          <View style={authStyles.countdownWrap}>
+            <Animated.View style={[authStyles.countdownDot, { backgroundColor: theme.primary, opacity: pulse }]} />
+            <AppText variant="caption" style={[authStyles.countdownText, { color: theme.textSecondary }]}> 
+              {countdown > 0 ? `Code expires in ${countdown}s` : 'Resend is available now'}
+            </AppText>
+          </View>
 
-        <Button
-          title="Verify Email"
-          onPress={() => handleVerify()}
-          loading={isLoading}
-          disabled={isLoading || code.join('').length !== 6}
-          style={authStyles.button}
-        />
-
-        <View style={authStyles.resendContainer}>
-          <Text style={[authStyles.resendText, { color: theme.textSecondary }]}>Didn't receive the code? </Text>
-          <TouchableOpacity onPress={handleResendCode} disabled={isResending || countdown > 0}>
-            {isResending ? (
-              <ActivityIndicator size="small" color={theme.codeBorder} />
-            ) : (
-              <Text
+          <View style={authStyles.codeContainer}>
+            {code.map((digit, index) => (
+              <TextInput
+                key={index}
+                ref={(ref) => {
+                  inputRefs.current[index] = ref;
+                }}
                 style={[
-                  authStyles.resendLink,
-                  { color: countdown > 0 ? theme.textTertiary : theme.codeBorder },
+                  authStyles.codeInput,
+                  {
+                    borderColor: digit ? theme.codeBorder : theme.inputBorder,
+                    backgroundColor: digit ? theme.codeInputBg : theme.input,
+                    color: theme.text,
+                  },
                 ]}
-              >
-                {countdown > 0 ? `Resend in ${countdown}s` : 'Resend Code'}
-              </Text>
-            )}
+                value={digit}
+                onChangeText={(text) => handleCodeChange(text, index)}
+                onKeyPress={(event) => handleKeyPress(event, index)}
+                keyboardType="number-pad"
+                maxLength={1}
+                selectTextOnFocus
+                textContentType="oneTimeCode"
+                autoComplete="sms-otp"
+                editable={!isLoading}
+              />
+            ))}
+          </View>
+
+          <TouchableOpacity style={authStyles.pasteButton} onPress={handlePasteCode} disabled={isLoading}>
+            <View style={authStyles.pasteInner}>
+              <Ionicons name="clipboard-outline" size={16} color={theme.codeBorder} />
+              <AppText variant="label" style={[authStyles.pasteButtonText, { color: theme.codeBorder }]}> 
+                Paste code
+              </AppText>
+            </View>
+          </TouchableOpacity>
+
+          <Button
+            title="Verify Email"
+            onPress={() => handleVerify()}
+            loading={isLoading}
+            disabled={isLoading || !email || code.join('').length !== 6}
+            style={authStyles.button}
+          />
+
+          <View style={authStyles.resendContainer}>
+            <AppText variant="bodySmall" style={[authStyles.resendText, { color: theme.textSecondary }]}> 
+              Didn't receive the code? 
+            </AppText>
+            <TouchableOpacity onPress={handleResendCode} disabled={isResending || !email || countdown > 0}>
+              {isResending ? (
+                <ActivityIndicator size="small" color={theme.codeBorder} />
+              ) : (
+                <AppText
+                  variant="label"
+                  style={[authStyles.resendLink, { color: countdown > 0 ? theme.textTertiary : theme.codeBorder }]}
+                >
+                  {countdown > 0 ? `Resend in ${countdown}s` : 'Resend code'}
+                </AppText>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity style={authStyles.backButton} onPress={() => navigation.goBack()}>
+            <View style={authStyles.backInner}>
+              <Ionicons name="chevron-back" size={16} color={theme.textSecondary} />
+              <AppText variant="bodySmall" style={[authStyles.backButtonText, { color: theme.textSecondary }]}> 
+                Back to registration
+              </AppText>
+            </View>
           </TouchableOpacity>
         </View>
-
-        <TouchableOpacity style={authStyles.backButton} onPress={() => navigation.goBack()}>
-          <Text style={[authStyles.backButtonText, { color: theme.textSecondary }]}>← Back to Registration</Text>
-        </TouchableOpacity>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 };
