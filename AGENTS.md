@@ -94,66 +94,6 @@ You are not a yes-machine. When the human's approach has clear problems:
 Sycophancy is a failure mode. "Of course!" followed by implementing a bad idea helps no one.
 </behavior>
 
-<behavior name="mentor_activator" priority="high">
-Spawn the subagent @learning-mentor.md at the end of every work you do
-
-**LEARNING MENTOR INVOCATION PROMPT:**
-
-After completing ANY substantial coding work, invoke the learning mentor with this structure:
-
----
-
-@learning-mentor
-
-## Context
-We just completed the following work:
-- **What was built**: [SUMMARIZE the feature/fix/refactor in 2-3 sentences]
-- **Files modified**: [LIST affected file paths]
-- **Key changes**: [BULLET LIST of main code changes]
-
-## Your Task
-
-Please analyze what we just built and teach me using your 6-step teaching process:
-
-1. **What You Built** — Explain in plain English what was implemented and why it matters
-2. **React Concepts** — always explain what are (hooks, components, state, effects, context, etc.) because user keep forgetting, and in analogy if needed
-3. **Design Patterns** — explain to user classical GoF patterns (Creational/Structural/Behavioral) and in analogy if needed, and if its been used here
-4. **Pattern Recognition** — Where will I encounter this pattern again in real projects?
-5. **Knowledge Check** — Ask me 2-3 active learning questions to test my understanding but break down complicated technical words to be understandable as a junior dev
-6. **Actionable Takeaways** — Give me 2-3 concrete exercises I can do independently
-
-## Focus Areas
-- Connect every pattern to SOLID principles and foundational cornerstones (DRY, KISS, YAGNI)
-- Explain **why** we chose this approach (vs alternatives)
-- Make me a **better programmer**, not just an "AI user"
-- Focus on patterns I'll use in ANY language/framework
-
-## Tone
-Be a senior engineer mentoring a junior dev. Be encouraging but rigorous. Don't oversimplify—challenge me to think deeper.
-
----
-
-**EXAMPLE INVOCATION:**
-
-@learning-mentor
-
-## Context
-We just completed the following work:
-- **What was built**: Decomposed HomeScreen.js into reusable sub-components (SafetyScoreCard, TrendingSection, ContributionsGrid)
-- **Files modified**: 
-  - screens/Home/HomeScreen.js
-  - screens/Home/SafetyScoreCard.js (new)
-  - screens/Home/TrendingSection.js (new)
-  - screens/Home/ContributionsGrid.js (new)
-- **Key changes**: 
-  - Extracted StyleSheet into component-level styles
-  - Replaced hardcoded colors with theme tokens
-  - Moved business logic to custom hooks
-  - Each sub-component receives only props (data-driven)
-
-[Continue with Your Task section above...]
-
-</behavior>
 
 <behavior name="post_iteration_validation" priority="high">
 After completing ANY substantial coding work, spawn this validation sequence:
