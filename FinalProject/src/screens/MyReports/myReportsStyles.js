@@ -4,134 +4,179 @@ const myReportsStyles = StyleSheet.create({
   container: {
     flex: 1,
   },
+
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
+    marginTop: 14,
   },
-  header: {
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
   },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 4,
-    textAlign: 'center',
+  summaryTitle: {
+    letterSpacing: 0.2,
   },
-  headerSubtitle: {
-    fontSize: 14,
-    opacity: 0.9,
-    textAlign: 'center',
+  summaryCount: {
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
+
   filterContainer: {
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
   },
   filterButton: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: 999,
     marginRight: 8,
+    borderWidth: 1,
   },
   filterButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
+    textTransform: 'capitalize',
   },
+
   listContainer: {
-    padding: 16,
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    paddingBottom: 24,
   },
+
   incidentCard: {
     marginBottom: 12,
   },
   incidentCardInner: {
-    padding: 16,
+    borderWidth: 1,
+    borderLeftWidth: 4,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 12,
   },
   categoryBadge: {
-    borderRadius: 8,
-    padding: 8,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  categoryIcon: {
-    fontSize: 20,
+  categoryLabel: {
+    textTransform: 'capitalize',
+    marginLeft: 6,
   },
   badgesRight: {
     alignItems: 'flex-end',
-    gap: 6,
   },
   statusBadge: {
     alignSelf: 'flex-end',
   },
   severityBadge: {
     alignSelf: 'flex-end',
+    marginBottom: 6,
   },
+
   incidentTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   incidentDescription: {
-    fontSize: 14,
-    lineHeight: 20,
     marginBottom: 12,
   },
+
+  progressSection: {
+    marginBottom: 12,
+  },
+  progressTrack: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  progressStepWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  progressDot: {
+    width: 11,
+    height: 11,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  progressLine: {
+    flex: 1,
+    height: 2,
+    marginHorizontal: 4,
+    borderRadius: 999,
+  },
+  progressLabels: {
+    marginTop: 7,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  progressLabel: {
+    flex: 1,
+    textAlign: 'left',
+    fontSize: 10,
+  },
+
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 12,
+    paddingTop: 10,
     borderTopWidth: 1,
   },
   locationContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    marginRight: 10,
   },
   locationIcon: {
-    fontSize: 12,
     marginRight: 4,
   },
   locationText: {
-    fontSize: 12,
+    flex: 1,
   },
   dateText: {
-    fontSize: 12,
+    textTransform: 'lowercase',
   },
+
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60,
-    paddingHorizontal: 40,
+    paddingVertical: 70,
+    paddingHorizontal: 28,
   },
-  emptyIcon: {
-    fontSize: 64,
+  emptyIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 16,
   },
   emptyTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
     marginBottom: 8,
   },
   emptyText: {
-    fontSize: 14,
     textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 24,
+    marginBottom: 20,
   },
   reportButton: {
     alignSelf: 'center',
-    minWidth: 200,
+    minWidth: 230,
   },
 });
 

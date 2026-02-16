@@ -1,5 +1,6 @@
 import React from 'react';
-import { ActivityIndicator, Alert, FlatList, RefreshControl, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, RefreshControl, View } from 'react-native';
+import { AppText } from '../../components';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import useMyReports from '../../hooks/useMyReports';
@@ -38,28 +39,25 @@ const MyReportsScreen = ({ navigation }) => {
 
   if (isLoading) {
     return (
-      <View style={[myReportsStyles.loadingContainer, { backgroundColor: theme.background }]}>
+      <View style={[myReportsStyles.loadingContainer, { backgroundColor: theme.background }]}> 
         <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={[myReportsStyles.loadingText, { color: theme.textSecondary }]}>Loading your reports...</Text>
+        <AppText variant="body" style={[myReportsStyles.loadingText, { color: theme.textSecondary }]}> 
+          Loading your reports...
+        </AppText>
       </View>
     );
   }
 
   return (
-    <View style={[myReportsStyles.container, { backgroundColor: theme.background }]}>
-      <View style={[myReportsStyles.header, { backgroundColor: theme.primary }]}>
-        <Text style={[myReportsStyles.headerTitle, { color: theme.card }]}>My Reports</Text>
-        <Text style={[myReportsStyles.headerSubtitle, { color: theme.card }]}>
-          {pagination ? `${pagination.total} total report${pagination.total !== 1 ? 's' : ''}` : ''}
-        </Text>
-      </View>
-
+    <View style={[myReportsStyles.container, { backgroundColor: theme.background }]}> 
       <StatusFilterBar selectedFilter={selectedFilter} onSelectFilter={setSelectedFilter} />
 
       <FlatList
         data={incidents}
         renderItem={({ item }) => <ReportItem item={item} onPress={handleIncidentPress} />}
-        keyExtractor={(item) => (item.id ? item.id.toString() : Math.random().toString())}
+        keyExtractor={(item, index) =>
+          item.id ? item.id.toString() : `${item.createdAt || 'report'}-${item.status || 'status'}-${index}`
+        }
         contentContainerStyle={myReportsStyles.listContainer}
         refreshControl={
           <RefreshControl

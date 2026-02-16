@@ -1,5 +1,6 @@
 import React from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
+import { AppText } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import styles from './myReportsStyles';
 
@@ -31,23 +32,28 @@ const StatusFilterBar = ({ selectedFilter, onSelectFilter }) => {
           const isActive = selectedFilter === filter.key;
 
           return (
-            <TouchableOpacity
+            <Pressable
               key={filter.key}
-              style={[
+              style={({ pressed }) => [
                 styles.filterButton,
-                { backgroundColor: isActive ? theme.primary : theme.surface },
+                {
+                  backgroundColor: isActive ? theme.primary : theme.surface,
+                  borderColor: isActive ? theme.primary : theme.border,
+                  transform: [{ scale: pressed ? 0.98 : 1 }],
+                },
               ]}
               onPress={() => onSelectFilter(filter.key)}
             >
-              <Text
+              <AppText
+                variant="caption"
                 style={[
                   styles.filterButtonText,
-                  { color: isActive ? theme.card : theme.text },
+                  { color: isActive ? '#FFFFFF' : theme.textSecondary },
                 ]}
               >
                 {filter.label}
-              </Text>
-            </TouchableOpacity>
+              </AppText>
+            </Pressable>
           );
         })}
       </ScrollView>

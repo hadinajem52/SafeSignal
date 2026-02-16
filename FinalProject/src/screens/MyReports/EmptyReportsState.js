@@ -1,6 +1,7 @@
 import React from 'react';
-import { Text, View } from 'react-native';
-import { Button } from '../../components';
+import { View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { AppText, Button } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import styles from './myReportsStyles';
 
@@ -19,10 +20,14 @@ const EmptyReportsState = ({ selectedFilter, onReportPress }) => {
 
   return (
     <View style={styles.emptyContainer}>
-      <Text style={styles.emptyIcon}>📭</Text>
-      <Text style={[styles.emptyTitle, { color: theme.text }]}>No Reports Yet</Text>
-      <Text style={[styles.emptyText, { color: theme.textSecondary }]}>{getEmptyMessage(selectedFilter)}</Text>
-      <Button title="Report an Incident" onPress={onReportPress} style={styles.reportButton} />
+      <View style={[styles.emptyIconWrap, { backgroundColor: theme.primaryLight }]}> 
+        <Ionicons name="document-text-outline" size={28} color={theme.primary} />
+      </View>
+      <AppText variant="h4" style={[styles.emptyTitle, { color: theme.text }]}>No reports yet</AppText>
+      <AppText variant="body" style={[styles.emptyText, { color: theme.textSecondary }]}> 
+        {getEmptyMessage(selectedFilter)}
+      </AppText>
+      <Button title="Submit your first report" onPress={onReportPress} style={styles.reportButton} />
     </View>
   );
 };
