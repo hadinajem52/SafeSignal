@@ -1,5 +1,5 @@
 import React from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import MapView, { Callout, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../../components';
@@ -24,7 +24,7 @@ const MapCanvas = ({
     <MapView
       ref={mapRef}
       style={styles.map}
-      provider={PROVIDER_GOOGLE}
+      provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
       initialRegion={region}
       onRegionChangeComplete={onRegionChange}
       showsUserLocation={nativeUserLocationEnabled}
@@ -37,9 +37,14 @@ const MapCanvas = ({
       loadingIndicatorColor={theme.mapMarkerDefault}
       loadingBackgroundColor={theme.card}
     >
-      {incidents.map((incident) => {
+      {incidents.filter((incident) => {
+        const latitude = incident?.location?.latitude;
+        const longitude = incident?.location?.longitude;
+        return Number.isFinite(latitude) && Number.isFinite(longitude);
+      }).map((incident) => {
         const markerColor = getMarkerColor(incident.category, categoryDisplay, theme.mapMarkerDefault);
         const categoryLabel = getCategoryLabel(incident.category, categoryDisplay);
+        const incidentTime = incident.createdAt || incident.timestamp;
 
         return (
           <Marker
@@ -62,7 +67,7 @@ const MapCanvas = ({
               <View style={[styles.markerArrow, { borderTopColor: markerColor }]} />
             </View>
             <Callout tooltip onPress={() => onMarkerPress(incident)}>
-              <View style={[styles.calloutContainer, { backgroundColor: theme.card }]}> 
+              <View style={[styles.calloutContainer, { backgroundColor: theme.card, borderColor: theme.border }]}> 
                 <AppText variant="label" style={[styles.calloutTitle, { color: theme.text }]} numberOfLines={2}>
                   {incident.title}
                 </AppText>
@@ -70,7 +75,7 @@ const MapCanvas = ({
                   {categoryLabel}
                 </AppText>
                 <AppText variant="small" style={[styles.calloutTime, { color: theme.textTertiary }]}> 
-                  {formatTimeAgo(incident.createdAt)}
+                  {incidentTime ? formatTimeAgo(incidentTime) : 'Just now'}
                 </AppText>
                 <AppText variant="small" style={[styles.calloutTap, { color: theme.mapMarkerDefault }]}>Tap for details</AppText>
               </View>

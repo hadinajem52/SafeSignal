@@ -15,7 +15,7 @@ const TimeframeSelector = ({ selectedTimeframe, onSelectTimeframe }) => {
   const { theme } = useTheme();
 
   return (
-    <View style={styles.timeframeContainer}>
+    <View style={[styles.timeframeContainer, { backgroundColor: `${theme.card}dd`, borderColor: theme.border }]}> 
       {TIMEFRAME_OPTIONS.map((option) => {
         const isActive = selectedTimeframe === option.value;
 
@@ -24,7 +24,10 @@ const TimeframeSelector = ({ selectedTimeframe, onSelectTimeframe }) => {
             key={option.value}
             style={[
               styles.timeframeButton,
-              { backgroundColor: isActive ? theme.mapMarkerDefault : theme.neutralGray100 },
+              {
+                backgroundColor: isActive ? theme.primary : theme.background,
+                borderColor: isActive ? theme.primary : theme.border,
+              },
             ]}
             onPress={() => onSelectTimeframe(option.value)}
           >
