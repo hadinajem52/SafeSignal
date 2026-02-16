@@ -19,12 +19,12 @@ const MapControls = ({
   return (
     <>
       <View style={styles.fabContainer}>
-        <TouchableOpacity style={[styles.fab, { backgroundColor: theme.card }]} onPress={onShowLegend}>
+        <TouchableOpacity style={[styles.fab, { backgroundColor: `${theme.card}dd`, borderColor: theme.border }]} onPress={onShowLegend}>
           <Ionicons name="information-circle" size={24} color={theme.mapMarkerDefault} />
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.fab, { backgroundColor: theme.card }]}
+          style={[styles.fab, { backgroundColor: `${theme.card}dd`, borderColor: theme.border }]}
           onPress={onMyLocation}
           disabled={locationLoading}
         >
@@ -35,12 +35,12 @@ const MapControls = ({
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.fab, { backgroundColor: theme.card }]} onPress={onResetRegion}>
+        <TouchableOpacity style={[styles.fab, { backgroundColor: `${theme.card}dd`, borderColor: theme.border }]} onPress={onResetRegion}>
           <Ionicons name="home" size={24} color={theme.mapMarkerDefault} />
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.fab, { backgroundColor: theme.card }]}
+          style={[styles.fab, { backgroundColor: `${theme.card}dd`, borderColor: theme.border }]}
           onPress={onRefresh}
           disabled={refreshing}
         >

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { incidentAPI } from '../../services/api';
@@ -17,6 +18,7 @@ import mapStyles from './mapStyles';
 import TimeframeSelector from './TimeframeSelector';
 
 const { CATEGORY_DISPLAY } = incidentConstants;
+const MAP_HINT_STORAGE_KEY = 'map_first_visit_hint_seen';
 
 const DEFAULT_REGION = {
   latitude: 33.8938,
@@ -30,6 +32,7 @@ const MapScreen = () => {
   const { theme } = useTheme();
   const { preferences } = useUserPreferences();
   const mapRef = useRef(null);
+  const activeRequestId = useRef(0);
 
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,6 +40,7 @@ const MapScreen = () => {
   const [error, setError] = useState(null);
   const [showLegend, setShowLegend] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState(null);
+  const [showMapHint, setShowMapHint] = useState(true);
 
   const {
     selectedCategory,
@@ -53,6 +57,9 @@ const MapScreen = () => {
 
   const fetchIncidents = useCallback(
     async (isRefresh = false) => {
+      const requestId = activeRequestId.current + 1;
+      activeRequestId.current = requestId;
+
       try {
         if (isRefresh) {
           setRefreshing(true);
@@ -68,6 +75,9 @@ const MapScreen = () => {
         }
 
         const result = await incidentAPI.getMapIncidents(params);
+        if (activeRequestId.current !== requestId) {
+          return;
+        }
 
         if (!result.success) {
           setError(result.error || 'Failed to load incidents');
@@ -75,12 +85,14 @@ const MapScreen = () => {
         }
 
         const allowedStatuses = new Set(['verified', 'dispatched', 'on_scene']);
-        const filteredIncidents = result.incidents.filter((incident) =>
-          allowedStatuses.has(incident.status)
-        );
+        const filteredIncidents = result.incidents.filter((incident) => {
+          const latitude = Number(incident?.location?.latitude);
+          const longitude = Number(incident?.location?.longitude);
+          return allowedStatuses.has(incident.status) && Number.isFinite(latitude) && Number.isFinite(longitude);
+        });
         setIncidents(filteredIncidents);
 
-        if (filteredIncidents.length > 0 && mapRef.current && !isRefresh) {
+        if (filteredIncidents.length > 0 && mapRef.current && !isRefresh && !preferences.locationServices) {
           const coordinates = filteredIncidents.map((incident) => ({
             latitude: incident.location.latitude,
             longitude: incident.location.longitude,
@@ -94,28 +106,66 @@ const MapScreen = () => {
           }, 500);
         }
       } catch (fetchError) {
+        if (activeRequestId.current !== requestId) {
+          return;
+        }
         console.error('Error fetching incidents:', fetchError);
         setError('Failed to load incidents. Please try again.');
       } finally {
-        setLoading(false);
-        setRefreshing(false);
+        if (activeRequestId.current === requestId) {
+          setLoading(false);
+          setRefreshing(false);
+        }
       }
     },
-    [selectedCategory, selectedTimeframe]
+    [preferences.locationServices, selectedCategory, selectedTimeframe]
   );
 
   useEffect(() => {
     fetchIncidents();
   }, [fetchIncidents]);
 
+  useEffect(() => {
+    let hintTimer;
+    const loadHintState = async () => {
+      const hintSeen = await AsyncStorage.getItem(MAP_HINT_STORAGE_KEY);
+      if (hintSeen === '1') {
+        setShowMapHint(false);
+        return;
+      }
+
+      setShowMapHint(true);
+      hintTimer = setTimeout(async () => {
+        setShowMapHint(false);
+        await AsyncStorage.setItem(MAP_HINT_STORAGE_KEY, '1');
+      }, 4200);
+    };
+
+    loadHintState().catch(() => {
+      setShowMapHint(true);
+    });
+
+    return () => {
+      if (hintTimer) {
+        clearTimeout(hintTimer);
+      }
+    };
+  }, []);
+
   const clearSelectedIncident = () => {
     setSelectedIncident(null);
   };
 
   const handleCenterMap = (incident) => {
+    const latitude = Number(incident?.location?.latitude);
+    const longitude = Number(incident?.location?.longitude);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return;
+    }
+
     mapRef.current?.animateToRegion({
-      latitude: incident.location.latitude,
-      longitude: incident.location.longitude,
+      latitude,
+      longitude,
       latitudeDelta: 0.01,
       longitudeDelta: 0.01,
     });
@@ -147,13 +197,20 @@ const MapScreen = () => {
         showsUserLocation={preferences.locationServices}
         incidents={incidents}
         categoryDisplay={CATEGORY_DISPLAY}
-        onMarkerPress={setSelectedIncident}
+        onMarkerPress={(incident) => {
+          setShowMapHint(false);
+          AsyncStorage.setItem(MAP_HINT_STORAGE_KEY, '1').catch(() => {});
+          setSelectedIncident(incident);
+        }}
       />
 
       <View
         style={[
           mapStyles.filterHeader,
-          { paddingTop: insets.top + 10, backgroundColor: `${theme.card}fc` },
+          {
+            paddingTop: insets.top + 8,
+            backgroundColor: `${theme.card}00`,
+          },
         ]}
       >
         <CategoryFilterBar
@@ -166,6 +223,15 @@ const MapScreen = () => {
           onSelectTimeframe={setSelectedTimeframe}
         />
       </View>
+
+      {showMapHint ? (
+        <View style={[mapStyles.mapHintWrap, { backgroundColor: `${theme.card}e8`, borderColor: theme.border }]}> 
+          <Ionicons name="finger-print-outline" size={16} color={theme.primary} />
+          <AppText variant="caption" style={[mapStyles.mapHintText, { color: theme.textSecondary }]}> 
+            Tap a marker to open incident details.
+          </AppText>
+        </View>
+      ) : null}
 
       <MapControls
         onShowLegend={() => setShowLegend(true)}
