@@ -37,7 +37,7 @@ function DedupCandidatesPanel({ dedup, isLoading, onMerge, isMerging, sourceInci
       </div>
       {source.title && (
         <div className="mb-3 rounded-md border border-blue-100 bg-blue-50 p-2">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-blue-700">Current Incident</div>
+          <div className="text-[11px] font-semibold uppercase text-blue-700">Current Incident</div>
           <div className="text-sm font-medium text-blue-900">{source.title}</div>
         </div>
       )}
@@ -79,7 +79,7 @@ function DedupCandidatesPanel({ dedup, isLoading, onMerge, isMerging, sourceInci
               </div>
               {candidate.title && (
                 <div className="mt-2">
-                  <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">Candidate Incident</div>
+                  <div className="text-[11px] font-semibold uppercase text-muted">Candidate Incident</div>
                   <div className="text-sm font-medium text-text">{candidate.title}</div>
                 </div>
               )}
@@ -96,7 +96,7 @@ function DedupCandidatesPanel({ dedup, isLoading, onMerge, isMerging, sourceInci
                 <span>Same reporter: {candidate.sameReporter ? 'Yes' : 'No'}</span>
               </div>
               <div className="mt-2">
-                <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">Shared Keywords</div>
+                <div className="text-[11px] font-semibold uppercase text-muted">Shared Keywords</div>
                 {(candidate.sharedKeywords || []).length > 0 ? (
                   <div className="mt-1 flex flex-wrap gap-1">
                     {candidate.sharedKeywords.map((keyword) => (

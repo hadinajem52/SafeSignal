@@ -5,6 +5,7 @@ import { io } from 'socket.io-client'
 import PageHeader from '../../components/PageHeader'
 import { useAuth } from '../../context/AuthContext'
 import { leiAPI } from '../../services/api'
+import { SOCKET_URL } from '../../utils/network'
 import AlertsPanel from './AlertsPanel'
 import IncidentDetail from './IncidentDetail'
 import IncidentTable from './IncidentTable'
@@ -112,7 +113,7 @@ function LawEnforcement() {
     const token = localStorage.getItem('moderator_token')
     if (!token) return
 
-    const socket = io('http://localhost:3000', {
+    const socket = io(SOCKET_URL, {
       auth: { token },
     })
 
