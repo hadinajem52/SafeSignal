@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { AppText } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 
 const IncidentPhotoUploader = ({
@@ -11,8 +13,8 @@ const IncidentPhotoUploader = ({
 
   return (
     <View style={styles.inputGroup}>
-      <Text style={[styles.label, { color: theme.text }]}>Photos (Optional)</Text>
-      <Text style={[styles.helperText, { color: theme.textSecondary }]}>Add up to 5 photos to support your report</Text>
+      <AppText variant="label" style={[styles.label, { color: theme.text }]}>Photos (Optional)</AppText>
+      <AppText variant="small" style={[styles.helperText, { color: theme.textSecondary }]}>Add up to 5 photos to support your report</AppText>
       
       <View style={styles.photosContainer}>
         {photos.map((photo, index) => (
@@ -22,7 +24,7 @@ const IncidentPhotoUploader = ({
               style={styles.removePhotoButton}
               onPress={() => onRemovePhoto(index)}
             >
-              <Text style={styles.removePhotoText}>×</Text>
+              <Ionicons name="close" size={12} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         ))}
@@ -38,8 +40,8 @@ const IncidentPhotoUploader = ({
             ]}
             onPress={onAddPhoto}
           >
-            <Text style={styles.addPhotoIcon}>📷</Text>
-            <Text style={[styles.addPhotoText, { color: theme.textSecondary }]}>Add Photo</Text>
+            <Ionicons name="camera-outline" size={20} color={theme.textSecondary} style={styles.addPhotoIcon} />
+            <AppText variant="small" style={[styles.addPhotoText, { color: theme.textSecondary }]}>Add Photo</AppText>
           </TouchableOpacity>
         )}
       </View>
@@ -52,12 +54,9 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '600',
     marginBottom: 8,
   },
   helperText: {
-    fontSize: 12,
     marginTop: 6,
     fontStyle: 'italic',
   },
@@ -90,12 +89,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  removePhotoText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginTop: -2,
-  },
   addPhotoButton: {
     width: 80,
     height: 80,
@@ -107,11 +100,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   addPhotoIcon: {
-    fontSize: 24,
     marginBottom: 4,
   },
   addPhotoText: {
-    fontSize: 10,
   },
 });
 

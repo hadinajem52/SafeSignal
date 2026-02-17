@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { AppText } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 
 const IncidentDateTimePicker = ({
@@ -11,19 +13,19 @@ const IncidentDateTimePicker = ({
 
   return (
     <View style={styles.inputGroup}>
-      <Text style={[styles.label, { color: theme.text }]}>When did this happen?</Text>
-      <View style={[styles.dateTimeContainer, { backgroundColor: theme.input, borderColor: theme.inputBorder }]}>
+      <AppText variant="label" style={[styles.label, { color: theme.text }]}>When did this happen?</AppText>
+      <View style={[styles.dateTimeContainer, { backgroundColor: theme.input, borderColor: theme.inputBorder }]}> 
         <View style={styles.dateDisplay}>
-          <Text style={styles.dateIcon}>📅</Text>
-          <Text style={[styles.dateText, { color: theme.text }]}>{formatDate(incidentDate)}</Text>
+          <Ionicons name="calendar-outline" size={16} color={theme.primary} style={styles.dateIcon} />
+          <AppText variant="body" style={[styles.dateText, { color: theme.text }]}>{formatDate(incidentDate)}</AppText>
         </View>
         <TouchableOpacity style={[styles.setNowButton, { backgroundColor: theme.surface }]} onPress={onSetToNow}>
-          <Text style={[styles.setNowButtonText, { color: theme.primary }]}>Set to Now</Text>
+          <AppText variant="buttonSmall" style={[styles.setNowButtonText, { color: theme.primary }]}>Set to Now</AppText>
         </TouchableOpacity>
       </View>
-      <Text style={[styles.helperText, { color: theme.textSecondary }]}>
+      <AppText variant="small" style={[styles.helperText, { color: theme.textSecondary }]}> 
         Default is current time. Adjust if incident happened earlier.
-      </Text>
+      </AppText>
     </View>
   );
 };
@@ -33,8 +35,6 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '600',
     marginBottom: 8,
   },
   dateTimeContainer: {
@@ -53,7 +53,6 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   dateText: {
-    fontSize: 16,
   },
   setNowButton: {
     paddingHorizontal: 12,
@@ -61,10 +60,8 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   setNowButtonText: {
-    fontWeight: '600',
   },
   helperText: {
-    fontSize: 12,
     marginTop: 6,
     fontStyle: 'italic',
   },

@@ -5,6 +5,7 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { incidentAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -226,12 +227,13 @@ const ReportIncidentScreen = ({ navigation, route }) => {
       };
 
       let result;
+      const draftIdValue = draftId != null ? String(draftId) : '';
       
       // For drafts stored locally (with temp ID like "draft-123"), always submit as new
       // For drafts stored in DB (with numeric ID), update if submitting with isDraft=false, otherwise submit new
-      if (draftId && !draftId.startsWith('draft-') && !asDraft) {
+      if (draftIdValue && !draftIdValue.startsWith('draft-') && !asDraft) {
         // Update existing database draft to submitted status
-        result = await incidentAPI.updateIncident(draftId, incidentData);
+        result = await incidentAPI.updateIncident(draftIdValue, incidentData);
       } else {
         // Create new incident (handles both new reports and local draft submissions)
         result = await incidentAPI.submitIncident(incidentData);
@@ -319,12 +321,11 @@ const ReportIncidentScreen = ({ navigation, route }) => {
         styles.noticeContainer,
         {
           backgroundColor: theme.warningNoticeBg,
-          borderLeftColor: theme.warning,
           borderColor: theme.warning,
         },
       ]}
       >
-        <AppText style={styles.noticeIcon}>⚠️</AppText>
+        <Ionicons name="warning-outline" size={18} color={theme.warning} style={styles.noticeIcon} />
         <AppText variant="body" style={[styles.noticeText, { color: theme.warningNoticeText }]}> 
           If you are in immediate danger, call emergency services (911) immediately.
         </AppText>
@@ -411,7 +412,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
         <View style={styles.actionButtonsContainer}>
           {/* Save Draft Button */}
           <Button
-            title="💾 Save Draft"
+            title="Save Draft"
             onPress={() => saveDraft(true)}
             loading={isSavingDraft}
             disabled={isSavingDraft}
@@ -463,7 +464,6 @@ const styles = StyleSheet.create({
   },
   noticeContainer: {
     borderWidth: 1,
-    borderLeftWidth: 4,
     padding: 15,
     margin: 20,
     marginBottom: 10,
@@ -472,7 +472,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   noticeIcon: {
-    fontSize: 24,
     marginRight: 10,
   },
   noticeText: {

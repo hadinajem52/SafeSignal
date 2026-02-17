@@ -1,6 +1,21 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { AppText } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
+
+const CATEGORY_ICONS = {
+  theft: 'cash-outline',
+  assault: 'warning-outline',
+  vandalism: 'construct-outline',
+  suspicious_activity: 'eye-outline',
+  traffic_incident: 'car-outline',
+  noise_complaint: 'volume-high-outline',
+  fire: 'flame-outline',
+  medical_emergency: 'medkit-outline',
+  hazard: 'alert-circle-outline',
+  other: 'help-circle-outline',
+};
 
 const IncidentCategoryPicker = ({
   categories,
@@ -12,9 +27,7 @@ const IncidentCategoryPicker = ({
 
   return (
     <View style={styles.inputGroup}>
-      <Text style={[styles.label, { color: theme.text }]}>
-        Category <Text style={[styles.required, { color: theme.error }]}>*</Text>
-      </Text>
+      <AppText variant="label" style={[styles.label, { color: theme.text }]}>Category *</AppText>
       <View style={styles.categoryGrid}>
         {categories.map((category) => (
           <TouchableOpacity
@@ -35,8 +48,14 @@ const IncidentCategoryPicker = ({
             ]}
             onPress={() => onSelect(category.value)}
           >
-            <Text style={styles.categoryIcon}>{category.icon}</Text>
-            <Text
+            <Ionicons
+              name={CATEGORY_ICONS[category.value] || 'help-circle-outline'}
+              size={18}
+              color={selectedCategory === category.value ? theme.primary : theme.textSecondary}
+              style={styles.categoryIcon}
+            />
+            <AppText
+              variant="caption"
               style={[
                 styles.categoryLabel,
                 { color: theme.text },
@@ -47,11 +66,11 @@ const IncidentCategoryPicker = ({
               ]}
             >
               {category.label}
-            </Text>
+            </AppText>
           </TouchableOpacity>
         ))}
       </View>
-      {error && <Text style={[styles.errorText, { color: theme.error }]}>{error}</Text>}
+      {error && <AppText variant="small" style={[styles.errorText, { color: theme.error }]}>{error}</AppText>}
     </View>
   );
 };
@@ -61,11 +80,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '600',
     marginBottom: 8,
-  },
-  required: {
   },
   categoryGrid: {
     flexDirection: 'row',
@@ -80,24 +95,19 @@ const styles = StyleSheet.create({
     padding: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 90,
+    minHeight: 84,
   },
   categoryButtonSelected: {
   },
   categoryIcon: {
-    fontSize: 28,
     marginBottom: 6,
   },
   categoryLabel: {
-    fontSize: 12,
     textAlign: 'center',
-    fontWeight: '500',
   },
   categoryLabelSelected: {
-    fontWeight: '700',
   },
   errorText: {
-    fontSize: 12,
     marginTop: 4,
   },
 });
