@@ -4,8 +4,8 @@ import ToggleSettingRow from './ToggleSettingRow'
 
 function ModerationSettings({ settings, isMutating, onAutoVerifyChange, onMinConfidenceChange }) {
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+    <div className="bg-card border border-border rounded-lg shadow-soft p-6">
+      <h2 className="text-xl font-bold text-text mb-4 flex items-center gap-2">
         <Settings size={24} />
         Moderation Settings
       </h2>
@@ -19,8 +19,8 @@ function ModerationSettings({ settings, isMutating, onAutoVerifyChange, onMinCon
           disabled={isMutating}
         />
 
-        <div className="p-4 bg-gray-50 rounded-lg">
-          <label className="block text-sm font-medium text-gray-900 mb-3">
+        <div className="p-4 bg-surface rounded-lg">
+          <label className="block text-sm font-medium text-text mb-3">
             Minimum Confidence Score for Auto-Verification: {settings.minConfidenceScore}%
           </label>
           <input
@@ -29,10 +29,10 @@ function ModerationSettings({ settings, isMutating, onAutoVerifyChange, onMinCon
             max="100"
             value={settings.minConfidenceScore}
             onChange={onMinConfidenceChange}
-            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+            className="w-full h-2 bg-border rounded-lg appearance-none cursor-pointer"
             disabled={isMutating}
           />
-          <p className="text-sm text-gray-600 mt-2">Only reports above this score will be auto-verified</p>
+          <p className="text-sm text-muted mt-2">Only reports above this score will be auto-verified</p>
         </div>
       </div>
     </div>

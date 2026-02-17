@@ -160,7 +160,7 @@ function GoogleMapPanelContent({
 
   if (!isLoaded) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
+      <div className="rounded-lg border border-border bg-surface p-3 text-sm text-muted">
         Loading map...
       </div>
     )
@@ -168,7 +168,7 @@ function GoogleMapPanelContent({
 
   if (validMarkers.length === 0) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
+      <div className="rounded-lg border border-border bg-surface p-3 text-sm text-muted">
         {emptyMessage}
       </div>
     )
@@ -214,7 +214,7 @@ function GoogleMapPanelContent({
   }
 
   return (
-    <div className="rounded-lg overflow-hidden border border-gray-200">
+    <div className="rounded-lg overflow-hidden border border-border bg-card">
       <GoogleMap
         mapContainerStyle={mapContainerStyle}
         center={effectiveCenter}

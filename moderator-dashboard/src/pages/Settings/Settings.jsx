@@ -212,8 +212,8 @@ function SettingsPage() {
 
   if (isError) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Settings</h1>
+      <div className="bg-card border border-border rounded-lg shadow-soft p-6">
+        <h1 className="text-3xl font-bold text-text mb-2">Settings</h1>
         <p className="text-red-600 mb-4">{error?.message || 'Failed to load settings'}</p>
         <button
           onClick={() => refetch()}

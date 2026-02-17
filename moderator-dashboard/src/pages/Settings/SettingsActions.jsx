@@ -18,7 +18,7 @@ function SettingsActions({
         <button
           onClick={onSave}
           disabled={!hasChanges || isMutating}
-          className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 px-6 py-3 bg-primary hover:opacity-90 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Save size={20} />
           {savePending ? 'Saving...' : 'Save Settings'}
@@ -26,7 +26,7 @@ function SettingsActions({
         <button
           onClick={onReset}
           disabled={isMutating}
-          className="flex items-center gap-2 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 px-6 py-3 bg-surface border border-border hover:bg-bg text-text font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <RotateCcw size={20} />
           {resetPending ? 'Resetting...' : 'Reset to Defaults'}

@@ -2,12 +2,12 @@ import React from 'react'
 
 function DataTable({ headers, children }) {
   return (
-    <div className="bg-white rounded-lg shadow overflow-hidden">
+    <div className="bg-card rounded-lg border border-border shadow-soft overflow-hidden">
       <table className="w-full">
-        <thead className="bg-gray-50 border-b border-gray-200">
+        <thead className="bg-surface border-b border-border">
           <tr>
             {headers.map((header) => (
-              <th key={header} className="px-6 py-3 text-left text-sm font-bold text-gray-900">
+              <th key={header} className="px-6 py-3 text-left text-sm font-bold text-text">
                 {header}
               </th>
             ))}
