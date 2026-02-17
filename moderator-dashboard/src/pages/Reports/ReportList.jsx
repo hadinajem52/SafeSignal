@@ -5,7 +5,14 @@ import LoadingState from '../../components/LoadingState'
 import SeverityBadge from '../../components/SeverityBadge'
 import StatusBadge from '../../components/StatusBadge'
 
-function ReportList({ reports, isLoading, onSelectReport }) {
+function ReportList({
+  reports,
+  isLoading,
+  onSelectReport,
+  selectedReportIds,
+  onToggleSelection,
+  onToggleSelectAll,
+}) {
   if (isLoading) {
     return <LoadingState />
   }
@@ -14,31 +21,63 @@ function ReportList({ reports, isLoading, onSelectReport }) {
     return <EmptyState icon={AlertTriangle} message="No reports found matching your criteria" />
   }
 
+  const allSelected = selectedReportIds.length === reports.length
+
   return (
-    <div className="grid gap-4">
-      {reports.map((report) => (
-        <div
-          key={report.id}
-          className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 cursor-pointer"
-          onClick={() => onSelectReport(report)}
-        >
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <h3 className="text-lg font-bold text-gray-900">{report.title}</h3>
+    <div className="bg-card border border-border rounded-lg shadow-soft overflow-hidden">
+      <table className="w-full">
+        <thead className="bg-surface border-b border-border">
+          <tr>
+            <th className="px-4 py-3 text-left">
+              <input
+                type="checkbox"
+                aria-label="Select all reports"
+                checked={allSelected}
+                onChange={onToggleSelectAll}
+                className="size-4"
+              />
+            </th>
+            <th className="px-4 py-3 text-left text-sm font-bold text-text">Report</th>
+            <th className="px-4 py-3 text-left text-sm font-bold text-text">Reporter</th>
+            <th className="px-4 py-3 text-left text-sm font-bold text-text">Status</th>
+            <th className="px-4 py-3 text-left text-sm font-bold text-text">Severity</th>
+            <th className="px-4 py-3 text-left text-sm font-bold text-text">Date</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border">
+          {reports.map((report) => (
+            <tr
+              key={report.id}
+              className="hover:bg-surface cursor-pointer"
+              onClick={() => onSelectReport(report)}
+            >
+              <td className="px-4 py-3" onClick={(event) => event.stopPropagation()}>
+                <input
+                  type="checkbox"
+                  aria-label={`Select report ${report.title}`}
+                  checked={selectedReportIds.includes(report.id)}
+                  onChange={() => onToggleSelection(report.id)}
+                  className="size-4"
+                />
+              </td>
+              <td className="px-4 py-3">
+                <p className="font-semibold text-text text-sm">{report.title}</p>
+                <p className="text-xs text-muted truncate max-w-[420px]">{report.description}</p>
+              </td>
+              <td className="px-4 py-3 text-sm text-muted">{report.reporter}</td>
+              <td className="px-4 py-3">
                 <StatusBadge status={report.status} />
-              </div>
-              <p className="text-gray-600 text-sm mb-3">{report.description}</p>
-              <div className="flex items-center gap-4 text-sm text-gray-600">
-                <span>📍 {report.location}</span>
-                <span>👤 {report.reporter}</span>
-                <span>📅 {new Date(report.createdAt).toLocaleDateString()}</span>
-              </div>
-            </div>
-            <SeverityBadge severity={report.severity} display="initial" />
-          </div>
-        </div>
-      ))}
+              </td>
+              <td className="px-4 py-3">
+                <SeverityBadge severity={report.severity} display="initial" />
+              </td>
+              <td className="px-4 py-3 text-sm text-muted tabular-nums">
+                {new Date(report.createdAt).toLocaleDateString()}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }

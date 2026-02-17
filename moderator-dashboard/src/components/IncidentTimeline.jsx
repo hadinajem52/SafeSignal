@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Lock, Send, Loader2 } from 'lucide-react'
 import { timelineAPI } from '../services/api'
 import { SOCKET_URL } from '../utils/network'
@@ -14,23 +14,7 @@ const IncidentTimeline = ({ incidentId }) => {
   const timelineEndRef = useRef(null)
   const socketRef = useRef(null)
 
-  useEffect(() => {
-    loadTimeline()
-    setupSocket()
-
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.emit('leave_incident', { incidentId })
-        socketRef.current.disconnect()
-      }
-    }
-  }, [incidentId])
-
-  useEffect(() => {
-    scrollToBottom()
-  }, [timeline])
-
-  const loadTimeline = async () => {
+  const loadTimeline = useCallback(async () => {
     setLoading(true)
     setError(null)
 
@@ -43,9 +27,9 @@ const IncidentTimeline = ({ incidentId }) => {
     }
 
     setLoading(false)
-  }
+  }, [incidentId])
 
-  const setupSocket = () => {
+  const setupSocket = useCallback(() => {
     try {
       const token = localStorage.getItem('moderator_token')
       if (!token) return
@@ -78,11 +62,27 @@ const IncidentTimeline = ({ incidentId }) => {
     } catch (err) {
       console.error('Failed to setup socket:', err)
     }
-  }
+  }, [incidentId])
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     timelineEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+  }, [])
+
+  useEffect(() => {
+    loadTimeline()
+    setupSocket()
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.emit('leave_incident', { incidentId })
+        socketRef.current.disconnect()
+      }
+    }
+  }, [incidentId, loadTimeline, setupSocket])
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [timeline, scrollToBottom])
 
   const handleSend = async () => {
     if (!message.trim() || sending) return
