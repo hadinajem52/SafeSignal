@@ -20,18 +20,22 @@ const queryClient = new QueryClient({
   },
 })
 
+function FullPageLoading() {
+  return (
+    <div className="min-h-dvh flex items-center justify-center bg-bg">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+        <p className="mt-4 text-muted">Loading...</p>
+      </div>
+    </div>
+  )
+}
+
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth()
   
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    )
+    return <FullPageLoading />
   }
   
   return isAuthenticated ? children : <Navigate to="/login" />
@@ -41,14 +45,7 @@ function RoleProtectedRoute({ allowedRoles, children }) {
   const { user, loading } = useAuth()
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    )
+    return <FullPageLoading />
   }
 
   if (!user || !allowedRoles.includes(user.role)) {

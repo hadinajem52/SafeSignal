@@ -1,5 +1,6 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { AlertTriangle, RefreshCw, Trash2 } from 'lucide-react'
+import ConfirmDialog from '../../components/ConfirmDialog'
 import DangerActionPanel from './DangerActionPanel'
 
 function DatabaseTab({
@@ -24,8 +25,25 @@ function DatabaseTab({
   onClearAllData,
   clearAllPending,
 }) {
+  const [confirmState, setConfirmState] = useState(null)
+
+  const handleConfirmAction = () => {
+    if (!confirmState) return
+
+    if (confirmState.type === 'clear-table') {
+      onClearTable(confirmState.tableName)
+    }
+
+    if (confirmState.type === 'delete-row') {
+      onDeleteRow(confirmState.rowId)
+    }
+
+    setConfirmState(null)
+  }
+
   return (
-    <div className="space-y-6">
+    <>
+      <div className="space-y-6">
       <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
         <div className="flex items-start gap-3">
           <AlertTriangle className="text-amber-600 mt-0.5" size={18} />
@@ -41,6 +59,7 @@ function DatabaseTab({
             <h3 className="font-semibold text-gray-900">Managed Tables</h3>
             <button
               onClick={onRefreshTables}
+              aria-label="Refresh table stats"
               className="p-2 rounded hover:bg-gray-100 text-gray-600"
               title="Refresh table stats"
             >
@@ -95,10 +114,10 @@ function DatabaseTab({
               <button
                 onClick={() => {
                   if (!selectedTable) return
-                  const confirmed = window.confirm(
-                    `Clear all rows from table "${selectedTable}"? This cannot be undone.`
-                  )
-                  if (confirmed) onClearTable(selectedTable)
+                  setConfirmState({
+                    type: 'clear-table',
+                    tableName: selectedTable,
+                  })
                 }}
                 disabled={!selectedTable || clearTablePending}
                 className="px-3 py-2 rounded bg-red-600 text-white text-sm hover:bg-red-700 disabled:opacity-50"
@@ -124,10 +143,12 @@ function DatabaseTab({
                       </span>
                       <button
                         onClick={() => {
-                          const confirmed = window.confirm(
-                            `Delete row ${primaryKey}=${rowId} from "${selectedTable}"?`
-                          )
-                          if (confirmed) onDeleteRow(rowId)
+                          setConfirmState({
+                            type: 'delete-row',
+                            rowId,
+                            rowDescription: `${primaryKey}=${rowId}`,
+                            tableName: selectedTable,
+                          })
                         }}
                         className="text-red-600 hover:text-red-700 text-sm flex items-center gap-1"
                       >
@@ -172,7 +193,21 @@ function DatabaseTab({
         isPending={clearAllPending}
         onAction={onClearAllData}
       />
-    </div>
+      </div>
+
+      <ConfirmDialog
+        visible={Boolean(confirmState)}
+        title={confirmState?.type === 'clear-table' ? 'Clear Table?' : 'Delete Row?'}
+        message={
+          confirmState?.type === 'clear-table'
+            ? `Clear all rows from table "${confirmState?.tableName}"? This cannot be undone.`
+            : `Delete row ${confirmState?.rowDescription || ''} from "${confirmState?.tableName || ''}"?`
+        }
+        confirmLabel={confirmState?.type === 'clear-table' ? 'Clear Table' : 'Delete Row'}
+        onConfirm={handleConfirmAction}
+        onCancel={() => setConfirmState(null)}
+      />
+    </>
   )
 }
 

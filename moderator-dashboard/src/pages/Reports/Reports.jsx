@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { io } from 'socket.io-client'
 import PageHeader from '../../components/PageHeader'
 import { reportsAPI } from '../../services/api'
+import { SOCKET_URL } from '../../utils/network'
 import ReportDetail from './ReportDetail'
 import ReportFilters from './ReportFilters'
 import ReportList from './ReportList'
@@ -47,7 +48,7 @@ function Reports() {
     const token = localStorage.getItem('moderator_token')
     if (!token) return
 
-    const socket = io('http://localhost:3000', {
+    const socket = io(SOCKET_URL, {
       auth: { token },
     })
 

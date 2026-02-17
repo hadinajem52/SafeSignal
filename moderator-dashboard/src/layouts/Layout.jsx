@@ -3,6 +3,7 @@ import { io } from 'socket.io-client'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../context/AuthContext'
 import { settingsAPI } from '../services/api'
+import { SOCKET_URL } from '../utils/network'
 import { applyDarkMode, persistDarkMode } from '../utils/theme'
 import Navigation from './Navigation'
 
@@ -33,7 +34,7 @@ function Layout({ children }) {
     const token = localStorage.getItem('moderator_token')
     if (!token || !user) return undefined
 
-    const socket = io('http://localhost:3000', {
+    const socket = io(SOCKET_URL, {
       auth: { token },
     })
 
@@ -98,10 +99,16 @@ function Layout({ children }) {
   }, [queryClient, user])
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-dvh bg-bg">
       <Navigation />
       <main className="flex-1 overflow-auto">
-        <div className="fixed right-6 top-6 z-50 space-y-2">
+        <div
+          className="fixed z-50 space-y-2"
+          style={{
+            right: 'calc(env(safe-area-inset-right, 0px) + 1.5rem)',
+            top: 'calc(env(safe-area-inset-top, 0px) + 1.5rem)',
+          }}
+        >
           {activeNotifications.map((notification) => (
             <div
               key={notification.id}
@@ -117,7 +124,15 @@ function Layout({ children }) {
             </div>
           ))}
         </div>
-        <div className="p-8">
+        <div
+          className="p-8"
+          style={{
+            paddingTop: 'calc(env(safe-area-inset-top, 0px) + 2rem)',
+            paddingRight: 'calc(env(safe-area-inset-right, 0px) + 2rem)',
+            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 2rem)',
+            paddingLeft: 'calc(env(safe-area-inset-left, 0px) + 2rem)',
+          }}
+        >
           {children}
         </div>
       </main>

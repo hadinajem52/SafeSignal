@@ -22,15 +22,19 @@ function Login() {
     setSuccessMessage('')
     setLoading(true)
 
-    const result = await login(email, password)
-    
-    if (result.success) {
-      navigate('/')
-    } else {
-      setError(result.error)
+    try {
+      const result = await login(email, password)
+
+      if (result.success) {
+        navigate('/')
+      } else {
+        setError(result.error)
+      }
+    } catch (_error) {
+      setError('Unable to login right now. Please try again.')
+    } finally {
+      setLoading(false)
     }
-    
-    setLoading(false)
   }
 
   const handleApplicationSubmit = async (e) => {
@@ -39,27 +43,31 @@ function Login() {
     setSuccessMessage('')
     setLoading(true)
 
-    const result = await authAPI.register({
-      username,
-      email,
-      password,
-      role: requestedRole,
-    })
+    try {
+      const result = await authAPI.register({
+        username,
+        email,
+        password,
+        role: requestedRole,
+      })
 
-    if (result.success) {
-      setSuccessMessage('Application submitted. An admin must approve your account before login.')
-      setUsername('')
-      setEmail('')
-      setPassword('')
-    } else {
-      setError(result.error)
+      if (result.success) {
+        setSuccessMessage('Application submitted. An admin must approve your account before login.')
+        setUsername('')
+        setEmail('')
+        setPassword('')
+      } else {
+        setError(result.error)
+      }
+    } catch (_error) {
+      setError('Unable to submit application right now. Please try again.')
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center p-4">
+    <div className="min-h-dvh bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white rounded-lg shadow-xl p-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">SafeSignal</h1>

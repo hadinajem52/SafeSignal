@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Lock, Send, Loader2 } from 'lucide-react'
 import { timelineAPI } from '../services/api'
+import { SOCKET_URL } from '../utils/network'
 import io from 'socket.io-client'
 
 const IncidentTimeline = ({ incidentId }) => {
@@ -49,7 +50,7 @@ const IncidentTimeline = ({ incidentId }) => {
       const token = localStorage.getItem('moderator_token')
       if (!token) return
 
-      const socket = io('http://localhost:3000', {
+      const socket = io(SOCKET_URL, {
         auth: { token },
         transports: ['websocket'],
       })
