@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { View, TextInput, StyleSheet } from 'react-native';
+import { AppText } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 
 const IncidentTextFields = ({
@@ -15,9 +16,7 @@ const IncidentTextFields = ({
     <>
       {/* Title Input */}
       <View style={styles.inputGroup}>
-        <Text style={[styles.label, { color: theme.text }]}>
-          Title <Text style={[styles.required, { color: theme.error }]}>*</Text>
-        </Text>
+        <AppText variant="label" style={[styles.label, { color: theme.text }]}>Title *</AppText>
         <TextInput
           style={[
             styles.input,
@@ -34,15 +33,13 @@ const IncidentTextFields = ({
           onChangeText={onTitleChange}
           maxLength={255}
         />
-        {errors.title && <Text style={[styles.errorText, { color: theme.error }]}>{errors.title}</Text>}
-        <Text style={[styles.charCount, { color: theme.textSecondary }]}>{title.length}/255</Text>
+        {errors.title && <AppText variant="small" style={[styles.errorText, { color: theme.error }]}>{errors.title}</AppText>}
+        <AppText variant="small" style={[styles.charCount, { color: theme.textSecondary }]}>{title.length}/255</AppText>
       </View>
 
       {/* Description Input */}
       <View style={styles.inputGroup}>
-        <Text style={[styles.label, { color: theme.text }]}>
-          Description <Text style={[styles.required, { color: theme.error }]}>*</Text>
-        </Text>
+        <AppText variant="label" style={[styles.label, { color: theme.text }]}>Description *</AppText>
         <TextInput
           style={[
             styles.textArea,
@@ -62,8 +59,8 @@ const IncidentTextFields = ({
           textAlignVertical="top"
           maxLength={5000}
         />
-        {errors.description && <Text style={[styles.errorText, { color: theme.error }]}>{errors.description}</Text>}
-        <Text style={[styles.charCount, { color: theme.textSecondary }]}>{description.length}/5000</Text>
+        {errors.description && <AppText variant="small" style={[styles.errorText, { color: theme.error }]}>{errors.description}</AppText>}
+        <AppText variant="small" style={[styles.charCount, { color: theme.textSecondary }]}>{description.length}/5000</AppText>
       </View>
     </>
   );
@@ -74,33 +71,27 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '600',
     marginBottom: 8,
-  },
-  required: {
   },
   input: {
     borderWidth: 1,
     borderRadius: 8,
     padding: 12,
-    fontSize: 16,
+    fontSize: 15,
   },
   textArea: {
     borderWidth: 1,
     borderRadius: 8,
     padding: 12,
-    fontSize: 16,
+    fontSize: 15,
     minHeight: 120,
   },
   inputError: {
   },
   errorText: {
-    fontSize: 12,
     marginTop: 4,
   },
   charCount: {
-    fontSize: 12,
     textAlign: 'right',
     marginTop: 4,
   },

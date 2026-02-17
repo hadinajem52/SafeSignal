@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { AppText } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 
 const IncidentSeverityPicker = ({
@@ -12,7 +13,7 @@ const IncidentSeverityPicker = ({
 
   return (
     <View style={styles.inputGroup}>
-      <Text style={[styles.label, { color: theme.text }]}>Severity Level</Text>
+      <AppText variant="label" style={[styles.label, { color: theme.text }]}>Severity Level</AppText>
       <View style={styles.severityContainer}>
         {levels.map((level) => (
           <TouchableOpacity
@@ -25,7 +26,8 @@ const IncidentSeverityPicker = ({
             ]}
             onPress={() => onSelect(level.value)}
           >
-            <Text
+            <AppText
+              variant="bodySmall"
               style={[
                 styles.severityLabel,
                 { color: theme.text },
@@ -33,13 +35,13 @@ const IncidentSeverityPicker = ({
               ]}
             >
               {level.label}
-            </Text>
+            </AppText>
           </TouchableOpacity>
         ))}
       </View>
-      <Text style={[styles.helperText, { color: theme.textSecondary }]}>
+      <AppText variant="small" style={[styles.helperText, { color: theme.textSecondary }]}> 
         {currentLevel?.description}
-      </Text>
+      </AppText>
     </View>
   );
 };
@@ -49,8 +51,6 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '600',
     marginBottom: 8,
   },
   severityContainer: {
@@ -66,14 +66,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   severityLabel: {
-    fontSize: 14,
-    fontWeight: '600',
   },
   severityLabelSelected: {
     color: '#fff',
   },
   helperText: {
-    fontSize: 12,
     marginTop: 6,
     fontStyle: 'italic',
   },
