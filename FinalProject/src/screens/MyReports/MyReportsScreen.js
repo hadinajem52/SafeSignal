@@ -1,5 +1,6 @@
 import React from 'react';
-import { ActivityIndicator, Alert, FlatList, RefreshControl, View } from 'react-native';
+import { Alert, FlatList, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { AppText } from '../../components';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -40,16 +41,35 @@ const MyReportsScreen = ({ navigation }) => {
   if (isLoading) {
     return (
       <View style={[myReportsStyles.loadingContainer, { backgroundColor: theme.background }]}> 
-        <ActivityIndicator size="large" color={theme.primary} />
-        <AppText variant="body" style={[myReportsStyles.loadingText, { color: theme.textSecondary }]}> 
-          Loading your reports...
-        </AppText>
+        <View style={[myReportsStyles.skeletonHeader, { backgroundColor: theme.surface2 }]} />
+        <View style={[myReportsStyles.skeletonFilterRow, { backgroundColor: theme.card, borderColor: theme.border }]} />
+        {[1, 2, 3].map((item) => (
+          <View key={item} style={[myReportsStyles.skeletonCard, { backgroundColor: theme.card, borderColor: theme.border }]}> 
+            <View style={[myReportsStyles.skeletonLineWide, { backgroundColor: theme.surface2 }]} />
+            <View style={[myReportsStyles.skeletonLineMid, { backgroundColor: theme.surface }]} />
+            <View style={[myReportsStyles.skeletonLineShort, { backgroundColor: theme.surface }]} />
+          </View>
+        ))}
       </View>
     );
   }
 
+  const totalReports = pagination?.total ?? incidents.length;
+
   return (
     <View style={[myReportsStyles.container, { backgroundColor: theme.background }]}> 
+      <LinearGradient
+        colors={[theme.primaryLight || 'rgba(29,78,216,0.14)', 'rgba(255,255,255,0)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={[myReportsStyles.headerBand, { borderColor: theme.border }]}
+      >
+        <AppText variant="h4" style={[myReportsStyles.headerTitle, { color: theme.text }]}>My reports</AppText>
+        <AppText variant="caption" style={[myReportsStyles.headerCount, { color: theme.textSecondary }]}> 
+          {totalReports} total
+        </AppText>
+      </LinearGradient>
+
       <StatusFilterBar selectedFilter={selectedFilter} onSelectFilter={setSelectedFilter} />
 
       <FlatList
@@ -59,14 +79,8 @@ const MyReportsScreen = ({ navigation }) => {
           item.id ? item.id.toString() : `${item.createdAt || 'report'}-${item.status || 'status'}-${index}`
         }
         contentContainerStyle={myReportsStyles.listContainer}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={handleRefresh}
-            colors={[theme.primary]}
-            tintColor={theme.primary}
-          />
-        }
+        refreshing={isRefreshing}
+        onRefresh={handleRefresh}
         ListEmptyComponent={
           <EmptyReportsState
             selectedFilter={selectedFilter}

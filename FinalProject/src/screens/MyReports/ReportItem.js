@@ -61,11 +61,14 @@ const ReportItem = ({ item, onPress }) => {
     mapIcon: 'help-circle',
     mapColor: theme.mapMarkerDefault,
   };
-  const hasLocation = item.location && typeof item.location.latitude === 'number';
+  const hasLocation =
+    item.location &&
+    Number.isFinite(Number(item.location.latitude)) &&
+    Number.isFinite(Number(item.location.longitude));
   const locationDisplay = hasLocation
     ? `${item.location.latitude.toFixed(4)}, ${item.location.longitude.toFixed(4)}`
     : item.locationName || 'Location not set';
-  const createdAtText = formatTimeAgo(item.createdAt);
+  const createdAtText = formatTimeAgo(item.createdAt || item.timestamp || new Date().toISOString());
   const stage = getProgressStage(item.status);
 
   return (
@@ -101,7 +104,7 @@ const ReportItem = ({ item, onPress }) => {
           </AppText>
 
           <AppText variant="body" style={[styles.incidentDescription, { color: theme.textSecondary }]} numberOfLines={2}>
-            {item.description}
+            {item.description || 'No additional details provided.'}
           </AppText>
 
           <View style={styles.progressSection}>

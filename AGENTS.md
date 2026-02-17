@@ -105,9 +105,6 @@ AFTER SUBSTANTIAL CODING WORK:
 
 ✅ Code written & committed
   ↓
-🧠 @learning-mentor
-   └─ Teaches you the patterns/concepts embedded in the code
-  ↓
 ✔️ @Jenny
    └─ Verifies spec compliance (gap analysis with file references)
   ↓

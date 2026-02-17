@@ -7,32 +7,68 @@ const myReportsStyles = StyleSheet.create({
 
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingTop: 56,
   },
   loadingText: {
     marginTop: 14,
   },
-
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
+  skeletonHeader: {
+    height: 48,
+    borderRadius: 14,
+    marginBottom: 10,
   },
-  summaryTitle: {
+  skeletonFilterRow: {
+    height: 42,
+    borderRadius: 999,
+    borderWidth: 1,
+    marginBottom: 14,
+  },
+  skeletonCard: {
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 12,
+  },
+  skeletonLineWide: {
+    height: 14,
+    borderRadius: 7,
+    marginBottom: 10,
+    width: '80%',
+  },
+  skeletonLineMid: {
+    height: 10,
+    borderRadius: 5,
+    marginBottom: 8,
+    width: '55%',
+  },
+  skeletonLineShort: {
+    height: 10,
+    borderRadius: 5,
+    width: '35%',
+  },
+
+  headerBand: {
+    marginTop: 42,
+    marginHorizontal: 12,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerTitle: {
     letterSpacing: 0.2,
   },
-  summaryCount: {
+  headerCount: {
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },
 
   filterContainer: {
-    paddingVertical: 10,
+    paddingVertical: 8,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
   },
