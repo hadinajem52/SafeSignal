@@ -129,8 +129,40 @@ async function updateUserSuspension(userId, isSuspended) {
   };
 }
 
+/**
+ * Update a user's role
+ * @param {number} userId - The user's ID
+ * @param {string} role - New role value
+ * @returns {Promise<Object>} Updated user object
+ * @throws {ServiceError} If user not found
+ */
+async function updateUserRole(userId, role) {
+  const existingUser = await db.oneOrNone(
+    'SELECT * FROM users WHERE user_id = $1',
+    [userId]
+  );
+
+  if (!existingUser) {
+    throw ServiceError.notFound('User');
+  }
+
+  const updatedUser = await db.one(
+    'UPDATE users SET role = $1 WHERE user_id = $2 RETURNING *',
+    [role, userId]
+  );
+
+  return {
+    id: updatedUser.user_id,
+    name: updatedUser.username,
+    email: updatedUser.email,
+    role: updatedUser.role,
+    isSuspended: updatedUser.is_suspended,
+  };
+}
+
 module.exports = {
   getAllUsers,
   getUserById,
   updateUserSuspension,
+  updateUserRole,
 };

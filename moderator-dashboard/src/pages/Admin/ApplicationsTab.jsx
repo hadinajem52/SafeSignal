@@ -24,20 +24,20 @@ function ApplicationsTab({
 
   return (
     <>
-      <div className="space-y-4">
+      <div className="grid gap-4">
         {applications.map((application) => (
           <div
             key={application.id}
-            className="rounded-lg border border-gray-200 bg-white p-5 flex items-center justify-between gap-4"
+            className="rounded-lg border border-border bg-card shadow-soft p-5 flex items-center justify-between gap-4"
           >
             <div>
-              <p className="text-lg font-semibold text-gray-900">{application.username}</p>
-              <p className="text-sm text-gray-600">{application.email}</p>
+              <p className="text-lg font-semibold text-text">{application.username}</p>
+              <p className="text-sm text-muted">{application.email}</p>
               <p className="text-sm mt-2">
                 <span className="inline-flex px-2 py-1 rounded bg-blue-100 text-blue-700 font-medium">
                   {application.role === 'law_enforcement' ? 'LAW ENFORCEMENT' : 'MODERATOR'}
                 </span>
-                <span className="ml-3 text-gray-500">
+                <span className="ml-3 text-muted">
                   Applied {new Date(application.appliedAt).toLocaleString()}
                 </span>
               </p>
@@ -46,7 +46,7 @@ function ApplicationsTab({
               <button
                 onClick={() => onApprove(application.id)}
                 disabled={approvePending || rejectPending}
-                className="px-4 py-2 rounded bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
+                className="px-4 py-2 rounded bg-success text-white font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
               >
                 <CheckCircle2 size={16} />
                 Approve
@@ -59,7 +59,7 @@ function ApplicationsTab({
                   })
                 }}
                 disabled={approvePending || rejectPending}
-                className="px-4 py-2 rounded bg-red-600 text-white font-medium hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
+                className="px-4 py-2 rounded bg-danger text-white font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
               >
                 <XCircle size={16} />
                 Reject
