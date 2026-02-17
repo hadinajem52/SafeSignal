@@ -95,12 +95,29 @@ router.patch('/:id', authenticateToken, requireRole('admin'), [param('id').isInt
   }
 
   try {
-    const { is_suspended } = req.body;
+    const { is_suspended, role } = req.body;
 
-    if (is_suspended === undefined) {
+    if (is_suspended === undefined && role === undefined) {
       return res.status(400).json({
         status: 'ERROR',
-        message: 'is_suspended field is required',
+        message: 'Either is_suspended or role field is required',
+      });
+    }
+
+    if (role !== undefined && !['citizen', 'moderator', 'admin', 'law_enforcement'].includes(role)) {
+      return res.status(400).json({
+        status: 'ERROR',
+        message: 'Invalid role value',
+      });
+    }
+
+    if (role !== undefined) {
+      const updatedUser = await userService.updateUserRole(req.params.id, role);
+
+      return res.json({
+        status: 'OK',
+        message: 'User role updated successfully',
+        data: updatedUser,
       });
     }
 

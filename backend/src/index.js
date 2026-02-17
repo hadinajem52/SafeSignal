@@ -38,7 +38,7 @@ setSocketServer(io);
 
 const JWT_SECRET = process.env.JWT_SECRET || 'safesignal-jwt-secret-change-in-production';
 
-io.use((socket, next) => {
+io.use(async (socket, next) => {
   try {
     const authHeader = socket.handshake.headers?.authorization;
     const token = socket.handshake.auth?.token || (authHeader ? authHeader.split(' ')[1] : null);
@@ -48,7 +48,19 @@ io.use((socket, next) => {
     }
 
     const decoded = jwt.verify(token, JWT_SECRET);
-    socket.user = decoded;
+    const dbUser = await db.oneOrNone(
+      'SELECT role, is_suspended FROM users WHERE user_id = $1',
+      [decoded.userId]
+    );
+
+    if (!dbUser || dbUser.is_suspended) {
+      return next(new Error('Unauthorized'));
+    }
+
+    socket.user = {
+      ...decoded,
+      role: dbUser.role,
+    };
     return next();
   } catch (error) {
     return next(new Error('Unauthorized'));

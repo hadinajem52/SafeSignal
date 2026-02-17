@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { usersAPI } from '../services/api'
+import { useAuth } from '../context/AuthContext'
 import { 
   Search, 
   Filter, 
@@ -19,36 +20,72 @@ import StatusBadge from '../components/StatusBadge'
 import { getUserStatusColor, getUserStatusLabel } from '../utils/userStatus'
 
 function Users() {
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'admin'
+  const ensureSuccess = (result, fallbackMessage) => {
+    if (result.success) return result.data
+    throw new Error(result.error || fallbackMessage)
+  }
+
   const [searchTerm, setSearchTerm] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
   const [selectedUser, setSelectedUser] = useState(null)
+  const [selectedRole, setSelectedRole] = useState('citizen')
+  const [actionError, setActionError] = useState('')
 
-  const { data: users = [], isLoading } = useQuery({
+  const { data: users = [], isLoading, isError, error, refetch } = useQuery({
     queryKey: ['users', roleFilter],
     queryFn: async () => {
       const params = roleFilter !== 'all' ? { role: roleFilter } : {}
       const result = await usersAPI.getAll(params)
-      return result.success ? result.data : []
+      return ensureSuccess(result, 'Failed to load users')
     },
   })
 
   const queryClient = useQueryClient()
 
   const suspendMutation = useMutation({
-    mutationFn: (id) => usersAPI.suspend(id),
+    mutationFn: async (id) => ensureSuccess(await usersAPI.suspend(id), 'Failed to suspend user'),
     onSuccess: () => {
+      setActionError('')
       queryClient.invalidateQueries({ queryKey: ['users'] })
       setSelectedUser(null)
+    },
+    onError: (mutationError) => {
+      setActionError(mutationError.message || 'Failed to suspend user')
     },
   })
 
   const unsuspendMutation = useMutation({
-    mutationFn: (id) => usersAPI.unsuspend(id),
+    mutationFn: async (id) => ensureSuccess(await usersAPI.unsuspend(id), 'Failed to unsuspend user'),
     onSuccess: () => {
+      setActionError('')
       queryClient.invalidateQueries({ queryKey: ['users'] })
       setSelectedUser(null)
     },
+    onError: (mutationError) => {
+      setActionError(mutationError.message || 'Failed to unsuspend user')
+    },
   })
+
+  const roleMutation = useMutation({
+    mutationFn: async ({ id, role }) => ensureSuccess(await usersAPI.updateRole(id, role), 'Failed to update role'),
+    onSuccess: () => {
+      setActionError('')
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+      setSelectedUser(null)
+    },
+    onError: (mutationError) => {
+      setActionError(mutationError.message || 'Failed to update role')
+    },
+  })
+
+  useEffect(() => {
+    if (selectedUser?.role) {
+      setSelectedRole(selectedUser.role)
+      setActionError('')
+    }
+  }, [selectedUser])
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = 
@@ -58,10 +95,35 @@ function Users() {
     return matchesSearch && matchesRole
   })
 
+  const getRoleBadgeClass = (role) => {
+    switch (role) {
+      case 'admin':
+        return 'bg-purple-100 text-purple-800'
+      case 'moderator':
+        return 'bg-blue-100 text-blue-800'
+      case 'law_enforcement':
+        return 'bg-emerald-100 text-emerald-800'
+      default:
+        return 'bg-surface text-text'
+    }
+  }
+
   return (
     <div>
       {/* Header */}
       <PageHeader title="Users Management" description="Manage user accounts and permissions" />
+
+      {isError ? (
+        <div className="bg-card border border-border rounded-lg shadow-soft p-6 mb-6">
+          <p className="text-danger mb-3">{error?.message || 'Failed to load users.'}</p>
+          <button
+            onClick={() => refetch()}
+            className="px-4 py-2 rounded-lg bg-primary text-white font-medium"
+          >
+            Retry
+          </button>
+        </div>
+      ) : null}
 
       {/* Filters */}
       <div className="bg-card border border-border rounded-lg shadow-soft p-6 mb-6">
@@ -105,7 +167,7 @@ function Users() {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getRoleBadgeClass(user.role)}`}>
                       {user.role.toUpperCase()}
                     </span>
                   </td>
@@ -156,7 +218,7 @@ function Users() {
 
               <div className="grid grid-cols-2 gap-4 p-4 bg-surface rounded-lg">
                 <div>
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800`}>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getRoleBadgeClass(selectedUser.role)}`}>
                     {selectedUser.role.toUpperCase()}
                   </span>
                 </div>
@@ -168,6 +230,32 @@ function Users() {
                   />
                 </div>
               </div>
+
+              {isAdmin ? (
+                <div className="p-4 bg-surface rounded-lg border border-border">
+                  <p className="text-sm text-muted mb-2">Role Management</p>
+                  <div className="flex gap-2">
+                    <select
+                      value={selectedRole}
+                      onChange={(event) => setSelectedRole(event.target.value)}
+                      className="flex-1 px-3 py-2 border border-border bg-card text-text rounded-lg"
+                      disabled={roleMutation.isPending}
+                    >
+                      <option value="citizen">Citizen</option>
+                      <option value="moderator">Moderator</option>
+                      <option value="law_enforcement">Law Enforcement</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                    <button
+                      onClick={() => roleMutation.mutate({ id: selectedUser.id, role: selectedRole })}
+                      disabled={roleMutation.isPending || selectedRole === selectedUser.role}
+                      className="px-4 py-2 bg-primary text-white rounded-lg font-medium disabled:opacity-50"
+                    >
+                      {roleMutation.isPending ? 'Saving...' : 'Save Role'}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
 
               <div className="grid grid-cols-3 gap-4">
                 <div className="p-4 bg-blue-50 rounded-lg">
@@ -190,24 +278,30 @@ function Users() {
               </div>
 
               <div className="pt-6 border-t border-border flex gap-3">
-                {selectedUser.isSuspended ? (
-                  <button 
-                    onClick={() => unsuspendMutation.mutate(selectedUser.id)}
-                    disabled={unsuspendMutation.isPending}
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                    <RotateCcw size={20} />
-                    {unsuspendMutation.isPending ? 'Unsuspending...' : 'Unsuspend User'}
-                  </button>
+                {isAdmin ? (
+                  selectedUser.isSuspended ? (
+                    <button 
+                      onClick={() => unsuspendMutation.mutate(selectedUser.id)}
+                      disabled={unsuspendMutation.isPending}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      <RotateCcw size={20} />
+                      {unsuspendMutation.isPending ? 'Unsuspending...' : 'Unsuspend User'}
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => suspendMutation.mutate(selectedUser.id)}
+                      disabled={suspendMutation.isPending}
+                      className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      <Ban size={20} />
+                      {suspendMutation.isPending ? 'Suspending...' : 'Suspend User'}
+                    </button>
+                  )
                 ) : (
-                  <button 
-                    onClick={() => suspendMutation.mutate(selectedUser.id)}
-                    disabled={suspendMutation.isPending}
-                    className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                    <Ban size={20} />
-                    {suspendMutation.isPending ? 'Suspending...' : 'Suspend User'}
-                  </button>
+                  <div className="flex-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                    Admin access required for suspension actions.
+                  </div>
                 )}
                 <button
                   onClick={() => setSelectedUser(null)}
@@ -216,6 +310,10 @@ function Users() {
                   Close
                 </button>
               </div>
+
+              {actionError ? (
+                <p className="text-sm text-danger">{actionError}</p>
+              ) : null}
             </div>
         </DetailPanel>
       )}

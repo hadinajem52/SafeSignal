@@ -28,7 +28,7 @@ function DangerActionPanel({
           value={inputValue}
           onChange={onInputChange}
           placeholder={inputPlaceholder}
-          className="px-3 py-2 border border-red-300 rounded w-56"
+          className="px-3 py-2 border border-red-300 bg-white rounded w-56"
         />
         <button
           onClick={onAction}

@@ -44,7 +44,7 @@ function DatabaseTab({
   return (
     <>
       <div className="space-y-6">
-      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+      <div className="rounded-lg border border-amber-300 bg-amber-50 p-4">
         <div className="flex items-start gap-3">
           <AlertTriangle className="text-amber-600 mt-0.5" size={18} />
           <div className="text-sm text-amber-800">
@@ -54,13 +54,13 @@ function DatabaseTab({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        <div className="rounded-lg border border-gray-200 bg-white p-4 lg:col-span-1">
+        <div className="rounded-lg border border-border bg-card shadow-soft p-4 lg:col-span-1">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-900">Managed Tables</h3>
+            <h3 className="font-semibold text-text">Managed Tables</h3>
             <button
               onClick={onRefreshTables}
               aria-label="Refresh table stats"
-              className="p-2 rounded hover:bg-gray-100 text-gray-600"
+              className="p-2 rounded hover:bg-surface text-muted"
               title="Refresh table stats"
             >
               <RefreshCw size={16} />
@@ -68,7 +68,7 @@ function DatabaseTab({
           </div>
 
           {tablesLoading ? (
-            <div className="text-sm text-gray-500">Loading tables...</div>
+            <div className="text-sm text-muted">Loading tables...</div>
           ) : (
             <div className="space-y-2">
               {tables.map((table) => (
@@ -77,18 +77,14 @@ function DatabaseTab({
                   onClick={() => onSelectTable(table.tableName)}
                   className={`w-full text-left rounded px-3 py-2 border ${
                     selectedTable === table.tableName
-                      ? 'border-blue-600 bg-blue-50'
-                      : 'border-gray-200 hover:bg-gray-50'
+                      ? 'border-primary bg-blue-50'
+                      : 'border-border hover:bg-surface'
                   }`}
                 >
-                  <div
-                    className={`font-medium ${
-                      selectedTable === table.tableName ? 'text-black' : 'text-gray-900'
-                    }`}
-                  >
+                  <div className="font-medium text-text">
                     {table.tableName}
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-muted">
                     Rows: {table.rowCount} | PK: {table.primaryKey}
                   </div>
                 </button>
@@ -97,17 +93,17 @@ function DatabaseTab({
           )}
         </div>
 
-        <div className="rounded-lg border border-gray-200 bg-white p-4 lg:col-span-2">
+        <div className="rounded-lg border border-border bg-card shadow-soft p-4 lg:col-span-2">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <div>
-              <h3 className="font-semibold text-gray-900">Table Rows: {selectedTable || '-'}</h3>
-              {primaryKey ? <p className="text-xs text-gray-500">Primary key: {primaryKey}</p> : null}
+              <h3 className="font-semibold text-text">Table Rows: {selectedTable || '-'}</h3>
+              {primaryKey ? <p className="text-xs text-muted">Primary key: {primaryKey}</p> : null}
             </div>
             <div className="flex gap-2">
               <button
                 onClick={onRefreshRows}
                 disabled={!selectedTable}
-                className="px-3 py-2 rounded border border-gray-300 text-sm hover:bg-gray-50 disabled:opacity-50"
+                className="px-3 py-2 rounded border border-border text-sm text-text hover:bg-surface disabled:opacity-50"
               >
                 Refresh Rows
               </button>
@@ -120,7 +116,7 @@ function DatabaseTab({
                   })
                 }}
                 disabled={!selectedTable || clearTablePending}
-                className="px-3 py-2 rounded bg-red-600 text-white text-sm hover:bg-red-700 disabled:opacity-50"
+                className="px-3 py-2 rounded bg-danger text-white text-sm hover:opacity-90 disabled:opacity-50"
               >
                 Clear Table
               </button>
@@ -128,17 +124,17 @@ function DatabaseTab({
           </div>
 
           {rowsLoading ? (
-            <div className="text-sm text-gray-500">Loading rows...</div>
+            <div className="text-sm text-muted">Loading rows...</div>
           ) : rows.length === 0 ? (
-            <div className="text-sm text-gray-500">No rows in this table.</div>
+            <div className="text-sm text-muted">No rows in this table.</div>
           ) : (
             <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
               {rows.map((row) => {
                 const rowId = row[primaryKey]
                 return (
-                  <div key={rowId} className="rounded border border-gray-200">
-                    <div className="flex items-center justify-between bg-gray-50 px-3 py-2 border-b border-gray-200">
-                      <span className="text-sm font-medium text-gray-700">
+                  <div key={rowId} className="rounded border border-border">
+                    <div className="flex items-center justify-between bg-surface px-3 py-2 border-b border-border">
+                      <span className="text-sm font-medium text-text">
                         {primaryKey}: {String(rowId)}
                       </span>
                       <button
@@ -150,13 +146,13 @@ function DatabaseTab({
                             tableName: selectedTable,
                           })
                         }}
-                        className="text-red-600 hover:text-red-700 text-sm flex items-center gap-1"
+                        className="text-danger hover:opacity-80 text-sm flex items-center gap-1"
                       >
                         <Trash2 size={14} />
                         Delete Row
                       </button>
                     </div>
-                    <pre className="text-xs text-gray-700 p-3 overflow-x-auto">
+                    <pre className="text-xs text-muted p-3 overflow-x-auto">
                       {JSON.stringify(row, null, 2)}
                     </pre>
                   </div>

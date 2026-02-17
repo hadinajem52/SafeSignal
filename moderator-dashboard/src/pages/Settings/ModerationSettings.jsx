@@ -32,6 +32,19 @@ function ModerationSettings({ settings, isMutating, onAutoVerifyChange, onMinCon
             className="w-full h-2 bg-border rounded-lg appearance-none cursor-pointer"
             disabled={isMutating}
           />
+          <div className="mt-3">
+            <div className="flex justify-between text-xs text-muted mb-1">
+              <span>Conservative</span>
+              <span className="tabular-nums">{settings.minConfidenceScore}%</span>
+              <span>Aggressive</span>
+            </div>
+            <div className="w-full h-2 rounded-full bg-border overflow-hidden">
+              <div
+                className="h-full bg-primary rounded-full"
+                style={{ width: `${Math.max(0, Math.min(100, settings.minConfidenceScore))}%` }}
+              />
+            </div>
+          </div>
           <p className="text-sm text-muted mt-2">Only reports above this score will be auto-verified</p>
         </div>
       </div>

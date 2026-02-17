@@ -67,6 +67,10 @@ async function login(email, password) {
     throw ServiceError.unauthorized('Invalid credentials');
   }
 
+  if (user.is_suspended) {
+    throw ServiceError.forbidden('Account is suspended');
+  }
+
   const isStaffRole = ['moderator', 'law_enforcement'].includes(user.role);
   if (isStaffRole && !user.is_verified) {
     throw ServiceError.forbidden('Account pending admin approval');
@@ -176,6 +180,15 @@ async function googleLogin(idToken, email, name) {
         throw dbError;
       }
     }
+  }
+
+  if (user.is_suspended) {
+    throw ServiceError.forbidden('Account is suspended');
+  }
+
+  const isStaffRole = ['moderator', 'law_enforcement'].includes(user.role);
+  if (isStaffRole && !user.is_verified) {
+    throw ServiceError.forbidden('Account pending admin approval');
   }
 
   // Generate token and return

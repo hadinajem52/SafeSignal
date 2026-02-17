@@ -162,6 +162,13 @@ function AdminPanel() {
   const rows = tableRowsData?.rows || []
   const primaryKey = tableRowsData?.primaryKey || selectedTableMeta?.primaryKey
 
+  const tabClassName = (tab) =>
+    `px-4 py-2 rounded-lg font-medium flex items-center gap-2 border transition-colors ${
+      activeTab === tab
+        ? 'bg-primary text-white border-primary'
+        : 'bg-surface text-text border-border hover:bg-bg'
+    }`
+
   return (
     <div>
       <PageHeader
@@ -182,26 +189,18 @@ function AdminPanel() {
         </div>
       ) : null}
 
-      <div className="mb-6 border-b border-gray-200">
-        <div className="flex gap-2">
+      <div className="mb-6 bg-card border border-border rounded-lg shadow-soft p-3">
+        <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => setActiveTab('applications')}
-            className={`px-4 py-2 rounded-t-lg font-medium flex items-center gap-2 ${
-              activeTab === 'applications'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+            className={tabClassName('applications')}
           >
             <UserCheck size={16} />
             Applications
           </button>
           <button
             onClick={() => setActiveTab('database')}
-            className={`px-4 py-2 rounded-t-lg font-medium flex items-center gap-2 ${
-              activeTab === 'database'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+            className={tabClassName('database')}
           >
             <Database size={16} />
             Database
@@ -210,37 +209,49 @@ function AdminPanel() {
       </div>
 
       {activeTab === 'applications' ? (
-        <ApplicationsTab
-          applications={applications}
-          isLoading={applicationsLoading}
-          approvePending={approveMutation.isPending}
-          rejectPending={rejectMutation.isPending}
-          onApprove={(id) => approveMutation.mutate(id)}
-          onReject={(id) => rejectMutation.mutate(id)}
-        />
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-lg font-bold text-text">Staff Applications</h2>
+            <p className="text-sm text-muted">Review pending moderator and law-enforcement access requests.</p>
+          </div>
+          <ApplicationsTab
+            applications={applications}
+            isLoading={applicationsLoading}
+            approvePending={approveMutation.isPending}
+            rejectPending={rejectMutation.isPending}
+            onApprove={(id) => approveMutation.mutate(id)}
+            onReject={(id) => rejectMutation.mutate(id)}
+          />
+        </div>
       ) : (
-        <DatabaseTab
-          tables={tables}
-          tablesLoading={tablesLoading}
-          selectedTable={selectedTable}
-          onSelectTable={setSelectedTable}
-          onRefreshTables={() => queryClient.invalidateQueries({ queryKey: ['admin-database-tables'] })}
-          rows={rows}
-          rowsLoading={rowsLoading}
-          primaryKey={primaryKey}
-          onRefreshRows={() => queryClient.invalidateQueries({ queryKey: ['admin-table-rows', selectedTable] })}
-          onClearTable={(tableName) => clearTableMutation.mutate(tableName)}
-          clearTablePending={clearTableMutation.isPending}
-          onDeleteRow={(rowId) => deleteRowMutation.mutate(rowId)}
-          reportsResetConfirmation={reportsResetConfirmation}
-          onReportsResetConfirmationChange={(event) => setReportsResetConfirmation(event.target.value)}
-          onResetReports={() => resetReportsMutation.mutate()}
-          resetReportsPending={resetReportsMutation.isPending}
-          allDataConfirmation={allDataConfirmation}
-          onAllDataConfirmationChange={(event) => setAllDataConfirmation(event.target.value)}
-          onClearAllData={() => clearAllMutation.mutate()}
-          clearAllPending={clearAllMutation.isPending}
-        />
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-lg font-bold text-text">Database Operations</h2>
+            <p className="text-sm text-muted">Inspect managed tables and execute guarded maintenance actions.</p>
+          </div>
+          <DatabaseTab
+            tables={tables}
+            tablesLoading={tablesLoading}
+            selectedTable={selectedTable}
+            onSelectTable={setSelectedTable}
+            onRefreshTables={() => queryClient.invalidateQueries({ queryKey: ['admin-database-tables'] })}
+            rows={rows}
+            rowsLoading={rowsLoading}
+            primaryKey={primaryKey}
+            onRefreshRows={() => queryClient.invalidateQueries({ queryKey: ['admin-table-rows', selectedTable] })}
+            onClearTable={(tableName) => clearTableMutation.mutate(tableName)}
+            clearTablePending={clearTableMutation.isPending}
+            onDeleteRow={(rowId) => deleteRowMutation.mutate(rowId)}
+            reportsResetConfirmation={reportsResetConfirmation}
+            onReportsResetConfirmationChange={(event) => setReportsResetConfirmation(event.target.value)}
+            onResetReports={() => resetReportsMutation.mutate()}
+            resetReportsPending={resetReportsMutation.isPending}
+            allDataConfirmation={allDataConfirmation}
+            onAllDataConfirmationChange={(event) => setAllDataConfirmation(event.target.value)}
+            onClearAllData={() => clearAllMutation.mutate()}
+            clearAllPending={clearAllMutation.isPending}
+          />
+        </div>
       )}
     </div>
   )

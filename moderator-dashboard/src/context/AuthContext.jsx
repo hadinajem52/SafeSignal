@@ -12,15 +12,45 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     applyDarkMode(readStoredDarkMode())
 
-    // Check if user is logged in (check localStorage)
-    const storedUser = localStorage.getItem('moderator_user')
     const token = localStorage.getItem('moderator_token')
-    
-    if (storedUser && token) {
-      setUser(JSON.parse(storedUser))
-      setIsAuthenticated(true)
+
+    const bootstrapAuth = async () => {
+      if (!token) {
+        setLoading(false)
+        return
+      }
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/auth/me`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+
+        if (!response.ok) {
+          throw new Error('Session expired')
+        }
+
+        const data = await response.json()
+        const userData = data?.data?.user
+        if (!userData) {
+          throw new Error('Invalid session')
+        }
+
+        localStorage.setItem('moderator_user', JSON.stringify(userData))
+        setUser(userData)
+        setIsAuthenticated(true)
+      } catch (_error) {
+        localStorage.removeItem('moderator_user')
+        localStorage.removeItem('moderator_token')
+        setUser(null)
+        setIsAuthenticated(false)
+      } finally {
+        setLoading(false)
+      }
     }
-    setLoading(false)
+
+    bootstrapAuth()
   }, [])
 
   const login = async (email, password) => {

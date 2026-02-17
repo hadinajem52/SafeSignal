@@ -14,6 +14,23 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status
+    if (status === 401 || status === 403) {
+      localStorage.removeItem('moderator_user')
+      localStorage.removeItem('moderator_token')
+
+      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+        window.location.href = '/login'
+      }
+    }
+
+    return Promise.reject(error)
+  }
+)
+
 // Auth API
 export const authAPI = {
   register: async ({ username, email, password, role = 'citizen' }) => {
@@ -153,6 +170,15 @@ export const usersAPI = {
       return { success: true, data: response.data.data }
     } catch (error) {
       return { success: false, error: error.response?.data?.message || 'Failed to unsuspend user' }
+    }
+  },
+
+  updateRole: async (id, role) => {
+    try {
+      const response = await api.patch(`/users/${id}`, { role })
+      return { success: true, data: response.data.data }
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Failed to update user role' }
     }
   },
 }
