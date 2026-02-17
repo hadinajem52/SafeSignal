@@ -1,6 +1,5 @@
 import React from 'react'
 import DetailSection from '../../components/DetailSection'
-import DetailPanel from '../../components/DetailPanel'
 import IncidentTimeline from '../../components/IncidentTimeline'
 import DedupCandidatesPanel from '../../components/DedupCandidatesPanel'
 import GoogleMapPanel from '../../components/GoogleMapPanel'
@@ -24,33 +23,52 @@ function ReportDetail({
   onApplySuggestedCategory,
   onVerify,
   onReject,
+  onNext,
 }) {
   if (!report) {
     return null
   }
 
   return (
-    <DetailPanel
-      visible={!!report}
-      title="Report Details"
-      onClose={onClose}
-      maxWidthClass="max-w-6xl"
-    >
-      <div className="flex-1 overflow-hidden flex">
-        <div className="w-1/2 p-6 space-y-6 overflow-y-auto border-r">
+    <div className="fixed inset-0 z-50 bg-black/50">
+      <div className="absolute inset-y-0 right-0 w-full bg-card border-l border-border shadow-soft overflow-hidden">
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-primary to-blue-700 text-white p-5 flex justify-between items-center">
           <div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">{report.title}</h3>
+            <h2 className="text-2xl font-bold">Report Detail Workspace</h2>
+            <p className="text-sm text-blue-100">Keyboard shortcuts: V verify, R reject, N next</p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={onNext}
+              className="px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-semibold"
+            >
+              Next (N)
+            </button>
+            <button
+              aria-label="Close report detail"
+              onClick={onClose}
+              className="px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-semibold"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+
+        <div className="h-[calc(100dvh-88px)] flex">
+          <div className="w-1/2 p-6 space-y-6 overflow-y-auto border-r border-border bg-card">
+          <div>
+            <h3 className="text-2xl font-bold text-text mb-4">{report.title}</h3>
             <div className="flex gap-3">
               <StatusBadge status={report.status} size="sm" />
-              <span className="px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+              <span className="px-4 py-2 rounded-full text-sm font-medium bg-surface text-text">
                 {formatCategoryLabel(report.category)}
               </span>
             </div>
           </div>
 
           <div>
-            <h4 className="font-bold text-gray-900 mb-2">Description</h4>
-            <p className="text-gray-700">{report.description}</p>
+            <h4 className="font-bold text-text mb-2">Description</h4>
+            <p className="text-muted">{report.description}</p>
           </div>
 
           <DetailSection
@@ -60,7 +78,7 @@ function ReportDetail({
                 href={openMapsUrl(report.latitude, report.longitude)}
                 target="_blank"
                 rel="noreferrer"
-                className="text-xs font-semibold text-blue-700 hover:underline"
+                className="text-xs font-semibold text-primary hover:underline"
               >
                 Open in Google Maps
               </a>
@@ -85,30 +103,30 @@ function ReportDetail({
 
           <DetailSection
             title="ML Insights"
-            headerRight={isMlLoading ? <span className="text-xs text-gray-500">Loading...</span> : null}
+            headerRight={isMlLoading ? <span className="text-xs text-muted">Loading...</span> : null}
           >
 
-            {!isMlLoading && !mlSummary ? <p className="text-sm text-gray-600">No ML data available.</p> : null}
+            {!isMlLoading && !mlSummary ? <p className="text-sm text-muted">No ML data available.</p> : null}
 
             {mlSummary ? (
-              <div className="space-y-2 text-sm text-gray-700">
+              <div className="space-y-2 text-sm text-muted">
                 <div className="flex items-center justify-between">
                   <span>Suggested category</span>
-                  <span className="font-semibold text-gray-900">{mlSummary.predictedCategory || 'N/A'}</span>
+                  <span className="font-semibold text-text">{mlSummary.predictedCategory || 'N/A'}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Category confidence</span>
-                  <span className="font-semibold text-gray-900">{mlSummary.categoryConfidence}</span>
+                  <span className="font-semibold text-text">{mlSummary.categoryConfidence}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Risk score</span>
-                  <span className={`font-semibold ${mlSummary.riskScore >= 0.8 ? 'text-red-600' : mlSummary.riskScore >= 0.5 ? 'text-amber-600' : 'text-gray-900'}`}>
+                  <span className={`font-semibold ${mlSummary.riskScore >= 0.8 ? 'text-red-600' : mlSummary.riskScore >= 0.5 ? 'text-amber-600' : 'text-text'}`}>
                     {mlSummary.riskScore}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Toxicity</span>
-                  <span className={`font-semibold ${mlSummary.isToxic ? 'text-red-600' : 'text-gray-900'}`}>
+                  <span className={`font-semibold ${mlSummary.isToxic ? 'text-red-600' : 'text-text'}`}>
                     {mlSummary.isToxic ? `Flagged (${mlSummary.toxicityScore})` : mlSummary.toxicityScore}
                   </span>
                 </div>
@@ -117,7 +135,7 @@ function ReportDetail({
                   <button
                     onClick={() => onApplySuggestedCategory(mlSummary.predictedCategory)}
                     disabled={updateCategoryPending}
-                    className="mt-3 w-full bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-2 rounded-lg disabled:opacity-50"
+                    className="mt-3 w-full bg-primary hover:opacity-90 text-white text-sm font-semibold py-2 rounded-lg disabled:opacity-50"
                   >
                     {updateCategoryPending ? 'Updating...' : 'Apply Suggested Category'}
                   </button>
@@ -142,19 +160,19 @@ function ReportDetail({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-gray-600">Reported By</p>
-              <p className="font-medium text-gray-900">{report.reporter}</p>
+              <p className="text-sm text-muted">Reported By</p>
+              <p className="font-medium text-text">{report.reporter}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Location</p>
-              <p className="font-medium text-gray-900">{report.location}</p>
+              <p className="text-sm text-muted">Location</p>
+              <p className="font-medium text-text">{report.location}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Date Reported</p>
-              <p className="font-medium text-gray-900">{new Date(report.createdAt).toLocaleString()}</p>
+              <p className="text-sm text-muted">Date Reported</p>
+              <p className="font-medium text-text">{new Date(report.createdAt).toLocaleString()}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Severity Level</p>
+              <p className="text-sm text-muted">Severity Level</p>
               <SeverityBadge severity={report.severity} display="text" />
             </div>
           </div>
@@ -168,17 +186,18 @@ function ReportDetail({
           />
         </div>
 
-        <div className="w-1/2 flex flex-col">
-          <div className="p-4 border-b bg-gray-50">
-            <h3 className="text-lg font-bold text-gray-900">Timeline & Communication</h3>
-            <p className="text-sm text-gray-600 mt-1">Communicate with the reporter or add internal notes</p>
-          </div>
-          <div className="flex-1">
-            <IncidentTimeline incidentId={report.id} />
+          <div className="w-1/2 flex flex-col bg-surface">
+            <div className="p-4 border-b border-border bg-surface">
+              <h3 className="text-lg font-bold text-text">Timeline & Communication</h3>
+              <p className="text-sm text-muted mt-1">Communicate with the reporter or add internal notes</p>
+            </div>
+            <div className="flex-1">
+              <IncidentTimeline incidentId={report.id} />
+            </div>
           </div>
         </div>
       </div>
-    </DetailPanel>
+    </div>
   )
 }
 
