@@ -74,6 +74,7 @@ const HomeScreen = ({ navigation }) => {
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} />
       }
+      showsVerticalScrollIndicator={false}
     >
       <LinearGradient
         colors={[theme.primaryLight || 'rgba(29,78,216,0.14)', 'rgba(255,255,255,0)']}

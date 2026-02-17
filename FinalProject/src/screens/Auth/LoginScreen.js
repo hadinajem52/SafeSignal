@@ -130,7 +130,11 @@ const LoginScreen = ({ navigation }) => {
           style={authStyles.bgOrbBottom}
         />
       </View>
-      <ScrollView contentContainerStyle={authStyles.scrollContent} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={authStyles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <AuthHeader subtitle="Community safety network" />
 
         <View style={[authStyles.formContainer, { backgroundColor: theme.card, borderColor: theme.border }]}> 

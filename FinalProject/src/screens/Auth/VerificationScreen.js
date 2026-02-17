@@ -210,7 +210,11 @@ const VerificationScreen = ({ navigation, route }) => {
         />
       </View>
 
-      <ScrollView contentContainerStyle={authStyles.verificationScroll} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={authStyles.verificationScroll}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <View style={[authStyles.verificationContent, { backgroundColor: theme.card, borderColor: theme.border }]}> 
           <AuthHeader
             iconName="mail-unread"

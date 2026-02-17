@@ -158,7 +158,11 @@ const RegisterScreen = ({ navigation }) => {
           style={authStyles.bgOrbBottom}
         />
       </View>
-      <ScrollView contentContainerStyle={authStyles.scrollContent} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={authStyles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <AuthHeader subtitle="Join the community" />
 
         <View style={[authStyles.formContainer, { backgroundColor: theme.card, borderColor: theme.border }]}> 

@@ -39,7 +39,11 @@ const IncidentDetailScreen = ({ route }) => {
     : statusLabel;
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: theme.surface }]} contentContainerStyle={styles.contentContainer}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: theme.surface }]}
+      contentContainerStyle={styles.contentContainer}
+      showsVerticalScrollIndicator={false}
+    >
       <Card style={styles.headerCard}>
         <View style={styles.headerRow}>
           <View style={[styles.categoryBadge, { backgroundColor: theme.surface }]}> 

@@ -237,6 +237,7 @@ const AccountScreen = () => {
     <ScrollView
       style={[styles.container, { backgroundColor: theme.background }]}
       contentContainerStyle={styles.contentContainer}
+      showsVerticalScrollIndicator={false}
     >
       <AppText variant="h1" style={[styles.title, { color: theme.text }]}>Account</AppText>
 

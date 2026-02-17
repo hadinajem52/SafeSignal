@@ -232,6 +232,7 @@ const IncidentTimeline = ({ incidentId, incidentStatus }) => {
         style={{ backgroundColor: theme.background }}
         contentContainerStyle={styles.timelineContent}
         onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: false })}
+        showsVerticalScrollIndicator={false}
       >
         {timeline.length === 0 ? (
           <View style={styles.emptyContainer}>

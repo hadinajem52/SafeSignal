@@ -81,6 +81,7 @@ const MyReportsScreen = ({ navigation }) => {
         contentContainerStyle={myReportsStyles.listContainer}
         refreshing={isRefreshing}
         onRefresh={handleRefresh}
+        showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <EmptyReportsState
             selectedFilter={selectedFilter}
