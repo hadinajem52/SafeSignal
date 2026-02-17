@@ -1,5 +1,6 @@
 import React from 'react';
 import { Switch, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { AppText, Card } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import styles from './accountStyles';
@@ -10,16 +11,12 @@ const PreferencesSection = ({
   onNotificationsToggle,
   onDefaultAnonymousToggle,
   onSendTestNotification,
+  feedbackMessage,
 }) => {
   const { theme } = useTheme();
 
   return (
-    <Card
-      style={[
-        styles.settingsContainer,
-        { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1 },
-      ]}
-    >
+    <Card style={[styles.settingsContainer, { backgroundColor: theme.card, borderColor: theme.border }]}> 
       <AppText variant="h4" style={[styles.sectionTitle, { color: theme.text }]}>Preferences</AppText>
 
       <View style={[styles.settingRow, { borderBottomColor: theme.divider }]}> 
@@ -74,6 +71,15 @@ const PreferencesSection = ({
         <AppText variant="label" style={[styles.linkText, { color: theme.text }]}>Send Test Notification</AppText>
         <AppText variant="h5" style={[styles.linkArrow, { color: theme.textTertiary }]}>›</AppText>
       </TouchableOpacity>
+
+      {feedbackMessage ? (
+        <View style={[styles.inlineFeedbackRow, { borderColor: `${theme.success}40`, backgroundColor: `${theme.success}14` }]}>
+          <Ionicons name="checkmark-circle" size={14} color={theme.success} />
+          <AppText variant="caption" style={[styles.inlineFeedbackText, { color: theme.success }]}>
+            {feedbackMessage}
+          </AppText>
+        </View>
+      ) : null}
     </Card>
   );
 };

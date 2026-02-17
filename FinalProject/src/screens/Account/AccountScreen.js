@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Alert, Linking, PermissionsAndroid, Platform, ScrollView } from 'react-native';
+import { Alert, Linking, PermissionsAndroid, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
@@ -22,6 +23,8 @@ const AccountScreen = () => {
   const { theme, isDark, mode, setThemeMode } = useTheme();
   const { preferences, updatePreference } = useUserPreferences();
   const [isEditingName, setIsEditingName] = useState(false);
+  const [showMore, setShowMore] = useState(false);
+  const [inlinePreferenceFeedback, setInlinePreferenceFeedback] = useState('');
   const [pendingName, setPendingName] = useState('');
   const [accessStatus, setAccessStatus] = useState({
     location: { status: 'unknown', detail: '' },
@@ -140,30 +143,14 @@ const AccountScreen = () => {
 
   const handleLocationToggle = (value) => {
     updatePreference('locationServices', value);
-    if (!value) {
-      Alert.alert(
-        'Location Disabled',
-        'Location access is disabled for the app. You can re-enable it in system settings.',
-        [
-          { text: 'Open Settings', onPress: () => Linking.openSettings?.() },
-          { text: 'OK' },
-        ]
-      );
-    }
+    setInlinePreferenceFeedback(value ? 'Location sharing enabled' : 'Location sharing disabled');
+    setTimeout(() => setInlinePreferenceFeedback(''), 1800);
   };
 
   const handleNotificationsToggle = (value) => {
     updatePreference('pushNotifications', value);
-    if (!value) {
-      Alert.alert(
-        'Notifications Disabled',
-        'Notification permissions can be managed in system settings.',
-        [
-          { text: 'Open Settings', onPress: () => Linking.openSettings?.() },
-          { text: 'OK' },
-        ]
-      );
-    }
+    setInlinePreferenceFeedback(value ? 'Notifications enabled' : 'Notifications disabled');
+    setTimeout(() => setInlinePreferenceFeedback(''), 1800);
   };
 
   const handleSendTestNotification = async () => {
@@ -269,24 +256,37 @@ const AccountScreen = () => {
         onThemeToggle={(value) => setThemeMode(value ? 'dark' : 'light')}
       />
 
-      <AccessStatusSection accessStatus={accessStatus} onOpenSettings={() => Linking.openSettings?.()} />
-
       <PreferencesSection
         preferences={preferences}
         onLocationToggle={handleLocationToggle}
         onNotificationsToggle={handleNotificationsToggle}
         onDefaultAnonymousToggle={(value) => updatePreference('defaultAnonymous', value)}
         onSendTestNotification={handleSendTestNotification}
+        feedbackMessage={inlinePreferenceFeedback}
       />
 
-      <SupportSection
-        onHelp={() => openLink('https://safesignal.org/help')}
-        onTerms={() => openLink('https://safesignal.org/terms')}
-        onPrivacy={() => openLink('https://safesignal.org/privacy')}
-        onContactSupport={contactSupport}
-      />
+      <AccessStatusSection accessStatus={accessStatus} onOpenSettings={() => Linking.openSettings?.()} />
 
-      <DangerZone onLogout={logout} onDeleteAccount={confirmDeleteAccount} />
+      <TouchableOpacity
+        style={[styles.moreToggle, { borderColor: theme.border, backgroundColor: theme.card }]}
+        onPress={() => setShowMore((prev) => !prev)}
+      >
+        <AppText variant="label" style={{ color: theme.text }}>More settings</AppText>
+        <Ionicons name={showMore ? 'chevron-up' : 'chevron-down'} size={16} color={theme.textSecondary} />
+      </TouchableOpacity>
+
+      {showMore ? (
+        <>
+          <SupportSection
+            onHelp={() => openLink('https://safesignal.org/help')}
+            onTerms={() => openLink('https://safesignal.org/terms')}
+            onPrivacy={() => openLink('https://safesignal.org/privacy')}
+            onContactSupport={contactSupport}
+          />
+
+          <DangerZone onLogout={logout} onDeleteAccount={confirmDeleteAccount} />
+        </>
+      ) : null}
 
       <EditNameModal
         visible={isEditingName}

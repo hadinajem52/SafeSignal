@@ -8,12 +8,7 @@ const SupportSection = ({ onHelp, onTerms, onPrivacy, onContactSupport }) => {
   const { theme } = useTheme();
 
   return (
-    <Card
-      style={[
-        styles.settingsContainer,
-        { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1 },
-      ]}
-    >
+    <Card style={[styles.settingsContainer, { backgroundColor: theme.card, borderColor: theme.border }]}> 
       <AppText variant="h4" style={[styles.sectionTitle, { color: theme.text }]}>About and Support</AppText>
 
       <View style={[styles.settingRow, { borderBottomColor: theme.divider }]}> 

@@ -3,44 +3,54 @@ import { StyleSheet } from 'react-native';
 const accountStyles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 16,
   },
   contentContainer: {
-    paddingBottom: 24,
+    paddingBottom: 28,
   },
   title: {
-    marginBottom: 30,
-    marginTop: 20,
-  },
-  profileHeader: {
+    marginTop: 44,
     marginBottom: 16,
+  },
+
+  profileHeader: {
+    marginBottom: 14,
+    borderWidth: 1,
+    borderRadius: 18,
+    overflow: 'hidden',
+  },
+  profileHeaderGradient: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
   },
   profileRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
+  avatarWrap: {
+    position: 'relative',
+    marginRight: 14,
+  },
   avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 92,
+    height: 92,
+    borderRadius: 999,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
   },
-  avatarText: {
-  },
+  avatarText: {},
   avatarImage: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 92,
+    height: 92,
+    borderRadius: 999,
   },
   avatarEdit: {
     position: 'absolute',
-    right: -2,
-    bottom: -2,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    right: 2,
+    bottom: 2,
+    width: 28,
+    height: 28,
+    borderRadius: 999,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
@@ -52,8 +62,7 @@ const accountStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  username: {
-  },
+  username: {},
   editButton: {
     marginLeft: 8,
   },
@@ -61,21 +70,73 @@ const accountStyles = StyleSheet.create({
     marginTop: 4,
   },
   emailValue: {
-    marginTop: 4,
+    marginTop: 6,
   },
+
   settingsContainer: {
-    marginBottom: 20,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   sectionTitle: {
+    marginBottom: 10,
+  },
+
+  themePreviewRow: {
+    flexDirection: 'row',
     marginBottom: 12,
   },
+  themePreviewCard: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 10,
+  },
+  themePreviewDivider: {
+    width: 8,
+  },
+  themePreviewTitle: {
+    marginBottom: 8,
+  },
+  themePreviewBar: {
+    height: 8,
+    borderRadius: 999,
+    marginBottom: 5,
+  },
+  themePreviewBarShort: {
+    width: '70%',
+  },
+
   settingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 10,
+    paddingVertical: 11,
     borderBottomWidth: 1,
   },
+  settingInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  settingLabel: {
+    marginBottom: 3,
+  },
+  settingHint: {},
+  inlineFeedbackRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  inlineFeedbackText: {
+    marginLeft: 6,
+  },
+
   linkRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -83,19 +144,20 @@ const accountStyles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
   },
-  linkText: {
+  linkText: {},
+  linkArrow: {},
+
+  moreToggle: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  linkArrow: {
-  },
-  settingInfo: {
-    flex: 1,
-    marginRight: 12,
-  },
-  settingLabel: {
-    marginBottom: 4,
-  },
-  settingHint: {
-  },
+
   accessStatusRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -120,38 +182,44 @@ const accountStyles = StyleSheet.create({
   accessStatusLabel: {
     marginBottom: 2,
   },
-  accessStatusHint: {
-  },
+  accessStatusHint: {},
   accessStatusValue: {
     textTransform: 'uppercase',
   },
   accessStatusFooter: {
     alignItems: 'flex-start',
-    paddingTop: 12,
+    paddingTop: 10,
+  },
+
+  dangerContainer: {
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 10,
+  },
+  dangerHint: {
+    marginBottom: 10,
   },
   dangerSpacing: {
     height: 10,
   },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
+
   modalCard: {
-    borderRadius: 12,
-    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
     width: '100%',
   },
   modalTitle: {
-    marginBottom: 12,
+    marginBottom: 10,
   },
   modalInput: {
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 16,
+    paddingVertical: 11,
+    marginBottom: 14,
   },
   modalActions: {
     flexDirection: 'row',
@@ -159,7 +227,7 @@ const accountStyles = StyleSheet.create({
   },
   modalButton: {
     marginLeft: 10,
-    minWidth: 100,
+    minWidth: 104,
   },
 });
 
