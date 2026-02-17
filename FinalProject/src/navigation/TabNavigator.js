@@ -77,7 +77,10 @@ const TabNavigator = () => {
         tabBarActiveTintColor: theme.tabBarActive,
         tabBarInactiveTintColor: theme.tabBarInactive,
         headerShown: false,
-        tabBarStyle: [styles.tabBar, { backgroundColor: theme.tabBar }]
+        tabBarStyle: [styles.tabBar, { backgroundColor: 'transparent' }],
+        tabBarBackground: () => (
+          <View style={[styles.tabBarBackground, { backgroundColor: theme.tabBar }]} />
+        ),
       })}
     >
       <Tab.Screen name="Dashboard" component={HomeScreen} />
@@ -109,6 +112,7 @@ const styles = StyleSheet.create({
     height: 72,
     marginHorizontal: 16,
     marginBottom: 16,
+    position: 'absolute',
     paddingBottom: 10,
     paddingTop: 10,
     borderRadius: 24,
@@ -124,6 +128,10 @@ const styles = StyleSheet.create({
         elevation: 8,
       },
     }),
+  },
+  tabBarBackground: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 24,
   },
   fabWrapper: {
     top: -28,
