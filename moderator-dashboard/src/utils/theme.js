@@ -16,5 +16,10 @@ export function persistDarkMode(enabled) {
 }
 
 export function applyDarkMode(enabled) {
-  document.documentElement.classList.toggle('dark', Boolean(enabled))
+  const isDark = Boolean(enabled)
+  const root = document.documentElement
+
+  root.classList.toggle('dark', isDark)
+  root.setAttribute('data-theme', isDark ? 'dark' : 'light')
+  root.style.colorScheme = isDark ? 'dark' : 'light'
 }
