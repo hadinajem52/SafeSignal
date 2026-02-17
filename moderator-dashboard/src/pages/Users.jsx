@@ -16,7 +16,7 @@ import LoadingState from '../components/LoadingState'
 import PageHeader from '../components/PageHeader'
 import SearchInput from '../components/SearchInput'
 import StatusBadge from '../components/StatusBadge'
-import { getStatusColor } from '../utils/incident'
+import { getUserStatusColor, getUserStatusLabel } from '../utils/userStatus'
 
 function Users() {
   const [searchTerm, setSearchTerm] = useState('')
@@ -58,18 +58,13 @@ function Users() {
     return matchesSearch && matchesRole
   })
 
-  const getUserStatusColor = (status, isSuspended) => {
-    if (isSuspended) return 'bg-red-100 text-red-800'
-    return status === 'active' ? 'bg-green-100 text-green-800' : getStatusColor(status)
-  }
-
   return (
     <div>
       {/* Header */}
       <PageHeader title="Users Management" description="Manage user accounts and permissions" />
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
+      <div className="bg-card border border-border rounded-lg shadow-soft p-6 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="col-span-1 md:col-span-2">
             <SearchInput
@@ -100,13 +95,13 @@ function Users() {
         <LoadingState />
       ) : (
         <DataTable headers={['User', 'Role', 'Status', 'Reports', 'Joined', 'Actions']}>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-border">
               {filteredUsers.map(user => (
-                <tr key={user.id} className="hover:bg-gray-50">
+                <tr key={user.id} className="hover:bg-surface">
                   <td className="px-6 py-4">
                     <div className="cursor-pointer" onClick={() => setSelectedUser(user)}>
-                      <p className="font-medium text-gray-900">{user.name}</p>
-                      <p className="text-sm text-gray-600">{user.email}</p>
+                      <p className="font-medium text-text">{user.name}</p>
+                      <p className="text-sm text-muted">{user.email}</p>
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -117,19 +112,19 @@ function Users() {
                   <td className="px-6 py-4">
                     <StatusBadge
                       className={getUserStatusColor(user.status, user.isSuspended)}
-                      label={user.isSuspended ? 'SUSPENDED' : user.status.toUpperCase()}
+                      label={getUserStatusLabel(user.status, user.isSuspended)}
                     />
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
+                  <td className="px-6 py-4 text-sm text-text">
                     {user.totalReports} total ({user.verifiedReports} verified)
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
+                  <td className="px-6 py-4 text-sm text-muted">
                     {new Date(user.joinedDate).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4">
                     <button
                       onClick={() => setSelectedUser(user)}
-                      className="text-blue-600 hover:text-blue-900 text-sm font-medium"
+                      className="text-primary hover:opacity-80 text-sm font-medium"
                     >
                       View Details
                     </button>
@@ -155,11 +150,11 @@ function Users() {
 
             <div className="p-6 space-y-6">
               <div>
-                <h3 className="text-2xl font-bold text-gray-900">{selectedUser.name}</h3>
-                <p className="text-gray-600">{selectedUser.email}</p>
+                <h3 className="text-2xl font-bold text-text">{selectedUser.name}</h3>
+                <p className="text-muted">{selectedUser.email}</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+              <div className="grid grid-cols-2 gap-4 p-4 bg-surface rounded-lg">
                 <div>
                   <span className={`px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800`}>
                     {selectedUser.role.toUpperCase()}
@@ -169,32 +164,32 @@ function Users() {
                   <StatusBadge
                     size="sm"
                     className={getUserStatusColor(selectedUser.status, selectedUser.isSuspended)}
-                    label={selectedUser.isSuspended ? 'SUSPENDED' : selectedUser.status.toUpperCase()}
+                    label={getUserStatusLabel(selectedUser.status, selectedUser.isSuspended)}
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-4">
                 <div className="p-4 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Total Reports</p>
+                  <p className="text-sm text-muted">Total Reports</p>
                   <p className="text-2xl font-bold text-blue-600">{selectedUser.totalReports}</p>
                 </div>
                 <div className="p-4 bg-green-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Verified</p>
+                  <p className="text-sm text-muted">Verified</p>
                   <p className="text-2xl font-bold text-green-600">{selectedUser.verifiedReports}</p>
                 </div>
                 <div className="p-4 bg-red-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Rejected</p>
+                  <p className="text-sm text-muted">Rejected</p>
                   <p className="text-2xl font-bold text-red-600">{selectedUser.rejectedReports}</p>
                 </div>
               </div>
 
               <div>
-                <p className="text-sm text-gray-600">Member Since</p>
-                <p className="font-medium text-gray-900">{new Date(selectedUser.joinedDate).toLocaleString()}</p>
+                <p className="text-sm text-muted">Member Since</p>
+                <p className="font-medium text-text">{new Date(selectedUser.joinedDate).toLocaleString()}</p>
               </div>
 
-              <div className="pt-6 border-t border-gray-200 flex gap-3">
+              <div className="pt-6 border-t border-border flex gap-3">
                 {selectedUser.isSuspended ? (
                   <button 
                     onClick={() => unsuspendMutation.mutate(selectedUser.id)}
@@ -216,7 +211,7 @@ function Users() {
                 )}
                 <button
                   onClick={() => setSelectedUser(null)}
-                  className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 rounded-lg transition-colors"
+                  className="flex-1 bg-surface hover:bg-bg border border-border text-text font-medium py-2 rounded-lg transition-colors"
                 >
                   Close
                 </button>

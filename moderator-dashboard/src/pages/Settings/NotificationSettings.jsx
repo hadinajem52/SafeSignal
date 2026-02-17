@@ -12,8 +12,8 @@ function NotificationSettings({
   digestPending,
 }) {
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+    <div className="bg-card border border-border rounded-lg shadow-soft p-6">
+      <h2 className="text-xl font-bold text-text mb-4 flex items-center gap-2">
         <AlertCircle size={24} />
         Notification Settings
       </h2>

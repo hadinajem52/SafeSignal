@@ -7,13 +7,13 @@ function DetailPanel({ visible, title, subtitle, headerClassName = 'from-blue-60
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className={`bg-white rounded-lg shadow-xl ${maxWidthClass} w-full max-h-[90vh] overflow-y-auto`}>
+      <div className={`bg-card border border-border rounded-lg shadow-soft ${maxWidthClass} w-full max-h-[90vh] overflow-y-auto`}>
         <div className={`sticky top-0 bg-gradient-to-r ${headerClassName} text-white p-6 flex justify-between items-center rounded-t-lg`}>
           <div>
             <h2 className="text-2xl font-bold">{title}</h2>
             {subtitle ? <p className="text-sm text-blue-100">{subtitle}</p> : null}
           </div>
-          <button onClick={onClose} className="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2">
+          <button aria-label="Close detail panel" onClick={onClose} className="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2">
             ✕
           </button>
         </div>

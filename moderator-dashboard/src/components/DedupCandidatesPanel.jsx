@@ -28,10 +28,10 @@ function DedupCandidatesPanel({ dedup, isLoading, onMerge, isMerging, sourceInci
     : []
 
   return (
-    <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+    <div className="border border-border rounded-lg p-4 bg-surface">
       <div className="flex items-center justify-between mb-3">
-        <h4 className="font-bold text-gray-900">Potential Duplicates</h4>
-        <span className="text-xs text-gray-500">
+        <h4 className="font-bold text-text">Potential Duplicates</h4>
+        <span className="text-xs text-muted">
           {meta.radiusMeters || 500}m • {meta.timeHours || 1}h
         </span>
       </div>
@@ -42,7 +42,7 @@ function DedupCandidatesPanel({ dedup, isLoading, onMerge, isMerging, sourceInci
         </div>
       )}
       {!isLoading && candidates.length > 0 && (
-        <div className="mb-3 text-xs text-gray-600">
+        <div className="mb-3 text-xs text-muted">
           ML semantic similarity: {meta.mlEnhanced ? 'enabled' : 'fallback'} ({meta.mlCandidatesWithSimilarity ?? 0}/{candidates.length} candidates)
         </div>
       )}
@@ -57,36 +57,36 @@ function DedupCandidatesPanel({ dedup, isLoading, onMerge, isMerging, sourceInci
             showClusters
             emptyMessage="Not enough coordinate data to render duplicate proximity map."
           />
-          <div className="mt-1 text-xs text-gray-500">
+          <div className="mt-1 text-xs text-muted">
             Proximity view: 1 source incident + {plottedCandidates.length} candidates within {meta.radiusMeters || 500}m.
           </div>
         </div>
       )}
 
       {isLoading ? (
-        <div className="text-sm text-gray-500">Loading candidates...</div>
+        <div className="text-sm text-muted">Loading candidates...</div>
       ) : candidates.length === 0 ? (
-        <div className="text-sm text-gray-600">No duplicate candidates detected.</div>
+        <div className="text-sm text-muted">No duplicate candidates detected.</div>
       ) : (
         <div className="space-y-3">
           {candidates.map((candidate) => (
-            <div key={candidate.incidentId} className="bg-white border border-gray-200 rounded-md p-3">
+            <div key={candidate.incidentId} className="bg-card border border-border rounded-md p-3">
               <div className="flex items-center justify-between">
-                <span className="font-medium text-gray-900">Incident #{candidate.incidentId}</span>
+                <span className="font-medium text-text">Incident #{candidate.incidentId}</span>
                 <span className="text-xs font-semibold px-2 py-1 rounded-full bg-blue-100 text-blue-700">
                   Score {candidate.score}
                 </span>
               </div>
               {candidate.title && (
                 <div className="mt-2">
-                  <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Candidate Incident</div>
-                  <div className="text-sm font-medium text-gray-900">{candidate.title}</div>
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">Candidate Incident</div>
+                  <div className="text-sm font-medium text-text">{candidate.title}</div>
                 </div>
               )}
               {candidate.description && (
-                <div className="mt-1 text-xs text-gray-600">{candidate.description}</div>
+                <div className="mt-1 text-xs text-muted">{candidate.description}</div>
               )}
-              <div className="mt-2 text-xs text-gray-600 grid grid-cols-2 gap-2">
+              <div className="mt-2 text-xs text-muted grid grid-cols-2 gap-2">
                 <span>Distance: {candidate.distanceMeters}m</span>
                 <span>Time Δ: {candidate.timeHours}h</span>
                 <span>Text sim: {candidate.textSimilarity}</span>
@@ -96,7 +96,7 @@ function DedupCandidatesPanel({ dedup, isLoading, onMerge, isMerging, sourceInci
                 <span>Same reporter: {candidate.sameReporter ? 'Yes' : 'No'}</span>
               </div>
               <div className="mt-2">
-                <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Shared Keywords</div>
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">Shared Keywords</div>
                 {(candidate.sharedKeywords || []).length > 0 ? (
                   <div className="mt-1 flex flex-wrap gap-1">
                     {candidate.sharedKeywords.map((keyword) => (
@@ -109,7 +109,7 @@ function DedupCandidatesPanel({ dedup, isLoading, onMerge, isMerging, sourceInci
                     ))}
                   </div>
                 ) : (
-                  <div className="text-xs text-gray-500 mt-1">No strong shared keywords.</div>
+                  <div className="text-xs text-muted mt-1">No strong shared keywords.</div>
                 )}
               </div>
               <div className="mt-3">

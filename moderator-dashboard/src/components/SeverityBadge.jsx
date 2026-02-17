@@ -14,7 +14,7 @@ function SeverityBadge({ severity, variant = SEVERITY_VARIANTS.REPORTS, display 
   }
 
   return (
-    <span className={`px-3 py-1 rounded-full text-xs font-medium bg-gray-50 ${colorClass}`}>
+    <span className={`px-3 py-1 rounded-full text-xs font-medium bg-surface ${colorClass}`}>
       {safeSeverity.toUpperCase()}
     </span>
   )

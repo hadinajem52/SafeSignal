@@ -140,9 +140,9 @@ const IncidentTimeline = ({ incidentId }) => {
     if (isSystemMessage) {
       return (
         <div key={index} className="flex justify-center my-4">
-          <div className="bg-gray-100 px-4 py-2 rounded-full">
-            <p className="text-xs text-gray-600 italic">{getSystemMessage(item)}</p>
-            <p className="text-xs text-gray-400 text-center mt-1">{formatTime(item.created_at)}</p>
+          <div className="bg-surface px-4 py-2 rounded-full border border-border">
+            <p className="text-xs text-muted italic">{getSystemMessage(item)}</p>
+            <p className="text-xs text-muted text-center mt-1">{formatTime(item.created_at)}</p>
           </div>
         </div>
       )
@@ -152,15 +152,15 @@ const IncidentTimeline = ({ incidentId }) => {
       <div key={index} className="mb-4">
         <div className="flex items-start gap-3">
           <div
-            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white ${
-              isStaff ? 'bg-blue-500' : 'bg-gray-400'
+            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+              isStaff ? 'bg-blue-500 text-white' : 'bg-border text-text'
             }`}
           >
             {item.username?.charAt(0).toUpperCase() || '?'}
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-              <span className="font-semibold text-sm text-gray-900">{item.username}</span>
+              <span className="font-semibold text-sm text-text">{item.username}</span>
               {isStaff && (
                 <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Staff</span>
               )}
@@ -170,16 +170,16 @@ const IncidentTimeline = ({ incidentId }) => {
                   <span>Internal</span>
                 </div>
               )}
-              <span className="text-xs text-gray-400">{formatTime(item.created_at)}</span>
+              <span className="text-xs text-muted">{formatTime(item.created_at)}</span>
             </div>
             <div
               className={`rounded-lg p-3 ${
                 item.is_internal
                   ? 'bg-yellow-50 border border-yellow-200'
-                  : 'bg-white border border-gray-200'
+                  : 'bg-card border border-border'
               }`}
             >
-              <p className="text-sm text-gray-800 whitespace-pre-wrap">{item.content}</p>
+              <p className="text-sm text-text whitespace-pre-wrap">{item.content}</p>
             </div>
           </div>
         </div>
@@ -211,10 +211,10 @@ const IncidentTimeline = ({ incidentId }) => {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+      <div className="flex-1 overflow-y-auto p-4 bg-surface">
         {timeline.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-            <p className="text-gray-500">No messages yet. Start the conversation!</p>
+            <p className="text-muted">No messages yet. Start the conversation!</p>
           </div>
         ) : (
           <>
@@ -224,15 +224,15 @@ const IncidentTimeline = ({ incidentId }) => {
         )}
       </div>
 
-      <div className="border-t bg-white p-4">
+      <div className="border-t border-border bg-card p-4">
         <div className="flex gap-2 mb-2">
           <button
             onClick={() => setIsInternal(false)}
             className={`px-3 py-1 text-sm rounded transition-colors ${
               !isInternal
                 ? 'bg-blue-500 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+                : 'bg-surface text-text hover:bg-bg'
+             }`}
           >
             Public Reply
           </button>
@@ -241,8 +241,8 @@ const IncidentTimeline = ({ incidentId }) => {
             className={`px-3 py-1 text-sm rounded transition-colors flex items-center gap-1 ${
               isInternal
                 ? 'bg-yellow-500 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+                : 'bg-surface text-text hover:bg-bg'
+             }`}
           >
             <Lock size={14} />
             Internal Note
@@ -263,8 +263,8 @@ const IncidentTimeline = ({ incidentId }) => {
             className={`flex-1 px-3 py-2 border rounded-lg resize-none focus:outline-none focus:ring-2 ${
               isInternal
                 ? 'border-yellow-300 focus:ring-yellow-500 bg-yellow-50'
-                : 'border-gray-300 focus:ring-blue-500'
-            }`}
+                : 'border-border bg-card text-text focus:ring-primary'
+             }`}
             rows={3}
             maxLength={10000}
           />
@@ -276,8 +276,8 @@ const IncidentTimeline = ({ incidentId }) => {
                 ? isInternal
                   ? 'bg-yellow-500 hover:bg-yellow-600'
                   : 'bg-blue-500 hover:bg-blue-600'
-                : 'bg-gray-300 cursor-not-allowed'
-            }`}
+                : 'bg-surface text-muted cursor-not-allowed'
+             }`}
           >
             {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send size={16} />}
             Send
