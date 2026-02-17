@@ -305,6 +305,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     <ScrollView
       style={[styles.container, { backgroundColor: theme.background }]}
       contentContainerStyle={styles.contentContainer}
+      showsVerticalScrollIndicator={false}
     >
       {/* Header */}
       <View style={[styles.header, { backgroundColor: theme.primary }]}> 
