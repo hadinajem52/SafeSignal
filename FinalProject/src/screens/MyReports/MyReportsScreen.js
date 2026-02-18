@@ -1,5 +1,6 @@
 import React from 'react';
 import { Alert, FlatList, View } from 'react-native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppText } from '../../components';
 import { useAuth } from '../../context/AuthContext';
@@ -13,6 +14,7 @@ import StatusFilterBar from './StatusFilterBar';
 const MyReportsScreen = ({ navigation }) => {
   const { user } = useAuth();
   const { theme } = useTheme();
+  const tabBarHeight = useBottomTabBarHeight();
   const {
     incidents,
     isLoading,
@@ -78,7 +80,7 @@ const MyReportsScreen = ({ navigation }) => {
         keyExtractor={(item, index) =>
           item.id ? item.id.toString() : `${item.createdAt || 'report'}-${item.status || 'status'}-${index}`
         }
-        contentContainerStyle={myReportsStyles.listContainer}
+        contentContainerStyle={[myReportsStyles.listContainer, { paddingBottom: tabBarHeight + 8 }]}
         refreshing={isRefreshing}
         onRefresh={handleRefresh}
         showsVerticalScrollIndicator={false}

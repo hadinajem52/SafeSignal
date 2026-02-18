@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { Alert, Linking, PermissionsAndroid, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
@@ -22,6 +23,7 @@ const AccountScreen = () => {
   const { logout, user } = useAuth();
   const { theme, isDark, mode, setThemeMode } = useTheme();
   const { preferences, updatePreference } = useUserPreferences();
+  const tabBarHeight = useBottomTabBarHeight();
   const [isEditingName, setIsEditingName] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const [inlinePreferenceFeedback, setInlinePreferenceFeedback] = useState('');
@@ -236,7 +238,7 @@ const AccountScreen = () => {
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: theme.background }]}
-      contentContainerStyle={styles.contentContainer}
+      contentContainerStyle={[styles.contentContainer, { paddingBottom: tabBarHeight + 8 }]}
       showsVerticalScrollIndicator={false}
     >
       <AppText variant="h1" style={[styles.title, { color: theme.text }]}>Account</AppText>

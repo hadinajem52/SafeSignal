@@ -5,6 +5,7 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { incidentAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -32,6 +33,7 @@ const { INCIDENT_CATEGORIES, SEVERITY_LEVELS } = incidentConstants;
 const ReportIncidentScreen = ({ navigation, route }) => {
   const { user } = useAuth();
   const { theme } = useTheme();
+  const tabBarHeight = useBottomTabBarHeight();
   const userId = user?.user_id || user?.userId;
   const { preferences, isLoading: isLoadingPreferences } = useUserPreferences();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -304,7 +306,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: theme.background }]}
-      contentContainerStyle={styles.contentContainer}
+      contentContainerStyle={[styles.contentContainer, { paddingBottom: tabBarHeight + 8 }]}
       showsVerticalScrollIndicator={false}
     >
       {/* Header */}

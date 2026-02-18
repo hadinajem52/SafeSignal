@@ -73,12 +73,14 @@ const Button = ({
     </View>
   );
 
+  const usingGradient = variant === 'primary' && useGradient;
+
   return (
     <Pressable
       style={({ pressed }) => [
         styles.base,
         baseStyle,
-        selected,
+        usingGradient ? { backgroundColor: 'transparent', borderColor: selected.borderColor } : selected,
         pressed && !isDisabled ? styles.pressed : null,
         isDisabled && styles.disabled,
         style,
@@ -86,7 +88,7 @@ const Button = ({
       onPress={onPress}
       disabled={isDisabled}
     >
-      {variant === 'primary' && useGradient ? (
+      {usingGradient ? (
         <LinearGradient
           colors={[theme.primary, theme.primaryDark || theme.primary]}
           start={{ x: 0, y: 0 }}
@@ -109,8 +111,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   gradientFill: {
-    width: '100%',
-    minHeight: 46,
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
   },

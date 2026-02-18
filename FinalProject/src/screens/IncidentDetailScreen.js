@@ -1,5 +1,6 @@
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import incidentConstants from '../../../constants/incident';
 import { formatDate } from '../utils/dateUtils';
@@ -11,6 +12,7 @@ const { CATEGORY_DISPLAY, STATUS_LABELS } = incidentConstants;
 const IncidentDetailScreen = ({ route }) => {
   const { incident } = route.params || {};
   const { theme } = useTheme();
+  const tabBarHeight = useBottomTabBarHeight();
 
   if (!incident) {
     return (
@@ -41,7 +43,7 @@ const IncidentDetailScreen = ({ route }) => {
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: theme.surface }]}
-      contentContainerStyle={styles.contentContainer}
+      contentContainerStyle={[styles.contentContainer, { paddingBottom: tabBarHeight + 8 }]}
       showsVerticalScrollIndicator={false}
     >
       <Card style={styles.headerCard}>
