@@ -32,7 +32,6 @@ const STATUS_TRANSITIONS = {
   police_closed: [],
 }
 
-const ACTIVE_ALERT_STATUSES = new Set(['verified', 'dispatched', 'on_scene', 'investigating'])
 const UNACTIONED_AGE_THRESHOLD_MINUTES = 30
 
 const STATUS_ACTION_CONFIG = {
@@ -85,6 +84,7 @@ function LawEnforcement() {
   const [lastRealtimeAlertAt, setLastRealtimeAlertAt] = useState(null)
   const [toasts, setToasts] = useState([])
   const [pendingTransition, setPendingTransition] = useState(null)
+  const notificationPermissionRequestedRef = useRef(false)
   const toastTimeoutsRef = useRef([])
 
   useEffect(() => {
@@ -108,6 +108,14 @@ function LawEnforcement() {
     queryFn: async () => {
       const params = statusFilter !== 'all' ? { status: statusFilter } : {}
       const result = await leiAPI.getAll(params)
+      return result.success ? result.data : []
+    },
+  })
+
+  const { data: allLeiIncidents = [] } = useQuery({
+    queryKey: ['lei-incidents-snapshot'],
+    queryFn: async () => {
+      const result = await leiAPI.getAll({})
       return result.success ? result.data : []
     },
   })
@@ -172,12 +180,11 @@ function LawEnforcement() {
   const actionLog = incidentDetail?.actions || []
 
   const displayAlerts = useMemo(() => {
-    const derived = filteredIncidents
+    const derived = allLeiIncidents
       .filter((incident) => ['critical', 'high'].includes(incident.severity))
-      .filter((incident) => ACTIVE_ALERT_STATUSES.has(incident.status))
-      .slice(0, 5)
+      .filter((incident) => incident.status === 'verified')
       .map((incident) => ({
-        incidentId: incident.id,
+        incidentId: incident.incident_id,
         title: incident.title,
         severity: incident.severity,
         status: incident.status,
@@ -193,8 +200,8 @@ function LawEnforcement() {
       if (seen.has(key)) return false
       seen.add(key)
       return true
-    })
-  }, [filteredIncidents, leiAlerts])
+    }).slice(0, 8)
+  }, [allLeiIncidents, leiAlerts])
 
   const hasFreshRealtimeAlert =
     typeof lastRealtimeAlertAt === 'number' && Date.now() - lastRealtimeAlertAt < 12000
@@ -241,7 +248,12 @@ function LawEnforcement() {
     }
 
     queryClient.invalidateQueries({ queryKey: ['lei-incidents'] })
+    queryClient.invalidateQueries({ queryKey: ['lei-incidents-snapshot'] })
     queryClient.invalidateQueries({ queryKey: ['lei-incident', incident.incident_id || incident.id] })
+    if (status !== 'verified') {
+      const incidentId = incident.incident_id || incident.id
+      setLeiAlerts((prev) => prev.filter((alert) => String(alert.incidentId) !== String(incidentId)))
+    }
     pushToast(`Incident moved to ${formatStatusLabel(status)}.`)
   }
 
@@ -254,6 +266,56 @@ function LawEnforcement() {
     }
 
     setPendingTransition({ incident, status })
+  }
+
+  const getIncidentFromAlert = (alert) => {
+    if (!alert) return null
+    const incidentId = alert.incidentId
+    const match = filteredIncidents.find((incident) => String(incident.id) === String(incidentId))
+    if (match) return match
+
+    return {
+      id: incidentId,
+      incident_id: incidentId,
+      status: alert.status,
+    }
+  }
+
+  const handleAlertDispatch = (alert) => {
+    const incident = getIncidentFromAlert(alert)
+    if (!incident) {
+      pushToast('Unable to dispatch from alert: incident not found.', 'warning')
+      return
+    }
+
+    requestStatusUpdate(incident, 'dispatched')
+  }
+
+  const notifyCriticalAlert = async (payload) => {
+    if (typeof window === 'undefined' || typeof Notification === 'undefined') return
+    if (payload?.severity !== 'critical') return
+
+    const showNotification = () => {
+      const notification = new Notification('Critical LE Alert', {
+        body: payload?.title || 'A critical incident requires immediate dispatch.',
+      })
+      notification.onclick = () => {
+        window.focus()
+      }
+    }
+
+    if (Notification.permission === 'granted') {
+      showNotification()
+      return
+    }
+
+    if (Notification.permission === 'default' && !notificationPermissionRequestedRef.current) {
+      notificationPermissionRequestedRef.current = true
+      const permission = await Notification.requestPermission()
+      if (permission === 'granted') {
+        showNotification()
+      }
+    }
   }
 
   const confirmPendingTransition = async () => {
@@ -274,10 +336,24 @@ function LawEnforcement() {
     })
 
     socket.on('lei_alert', (payload) => {
-      setLeiAlerts((prev) => [payload, ...prev].slice(0, 8))
+      const normalizedStatus = payload?.status || null
+      if (normalizedStatus === 'verified') {
+        setLeiAlerts((prev) => [payload, ...prev].slice(0, 8))
+      }
       setLastRealtimeAlertAt(Date.now())
       queryClient.invalidateQueries({ queryKey: ['lei-incidents'] })
+      queryClient.invalidateQueries({ queryKey: ['lei-incidents-snapshot'] })
       pushToast(`New LE alert: ${payload?.title || 'Incident update received'}`, 'warning')
+      notifyCriticalAlert(payload)
+    })
+
+    socket.on('incident:update', (payload) => {
+      const incidentId = payload?.incidentId
+      const nextStatus = payload?.status
+      if (!incidentId || nextStatus === 'verified') return
+
+      setLeiAlerts((prev) => prev.filter((alert) => String(alert.incidentId) !== String(incidentId)))
+      queryClient.invalidateQueries({ queryKey: ['lei-incidents-snapshot'] })
     })
 
     return () => {
@@ -288,6 +364,20 @@ function LawEnforcement() {
   const pendingActionConfig = pendingTransition?.status
     ? STATUS_ACTION_CONFIG[pendingTransition.status]
     : null
+
+  useEffect(() => {
+    const statusByIncidentId = new Map(
+      allLeiIncidents.map((incident) => [String(incident.incident_id), incident.status])
+    )
+
+    setLeiAlerts((prev) =>
+      prev.filter((alert) => {
+        const status = statusByIncidentId.get(String(alert.incidentId))
+        if (!status) return true
+        return status === 'verified'
+      })
+    )
+  }, [allLeiIncidents])
 
   if (user?.role !== 'law_enforcement' && user?.role !== 'admin') {
     return (
@@ -355,6 +445,15 @@ function LawEnforcement() {
                       Severity <span className="font-semibold uppercase">{alert.severity || 'unknown'}</span> · Status{' '}
                       <span className="font-semibold">{alert.status || 'N/A'}</span>
                     </p>
+                    <div className="mt-3" onClick={(event) => event.stopPropagation()}>
+                      <button
+                        onClick={() => handleAlertDispatch(alert)}
+                        disabled={statusMutation.isPending || alert.status !== 'verified'}
+                        className="px-3 py-1.5 rounded bg-primary text-white text-xs font-semibold disabled:opacity-50"
+                      >
+                        Dispatch Now
+                      </button>
+                    </div>
                   </div>
                   {Number.isFinite(Number(alert.latitude)) && Number.isFinite(Number(alert.longitude)) ? (
                     <div className="w-[320px]">
