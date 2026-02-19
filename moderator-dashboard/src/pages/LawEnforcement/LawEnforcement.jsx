@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, MapPin, Radio, Shield } from 'lucide-react'
 import { io } from 'socket.io-client'
@@ -9,7 +9,7 @@ import SearchInput from '../../components/SearchInput'
 import SeverityBadge from '../../components/SeverityBadge'
 import StatusBadge from '../../components/StatusBadge'
 import ConfirmDialog from '../../components/ConfirmDialog'
-import { LEI_STATUS_FILTERS } from '../../constants/incident'
+import { CLOSURE_OUTCOMES, LEI_STATUS_FILTERS } from '../../constants/incident'
 import { useAuth } from '../../context/AuthContext'
 import { leiAPI } from '../../services/api'
 import { getTimeAgo } from '../../utils/dateUtils'
@@ -82,9 +82,15 @@ function LawEnforcement() {
   const [selectedIncidentId, setSelectedIncidentId] = useState(null)
   const [leiAlerts, setLeiAlerts] = useState([])
   const [lastRealtimeAlertAt, setLastRealtimeAlertAt] = useState(null)
+  const [nowTs, setNowTs] = useState(Date.now())
+  const [freshNowTs, setFreshNowTs] = useState(Date.now())
   const [toasts, setToasts] = useState([])
   const [pendingTransition, setPendingTransition] = useState(null)
+  const [closeOutcome, setCloseOutcome] = useState('resolved_handled')
+  const [closeCaseId, setCloseCaseId] = useState('')
+  const [closeNotes, setCloseNotes] = useState('')
   const notificationPermissionRequestedRef = useRef(false)
+  const notificationFallbackShownRef = useRef(false)
   const toastTimeoutsRef = useRef([])
 
   useEffect(() => {
@@ -94,14 +100,30 @@ function LawEnforcement() {
     }
   }, [])
 
-  const pushToast = (message, type = 'success') => {
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setNowTs(Date.now())
+    }, 60000)
+
+    return () => clearInterval(intervalId)
+  }, [])
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setFreshNowTs(Date.now())
+    }, 1000)
+
+    return () => clearInterval(intervalId)
+  }, [])
+
+  const pushToast = useCallback((message, type = 'success') => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`
     setToasts((prev) => [...prev, { id, message, type }])
     const timeoutId = setTimeout(() => {
       setToasts((prev) => prev.filter((toast) => toast.id !== id))
     }, 3200)
     toastTimeoutsRef.current.push(timeoutId)
-  }
+  }, [])
 
   const { data: incidents = [], isLoading } = useQuery({
     queryKey: ['lei-incidents', statusFilter],
@@ -161,7 +183,7 @@ function LawEnforcement() {
     const reportedAt = incident?.reportedAt
     if (!reportedAt) return 0
 
-    const diffMs = Date.now() - new Date(reportedAt).getTime()
+    const diffMs = nowTs - new Date(reportedAt).getTime()
     if (!Number.isFinite(diffMs) || diffMs <= 0) return 0
 
     return Math.floor(diffMs / 60000)
@@ -204,7 +226,7 @@ function LawEnforcement() {
   }, [allLeiIncidents, leiAlerts])
 
   const hasFreshRealtimeAlert =
-    typeof lastRealtimeAlertAt === 'number' && Date.now() - lastRealtimeAlertAt < 12000
+    typeof lastRealtimeAlertAt === 'number' && freshNowTs - lastRealtimeAlertAt < 12000
 
   const getNextWorkflowStatus = (currentStatus) => {
     const next = STATUS_TRANSITIONS[currentStatus]?.[0]
@@ -217,7 +239,7 @@ function LawEnforcement() {
     return (STATUS_TRANSITIONS[currentStatus] || []).includes(status)
   }
 
-  const runStatusUpdate = async (incident, status) => {
+  const runStatusUpdate = async (incident, status, closePayload = null) => {
     if (!incident) return
 
     if (!canTransitionTo(incident, status)) {
@@ -228,13 +250,13 @@ function LawEnforcement() {
     const payload =
       status === 'police_closed'
         ? {
-            status,
-            closure_outcome: 'resolved_handled',
-            closure_details: {
-              case_id: null,
-              officer_notes: 'Closed from LEI workflow',
-            },
-          }
+          status,
+          closure_outcome: closePayload?.closure_outcome || 'resolved_handled',
+          closure_details: {
+            case_id: closePayload?.closure_details?.case_id || null,
+            officer_notes: closePayload?.closure_details?.officer_notes || null,
+          },
+        }
         : { status }
 
     const result = await statusMutation.mutateAsync({
@@ -257,7 +279,7 @@ function LawEnforcement() {
     pushToast(`Incident moved to ${formatStatusLabel(status)}.`)
   }
 
-  const requestStatusUpdate = (incident, status) => {
+  const requestStatusUpdate = (incident, status, closePayload = null) => {
     if (!incident || !status) return
 
     if (!canTransitionTo(incident, status)) {
@@ -265,7 +287,24 @@ function LawEnforcement() {
       return
     }
 
-    setPendingTransition({ incident, status })
+    setPendingTransition({ incident, status, closePayload })
+  }
+
+  const requestCloseCase = (incident) => {
+    if (!incident) return
+
+    if (closeOutcome === 'report_filed' && !closeCaseId.trim()) {
+      pushToast('Case ID is required when closure outcome is Report Filed.', 'warning')
+      return
+    }
+
+    requestStatusUpdate(incident, 'police_closed', {
+      closure_outcome: closeOutcome,
+      closure_details: {
+        case_id: closeCaseId.trim() || null,
+        officer_notes: closeNotes.trim() || null,
+      },
+    })
   }
 
   const getIncidentFromAlert = (alert) => {
@@ -291,7 +330,7 @@ function LawEnforcement() {
     requestStatusUpdate(incident, 'dispatched')
   }
 
-  const notifyCriticalAlert = async (payload) => {
+  const notifyCriticalAlert = useCallback(async (payload) => {
     if (typeof window === 'undefined' || typeof Notification === 'undefined') return
     if (payload?.severity !== 'critical') return
 
@@ -309,21 +348,41 @@ function LawEnforcement() {
       return
     }
 
+    if (Notification.permission === 'denied' && !notificationFallbackShownRef.current) {
+      notificationFallbackShownRef.current = true
+      pushToast('Critical alert received. Browser notifications are blocked.', 'warning')
+      return
+    }
+
     if (Notification.permission === 'default' && !notificationPermissionRequestedRef.current) {
       notificationPermissionRequestedRef.current = true
       const permission = await Notification.requestPermission()
       if (permission === 'granted') {
         showNotification()
+      } else if (!notificationFallbackShownRef.current) {
+        notificationFallbackShownRef.current = true
+        pushToast('Critical alert received. Enable browser notifications for pop-up alerts.', 'warning')
       }
     }
-  }
+  }, [pushToast])
 
   const confirmPendingTransition = async () => {
     if (!pendingTransition || statusMutation.isPending) return
 
-    await runStatusUpdate(pendingTransition.incident, pendingTransition.status)
+    await runStatusUpdate(
+      pendingTransition.incident,
+      pendingTransition.status,
+      pendingTransition.closePayload
+    )
     setPendingTransition(null)
   }
+
+  useEffect(() => {
+    if (!selectedIncidentId) return
+    setCloseOutcome('resolved_handled')
+    setCloseCaseId('')
+    setCloseNotes('')
+  }, [selectedIncidentId])
 
   useEffect(() => {
     if (user?.role !== 'law_enforcement' && user?.role !== 'admin') return
@@ -359,7 +418,7 @@ function LawEnforcement() {
     return () => {
       socket.disconnect()
     }
-  }, [queryClient, user])
+  }, [notifyCriticalAlert, pushToast, queryClient, user])
 
   const pendingActionConfig = pendingTransition?.status
     ? STATUS_ACTION_CONFIG[pendingTransition.status]
@@ -451,8 +510,11 @@ function LawEnforcement() {
                         disabled={statusMutation.isPending || alert.status !== 'verified'}
                         className="px-3 py-1.5 rounded bg-primary text-white text-xs font-semibold disabled:opacity-50"
                       >
-                        Dispatch Now
+                        {statusMutation.isPending ? 'Dispatching...' : 'Dispatch Now'}
                       </button>
+                      {alert.status !== 'verified' ? (
+                        <p className="text-xs text-muted mt-1">Dispatch unavailable: incident already actioned.</p>
+                      ) : null}
                     </div>
                   </div>
                   {Number.isFinite(Number(alert.latitude)) && Number.isFinite(Number(alert.longitude)) ? (
@@ -561,7 +623,10 @@ function LawEnforcement() {
                       <div className="flex flex-col gap-1">
                         <span className="text-sm text-text tabular-nums">{getTimeAgo(incident.reportedAt)}</span>
                         {aged ? (
-                          <span className="inline-flex w-fit rounded-full bg-danger/20 px-2 py-0.5 text-[11px] font-semibold text-danger">
+                          <span
+                            className="inline-flex w-fit rounded-full bg-danger/20 px-2 py-0.5 text-[11px] font-semibold text-danger"
+                            title={`Reported at ${new Date(incident.reportedAt).toLocaleString()}`}
+                          >
                             Over {UNACTIONED_AGE_THRESHOLD_MINUTES}m waiting dispatch
                           </span>
                         ) : null}
@@ -569,14 +634,16 @@ function LawEnforcement() {
                     </td>
                     <td className="px-4 py-3 text-sm text-muted">{incident.username || 'Unknown'}</td>
                     <td className="px-4 py-3" onClick={(event) => event.stopPropagation()}>
-                      {nextAction ? (
+                      {nextAction && nextStatus !== 'police_closed' ? (
                         <button
                           onClick={() => requestStatusUpdate(incident, nextStatus)}
                           disabled={statusMutation.isPending || !canTransitionTo(incident, nextStatus)}
                           className={`px-2.5 py-1.5 rounded text-xs font-semibold disabled:opacity-50 ${nextAction.buttonClass}`}
                         >
-                          {nextAction.label}
+                          {statusMutation.isPending ? 'Updating...' : nextAction.label}
                         </button>
+                      ) : nextStatus === 'police_closed' ? (
+                        <span className="text-xs text-muted">Close from detail panel</span>
                       ) : (
                         <span className="text-xs text-muted">No next action</span>
                       )}
@@ -648,13 +715,57 @@ function LawEnforcement() {
               </div>
 
               <div className="mt-3">
-                {nextAction ? (
+                {nextStatus === 'police_closed' ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <select
+                        value={closeOutcome}
+                        onChange={(event) => setCloseOutcome(event.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-card text-sm"
+                      >
+                        {CLOSURE_OUTCOMES.map((outcome) => (
+                          <option key={outcome.value} value={outcome.value}>
+                            {outcome.label}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="text"
+                        value={closeCaseId}
+                        onChange={(event) => setCloseCaseId(event.target.value)}
+                        placeholder="Case ID (for Report Filed)"
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-card text-sm"
+                      />
+                      <button
+                        onClick={() => requestCloseCase(selectedIncident)}
+                        disabled={
+                          statusMutation.isPending ||
+                          !canTransitionTo(selectedIncident, 'police_closed') ||
+                          (closeOutcome === 'report_filed' && !closeCaseId.trim())
+                        }
+                        className="px-3 py-2 rounded-lg text-sm font-semibold bg-emerald-600 text-white disabled:opacity-50"
+                      >
+                        {statusMutation.isPending ? 'Closing...' : 'Close Case'}
+                      </button>
+                    </div>
+                    <textarea
+                      value={closeNotes}
+                      onChange={(event) => setCloseNotes(event.target.value)}
+                      rows={3}
+                      placeholder="Officer notes"
+                      className="w-full px-3 py-2 border border-border rounded-lg bg-card text-sm"
+                    />
+                    {closeOutcome === 'report_filed' && !closeCaseId.trim() ? (
+                      <p className="text-xs text-danger">Case ID is required when outcome is Report Filed.</p>
+                    ) : null}
+                  </div>
+                ) : nextAction ? (
                   <button
                     onClick={() => requestStatusUpdate(selectedIncident, nextStatus)}
                     disabled={statusMutation.isPending || !canTransitionTo(selectedIncident, nextStatus)}
                     className={`px-3 py-2 rounded-lg text-sm font-semibold disabled:opacity-50 ${nextAction.buttonClass}`}
                   >
-                    {nextAction.label}
+                    {statusMutation.isPending ? 'Updating...' : nextAction.label}
                   </button>
                 ) : (
                   <p className="text-sm text-muted">Workflow complete. No next action available.</p>
