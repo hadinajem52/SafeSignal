@@ -11,6 +11,17 @@ function Layout({ children }) {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const [notifications, setNotifications] = useState([])
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(
+    () => localStorage.getItem('sidebar_collapsed') === 'true'
+  )
+
+  const handleSidebarToggle = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev
+      localStorage.setItem('sidebar_collapsed', String(next))
+      return next
+    })
+  }
   const { data: dashboardSettings } = useQuery({
     queryKey: ['dashboardSettings'],
     queryFn: async () => {
@@ -100,7 +111,7 @@ function Layout({ children }) {
 
   return (
     <div className="flex h-dvh bg-bg">
-      <Navigation />
+      <Navigation collapsed={sidebarCollapsed} onToggle={handleSidebarToggle} />
       <main className="flex-1 overflow-auto">
         <div
           className="fixed z-50 space-y-2"
@@ -112,13 +123,12 @@ function Layout({ children }) {
           {activeNotifications.map((notification) => (
             <div
               key={notification.id}
-              className={`min-w-[280px] max-w-[420px] rounded-lg border px-4 py-3 shadow-lg ${
-                notification.type === 'alert'
-                  ? 'border-red-200 bg-red-50 text-red-900'
+              className={`min-w-[280px] max-w-[420px] rounded-lg border px-4 py-3 shadow-lg ${notification.type === 'alert'
+                  ? 'border-error/30 bg-error/10 text-error'
                   : notification.type === 'digest'
-                    ? 'border-blue-200 bg-blue-50 text-blue-900'
-                    : 'border-gray-200 bg-white text-gray-900'
-              }`}
+                    ? 'border-primary/30 bg-primary/10 text-primary'
+                    : 'border-border bg-card text-text'
+                }`}
             >
               {notification.message}
             </div>

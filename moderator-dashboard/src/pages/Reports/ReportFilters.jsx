@@ -1,7 +1,5 @@
 import React from 'react'
 import { Filter, Search } from 'lucide-react'
-import FilterDropdown from '../../components/FilterDropdown'
-import SearchInput from '../../components/SearchInput'
 import { MODERATOR_STATUS_FILTERS } from '../../constants/incident'
 
 function ReportFilters({
@@ -16,56 +14,85 @@ function ReportFilters({
   onBulkReject,
 }) {
   return (
-    <div className="bg-card border border-border rounded-lg shadow-soft p-6 mb-6">
-      <div className="flex flex-wrap items-end gap-4 justify-between">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 min-w-[280px]">
-          <div className="col-span-1 md:col-span-2">
-            <SearchInput
-              label="Search Reports"
-              icon={Search}
-              value={searchTerm}
-              onChange={onSearchChange}
-              placeholder="Search by title or description..."
-            />
-          </div>
-          <FilterDropdown
-            label={
-              <>
-                <Filter className="inline mr-2" size={18} /> Filter by Status
-              </>
-            }
-            value={statusFilter}
-            onChange={onStatusFilterChange}
-            options={MODERATOR_STATUS_FILTERS}
+    <div className="bg-card/60 backdrop-blur-sm border border-border rounded-xl px-4 py-3">
+      {/* Main row: search + filter + count + bulk actions */}
+      <div className="flex items-center gap-3 flex-wrap">
+        {/* Search */}
+        <div className="relative flex-1 min-w-[200px] max-w-[400px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" size={15} />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={onSearchChange}
+            placeholder="Search reports…"
+            className="w-full pl-9 pr-3 py-2 text-sm bg-surface border border-border text-text rounded-lg
+              placeholder:text-muted/60 focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-shadow"
           />
         </div>
 
-        <div className="min-w-[280px]">
-          <p className="text-sm text-muted mb-2 tabular-nums">
-            {totalResults} reports{selectedCount ? ` • ${selectedCount} selected` : ''}
-          </p>
-          <div className="flex gap-2">
-            <button
-              onClick={onBulkVerify}
-              disabled={!selectedCount || bulkActionPending === 'reject'}
-              className="px-3 py-2 rounded-lg bg-success hover:opacity-90 text-white text-sm font-semibold disabled:opacity-50"
-            >
-              {bulkActionPending === 'verify' ? 'Verifying...' : 'Bulk Verify'}
-            </button>
-            <button
-              onClick={onBulkReject}
-              disabled={!selectedCount || bulkActionPending === 'verify'}
-              className="px-3 py-2 rounded-lg bg-danger hover:opacity-90 text-white text-sm font-semibold disabled:opacity-50"
-            >
-              {bulkActionPending === 'reject' ? 'Rejecting...' : 'Bulk Reject'}
-            </button>
-          </div>
+        {/* Status filter */}
+        <div className="relative min-w-[140px]">
+          <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" size={14} />
+          <select
+            value={statusFilter}
+            onChange={onStatusFilterChange}
+            className="w-full pl-8 pr-3 py-2 text-sm bg-surface border border-border text-text rounded-lg
+              focus:ring-2 focus:ring-primary/30 focus:border-primary/50 appearance-none cursor-pointer transition-shadow"
+          >
+            {MODERATOR_STATUS_FILTERS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Separator + count */}
+        <div className="h-6 w-px bg-border hidden sm:block" />
+        <span className="text-xs text-muted tabular-nums whitespace-nowrap">
+          {totalResults} report{totalResults !== 1 ? 's' : ''}
+          {selectedCount > 0 && (
+            <span className="text-primary font-semibold"> · {selectedCount} selected</span>
+          )}
+        </span>
+
+        {/* Bulk actions — only visible when items are selected */}
+        {selectedCount > 0 && (
+          <>
+            <div className="h-6 w-px bg-border hidden sm:block" />
+            <div className="flex gap-2">
+              <button
+                onClick={onBulkVerify}
+                disabled={bulkActionPending === 'reject'}
+                className="px-3 py-1.5 rounded-lg bg-success/15 text-success text-xs font-semibold
+                  hover:bg-success/25 disabled:opacity-40 transition-colors border border-success/20"
+              >
+                {bulkActionPending === 'verify' ? 'Verifying…' : 'Bulk Verify'}
+              </button>
+              <button
+                onClick={onBulkReject}
+                disabled={bulkActionPending === 'verify'}
+                className="px-3 py-1.5 rounded-lg bg-error/15 text-error text-xs font-semibold
+                  hover:bg-error/25 disabled:opacity-40 transition-colors border border-error/20"
+              >
+                {bulkActionPending === 'reject' ? 'Rejecting…' : 'Bulk Reject'}
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Keyboard shortcuts — pushed to far right */}
+        <div className="ml-auto hidden lg:flex items-center gap-3 text-[11px] text-muted">
+          {[['V', 'verify'], ['R', 'reject'], ['N', 'next']].map(([key, action]) => (
+            <span key={key} className="inline-flex items-center gap-1">
+              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border font-mono font-bold text-text text-[10px]">
+                {key}
+              </kbd>
+              {action}
+            </span>
+          ))}
         </div>
       </div>
-
-      <p className="text-xs text-muted mt-4">
-        Shortcuts: <span className="font-semibold">V</span> verify, <span className="font-semibold">R</span> reject, <span className="font-semibold">N</span> next report
-      </p>
     </div>
   )
 }

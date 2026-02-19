@@ -4,10 +4,12 @@ import EmptyState from '../../components/EmptyState'
 import LoadingState from '../../components/LoadingState'
 import SeverityBadge from '../../components/SeverityBadge'
 import StatusBadge from '../../components/StatusBadge'
+import { getTimeAgo } from '../../utils/dateUtils'
 
 function ReportList({
   reports,
   isLoading,
+  selectedReportId,
   onSelectReport,
   selectedReportIds,
   onToggleSelection,
@@ -24,60 +26,68 @@ function ReportList({
   const allSelected = selectedReportIds.length === reports.length
 
   return (
-    <div className="bg-card border border-border rounded-lg shadow-soft overflow-hidden">
-      <table className="w-full">
-        <thead className="bg-surface border-b border-border">
-          <tr>
-            <th className="px-4 py-3 text-left">
-              <input
-                type="checkbox"
-                aria-label="Select all reports"
-                checked={allSelected}
-                onChange={onToggleSelectAll}
-                className="size-4"
-              />
-            </th>
-            <th className="px-4 py-3 text-left text-sm font-bold text-text">Report</th>
-            <th className="px-4 py-3 text-left text-sm font-bold text-text">Reporter</th>
-            <th className="px-4 py-3 text-left text-sm font-bold text-text">Status</th>
-            <th className="px-4 py-3 text-left text-sm font-bold text-text">Severity</th>
-            <th className="px-4 py-3 text-left text-sm font-bold text-text">Date</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border">
-          {reports.map((report) => (
-            <tr
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Sticky header */}
+      <div className="flex items-center gap-3 px-4 py-3 bg-surface/60 backdrop-blur-sm border-b border-border sticky top-0 z-10">
+        <input
+          type="checkbox"
+          aria-label="Select all reports"
+          checked={allSelected}
+          onChange={onToggleSelectAll}
+          className="size-3.5 accent-primary"
+        />
+        <span className="text-[11px] font-semibold text-muted uppercase tracking-wider flex-1">Report</span>
+        <span className="text-[11px] font-semibold text-muted uppercase tracking-wider w-12 text-center">Sev.</span>
+        <span className="text-[11px] font-semibold text-muted uppercase tracking-wider w-16 text-right">Age</span>
+      </div>
+
+      {/* Scrollable body */}
+      <div className="overflow-y-auto flex-1">
+        {reports.map((report) => {
+          const isSelected = report.id === selectedReportId
+          const isChecked = selectedReportIds.includes(report.id)
+
+          return (
+            <div
               key={report.id}
-              className="hover:bg-surface cursor-pointer"
+              className={`flex items-center gap-3 px-4 py-3.5 cursor-pointer transition-all duration-150 border-l-2
+                ${isSelected
+                  ? 'bg-primary/8 border-l-primary'
+                  : 'border-l-transparent hover:bg-surface/50'
+                }`}
               onClick={() => onSelectReport(report)}
             >
-              <td className="px-4 py-3" onClick={(event) => event.stopPropagation()}>
+              <div onClick={(e) => e.stopPropagation()}>
                 <input
                   type="checkbox"
                   aria-label={`Select report ${report.title}`}
-                  checked={selectedReportIds.includes(report.id)}
+                  checked={isChecked}
                   onChange={() => onToggleSelection(report.id)}
-                  className="size-4"
+                  className="size-3.5 accent-primary"
                 />
-              </td>
-              <td className="px-4 py-3">
-                <p className="font-semibold text-text text-sm">{report.title}</p>
-                <p className="text-xs text-muted truncate max-w-[420px]">{report.description}</p>
-              </td>
-              <td className="px-4 py-3 text-sm text-muted">{report.reporter}</td>
-              <td className="px-4 py-3">
-                <StatusBadge status={report.status} />
-              </td>
-              <td className="px-4 py-3">
+              </div>
+
+              {/* Report info */}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-text leading-snug truncate">{report.title}</p>
+                <div className="mt-1.5">
+                  <StatusBadge status={report.status} size="xs" />
+                </div>
+              </div>
+
+              {/* Severity */}
+              <div className="w-12 flex justify-center flex-shrink-0">
                 <SeverityBadge severity={report.severity} display="initial" />
-              </td>
-              <td className="px-4 py-3 text-sm text-muted tabular-nums">
-                {new Date(report.createdAt).toLocaleDateString()}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+              </div>
+
+              {/* Age */}
+              <div className="w-16 text-right flex-shrink-0">
+                <span className="text-xs text-muted tabular-nums">{getTimeAgo(report.createdAt)}</span>
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

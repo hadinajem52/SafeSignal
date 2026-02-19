@@ -31,30 +31,17 @@ export const formatCategoryLabel = (category) => {
 }
 
 export const getSeverityColor = (severity, variant = SEVERITY_VARIANTS.REPORTS) => {
-  if (variant === SEVERITY_VARIANTS.LAW_ENFORCEMENT) {
-    switch (severity) {
-      case 'critical':
-        return 'text-red-600'
-      case 'high':
-        return 'text-orange-600'
-      case 'medium':
-        return 'text-yellow-600'
-      case 'low':
-        return 'text-green-600'
-      default:
-        return 'text-gray-600'
-    }
-  }
-
   switch (severity) {
-    case 'low':
-      return 'text-green-600'
-    case 'medium':
-      return 'text-yellow-600'
+    case 'critical':
+      return 'text-error'
     case 'high':
-      return 'text-red-600'
+      return 'text-error'
+    case 'medium':
+      return 'text-warning'
+    case 'low':
+      return 'text-success'
     default:
-      return 'text-gray-600'
+      return 'text-muted'
   }
 }
 

@@ -2,10 +2,12 @@ import React from 'react'
 
 function DetailSection({ title, headerRight, className = '', children }) {
   return (
-    <div className={`bg-card border border-border rounded-lg p-4 ${className}`.trim()}>
+    <div className={`bg-surface/40 border border-border rounded-lg p-4 ${className}`.trim()}>
       {(title || headerRight) ? (
         <div className="flex items-center justify-between mb-3">
-          {title ? <h4 className="font-bold text-text">{title}</h4> : <span />}
+          {title ? (
+            <h4 className="text-sm font-bold text-text">{title}</h4>
+          ) : <span />}
           {headerRight}
         </div>
       ) : null}
