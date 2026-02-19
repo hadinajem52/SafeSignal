@@ -117,9 +117,10 @@ async function getModeratorStats() {
 async function getUserDashboardStats(userId, { latitude, longitude, radius = 5 }) {
     const hasCoords = latitude && longitude;
 
+    // Single spatial scan returns all nearby incidents + active count in one pass
     const nearbyIncidentsPromise = hasCoords
         ? db.manyOrNone(`
-      SELECT severity, created_at
+      SELECT severity, created_at, status
       FROM incidents i
       WHERE i.is_draft = FALSE
         AND ST_DWithin(
@@ -130,18 +131,15 @@ async function getUserDashboardStats(userId, { latitude, longitude, radius = 5 }
     `, [longitude, latitude, radius])
         : Promise.resolve([]);
 
-    const activeNearbyPromise = db.one(`
+    const activeNearbyPromise = hasCoords
+        ? Promise.resolve(null) // derived from nearbyIncidentsPromise after await
+        : db.one(`
     SELECT COUNT(*) as count
     FROM incidents
     WHERE is_draft = FALSE
       AND status = 'verified'
       AND created_at >= NOW() - INTERVAL '7 days'
-      ${hasCoords ? `AND ST_DWithin(
-        location,
-        ST_SetSRID(ST_Point($1::float, $2::float), 4326)::geography,
-        $3::float * 1000
-      )` : ''}
-  `, hasCoords ? [longitude, latitude, radius] : []);
+  `);
 
     const resolvedThisWeekPromise = db.one(`
     SELECT COUNT(*) as count
@@ -199,7 +197,7 @@ async function getUserDashboardStats(userId, { latitude, longitude, radius = 5 }
 
     const [
         nearbyIncidents,
-        activeNearby,
+        activeNearbyRow,
         resolvedThisWeek,
         trendingWithChange,
         userStats,
@@ -215,10 +213,18 @@ async function getUserDashboardStats(userId, { latitude, longitude, radius = 5 }
 
     const safetyScore = hasCoords ? calculateSafetyScore(nearbyIncidents) : null;
 
+    // When coords present, derive active count from the shared spatial query result
+    const activeNearbyCount = hasCoords
+        ? nearbyIncidents.filter(
+            (i) => i.status === 'verified' &&
+            new Date(i.created_at) >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+          ).length
+        : parseInt(activeNearbyRow.count);
+
     return {
         safetyScore,
         quickStats: {
-            activeNearby: parseInt(activeNearby.count),
+            activeNearby: activeNearbyCount,
             resolvedThisWeek: parseInt(resolvedThisWeek.count),
         },
         trendingCategories: trendingWithChange || [],

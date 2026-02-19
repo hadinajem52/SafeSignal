@@ -7,11 +7,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { AppText, Button } from '../../components';
 import { configureGoogleAuth, signInWithGoogle, statusCodes } from '../../services/googleAuth';
+import AnimatedBackground from './AnimatedBackground';
 import AuthDivider from './AuthDivider';
 import AuthFormInput from './AuthFormInput';
 import AuthHeader from './AuthHeader';
@@ -117,18 +117,7 @@ const LoginScreen = ({ navigation }) => {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0}
     >
       <View style={authStyles.backgroundLayer} pointerEvents="none">
-        <LinearGradient
-          colors={[theme.primaryLight || 'rgba(29,78,216,0.14)', 'rgba(255,255,255,0)']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={authStyles.bgOrbTop}
-        />
-        <LinearGradient
-          colors={[theme.primaryLight || 'rgba(29,78,216,0.14)', 'rgba(255,255,255,0)']}
-          start={{ x: 1, y: 1 }}
-          end={{ x: 0, y: 0 }}
-          style={authStyles.bgOrbBottom}
-        />
+        <AnimatedBackground />
       </View>
       <ScrollView
         contentContainerStyle={authStyles.scrollContent}
