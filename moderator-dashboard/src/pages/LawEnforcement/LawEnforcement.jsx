@@ -33,6 +33,11 @@ const STATUS_TRANSITIONS = {
 }
 
 const UNACTIONED_AGE_THRESHOLD_MINUTES = 30
+const TOAST_DURATION_MS = {
+  success: 3000,
+  warning: 4000,
+  error: 5000,
+}
 
 const STATUS_ACTION_CONFIG = {
   dispatched: {
@@ -91,6 +96,7 @@ function LawEnforcement() {
   const [closeNotes, setCloseNotes] = useState('')
   const notificationPermissionRequestedRef = useRef(false)
   const notificationFallbackShownRef = useRef(false)
+  const manualDeselectRef = useRef(false)
   const toastTimeoutsRef = useRef([])
 
   useEffect(() => {
@@ -119,9 +125,11 @@ function LawEnforcement() {
   const pushToast = useCallback((message, type = 'success') => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`
     setToasts((prev) => [...prev, { id, message, type }])
+    const duration = TOAST_DURATION_MS[type] || TOAST_DURATION_MS.success
     const timeoutId = setTimeout(() => {
       setToasts((prev) => prev.filter((toast) => toast.id !== id))
-    }, 3200)
+      toastTimeoutsRef.current = toastTimeoutsRef.current.filter((savedId) => savedId !== timeoutId)
+    }, duration)
     toastTimeoutsRef.current.push(timeoutId)
   }, [])
 
@@ -192,7 +200,13 @@ function LawEnforcement() {
   const isUnactionedAged = (incident) =>
     incident?.status === 'verified' && getIncidentAgeMinutes(incident) >= UNACTIONED_AGE_THRESHOLD_MINUTES
 
+  const selectIncident = useCallback((incidentId) => {
+    manualDeselectRef.current = false
+    setSelectedIncidentId(incidentId)
+  }, [])
+
   useEffect(() => {
+    if (manualDeselectRef.current) return
     if (!selectedIncidentId && filteredIncidents.length) {
       setSelectedIncidentId(filteredIncidents[0].id)
     }
@@ -233,11 +247,11 @@ function LawEnforcement() {
     return next || null
   }
 
-  const canTransitionTo = (incident, status) => {
+  const canTransitionTo = useCallback((incident, status) => {
     if (!incident) return false
     const currentStatus = incident.status
     return (STATUS_TRANSITIONS[currentStatus] || []).includes(status)
-  }
+  }, [])
 
   const runStatusUpdate = async (incident, status, closePayload = null) => {
     if (!incident) return
@@ -279,7 +293,7 @@ function LawEnforcement() {
     pushToast(`Incident moved to ${formatStatusLabel(status)}.`)
   }
 
-  const requestStatusUpdate = (incident, status, closePayload = null) => {
+  const requestStatusUpdate = useCallback((incident, status, closePayload = null) => {
     if (!incident || !status) return
 
     if (!canTransitionTo(incident, status)) {
@@ -288,7 +302,7 @@ function LawEnforcement() {
     }
 
     setPendingTransition({ incident, status, closePayload })
-  }
+  }, [canTransitionTo, pushToast])
 
   const requestCloseCase = (incident) => {
     if (!incident) return
@@ -424,6 +438,11 @@ function LawEnforcement() {
     ? STATUS_ACTION_CONFIG[pendingTransition.status]
     : null
 
+  const activeCasesCount = allLeiIncidents.filter((incident) => incident.status !== 'police_closed').length
+  const criticalActiveCount = allLeiIncidents.filter(
+    (incident) => incident.status !== 'police_closed' && incident.severity === 'critical'
+  ).length
+
   useEffect(() => {
     const statusByIncidentId = new Map(
       allLeiIncidents.map((incident) => [String(incident.incident_id), incident.status])
@@ -437,6 +456,40 @@ function LawEnforcement() {
       })
     )
   }, [allLeiIncidents])
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      const tagName = event.target?.tagName?.toLowerCase()
+      const isTypingTarget =
+        tagName === 'input' ||
+        tagName === 'textarea' ||
+        tagName === 'select' ||
+        event.target?.isContentEditable
+
+      if (isTypingTarget) return
+
+      if (event.metaKey || event.ctrlKey || event.altKey) return
+
+      if (event.key === 'Escape') {
+        if (pendingTransition) {
+          setPendingTransition(null)
+          return
+        }
+        manualDeselectRef.current = true
+        setSelectedIncidentId(null)
+        return
+      }
+
+      if (!selectedIncident) return
+
+      if (event.key.toLowerCase() === 'd' && canTransitionTo(selectedIncident, 'dispatched')) {
+        requestStatusUpdate(selectedIncident, 'dispatched')
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [canTransitionTo, pendingTransition, requestStatusUpdate, selectedIncident])
 
   if (user?.role !== 'law_enforcement' && user?.role !== 'admin') {
     return (
@@ -455,6 +508,13 @@ function LawEnforcement() {
         title="Law Enforcement Operations"
         description="Monitor active incidents, dispatch field response, and close cases with operational traceability."
       />
+
+      <div className="sticky top-3 z-40 bg-card/95 backdrop-blur border border-border rounded-lg shadow-soft px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <span className="text-sm font-semibold text-text">Officer: {user?.username || 'Unknown'}</span>
+        <span className="text-sm text-muted">Active Cases: {activeCasesCount}</span>
+        <span className="text-sm font-semibold text-danger">Critical: {criticalActiveCount}</span>
+        <span className="text-xs text-muted">Shortcuts: D dispatch selected, Esc deselect</span>
+      </div>
 
       <div className="fixed bottom-6 right-6 z-50 space-y-2">
         {toasts.map((toast) => (
@@ -495,7 +555,7 @@ function LawEnforcement() {
               <div
                 key={`${alert.incidentId}-${alert.source || 'socket'}`}
                 className={`rounded-lg border p-4 ${severityClass} cursor-pointer`}
-                onClick={() => setSelectedIncidentId(alert.incidentId)}
+                onClick={() => selectIncident(alert.incidentId)}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -573,228 +633,238 @@ function LawEnforcement() {
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-lg shadow-soft overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-surface border-b border-border">
-            <tr>
-              <th className="px-4 py-3 text-left text-sm font-bold text-text">Incident</th>
-              <th className="px-4 py-3 text-left text-sm font-bold text-text">Status</th>
-              <th className="px-4 py-3 text-left text-sm font-bold text-text">Severity</th>
-              <th className="px-4 py-3 text-left text-sm font-bold text-text">Time Reported</th>
-              <th className="px-4 py-3 text-left text-sm font-bold text-text">Reporter</th>
-              <th className="px-4 py-3 text-left text-sm font-bold text-text">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {isLoading ? (
-              <tr>
-                <td className="px-4 py-6 text-sm text-muted" colSpan={6}>Loading incidents...</td>
-              </tr>
-            ) : filteredIncidents.length === 0 ? (
-              <tr>
-                <td className="px-4 py-6 text-sm text-muted" colSpan={6}>No incidents found.</td>
-              </tr>
-            ) : (
-              filteredIncidents.map((incident) => {
-                const aged = isUnactionedAged(incident)
-                const statusClass = aged ? 'bg-danger/10' : STATUS_ROW_CLASS[incident.status]
-                const nextStatus = getNextWorkflowStatus(incident.status)
-                const nextAction = nextStatus ? STATUS_ACTION_CONFIG[nextStatus] : null
-
-                return (
-                  <tr
-                    key={incident.id}
-                    className={`cursor-pointer ${statusClass || ''} ${selectedIncidentId === incident.id ? 'ring-1 ring-primary/30' : 'hover:bg-surface'}`}
-                    onClick={() => setSelectedIncidentId(incident.id)}
-                  >
-                    <td className="px-4 py-3">
-                      <p className="text-sm font-semibold text-text">{incident.title}</p>
-                      <p className="text-xs text-muted truncate max-w-[320px]">{incident.description}</p>
-                    </td>
-                    <td className="px-4 py-3"><StatusBadge status={incident.status} /></td>
-                    <td className="px-4 py-3">
-                      <SeverityBadge
-                        severity={incident.severity}
-                        variant={SEVERITY_VARIANTS.LAW_ENFORCEMENT}
-                        display="initial"
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-sm text-text tabular-nums">{getTimeAgo(incident.reportedAt)}</span>
-                        {aged ? (
-                          <span
-                            className="inline-flex w-fit rounded-full bg-danger/20 px-2 py-0.5 text-[11px] font-semibold text-danger"
-                            title={`Reported at ${new Date(incident.reportedAt).toLocaleString()}`}
-                          >
-                            Over {UNACTIONED_AGE_THRESHOLD_MINUTES}m waiting dispatch
-                          </span>
-                        ) : null}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-muted">{incident.username || 'Unknown'}</td>
-                    <td className="px-4 py-3" onClick={(event) => event.stopPropagation()}>
-                      {nextAction && nextStatus !== 'police_closed' ? (
-                        <button
-                          onClick={() => requestStatusUpdate(incident, nextStatus)}
-                          disabled={statusMutation.isPending || !canTransitionTo(incident, nextStatus)}
-                          className={`px-2.5 py-1.5 rounded text-xs font-semibold disabled:opacity-50 ${nextAction.buttonClass}`}
-                        >
-                          {statusMutation.isPending ? 'Updating...' : nextAction.label}
-                        </button>
-                      ) : nextStatus === 'police_closed' ? (
-                        <span className="text-xs text-muted">Close from detail panel</span>
-                      ) : (
-                        <span className="text-xs text-muted">No next action</span>
-                      )}
-                    </td>
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.7fr)_minmax(340px,1fr)] gap-6 items-start">
+        <div className="bg-card border border-border rounded-lg shadow-soft overflow-hidden">
+          <div className="max-h-[72vh] overflow-auto">
+            <table className="w-full">
+              <thead className="bg-surface border-b border-border sticky top-0 z-10">
+                <tr>
+                  <th className="px-4 py-3 text-left text-sm font-bold text-text">Incident</th>
+                  <th className="px-4 py-3 text-left text-sm font-bold text-text">Status</th>
+                  <th className="px-4 py-3 text-left text-sm font-bold text-text">Severity</th>
+                  <th className="px-4 py-3 text-left text-sm font-bold text-text">Time Reported</th>
+                  <th className="px-4 py-3 text-left text-sm font-bold text-text">Reporter</th>
+                  <th className="px-4 py-3 text-left text-sm font-bold text-text">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {isLoading ? (
+                  <tr>
+                    <td className="px-4 py-6 text-sm text-muted" colSpan={6}>Loading incidents...</td>
                   </tr>
-                )
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {selectedIncident ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-card border border-border rounded-lg shadow-soft p-6 space-y-4">
-            {(() => {
-              const currentStepIndex = WORKFLOW_STEPS.findIndex((step) => step.id === selectedIncident.status)
-              const nextStatus = getNextWorkflowStatus(selectedIncident.status)
-              const nextAction = nextStatus ? STATUS_ACTION_CONFIG[nextStatus] : null
-
-              return (
-                <>
-            <div className="flex items-center justify-between gap-3">
-              <h3 className="text-xl font-bold text-text">Selected Incident</h3>
-              <StatusBadge status={selectedIncident.status} size="sm" />
-            </div>
-
-            <p className="text-sm text-muted">{selectedIncident.title}</p>
-            <p className="text-sm text-muted">{selectedIncident.description}</p>
-
-            <GoogleMapPanel
-              markers={[
-                {
-                  id: `lei-map-${selectedIncident.id || selectedIncident.incident_id}`,
-                  lat: selectedIncident.latitude,
-                  lng: selectedIncident.longitude,
-                  title: selectedIncident.title || `Incident #${selectedIncident.id || selectedIncident.incident_id}`,
-                },
-              ]}
-              center={{ lat: selectedIncident.latitude, lng: selectedIncident.longitude }}
-              zoom={15}
-              height={260}
-              autoFit={false}
-              emptyMessage="No coordinates available for this incident."
-            />
-
-            <div className="pt-4 border-t border-border">
-              <p className="text-sm font-semibold text-text mb-3">Status Workflow</p>
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
-                {WORKFLOW_STEPS.map((step, index) => {
-                  const isDone = currentStepIndex > index
-                  const isCurrent = currentStepIndex === index
-
-                  return (
-                    <div
-                      key={step.id}
-                      className={`rounded-lg border px-3 py-2 text-sm font-semibold ${
-                        isCurrent
-                          ? 'bg-primary text-white border-primary'
-                          : isDone
-                            ? 'bg-success/10 text-success border-success/30'
-                            : 'bg-surface text-muted border-border'
-                      }`}
-                    >
-                      {step.label}
-                    </div>
-                  )
-                })}
-              </div>
-
-              <div className="mt-3">
-                {nextStatus === 'police_closed' ? (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <select
-                        value={closeOutcome}
-                        onChange={(event) => setCloseOutcome(event.target.value)}
-                        className="w-full px-3 py-2 border border-border rounded-lg bg-card text-sm"
-                      >
-                        {CLOSURE_OUTCOMES.map((outcome) => (
-                          <option key={outcome.value} value={outcome.value}>
-                            {outcome.label}
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        type="text"
-                        value={closeCaseId}
-                        onChange={(event) => setCloseCaseId(event.target.value)}
-                        placeholder="Case ID (for Report Filed)"
-                        className="w-full px-3 py-2 border border-border rounded-lg bg-card text-sm"
-                      />
-                      <button
-                        onClick={() => requestCloseCase(selectedIncident)}
-                        disabled={
-                          statusMutation.isPending ||
-                          !canTransitionTo(selectedIncident, 'police_closed') ||
-                          (closeOutcome === 'report_filed' && !closeCaseId.trim())
-                        }
-                        className="px-3 py-2 rounded-lg text-sm font-semibold bg-emerald-600 text-white disabled:opacity-50"
-                      >
-                        {statusMutation.isPending ? 'Closing...' : 'Close Case'}
-                      </button>
-                    </div>
-                    <textarea
-                      value={closeNotes}
-                      onChange={(event) => setCloseNotes(event.target.value)}
-                      rows={3}
-                      placeholder="Officer notes"
-                      className="w-full px-3 py-2 border border-border rounded-lg bg-card text-sm"
-                    />
-                    {closeOutcome === 'report_filed' && !closeCaseId.trim() ? (
-                      <p className="text-xs text-danger">Case ID is required when outcome is Report Filed.</p>
-                    ) : null}
-                  </div>
-                ) : nextAction ? (
-                  <button
-                    onClick={() => requestStatusUpdate(selectedIncident, nextStatus)}
-                    disabled={statusMutation.isPending || !canTransitionTo(selectedIncident, nextStatus)}
-                    className={`px-3 py-2 rounded-lg text-sm font-semibold disabled:opacity-50 ${nextAction.buttonClass}`}
-                  >
-                    {statusMutation.isPending ? 'Updating...' : nextAction.label}
-                  </button>
+                ) : filteredIncidents.length === 0 ? (
+                  <tr>
+                    <td className="px-4 py-6 text-sm text-muted" colSpan={6}>No incidents found.</td>
+                  </tr>
                 ) : (
-                  <p className="text-sm text-muted">Workflow complete. No next action available.</p>
-                )}
-              </div>
-            </div>
-                </>
-              )
-            })()}
-          </div>
+                  filteredIncidents.map((incident) => {
+                    const aged = isUnactionedAged(incident)
+                    const statusClass = aged ? 'bg-danger/10' : STATUS_ROW_CLASS[incident.status]
+                    const nextStatus = getNextWorkflowStatus(incident.status)
+                    const nextAction = nextStatus ? STATUS_ACTION_CONFIG[nextStatus] : null
 
-          <div className="bg-card border border-border rounded-lg shadow-soft p-6">
-            <h3 className="text-xl font-bold text-text mb-4">Recent LE Actions</h3>
-            {actionLog.length ? (
-              <ul className="space-y-3">
-                {actionLog.map((entry) => (
-                  <li key={entry.action_id} className="border border-border rounded-lg p-3 bg-surface">
-                    <p className="text-sm text-text font-semibold">{entry.action_type.replace(/_/g, ' ')}</p>
-                    <p className="text-xs text-muted mt-1">{entry.moderator_name || 'System'} · {new Date(entry.timestamp).toLocaleString()}</p>
-                    {entry.notes ? <p className="text-xs text-muted mt-1">{entry.notes}</p> : null}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-muted">No actions recorded for this incident.</p>
-            )}
+                    return (
+                      <tr
+                        key={incident.id}
+                        className={`cursor-pointer ${statusClass || ''} ${selectedIncidentId === incident.id ? 'ring-1 ring-primary/30' : 'hover:bg-surface'}`}
+                        onClick={() => selectIncident(incident.id)}
+                      >
+                        <td className="px-4 py-3">
+                          <p className="text-sm font-semibold text-text">{incident.title}</p>
+                          <p className="text-xs text-muted truncate max-w-[320px]">{incident.description}</p>
+                        </td>
+                        <td className="px-4 py-3"><StatusBadge status={incident.status} /></td>
+                        <td className="px-4 py-3">
+                          <SeverityBadge
+                            severity={incident.severity}
+                            variant={SEVERITY_VARIANTS.LAW_ENFORCEMENT}
+                            display="initial"
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-1">
+                            <span className="text-sm text-text tabular-nums">{getTimeAgo(incident.reportedAt)}</span>
+                            {aged ? (
+                              <span
+                                className="inline-flex w-fit rounded-full bg-danger/20 px-2 py-0.5 text-[11px] font-semibold text-danger"
+                                title={`Reported at ${new Date(incident.reportedAt).toLocaleString()}`}
+                              >
+                                Over {UNACTIONED_AGE_THRESHOLD_MINUTES}m waiting dispatch
+                              </span>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-muted">{incident.username || 'Unknown'}</td>
+                        <td className="px-4 py-3" onClick={(event) => event.stopPropagation()}>
+                          {nextAction && nextStatus !== 'police_closed' ? (
+                            <button
+                              onClick={() => requestStatusUpdate(incident, nextStatus)}
+                              disabled={statusMutation.isPending || !canTransitionTo(incident, nextStatus)}
+                              className={`px-2.5 py-1.5 rounded text-xs font-semibold disabled:opacity-50 ${nextAction.buttonClass}`}
+                            >
+                              {statusMutation.isPending ? 'Updating...' : nextAction.label}
+                            </button>
+                          ) : nextStatus === 'police_closed' ? (
+                            <span className="text-xs text-muted">Close from detail panel</span>
+                          ) : (
+                            <span className="text-xs text-muted">No next action</span>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
-      ) : null}
+
+        <div className="lg:sticky lg:top-24 space-y-6">
+          {selectedIncident ? (
+            <>
+              <div className="bg-card border border-border rounded-lg shadow-soft p-6 space-y-4">
+                {(() => {
+                  const currentStepIndex = WORKFLOW_STEPS.findIndex((step) => step.id === selectedIncident.status)
+                  const nextStatus = getNextWorkflowStatus(selectedIncident.status)
+                  const nextAction = nextStatus ? STATUS_ACTION_CONFIG[nextStatus] : null
+
+                  return (
+                    <>
+                      <div className="flex items-center justify-between gap-3">
+                        <h3 className="text-xl font-bold text-text">Selected Incident</h3>
+                        <StatusBadge status={selectedIncident.status} size="sm" />
+                      </div>
+
+                      <p className="text-sm text-muted">{selectedIncident.title}</p>
+                      <p className="text-sm text-muted">{selectedIncident.description}</p>
+
+                      <GoogleMapPanel
+                        markers={[
+                          {
+                            id: `lei-map-${selectedIncident.id || selectedIncident.incident_id}`,
+                            lat: selectedIncident.latitude,
+                            lng: selectedIncident.longitude,
+                            title: selectedIncident.title || `Incident #${selectedIncident.id || selectedIncident.incident_id}`,
+                          },
+                        ]}
+                        center={{ lat: selectedIncident.latitude, lng: selectedIncident.longitude }}
+                        zoom={15}
+                        height={240}
+                        autoFit={false}
+                        emptyMessage="No coordinates available for this incident."
+                      />
+
+                      <div className="pt-4 border-t border-border">
+                        <p className="text-sm font-semibold text-text mb-3">Status Workflow</p>
+                        <div className="grid grid-cols-1 md:grid-cols-5 xl:grid-cols-1 gap-2">
+                          {WORKFLOW_STEPS.map((step, index) => {
+                            const isDone = currentStepIndex > index
+                            const isCurrent = currentStepIndex === index
+
+                            return (
+                              <div
+                                key={step.id}
+                                className={`rounded-lg border px-3 py-2 text-sm font-semibold ${
+                                  isCurrent
+                                    ? 'bg-primary text-white border-primary'
+                                    : isDone
+                                      ? 'bg-success/10 text-success border-success/30'
+                                      : 'bg-surface text-muted border-border'
+                                }`}
+                              >
+                                {step.label}
+                              </div>
+                            )
+                          })}
+                        </div>
+
+                        <div className="mt-3">
+                          {nextStatus === 'police_closed' ? (
+                            <div className="space-y-3">
+                              <div className="grid grid-cols-1 gap-3">
+                                <select
+                                  value={closeOutcome}
+                                  onChange={(event) => setCloseOutcome(event.target.value)}
+                                  className="w-full px-3 py-2 border border-border rounded-lg bg-card text-sm"
+                                >
+                                  {CLOSURE_OUTCOMES.map((outcome) => (
+                                    <option key={outcome.value} value={outcome.value}>
+                                      {outcome.label}
+                                    </option>
+                                  ))}
+                                </select>
+                                <input
+                                  type="text"
+                                  value={closeCaseId}
+                                  onChange={(event) => setCloseCaseId(event.target.value)}
+                                  placeholder="Case ID (for Report Filed)"
+                                  className="w-full px-3 py-2 border border-border rounded-lg bg-card text-sm"
+                                />
+                                <button
+                                  onClick={() => requestCloseCase(selectedIncident)}
+                                  disabled={
+                                    statusMutation.isPending ||
+                                    !canTransitionTo(selectedIncident, 'police_closed') ||
+                                    (closeOutcome === 'report_filed' && !closeCaseId.trim())
+                                  }
+                                  className="px-3 py-2 rounded-lg text-sm font-semibold bg-emerald-600 text-white disabled:opacity-50"
+                                >
+                                  {statusMutation.isPending ? 'Closing...' : 'Close Case'}
+                                </button>
+                              </div>
+                              <textarea
+                                value={closeNotes}
+                                onChange={(event) => setCloseNotes(event.target.value)}
+                                rows={3}
+                                placeholder="Officer notes"
+                                className="w-full px-3 py-2 border border-border rounded-lg bg-card text-sm"
+                              />
+                              {closeOutcome === 'report_filed' && !closeCaseId.trim() ? (
+                                <p className="text-xs text-danger">Case ID is required when outcome is Report Filed.</p>
+                              ) : null}
+                            </div>
+                          ) : nextAction ? (
+                            <button
+                              onClick={() => requestStatusUpdate(selectedIncident, nextStatus)}
+                              disabled={statusMutation.isPending || !canTransitionTo(selectedIncident, nextStatus)}
+                              className={`px-3 py-2 rounded-lg text-sm font-semibold disabled:opacity-50 ${nextAction.buttonClass}`}
+                            >
+                              {statusMutation.isPending ? 'Updating...' : nextAction.label}
+                            </button>
+                          ) : (
+                            <p className="text-sm text-muted">Workflow complete. No next action available.</p>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )
+                })()}
+              </div>
+
+              <div className="bg-card border border-border rounded-lg shadow-soft p-6">
+                <h3 className="text-xl font-bold text-text mb-4">Recent LE Actions</h3>
+                {actionLog.length ? (
+                  <ul className="space-y-3">
+                    {actionLog.map((entry) => (
+                      <li key={entry.action_id} className="border border-border rounded-lg p-3 bg-surface">
+                        <p className="text-sm text-text font-semibold">{entry.action_type.replace(/_/g, ' ')}</p>
+                        <p className="text-xs text-muted mt-1">{entry.moderator_name || 'System'} · {new Date(entry.timestamp).toLocaleString()}</p>
+                        {entry.notes ? <p className="text-xs text-muted mt-1">{entry.notes}</p> : null}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted">No actions recorded for this incident.</p>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="bg-card border border-border rounded-lg shadow-soft p-6 text-sm text-muted">
+              No incident selected. Choose a row to view detail.
+            </div>
+          )}
+        </div>
+      </div>
 
       <div className="text-xs text-muted">
         Live status transitions supported: verified to dispatched to on_scene to investigating to police_closed.
