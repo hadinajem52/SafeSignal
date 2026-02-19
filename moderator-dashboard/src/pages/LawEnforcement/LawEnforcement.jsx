@@ -11,6 +11,7 @@ import StatusBadge from '../../components/StatusBadge'
 import { LEI_STATUS_FILTERS } from '../../constants/incident'
 import { useAuth } from '../../context/AuthContext'
 import { leiAPI } from '../../services/api'
+import { getTimeAgo } from '../../utils/dateUtils'
 import { openMapsUrl, SEVERITY_VARIANTS } from '../../utils/incident'
 import { SOCKET_URL } from '../../utils/network'
 
@@ -31,6 +32,15 @@ const STATUS_TRANSITIONS = {
 }
 
 const ACTIVE_ALERT_STATUSES = new Set(['verified', 'dispatched', 'on_scene', 'investigating', 'resolved'])
+const UNACTIONED_AGE_THRESHOLD_MINUTES = 30
+
+const STATUS_ROW_CLASS = {
+  verified: 'bg-amber-50/50',
+  dispatched: 'bg-blue-50/40',
+  on_scene: 'bg-indigo-50/40',
+  investigating: 'bg-violet-50/40',
+  police_closed: 'bg-emerald-50/40',
+}
 
 function LawEnforcement() {
   const { user } = useAuth()
@@ -83,6 +93,8 @@ function LawEnforcement() {
   })
 
   const filteredIncidents = useMemo(() => {
+    const getReportedAt = (incident) => incident.incident_date || incident.created_at
+
     return incidents
       .filter((incident) => {
         const title = incident.title || ''
@@ -95,14 +107,27 @@ function LawEnforcement() {
         const rankA = severityRank[a.severity] || 5
         const rankB = severityRank[b.severity] || 5
         if (rankA !== rankB) return rankA - rankB
-        return new Date(b.incident_date || b.created_at) - new Date(a.incident_date || a.created_at)
+        return new Date(getReportedAt(b)) - new Date(getReportedAt(a))
       })
       .map((incident) => ({
         ...incident,
         id: incident.incident_id,
-        createdAt: incident.incident_date || incident.created_at,
+        reportedAt: getReportedAt(incident),
       }))
   }, [incidents, searchTerm])
+
+  const getIncidentAgeMinutes = (incident) => {
+    const reportedAt = incident?.reportedAt
+    if (!reportedAt) return 0
+
+    const diffMs = Date.now() - new Date(reportedAt).getTime()
+    if (!Number.isFinite(diffMs) || diffMs <= 0) return 0
+
+    return Math.floor(diffMs / 60000)
+  }
+
+  const isUnactionedAged = (incident) =>
+    incident?.status === 'verified' && getIncidentAgeMinutes(incident) >= UNACTIONED_AGE_THRESHOLD_MINUTES
 
   useEffect(() => {
     if (!selectedIncidentId && filteredIncidents.length) {
@@ -341,6 +366,7 @@ function LawEnforcement() {
               <th className="px-4 py-3 text-left text-sm font-bold text-text">Incident</th>
               <th className="px-4 py-3 text-left text-sm font-bold text-text">Status</th>
               <th className="px-4 py-3 text-left text-sm font-bold text-text">Severity</th>
+              <th className="px-4 py-3 text-left text-sm font-bold text-text">Time Reported</th>
               <th className="px-4 py-3 text-left text-sm font-bold text-text">Reporter</th>
               <th className="px-4 py-3 text-left text-sm font-bold text-text">Actions</th>
             </tr>
@@ -348,59 +374,74 @@ function LawEnforcement() {
           <tbody className="divide-y divide-border">
             {isLoading ? (
               <tr>
-                <td className="px-4 py-6 text-sm text-muted" colSpan={5}>Loading incidents...</td>
+                <td className="px-4 py-6 text-sm text-muted" colSpan={6}>Loading incidents...</td>
               </tr>
             ) : filteredIncidents.length === 0 ? (
               <tr>
-                <td className="px-4 py-6 text-sm text-muted" colSpan={5}>No incidents found.</td>
+                <td className="px-4 py-6 text-sm text-muted" colSpan={6}>No incidents found.</td>
               </tr>
             ) : (
-              filteredIncidents.map((incident) => (
-                <tr
-                  key={incident.id}
-                  className={`hover:bg-surface cursor-pointer ${selectedIncidentId === incident.id ? 'bg-surface' : ''}`}
-                  onClick={() => setSelectedIncidentId(incident.id)}
-                >
-                  <td className="px-4 py-3">
-                    <p className="text-sm font-semibold text-text">{incident.title}</p>
-                    <p className="text-xs text-muted truncate max-w-[320px]">{incident.description}</p>
-                  </td>
-                  <td className="px-4 py-3"><StatusBadge status={incident.status} /></td>
-                  <td className="px-4 py-3">
-                    <SeverityBadge
-                      severity={incident.severity}
-                      variant={SEVERITY_VARIANTS.LAW_ENFORCEMENT}
-                      display="initial"
-                    />
-                  </td>
-                  <td className="px-4 py-3 text-sm text-muted">{incident.username || 'Unknown'}</td>
-                  <td className="px-4 py-3" onClick={(event) => event.stopPropagation()}>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={() => handleStatusUpdate(incident, 'dispatched')}
-                        disabled={statusMutation.isPending || !canTransitionTo(incident, 'dispatched')}
-                        className="px-2.5 py-1.5 rounded bg-primary text-white text-xs font-semibold disabled:opacity-50"
-                      >
-                        Dispatch
-                      </button>
-                      <button
-                        onClick={() => handleStatusUpdate(incident, 'on_scene')}
-                        disabled={statusMutation.isPending || !canTransitionTo(incident, 'on_scene')}
-                        className="px-2.5 py-1.5 rounded bg-indigo-600 text-white text-xs font-semibold disabled:opacity-50"
-                      >
-                        On Scene
-                      </button>
-                      <button
-                        onClick={() => handleStatusUpdate(incident, 'resolved')}
-                        disabled={statusMutation.isPending || !canTransitionTo(incident, 'resolved')}
-                        className="px-2.5 py-1.5 rounded bg-success text-white text-xs font-semibold disabled:opacity-50"
-                      >
-                        Resolve
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
+              filteredIncidents.map((incident) => {
+                const aged = isUnactionedAged(incident)
+                const statusClass = aged ? 'bg-danger/10' : STATUS_ROW_CLASS[incident.status]
+
+                return (
+                  <tr
+                    key={incident.id}
+                    className={`cursor-pointer ${statusClass || ''} ${selectedIncidentId === incident.id ? 'ring-1 ring-primary/30' : 'hover:bg-surface'}`}
+                    onClick={() => setSelectedIncidentId(incident.id)}
+                  >
+                    <td className="px-4 py-3">
+                      <p className="text-sm font-semibold text-text">{incident.title}</p>
+                      <p className="text-xs text-muted truncate max-w-[320px]">{incident.description}</p>
+                    </td>
+                    <td className="px-4 py-3"><StatusBadge status={incident.status} /></td>
+                    <td className="px-4 py-3">
+                      <SeverityBadge
+                        severity={incident.severity}
+                        variant={SEVERITY_VARIANTS.LAW_ENFORCEMENT}
+                        display="initial"
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-sm text-text tabular-nums">{getTimeAgo(incident.reportedAt)}</span>
+                        {aged ? (
+                          <span className="inline-flex w-fit rounded-full bg-danger/20 px-2 py-0.5 text-[11px] font-semibold text-danger">
+                            Over {UNACTIONED_AGE_THRESHOLD_MINUTES}m waiting dispatch
+                          </span>
+                        ) : null}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-muted">{incident.username || 'Unknown'}</td>
+                    <td className="px-4 py-3" onClick={(event) => event.stopPropagation()}>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => handleStatusUpdate(incident, 'dispatched')}
+                          disabled={statusMutation.isPending || !canTransitionTo(incident, 'dispatched')}
+                          className="px-2.5 py-1.5 rounded bg-primary text-white text-xs font-semibold disabled:opacity-50"
+                        >
+                          Dispatch
+                        </button>
+                        <button
+                          onClick={() => handleStatusUpdate(incident, 'on_scene')}
+                          disabled={statusMutation.isPending || !canTransitionTo(incident, 'on_scene')}
+                          className="px-2.5 py-1.5 rounded bg-indigo-600 text-white text-xs font-semibold disabled:opacity-50"
+                        >
+                          On Scene
+                        </button>
+                        <button
+                          onClick={() => handleStatusUpdate(incident, 'resolved')}
+                          disabled={statusMutation.isPending || !canTransitionTo(incident, 'resolved')}
+                          className="px-2.5 py-1.5 rounded bg-success text-white text-xs font-semibold disabled:opacity-50"
+                        >
+                          Resolve
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })
             )}
           </tbody>
         </table>
