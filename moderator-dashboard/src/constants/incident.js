@@ -8,24 +8,40 @@ export const SEVERITY_COLORS = {
   critical: '#dc3545',
 };
 
+// Badge token name → CSS variable prefix (--color-badge-{name}-bg / text / border)
+// Light-mode fallback colors inline; dark-mode picks up the CSS variables automatically.
 export const STATUS_COLORS = {
-  submitted: 'bg-yellow-100 text-yellow-800',
-  in_review: 'bg-blue-100 text-blue-800',
-  verified: 'bg-green-100 text-green-800',
-  dispatched: 'bg-blue-100 text-blue-800',
-  on_scene: 'bg-indigo-100 text-indigo-800',
-  investigating: 'bg-purple-100 text-purple-800',
-  police_closed: 'bg-emerald-100 text-emerald-800',
-  rejected: 'bg-red-100 text-red-800',
-  auto_processed: 'bg-indigo-100 text-indigo-800',
-  auto_flagged: 'bg-orange-100 text-orange-800',
-  needs_info: 'bg-purple-100 text-purple-800',
-  published: 'bg-teal-100 text-teal-800',
-  resolved: 'bg-gray-200 text-gray-800',
-  archived: 'bg-gray-100 text-gray-800',
-  merged: 'bg-slate-100 text-slate-800',
-  draft: 'bg-gray-100 text-gray-800',
-  default: 'bg-gray-100 text-gray-800',
+  submitted: 'badge-yellow',
+  in_review: 'badge-blue',
+  verified: 'badge-green',
+  dispatched: 'badge-blue',
+  on_scene: 'badge-indigo',
+  investigating: 'badge-purple',
+  police_closed: 'badge-green',
+  rejected: 'badge-red',
+  auto_processed: 'badge-indigo',
+  auto_flagged: 'badge-orange',
+  needs_info: 'badge-purple',
+  published: 'badge-teal',
+  resolved: 'badge-gray',
+  archived: 'badge-gray',
+  merged: 'badge-slate',
+  draft: 'badge-gray',
+  default: 'badge-gray',
+};
+
+// Light-mode fallback inline styles for each badge token
+export const BADGE_LIGHT_STYLES = {
+  'badge-yellow': { bg: '#fef9c3', text: '#854d0e', border: '#fde68a' },
+  'badge-green': { bg: '#dcfce7', text: '#166534', border: '#bbf7d0' },
+  'badge-red': { bg: '#fee2e2', text: '#991b1b', border: '#fecaca' },
+  'badge-blue': { bg: '#dbeafe', text: '#1e40af', border: '#bfdbfe' },
+  'badge-purple': { bg: '#f3e8ff', text: '#6b21a8', border: '#e9d5ff' },
+  'badge-orange': { bg: '#ffedd5', text: '#9a3412', border: '#fed7aa' },
+  'badge-gray': { bg: '#f1f5f9', text: '#475569', border: '#e2e8f0' },
+  'badge-teal': { bg: '#ccfbf1', text: '#115e59', border: '#99f6e4' },
+  'badge-indigo': { bg: '#e0e7ff', text: '#3730a3', border: '#c7d2fe' },
+  'badge-slate': { bg: '#f1f5f9', text: '#475569', border: '#e2e8f0' },
 };
 
 export const STATUS_COLORS_HEX = {

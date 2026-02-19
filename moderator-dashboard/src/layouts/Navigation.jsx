@@ -1,17 +1,19 @@
 import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { 
-  Home, 
-  FileText, 
-  Users, 
-  Settings, 
+import {
+  Home,
+  FileText,
+  Users,
+  Settings,
   LogOut,
   Shield,
-  ShieldCheck
+  ShieldCheck,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react'
 
-function Navigation() {
+function Navigation({ collapsed, onToggle }) {
   const { logout, user } = useAuth()
   const location = useLocation()
 
@@ -35,42 +37,82 @@ function Navigation() {
   ]
 
   return (
-    <div className="w-64 bg-gray-900 text-white flex flex-col">
-      {/* Logo */}
-      <div className="p-6 border-b border-gray-700">
-        <div className="flex items-center gap-3">
-          <Shield size={32} className="text-blue-400" />
-          <h1 className="text-2xl font-bold">SafeSignal</h1>
-        </div>
-        <p className="text-xs text-gray-400 mt-2">Moderator Dashboard</p>
+    <div
+      className={`
+        flex flex-col flex-shrink-0 bg-card border-r border-border
+        transition-all duration-300 ease-in-out overflow-hidden
+        ${collapsed ? 'w-[60px]' : 'w-56'}
+      `}
+    >
+      {/* Logo + collapse button */}
+      <div className={`flex items-center border-b border-border flex-shrink-0 h-[61px] ${collapsed ? 'justify-center px-0' : 'px-4 gap-2.5 justify-between'}`}>
+        {!collapsed && (
+          <div className="flex items-center gap-2.5 min-w-0">
+            <Shield size={22} className="text-primary flex-shrink-0" />
+            <div className="min-w-0">
+              <h1 className="text-base font-bold text-text leading-tight truncate">SafeSignal</h1>
+              <p className="text-[10px] text-muted leading-tight">Moderator Dashboard</p>
+            </div>
+          </div>
+        )}
+
+        <button
+          onClick={onToggle}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          className={`
+            flex items-center justify-center rounded-lg transition-colors flex-shrink-0
+            text-muted hover:text-text hover:bg-surface
+            ${collapsed ? 'w-9 h-9' : 'w-7 h-7'}
+          `}
+        >
+          {collapsed
+            ? <PanelLeftOpen size={16} />
+            : <PanelLeftClose size={16} />
+          }
+        </button>
       </div>
 
-      {/* Navigation Items */}
-      <nav className="flex-1 p-4 space-y-2">
-        {navItems.map(({ path, label, icon: Icon }) => (
-          <Link
-            key={path}
-            to={path}
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-              isActive(path)
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-300 hover:bg-gray-800'
-            }`}
-          >
-            <Icon size={20} />
-            <span>{label}</span>
-          </Link>
-        ))}
+      {/* Nav items */}
+      <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
+        {navItems.map(({ path, label, icon: Icon }) => {
+          const active = isActive(path)
+          return (
+            <Link
+              key={path}
+              to={path}
+              title={collapsed ? label : undefined}
+              className={`
+                flex items-center rounded-lg transition-colors
+                ${collapsed ? 'justify-center h-10 w-10 mx-auto' : 'gap-3 px-3 py-2.5'}
+                ${active
+                  ? 'bg-primary/15 text-primary'
+                  : 'text-muted hover:bg-surface hover:text-text'
+                }
+              `}
+            >
+              <Icon size={18} className="flex-shrink-0" />
+              {!collapsed && <span className="text-sm font-medium">{label}</span>}
+              {active && collapsed && (
+                <span className="sr-only">{label}</span>
+              )}
+            </Link>
+          )
+        })}
       </nav>
 
-      {/* Logout Button */}
-      <div className="p-4 border-t border-gray-700">
+      {/* Logout */}
+      <div className="p-2 border-t border-border flex-shrink-0">
         <button
           onClick={logout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors"
+          title={collapsed ? 'Logout' : undefined}
+          className={`
+            w-full flex items-center rounded-lg text-muted hover:bg-surface hover:text-text transition-colors
+            ${collapsed ? 'justify-center h-10 w-10 mx-auto' : 'gap-3 px-3 py-2.5'}
+          `}
         >
-          <LogOut size={20} />
-          <span>Logout</span>
+          <LogOut size={18} className="flex-shrink-0" />
+          {!collapsed && <span className="text-sm font-medium">Logout</span>}
         </button>
       </div>
     </div>
