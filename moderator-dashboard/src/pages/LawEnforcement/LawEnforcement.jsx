@@ -8,31 +8,63 @@ import PageHeader from '../../components/PageHeader'
 import SearchInput from '../../components/SearchInput'
 import SeverityBadge from '../../components/SeverityBadge'
 import StatusBadge from '../../components/StatusBadge'
+import ConfirmDialog from '../../components/ConfirmDialog'
 import { LEI_STATUS_FILTERS } from '../../constants/incident'
 import { useAuth } from '../../context/AuthContext'
 import { leiAPI } from '../../services/api'
 import { getTimeAgo } from '../../utils/dateUtils'
-import { openMapsUrl, SEVERITY_VARIANTS } from '../../utils/incident'
+import { formatStatusLabel, openMapsUrl, SEVERITY_VARIANTS } from '../../utils/incident'
 import { SOCKET_URL } from '../../utils/network'
 
 const WORKFLOW_STEPS = [
+  { id: 'verified', label: 'Verified' },
   { id: 'dispatched', label: 'Dispatched' },
   { id: 'on_scene', label: 'On Scene' },
-  { id: 'resolved', label: 'Resolved' },
+  { id: 'investigating', label: 'Investigating' },
   { id: 'police_closed', label: 'Closed' },
 ]
 
 const STATUS_TRANSITIONS = {
-  verified: ['dispatched', 'investigating', 'police_closed'],
-  dispatched: ['on_scene', 'investigating', 'police_closed'],
-  on_scene: ['investigating', 'police_closed'],
+  verified: ['dispatched'],
+  dispatched: ['on_scene'],
+  on_scene: ['investigating'],
   investigating: ['police_closed'],
-  resolved: ['police_closed'],
   police_closed: [],
 }
 
-const ACTIVE_ALERT_STATUSES = new Set(['verified', 'dispatched', 'on_scene', 'investigating', 'resolved'])
+const ACTIVE_ALERT_STATUSES = new Set(['verified', 'dispatched', 'on_scene', 'investigating'])
 const UNACTIONED_AGE_THRESHOLD_MINUTES = 30
+
+const STATUS_ACTION_CONFIG = {
+  dispatched: {
+    label: 'Dispatch',
+    buttonClass: 'bg-primary text-white',
+    confirmTitle: 'Dispatch unit?',
+    confirmMessage: 'This marks the incident as dispatched and notifies responders.',
+    confirmClassName: 'bg-primary hover:bg-primary/90',
+  },
+  on_scene: {
+    label: 'Mark On Scene',
+    buttonClass: 'bg-indigo-600 text-white',
+    confirmTitle: 'Mark unit on scene?',
+    confirmMessage: 'Use this only when a responding unit has arrived at the location.',
+    confirmClassName: 'bg-indigo-600 hover:bg-indigo-700',
+  },
+  investigating: {
+    label: 'Mark Investigating',
+    buttonClass: 'bg-violet-600 text-white',
+    confirmTitle: 'Move to investigating?',
+    confirmMessage: 'This marks active scene handling as complete and starts investigation.',
+    confirmClassName: 'bg-violet-600 hover:bg-violet-700',
+  },
+  police_closed: {
+    label: 'Close Case',
+    buttonClass: 'bg-emerald-600 text-white',
+    confirmTitle: 'Close this case?',
+    confirmMessage: 'Closing is recorded in the audit log and ends the active LE workflow.',
+    confirmClassName: 'bg-emerald-600 hover:bg-emerald-700',
+  },
+}
 
 const STATUS_ROW_CLASS = {
   verified: 'bg-amber-50/50',
@@ -52,6 +84,7 @@ function LawEnforcement() {
   const [leiAlerts, setLeiAlerts] = useState([])
   const [lastRealtimeAlertAt, setLastRealtimeAlertAt] = useState(null)
   const [toasts, setToasts] = useState([])
+  const [pendingTransition, setPendingTransition] = useState(null)
   const toastTimeoutsRef = useRef([])
 
   useEffect(() => {
@@ -166,38 +199,36 @@ function LawEnforcement() {
   const hasFreshRealtimeAlert =
     typeof lastRealtimeAlertAt === 'number' && Date.now() - lastRealtimeAlertAt < 12000
 
-  const toApiStatus = (uiStatus) => (uiStatus === 'resolved' ? 'investigating' : uiStatus)
-
-  const canTransitionTo = (incident, uiStatus) => {
-    if (!incident) return false
-    const currentStatus = incident.status
-    if (uiStatus === 'resolved') {
-      return (STATUS_TRANSITIONS[currentStatus] || []).includes('investigating') || currentStatus === 'investigating'
-    }
-    return (STATUS_TRANSITIONS[currentStatus] || []).includes(toApiStatus(uiStatus))
+  const getNextWorkflowStatus = (currentStatus) => {
+    const next = STATUS_TRANSITIONS[currentStatus]?.[0]
+    return next || null
   }
 
-  const handleStatusUpdate = async (incident, status) => {
+  const canTransitionTo = (incident, status) => {
+    if (!incident) return false
+    const currentStatus = incident.status
+    return (STATUS_TRANSITIONS[currentStatus] || []).includes(status)
+  }
+
+  const runStatusUpdate = async (incident, status) => {
     if (!incident) return
 
-    if (!canTransitionTo(incident, status) && incident.status !== toApiStatus(status)) {
+    if (!canTransitionTo(incident, status)) {
       pushToast(`Invalid transition from ${incident.status} to ${status}.`, 'warning')
       return
     }
 
-    const apiStatus = toApiStatus(status)
-
     const payload =
-      apiStatus === 'police_closed'
+      status === 'police_closed'
         ? {
-            status: apiStatus,
+            status,
             closure_outcome: 'resolved_handled',
             closure_details: {
               case_id: null,
               officer_notes: 'Closed from LEI workflow',
             },
           }
-        : { status: apiStatus }
+        : { status }
 
     const result = await statusMutation.mutateAsync({
       id: incident.incident_id || incident.id,
@@ -211,7 +242,25 @@ function LawEnforcement() {
 
     queryClient.invalidateQueries({ queryKey: ['lei-incidents'] })
     queryClient.invalidateQueries({ queryKey: ['lei-incident', incident.incident_id || incident.id] })
-    pushToast(`Incident moved to ${status}.`)
+    pushToast(`Incident moved to ${formatStatusLabel(status)}.`)
+  }
+
+  const requestStatusUpdate = (incident, status) => {
+    if (!incident || !status) return
+
+    if (!canTransitionTo(incident, status)) {
+      pushToast(`Invalid transition from ${incident.status} to ${status}.`, 'warning')
+      return
+    }
+
+    setPendingTransition({ incident, status })
+  }
+
+  const confirmPendingTransition = async () => {
+    if (!pendingTransition || statusMutation.isPending) return
+
+    await runStatusUpdate(pendingTransition.incident, pendingTransition.status)
+    setPendingTransition(null)
   }
 
   useEffect(() => {
@@ -235,6 +284,10 @@ function LawEnforcement() {
       socket.disconnect()
     }
   }, [queryClient, user])
+
+  const pendingActionConfig = pendingTransition?.status
+    ? STATUS_ACTION_CONFIG[pendingTransition.status]
+    : null
 
   if (user?.role !== 'law_enforcement' && user?.role !== 'admin') {
     return (
@@ -384,6 +437,8 @@ function LawEnforcement() {
               filteredIncidents.map((incident) => {
                 const aged = isUnactionedAged(incident)
                 const statusClass = aged ? 'bg-danger/10' : STATUS_ROW_CLASS[incident.status]
+                const nextStatus = getNextWorkflowStatus(incident.status)
+                const nextAction = nextStatus ? STATUS_ACTION_CONFIG[nextStatus] : null
 
                 return (
                   <tr
@@ -415,29 +470,17 @@ function LawEnforcement() {
                     </td>
                     <td className="px-4 py-3 text-sm text-muted">{incident.username || 'Unknown'}</td>
                     <td className="px-4 py-3" onClick={(event) => event.stopPropagation()}>
-                      <div className="flex flex-wrap gap-2">
+                      {nextAction ? (
                         <button
-                          onClick={() => handleStatusUpdate(incident, 'dispatched')}
-                          disabled={statusMutation.isPending || !canTransitionTo(incident, 'dispatched')}
-                          className="px-2.5 py-1.5 rounded bg-primary text-white text-xs font-semibold disabled:opacity-50"
+                          onClick={() => requestStatusUpdate(incident, nextStatus)}
+                          disabled={statusMutation.isPending || !canTransitionTo(incident, nextStatus)}
+                          className={`px-2.5 py-1.5 rounded text-xs font-semibold disabled:opacity-50 ${nextAction.buttonClass}`}
                         >
-                          Dispatch
+                          {nextAction.label}
                         </button>
-                        <button
-                          onClick={() => handleStatusUpdate(incident, 'on_scene')}
-                          disabled={statusMutation.isPending || !canTransitionTo(incident, 'on_scene')}
-                          className="px-2.5 py-1.5 rounded bg-indigo-600 text-white text-xs font-semibold disabled:opacity-50"
-                        >
-                          On Scene
-                        </button>
-                        <button
-                          onClick={() => handleStatusUpdate(incident, 'resolved')}
-                          disabled={statusMutation.isPending || !canTransitionTo(incident, 'resolved')}
-                          className="px-2.5 py-1.5 rounded bg-success text-white text-xs font-semibold disabled:opacity-50"
-                        >
-                          Resolve
-                        </button>
-                      </div>
+                      ) : (
+                        <span className="text-xs text-muted">No next action</span>
+                      )}
                     </td>
                   </tr>
                 )
@@ -450,6 +493,13 @@ function LawEnforcement() {
       {selectedIncident ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-card border border-border rounded-lg shadow-soft p-6 space-y-4">
+            {(() => {
+              const currentStepIndex = WORKFLOW_STEPS.findIndex((step) => step.id === selectedIncident.status)
+              const nextStatus = getNextWorkflowStatus(selectedIncident.status)
+              const nextAction = nextStatus ? STATUS_ACTION_CONFIG[nextStatus] : null
+
+              return (
+                <>
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-xl font-bold text-text">Selected Incident</h3>
               <StatusBadge status={selectedIncident.status} size="sm" />
@@ -476,23 +526,45 @@ function LawEnforcement() {
 
             <div className="pt-4 border-t border-border">
               <p className="text-sm font-semibold text-text mb-3">Status Workflow</p>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                {WORKFLOW_STEPS.map((step) => (
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
+                {WORKFLOW_STEPS.map((step, index) => {
+                  const isDone = currentStepIndex > index
+                  const isCurrent = currentStepIndex === index
+
+                  return (
+                    <div
+                      key={step.id}
+                      className={`rounded-lg border px-3 py-2 text-sm font-semibold ${
+                        isCurrent
+                          ? 'bg-primary text-white border-primary'
+                          : isDone
+                            ? 'bg-success/10 text-success border-success/30'
+                            : 'bg-surface text-muted border-border'
+                      }`}
+                    >
+                      {step.label}
+                    </div>
+                  )
+                })}
+              </div>
+
+              <div className="mt-3">
+                {nextAction ? (
                   <button
-                    key={step.id}
-                    onClick={() => handleStatusUpdate(selectedIncident, step.id)}
-                    disabled={statusMutation.isPending || !canTransitionTo(selectedIncident, step.id)}
-                    className={`px-3 py-2 rounded-lg text-sm font-semibold border ${
-                      selectedIncident.status === toApiStatus(step.id)
-                        ? 'bg-primary text-white border-primary'
-                        : 'bg-surface text-text border-border hover:bg-bg'
-                    }`}
+                    onClick={() => requestStatusUpdate(selectedIncident, nextStatus)}
+                    disabled={statusMutation.isPending || !canTransitionTo(selectedIncident, nextStatus)}
+                    className={`px-3 py-2 rounded-lg text-sm font-semibold disabled:opacity-50 ${nextAction.buttonClass}`}
                   >
-                    {step.label}
+                    {nextAction.label}
                   </button>
-                ))}
+                ) : (
+                  <p className="text-sm text-muted">Workflow complete. No next action available.</p>
+                )}
               </div>
             </div>
+                </>
+              )
+            })()}
           </div>
 
           <div className="bg-card border border-border rounded-lg shadow-soft p-6">
@@ -515,8 +587,19 @@ function LawEnforcement() {
       ) : null}
 
       <div className="text-xs text-muted">
-        Live status transitions supported: dispatched, on_scene, resolved, police_closed.
+        Live status transitions supported: verified to dispatched to on_scene to investigating to police_closed.
       </div>
+
+      <ConfirmDialog
+        visible={Boolean(pendingTransition)}
+        title={pendingActionConfig?.confirmTitle || 'Confirm status update?'}
+        message={pendingActionConfig?.confirmMessage || 'This will update the incident workflow state.'}
+        confirmLabel={pendingActionConfig?.label || 'Confirm'}
+        confirmClassName={pendingActionConfig?.confirmClassName || 'bg-primary hover:bg-primary/90'}
+        confirmDisabled={statusMutation.isPending}
+        onCancel={() => setPendingTransition(null)}
+        onConfirm={confirmPendingTransition}
+      />
     </div>
   )
 }

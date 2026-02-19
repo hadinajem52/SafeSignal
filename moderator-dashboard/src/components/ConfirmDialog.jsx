@@ -1,6 +1,16 @@
 import React from 'react'
 
-function ConfirmDialog({ visible, title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel', onConfirm, onCancel, confirmClassName = 'bg-red-600 hover:bg-red-700' }) {
+function ConfirmDialog({
+  visible,
+  title,
+  message,
+  confirmLabel = 'Confirm',
+  cancelLabel = 'Cancel',
+  onConfirm,
+  onCancel,
+  confirmClassName = 'bg-red-600 hover:bg-red-700',
+  confirmDisabled = false,
+}) {
   if (!visible) {
     return null
   }
@@ -18,10 +28,18 @@ function ConfirmDialog({ visible, title, message, confirmLabel = 'Confirm', canc
         </h3>
         <p className="text-muted mb-6">{message}</p>
         <div className="flex gap-3 justify-end">
-          <button onClick={onCancel} className="px-4 py-2 rounded-lg border border-border text-text hover:bg-surface">
+          <button
+            onClick={onCancel}
+            disabled={confirmDisabled}
+            className="px-4 py-2 rounded-lg border border-border text-text hover:bg-surface disabled:opacity-60"
+          >
             {cancelLabel}
           </button>
-          <button onClick={onConfirm} className={`px-4 py-2 rounded-lg text-white font-medium ${confirmClassName}`}>
+          <button
+            onClick={onConfirm}
+            disabled={confirmDisabled}
+            className={`px-4 py-2 rounded-lg text-white font-medium disabled:opacity-60 ${confirmClassName}`}
+          >
             {confirmLabel}
           </button>
         </div>
