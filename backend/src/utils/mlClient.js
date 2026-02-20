@@ -8,7 +8,8 @@ const axios = require('axios');
 const logger = require('./logger');
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:5001';
-const ML_TIMEOUT_MS = parseInt(process.env.ML_TIMEOUT_MS, 10) || 10000;
+// Gemini 2.5-flash regularly takes 8–17 s per call; 10 s caused silent fallback to heuristics.
+const ML_TIMEOUT_MS = parseInt(process.env.ML_TIMEOUT_MS, 10) || 35000;
 
 const mlClient = axios.create({
   baseURL: ML_SERVICE_URL,

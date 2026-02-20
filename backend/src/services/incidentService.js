@@ -476,43 +476,9 @@ async function createIncident(incidentData, reporterId) {
       const allowMlRisk = enableMlRisk !== false;
       const allowExternalMl = allowMlClassification || allowMlRisk;
 
-      // Try external ML service first, fallback to heuristics
-      let mlResults = null;
-      let useExternalMl = false;
-      if (allowExternalMl) {
-        try {
-          mlResults = await mlClient.analyzeIncident({
-            text: mlText,
-            category: incident.category,
-            severity: incident.severity,
-            duplicateCount: 0,
-          });
-          useExternalMl = mlResults !== null;
-          if (useExternalMl) {
-            logger.info(`Using external ML service for incident ${incident.incident_id}`);
-          }
-        } catch (mlError) {
-          logger.warn(`External ML service unavailable, using heuristics: ${mlError.message}`);
-        }
-      }
-
-      // Extract ML results or fallback to heuristics
-      const { predictedCategory, confidence: categoryConfidence } = allowMlClassification
-        ? (useExternalMl && mlResults?.classification
-          ? { predictedCategory: mlResults.classification.predictedCategory, confidence: mlResults.classification.confidence }
-          : predictCategory(incident.title, incident.description))
-        : { predictedCategory: null, confidence: null };
-
-      const toxicity = useExternalMl && mlResults?.toxicity
-        ? { score: mlResults.toxicity.toxicityScore, isToxic: mlResults.toxicity.isToxic }
-        : assessToxicity(mlText);
-
-      autoVerificationContext.confidencePercent =
-        categoryConfidence === null || categoryConfidence === undefined
-          ? null
-          : Number((Number(categoryConfidence) * 100).toFixed(2));
-      autoVerificationContext.isToxic = Boolean(toxicity.isToxic);
-
+      // Fetch dedup candidates before the ML call so candidate texts can be
+      // bundled into a single analyzeIncident round-trip (no separate /similarity call).
+      let candidates = [];
       if (!Number.isNaN(latitudeValue) && !Number.isNaN(longitudeValue)) {
         const candidateQuery = `
           SELECT
@@ -543,8 +509,60 @@ async function createIncident(incidentData, reporterId) {
           ORDER BY i.incident_date DESC
           LIMIT $6
         `;
+        candidates = await db.manyOrNone(candidateQuery, [
+          longitudeValue,
+          latitudeValue,
+          incident.incident_id,
+          incident.incident_date,
+          LIMITS.DEDUP.RADIUS_METERS,
+          LIMITS.DEDUP.MAX_CANDIDATES,
+        ]);
+      }
 
-        const reportPromise = db.one(
+      // Try external ML service first, fallback to heuristics.
+      // Candidate texts are bundled into the same call — no second ML round-trip.
+      let mlResults = null;
+      let useExternalMl = false;
+      if (allowExternalMl) {
+        try {
+          const candidateTexts = candidates.length > 0
+            ? candidates.map((c) => `${c.title} ${c.description}`)
+            : null;
+          mlResults = await mlClient.analyzeIncident({
+            text: mlText,
+            category: incident.category,
+            severity: incident.severity,
+            candidateTexts,
+            duplicateCount: 0,
+          });
+          useExternalMl = mlResults !== null;
+          if (useExternalMl) {
+            logger.info(`Using external ML service for incident ${incident.incident_id}`);
+          }
+        } catch (mlError) {
+          logger.warn(`External ML service unavailable, using heuristics: ${mlError.message}`);
+        }
+      }
+
+      // Extract ML results or fallback to heuristics
+      const { predictedCategory, confidence: categoryConfidence } = allowMlClassification
+        ? (useExternalMl && mlResults?.classification
+          ? { predictedCategory: mlResults.classification.predictedCategory, confidence: mlResults.classification.confidence }
+          : predictCategory(incident.title, incident.description))
+        : { predictedCategory: null, confidence: null };
+
+      const toxicity = useExternalMl && mlResults?.toxicity
+        ? { score: mlResults.toxicity.toxicityScore, isToxic: mlResults.toxicity.isToxic }
+        : assessToxicity(mlText);
+
+      autoVerificationContext.confidencePercent =
+        categoryConfidence === null || categoryConfidence === undefined
+          ? null
+          : Number((Number(categoryConfidence) * 100).toFixed(2));
+      autoVerificationContext.isToxic = Boolean(toxicity.isToxic);
+
+      if (!Number.isNaN(latitudeValue) && !Number.isNaN(longitudeValue)) {
+        const report = await db.one(
           `INSERT INTO reports (incident_id, photo_urls, metadata, ml_confidence_score)
            VALUES ($1, $2, $3, $4)
            RETURNING report_id`,
@@ -558,17 +576,6 @@ async function createIncident(incidentData, reporterId) {
           ]
         );
 
-        const candidatePromise = db.manyOrNone(candidateQuery, [
-          longitudeValue,
-          latitudeValue,
-          incident.incident_id,
-          incident.incident_date,
-          LIMITS.DEDUP.RADIUS_METERS,
-          LIMITS.DEDUP.MAX_CANDIDATES,
-        ]);
-
-        const [report, candidates] = await Promise.all([reportPromise, candidatePromise]);
-
         // Use ML-predicted category for dedup matching instead of the
         // frontend placeholder ('other') that hasn't been updated yet.
         const dedupIncident = predictedCategory
@@ -578,55 +585,58 @@ async function createIncident(incidentData, reporterId) {
         // Compute dedup with optional ML-enhanced similarity
         let scoredCandidates = buildDedupCandidates(dedupIncident, candidates);
 
-        // Try ML-based semantic similarity if external service available
-        if (useExternalMl && candidates.length > 0) {
+        // Apply ML semantic similarity from the bundled analyzeIncident response.
+        // Candidate texts were passed in the initial call — no second round-trip needed.
+        // Unlike the standalone /similarity endpoint, /analyze returns scores for ALL
+        // candidates (unfiltered), so even low-similarity pairs get accurate ML scores.
+        const mlSimilarities = mlResults?.similarity?.similarities;
+        if (useExternalMl && mlSimilarities?.length > 0) {
           try {
-            const candidateTexts = candidates.map((c) => `${c.title} ${c.description}`);
-            const similarityResults = await mlClient.computeSimilarity(mlText, candidateTexts, 0.5);
-            if (similarityResults && similarityResults.length > 0) {
-              // similarityResults indices are based on the original SQL candidate order.
-              // scoredCandidates may already be re-ordered, so map by incident id.
-              const similarityByIncidentId = new Map(
-                similarityResults
-                  .filter((s) => Number.isInteger(s.index) && s.index >= 0 && s.index < candidates.length)
-                  .map((s) => [candidates[s.index].incident_id, s])
-              );
+            // Indices in mlSimilarities map to the original SQL candidate order.
+            // scoredCandidates may already be re-ordered, so key by incident id.
+            const similarityByIncidentId = new Map(
+              mlSimilarities
+                .filter((s) => Number.isInteger(s.index) && s.index >= 0 && s.index < candidates.length)
+                .map((s) => [candidates[s.index].incident_id, s])
+            );
 
-              // Enhance scores with ML similarity
-              scoredCandidates = scoredCandidates.map((candidate) => {
-                const mlSim = similarityByIncidentId.get(candidate.incidentId);
-                if (mlSim && Number.isFinite(mlSim.score)) {
-                  // Blend ML and Jaccard similarity (90% ML, 10% Jaccard).
-                  // Jaccard fails on paraphrased text (different words, same meaning)
-                  // so ML must dominate when available.
-                  const blendedTextSim = 0.9 * mlSim.score + 0.1 * candidate.textSimilarity;
-                  const newScore = computeDedupScore({
-                    textSimilarity: blendedTextSim,
-                    entitySimilarity: candidate.namedEntitySimilarity,
-                    distanceMeters: candidate.distanceMeters,
-                    timeHours: candidate.timeHours,
-                    categoryMatch: candidate.categoryMatch,
-                    bothCategoriesOther: candidate.categoryMatch
-                      && dedupIncident.category === 'other',
-                    sameReporter: candidate.sameReporter,
-                  });
-                  return {
-                    ...candidate,
-                    textSimilarity: Number(blendedTextSim.toFixed(3)),
-                    mlSimilarity: Number(mlSim.score.toFixed(3)),
-                    score: Number(newScore.toFixed(3)),
-                  };
-                }
-                return candidate;
-              }).sort((a, b) => b.score - a.score);
-            }
+            // Enhance scores with ML similarity
+            scoredCandidates = scoredCandidates.map((candidate) => {
+              const mlSim = similarityByIncidentId.get(candidate.incidentId);
+              if (mlSim && Number.isFinite(mlSim.score)) {
+                // Blend ML and Jaccard similarity (90% ML, 10% Jaccard).
+                // Jaccard fails on paraphrased text (different words, same meaning)
+                // so ML must dominate when available.
+                const blendedTextSim = 0.9 * mlSim.score + 0.1 * candidate.textSimilarity;
+                const newScore = computeDedupScore({
+                  textSimilarity: blendedTextSim,
+                  entitySimilarity: candidate.namedEntitySimilarity,
+                  distanceMeters: candidate.distanceMeters,
+                  timeHours: candidate.timeHours,
+                  categoryMatch: candidate.categoryMatch,
+                  bothCategoriesOther: candidate.categoryMatch
+                    && dedupIncident.category === 'other',
+                  sameReporter: candidate.sameReporter,
+                });
+                return {
+                  ...candidate,
+                  textSimilarity: Number(blendedTextSim.toFixed(3)),
+                  mlSimilarity: Number(mlSim.score.toFixed(3)),
+                  score: Number(newScore.toFixed(3)),
+                };
+              }
+              return candidate;
+            }).sort((a, b) => b.score - a.score);
           } catch (simError) {
             logger.warn(`ML similarity enhancement failed: ${simError.message}`);
           }
         }
 
         const topScore = scoredCandidates[0]?.score || 0;
-        const highConfidenceDuplicates = scoredCandidates.filter((candidate) => candidate.score >= 0.55).length;
+        // 0.70 calibrated against test data: SAME-report pairs score ~0.80+,
+        // DIFF-report pairs score ~0.56–0.57. 0.55 caused false positives that
+        // blocked auto-verification for legitimately distinct incidents.
+        const highConfidenceDuplicates = scoredCandidates.filter((candidate) => candidate.score >= 0.70).length;
         autoVerificationContext.highConfidenceDuplicates = highConfidenceDuplicates;
 
         // Risk scoring: prefer ML if available
