@@ -7,9 +7,9 @@ const LIMITS = {
     LNG: { MIN: -180, MAX: 180 },
   },
   DEDUP: {
-    RADIUS_METERS: 500,
-    TIME_HOURS: 1,
-    MAX_CANDIDATES: 10,
+    RADIUS_METERS: 1000,
+    TIME_HOURS: 4,
+    MAX_CANDIDATES: 20,
   },
   ML: {
     TOXICITY_THRESHOLD: 0.2,
