@@ -7,6 +7,9 @@
 const db = require('../config/database');
 const ServiceError = require('../utils/ServiceError');
 
+const DEFAULT_SAFETY_RADIUS_KM = 1;
+const MAX_SAFETY_RADIUS_KM = 1;
+
 /**
  * Severity weightings for safety score calculation
  * Adjustable central configuration
@@ -17,6 +20,16 @@ const SEVERITY_SCORES = {
     high: 35,
     critical: 60,
 };
+
+function normalizeSafetyRadius(radius) {
+    const parsedRadius = Number(radius);
+
+    if (!Number.isFinite(parsedRadius) || parsedRadius <= 0) {
+        return DEFAULT_SAFETY_RADIUS_KM;
+    }
+
+    return Math.min(parsedRadius, MAX_SAFETY_RADIUS_KM);
+}
 
 /**
  * Calculate safety score based on a list of incidents
@@ -114,8 +127,11 @@ async function getModeratorStats() {
  * @param {Object} coords - Coordinates { latitude, longitude, radius }
  * @returns {Promise<Object>} User dashboard data
  */
-async function getUserDashboardStats(userId, { latitude, longitude, radius = 5 }) {
-    const hasCoords = latitude && longitude;
+async function getUserDashboardStats(userId, { latitude, longitude, radius = DEFAULT_SAFETY_RADIUS_KM }) {
+    const parsedLatitude = Number(latitude);
+    const parsedLongitude = Number(longitude);
+    const hasCoords = Number.isFinite(parsedLatitude) && Number.isFinite(parsedLongitude);
+    const normalizedRadius = normalizeSafetyRadius(radius);
 
     // Single spatial scan returns all nearby incidents + active count in one pass
     const nearbyIncidentsPromise = hasCoords
@@ -128,7 +144,7 @@ async function getUserDashboardStats(userId, { latitude, longitude, radius = 5 }
           ST_SetSRID(ST_Point($1::float, $2::float), 4326)::geography,
           $3::float * 1000
         )
-    `, [longitude, latitude, radius])
+    `, [parsedLongitude, parsedLatitude, normalizedRadius])
         : Promise.resolve([]);
 
     const activeNearbyPromise = hasCoords
@@ -245,7 +261,9 @@ async function getUserDashboardStats(userId, { latitude, longitude, radius = 5 }
  * @param {number} radius - in km
  * @returns {Promise<Object>} Area safety details
  */
-async function getAreaSafetyStats(latitude, longitude, radius = 5) {
+async function getAreaSafetyStats(latitude, longitude, radius = DEFAULT_SAFETY_RADIUS_KM) {
+    const normalizedRadius = normalizeSafetyRadius(radius);
+
     // Calculate incidents within radius
     const incidents = await db.manyOrNone(`
     SELECT i.incident_id, i.title, i.category, i.severity, i.created_at,
@@ -262,7 +280,7 @@ async function getAreaSafetyStats(latitude, longitude, radius = 5) {
       )
     ORDER BY distance_km ASC
     LIMIT 50
-  `, [longitude, latitude, radius]);
+  `, [longitude, latitude, normalizedRadius]);
 
     // Calculate safety score
     // We reuse the pure function logic here!
@@ -277,7 +295,7 @@ async function getAreaSafetyStats(latitude, longitude, radius = 5) {
     return {
         latitude: parseFloat(latitude),
         longitude: parseFloat(longitude),
-        radius: parseFloat(radius),
+        radius: normalizedRadius,
         safetyScore: scoreData.score,
         safetyLabel: scoreData.label,             // Added structured data
         safetyDescription: scoreData.description, // Added structured data

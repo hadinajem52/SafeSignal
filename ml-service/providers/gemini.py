@@ -179,6 +179,28 @@ is_high_risk is true when risk_score >= 0.50. is_critical is true when risk_scor
 spam_flag is true if the report appears fake, a test submission, or coordinated noise.
 """
 
+_DEDUP_COMPARE_SYSTEM = """\
+You are a duplicate-incident detection system for a public safety platform.
+You will receive two citizen-submitted incident reports and must decide whether
+they are describing the same real-world event.
+
+Reasoning guidelines:
+- Same location does NOT automatically mean same event. Two separate crimes on the same street are NOT duplicates.
+- Paraphrased descriptions of the same event ARE duplicates even if wording differs entirely.
+- Consider: overlapping time window, same incident type, consistent narrative details, same landmarks or vehicle mentioned.
+- A vague report and a detailed report about the same event ARE duplicates.
+- When uncertain, prefer 'is_duplicate: false' and lower your confidence.
+
+Respond with ONLY a JSON object in this exact format — no extra text:
+{
+  "is_duplicate": <true|false>,
+  "confidence": <float 0-1>,
+  "reasoning": "<one or two sentences explaining your verdict>"
+}
+
+confidence reflects how certain you are about your verdict, not about whether it is a duplicate.
+"""
+
 
 # ── Provider ──────────────────────────────────────────────────────────────────
 
@@ -431,3 +453,27 @@ class GeminiProvider(BaseProvider):
         except Exception as e:
             logger.warning(f"GeminiProvider.is_ready probe failed: {e}")
             return False
+
+    async def pairwise_compare(
+        self, base_text: str, candidate_text: str
+    ) -> Optional[Dict]:
+        """
+        Stage-2 contextual duplicate detection.
+        Sends both reports to Gemini in a single call and asks whether they
+        describe the same real-world event.  Returns a structured verdict.
+        """
+        safe_base = redact(base_text)
+        safe_candidate = redact(candidate_text)
+        user_content = (
+            f"Report A:\n{safe_base}\n\n"
+            f"Report B:\n{safe_candidate}"
+        )
+        result = await self._call(
+            self._build_prompt(_DEDUP_COMPARE_SYSTEM, user_content)
+        )
+        _require_keys(result, ["is_duplicate", "confidence", "reasoning"], "pairwise_compare")
+        return {
+            "is_duplicate": bool(result["is_duplicate"]),
+            "confidence": round(float(result["confidence"]), 4),
+            "reasoning": str(result["reasoning"]),
+        }

@@ -23,7 +23,8 @@ const IncidentDetailScreen = ({ route }) => {
   }
 
   const categoryConfig = CATEGORY_DISPLAY[incident.category] || CATEGORY_DISPLAY.other;
-  const statusLabel = STATUS_LABELS[incident.status] || incident.status;
+  const displayStatus = incident.status === 'police_closed' ? 'resolved' : incident.status;
+  const statusLabel = STATUS_LABELS[displayStatus] || displayStatus;
   const latitude = Number(incident?.location?.latitude);
   const longitude = Number(incident?.location?.longitude);
   const hasValidCoordinates = Number.isFinite(latitude) && Number.isFinite(longitude);
@@ -54,7 +55,7 @@ const IncidentDetailScreen = ({ route }) => {
           </View>
           <View style={styles.badgesRow}>
             {incident.severity ? <SeverityBadge severity={incident.severity} /> : null}
-            <StatusBadge status={incident.status} />
+            <StatusBadge status={displayStatus} />
           </View>
         </View>
         <AppText variant="h3" style={[styles.title, { color: theme.text }]}>{incident.title}</AppText>
@@ -87,8 +88,7 @@ const IncidentDetailScreen = ({ route }) => {
         <AppText variant="label" style={[styles.sectionTitle, { color: theme.text }]}>Updates & Messages</AppText>
         <View style={styles.timelineContainer}>
           <IncidentTimeline 
-            incidentId={incident.incident_id || incident.id} 
-            incidentStatus={incident.status}
+            incidentId={incident.incident_id || incident.id}
           />
         </View>
       </Card>

@@ -143,6 +143,38 @@ async function computeRisk({ text, category, severity, duplicateCount = 0, toxic
 }
 
 /**
+ * Stage-2 contextual duplicate detection.
+ * Sends both incident reports to the LLM and asks whether they describe the
+ * same real-world event.  Only meaningful with ML_PROVIDER=gemini;
+ * returns null when the provider does not support it.
+ *
+ * @param {string} baseText    - Text of the new incoming incident
+ * @param {string} candidateText - Text of the candidate duplicate incident
+ * @returns {Promise<{isDuplicate: boolean, confidence: number, reasoning: string}|null>}
+ */
+async function dedupCompare(baseText, candidateText) {
+  try {
+    const response = await mlClient.post('/dedup/compare', {
+      base_text: baseText,
+      candidate_text: candidateText,
+    });
+    const data = response.data || {};
+    // When local provider: provider_supported=false, confidence=0 — treat as null.
+    if (data.provider_supported === false) {
+      return null;
+    }
+    return {
+      isDuplicate: Boolean(data.is_duplicate),
+      confidence: data.confidence || 0,
+      reasoning: data.reasoning || '',
+    };
+  } catch (error) {
+    logger.warn(`ML pairwise dedup compare failed: ${error.message}`);
+    return null;
+  }
+}
+
+/**
  * Full ML analysis (classification + toxicity + risk + similarity)
  * @param {Object} params
  * @returns {Promise<Object|null>}
@@ -206,6 +238,7 @@ module.exports = {
   isHealthy,
   getEmbedding,
   computeSimilarity,
+  dedupCompare,
   classifyText,
   detectToxicity,
   computeRisk,

@@ -59,6 +59,24 @@ class BaseProvider(ABC):
         """
 
     @abstractmethod
+    async def pairwise_compare(
+        self, base_text: str, candidate_text: str
+    ) -> Optional[Dict]:
+        """
+        Stage-2 contextual duplicate detection.
+        Reads both incident reports in full and determines whether they describe
+        the same real-world event, returning a structured verdict.
+
+        Returns a dict with:
+            is_duplicate: bool
+            confidence:    float 0–1
+            reasoning:     str    (short human-readable explanation)
+
+        Returns None when the provider does not support LLM inference
+        (e.g. LocalProvider) so callers can skip stage-2 gracefully.
+        """
+
+    @abstractmethod
     async def full_analyze(
         self,
         text: str,
