@@ -37,6 +37,7 @@ const useLocationPicker = ({
   const mapRef = useRef(null);
 
   const getCurrentLocation = useCallback(async () => {
+    console.log('[Location] getCurrentLocation called, locationServicesEnabled=', locationServicesEnabled);
     if (!locationServicesEnabled) {
       Alert.alert(
         'Location Disabled',
@@ -50,12 +51,38 @@ const useLocationPicker = ({
     onClearLocationError?.();
 
     try {
+      console.log('[Location] checking hasServicesEnabledAsync...');
       const servicesEnabled = await Location.hasServicesEnabledAsync();
+      console.log('[Location] hasServicesEnabledAsync =', servicesEnabled);
+
       if (!servicesEnabled) {
+        console.log('[Location] services off — calling enableNetworkProviderAsync...');
+        try {
+          await Location.enableNetworkProviderAsync();
+          console.log('[Location] enableNetworkProviderAsync resolved (user tapped Turn On)');
+        } catch (e) {
+          console.log('[Location] enableNetworkProviderAsync rejected (user declined):', e?.message);
+          setIsLoadingLocation(false);
+          return;
+        }
+      }
+
+      console.log('[Location] requesting foreground permission...');
+      const { status: existingStatus } = await Location.getForegroundPermissionsAsync();
+      console.log('[Location] existing permission status =', existingStatus);
+      let status = existingStatus;
+      if (existingStatus !== 'granted') {
+        console.log('[Location] not yet granted — calling requestForegroundPermissionsAsync...');
+        ({ status } = await Location.requestForegroundPermissionsAsync());
+        console.log('[Location] request result =', status);
+      }
+      console.log('[Location] permission status =', status);
+
+      if (status !== 'granted') {
         setIsLoadingLocation(false);
         Alert.alert(
-          'Location Services Off',
-          'Location services are disabled. Please enable them to use GPS.',
+          'Permission Denied',
+          'Location permission is required to get your current location. Please enable it in settings.',
           [
             { text: 'Cancel', style: 'cancel' },
             { text: 'Open Settings', onPress: () => Linking.openSettings() },
@@ -64,32 +91,46 @@ const useLocationPicker = ({
         return;
       }
 
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setIsLoadingLocation(false);
-        Alert.alert(
-          'Permission Denied',
-          'Location permission is required to get your current location. Please enable it in settings.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
       let position;
-      try {
-        position = await withTimeout(
-          Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }),
-          15000
-        );
-      } catch (positionError) {
-        const lastKnown = await Location.getLastKnownPositionAsync({
-          maxAge: 5 * 60 * 1000,
-          requiredAccuracy: 100,
-        });
-        if (!lastKnown) {
-          throw positionError;
+
+      // Fast path: use a cached position if one exists (returns in < 1 s).
+      console.log('[Location] trying getLastKnownPositionAsync (fast)...');
+      const lastKnownFast = await withTimeout(
+        Location.getLastKnownPositionAsync({
+          maxAge: 10 * 60 * 1000,
+          requiredAccuracy: 2000,
+        }),
+        2000
+      ).catch((e) => { console.log('[Location] getLastKnownPositionAsync (fast) failed:', e?.message); return null; });
+      console.log('[Location] lastKnownFast =', lastKnownFast ? `lat=${lastKnownFast.coords?.latitude}` : 'null');
+
+      if (lastKnownFast?.coords) {
+        position = lastKnownFast;
+      } else {
+        console.log('[Location] no cache — calling getCurrentPositionAsync (Balanced)...');
+        try {
+          position = await withTimeout(
+            Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+            12000
+          );
+          console.log('[Location] getCurrentPositionAsync resolved:', position?.coords?.latitude, position?.coords?.longitude);
+        } catch (positionError) {
+          console.log('[Location] getCurrentPositionAsync failed:', positionError?.message, positionError?.code);
+          console.log('[Location] trying stale getLastKnownPositionAsync...');
+          const lastKnownStale = await withTimeout(
+            Location.getLastKnownPositionAsync({
+              maxAge: 60 * 60 * 1000,
+              requiredAccuracy: 10000,
+            }),
+            2000
+          ).catch((e) => { console.log('[Location] stale lastKnown failed:', e?.message); return null; });
+
+          console.log('[Location] lastKnownStale =', lastKnownStale ? `lat=${lastKnownStale.coords?.latitude}` : 'null');
+          if (!lastKnownStale?.coords) {
+            throw positionError;
+          }
+          position = lastKnownStale;
         }
-        position = lastKnown;
       }
 
       const { latitude, longitude } = position.coords;
@@ -169,11 +210,20 @@ const useLocationPicker = ({
     try {
       const servicesEnabled = await Location.hasServicesEnabledAsync();
       if (!servicesEnabled) {
-        return;
+        // Show the native Google dialog; if the user declines, bail out quietly.
+        try {
+          await Location.enableNetworkProviderAsync();
+        } catch {
+          return;
+        }
       }
 
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
+      const { status: existingOpenStatus } = await Location.getForegroundPermissionsAsync();
+      let openStatus = existingOpenStatus;
+      if (existingOpenStatus !== 'granted') {
+        ({ status: openStatus } = await Location.requestForegroundPermissionsAsync());
+      }
+      if (openStatus !== 'granted') {
         return;
       }
 
@@ -184,10 +234,18 @@ const useLocationPicker = ({
           8000
         );
       } catch {
-        const lastKnown = await Location.getLastKnownPositionAsync({
-          maxAge: 5 * 60 * 1000,
-          requiredAccuracy: 100,
-        });
+        let lastKnown = null;
+        try {
+          lastKnown = await withTimeout(
+            Location.getLastKnownPositionAsync({
+              maxAge: 5 * 60 * 1000,
+              requiredAccuracy: 1000, // relaxed from 100m — accepts network-based cached positions
+            }),
+            3000
+          );
+        } catch {
+          // getLastKnownPositionAsync timed out — fall through
+        }
         if (!lastKnown?.coords) {
           return;
         }
