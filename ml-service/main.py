@@ -20,6 +20,8 @@ from models.embeddings import EmbeddingModel
 from models.classifier import CategoryClassifier
 from models.toxicity import ToxicityDetector
 from models.risk import RiskScorer
+from providers import get_provider, BaseProvider
+from providers.gemini import GeminiProvider
 
 # Configure logging
 logging.basicConfig(
@@ -51,12 +53,24 @@ cache = RedisCacheManager(
     fallback_cache=fallback_cache,
 )
 
-# Global model instances (lazy loaded)
+# Global model instances — only populated when ML_PROVIDER=local
 embedding_model: Optional[EmbeddingModel] = None
 classifier_model: Optional[CategoryClassifier] = None
 toxicity_model: Optional[ToxicityDetector] = None
 risk_scorer: Optional[RiskScorer] = None
+
+# Active provider — set during lifespan startup
+active_provider: Optional[BaseProvider] = None
+
+# Local (GPU/CPU-bound) inference semaphore
 inference_semaphore = asyncio.Semaphore(max(1, config.INFERENCE_MAX_CONCURRENCY))
+# Gemini (I/O-bound) semaphore — higher cap is safe for network calls
+api_semaphore = asyncio.Semaphore(config.GEMINI_MAX_CONCURRENCY)
+
+
+def _get_semaphore() -> asyncio.Semaphore:
+    """Return the appropriate concurrency guard for the active provider."""
+    return api_semaphore if config.ML_PROVIDER == "gemini" else inference_semaphore
 
 
 async def run_inference(func, *args, **kwargs):
@@ -98,20 +112,34 @@ def log_inference_event(endpoint: str, component: str, started_at: float):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Load models on startup."""
-    global embedding_model, classifier_model, toxicity_model, risk_scorer
+    """Initialise the active provider on startup."""
+    global embedding_model, classifier_model, toxicity_model, risk_scorer, active_provider
 
-    logger.info("Loading ML models...")
+    logger.info(f"Starting ML service — provider: {config.ML_PROVIDER}")
     logger.info(f"Cache backend: {cache.stats.get('backend', 'unknown')}")
 
+    if config.ML_PROVIDER == "local":
+        # Load HuggingFace models only when running the local provider.
+        try:
+            embedding_model = EmbeddingModel(config.EMBEDDING_MODEL)
+            classifier_model = CategoryClassifier(config.CLASSIFIER_MODEL)
+            toxicity_model = ToxicityDetector()
+            risk_scorer = RiskScorer()
+            logger.info("✅ All local models loaded successfully")
+        except Exception as e:
+            logger.error(f"❌ Failed to load local models: {e}")
+            raise
+
     try:
-        embedding_model = EmbeddingModel(config.EMBEDDING_MODEL)
-        classifier_model = CategoryClassifier(config.CLASSIFIER_MODEL)
-        toxicity_model = ToxicityDetector()
-        risk_scorer = RiskScorer()
-        logger.info("✅ All models loaded successfully")
+        active_provider = get_provider(
+            classifier=classifier_model,
+            embedding_model=embedding_model,
+            toxicity_model=toxicity_model,
+            risk_scorer=risk_scorer,
+        )
+        logger.info(f"✅ Provider initialised: {config.ML_PROVIDER}")
     except Exception as e:
-        logger.error(f"❌ Failed to load models: {e}")
+        logger.error(f"❌ Failed to initialise provider: {e}")
         raise
 
     yield
@@ -208,6 +236,11 @@ class FullAnalysisResponse(BaseModel):
     toxicity: Optional[ToxicityResponse] = None
     risk: Optional[RiskResponse] = None
     similarity: Optional[SimilarityResponse] = None
+    # LLM-only fields — populated when ML_PROVIDER=gemini, always None for local
+    summary: Optional[str] = None
+    entities: Optional[dict] = None
+    spam_flag: Optional[bool] = None
+    dispatch_suggestion: Optional[str] = None
 
 
 # ============== Endpoints ==============
@@ -216,23 +249,30 @@ class FullAnalysisResponse(BaseModel):
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    classifier_optimizations = (
+    provider_ready = (
+        await active_provider.is_ready() if active_provider is not None else False
+    )
+    # Keep classifier_runtime for backwards-compat with anything that reads it.
+    classifier_runtime = (
         classifier_model.optimization_status
         if classifier_model is not None
         else None
     )
     return {
-        "status": "healthy",
+        "status": "healthy" if provider_ready else "degraded",
+        "provider": config.ML_PROVIDER,
+        "provider_ready": provider_ready,
         "device": config.DEVICE,
         "service_version": config.SERVICE_VERSION,
+        # Kept for backwards compatibility — mirrors provider_ready when using Gemini
         "models_loaded": {
-            "embedding": embedding_model is not None,
-            "classifier": classifier_model is not None,
-            "toxicity": toxicity_model is not None,
-            "risk": risk_scorer is not None,
+            "embedding": provider_ready,
+            "classifier": provider_ready,
+            "toxicity": provider_ready,
+            "risk": provider_ready,
         },
         "optimizations": {
-            "classifier": classifier_optimizations,
+            "classifier": classifier_runtime,
         },
         "model_versions": config.MODEL_VERSION_MAP,
         "release": {
@@ -329,14 +369,15 @@ async def reconnect_redis():
 @app.post("/embed", response_model=EmbeddingResponse)
 async def get_embedding(request: TextInput):
     """Get text embedding vector."""
-    if embedding_model is None:
-        raise HTTPException(status_code=503, detail="Embedding model not loaded")
+    if active_provider is None:
+        raise HTTPException(status_code=503, detail="ML provider not initialised")
 
     started_at = time.perf_counter()
-    embedding = await run_inference(embedding_model.encode_single, request.text)
+    async with _get_semaphore():
+        embedding = await active_provider.embed(request.text)
     log_inference_event("/embed", "embedding", started_at)
     return EmbeddingResponse(
-        embedding=embedding.tolist(),
+        embedding=embedding,
         dimensions=len(embedding),
     )
 
@@ -344,15 +385,15 @@ async def get_embedding(request: TextInput):
 @app.post("/similarity", response_model=SimilarityResponse)
 async def compute_similarity(request: SimilarityRequest):
     """Find similar texts from candidates."""
-    if embedding_model is None:
-        raise HTTPException(status_code=503, detail="Embedding model not loaded")
+    if active_provider is None:
+        raise HTTPException(status_code=503, detail="ML provider not initialised")
 
     started_at = time.perf_counter()
-    similarities = await run_inference(
-        embedding_model.batch_similarity,
-        request.query_text,
-        request.candidate_texts,
-    )
+    async with _get_semaphore():
+        similarities = await active_provider.batch_similarity(
+            request.query_text,
+            request.candidate_texts,
+        )
 
     results = [
         {
@@ -376,30 +417,65 @@ async def compute_similarity(request: SimilarityRequest):
 @app.post("/classify", response_model=ClassificationResponse)
 async def classify_text(request: ClassifyRequest):
     """Classify text into incident category."""
-    if classifier_model is None:
-        raise HTTPException(status_code=503, detail="Classifier model not loaded")
+    if active_provider is None:
+        raise HTTPException(status_code=503, detail="ML provider not initialised")
 
     categories = request.categories or config.INCIDENT_CATEGORIES
     cats_key = ",".join(sorted(categories))
+    pv = config.PROMPT_VERSION_CLASSIFY
 
-    # Check cache
-    cached = cache.get("classify", request.text, cats=cats_key)
+    # Cache check — prompt version baked into key so stale results survive a prompt change
+    cached = cache.get("classify", request.text, cats=cats_key, pv=pv)
     if cached:
         return cached
 
     started_at = time.perf_counter()
-    result = await run_inference(classifier_model.predict_top, request.text, categories)
+
+    # Shadow mode: run both providers, log comparison, always return local result.
+    # Enable with: ML_PROVIDER=local + SHADOW_MODE_ENABLED=true
+    if (
+        config.SHADOW_MODE_ENABLED
+        and "classify" in config.SHADOW_ENDPOINTS
+        and config.ML_PROVIDER == "local"
+        and config.GEMINI_API_KEY
+    ):
+        try:
+            shadow_prov = GeminiProvider()
+            local_result, shadow_result = await asyncio.gather(
+                active_provider.classify(request.text, categories),
+                shadow_prov.classify(request.text, categories),
+                return_exceptions=True,
+            )
+            if isinstance(shadow_result, Exception):
+                logger.warning(f"Shadow classify failed: {shadow_result}")
+            elif not isinstance(local_result, Exception):
+                logger.info(
+                    "shadow_compare endpoint=classify "
+                    "local_cat=%s local_conf=%.3f "
+                    "gemini_cat=%s gemini_conf=%.3f "
+                    "agreement=%s",
+                    local_result["predicted_category"], local_result["confidence"],
+                    shadow_result["predicted_category"], shadow_result["confidence"],
+                    local_result["predicted_category"] == shadow_result["predicted_category"],
+                )
+            result = local_result if not isinstance(local_result, Exception) else None
+        except Exception as e:
+            logger.warning(f"Shadow mode error: {e}")
+            result = await active_provider.classify(request.text, categories)
+    else:
+        async with _get_semaphore():
+            result = await active_provider.classify(request.text, categories)
+
     if not result:
         raise HTTPException(status_code=400, detail="Could not classify text")
 
-    model_metadata = build_model_metadata("classifier")
     response = ClassificationResponse(
-        predicted_category=result["category"],
-        confidence=round(result["confidence"], 4),
-        all_scores={k: round(v, 4) for k, v in result["all_scores"].items()},
-        inference_metadata=model_metadata,
+        predicted_category=result["predicted_category"],
+        confidence=result["confidence"],
+        all_scores=result["all_scores"],
+        inference_metadata=build_model_metadata("classifier"),
     )
-    cache.set("classify", request.text, response, cats=cats_key)
+    cache.set("classify", request.text, response, cats=cats_key, pv=pv)
     log_inference_event("/classify", "classifier", started_at)
     return response
 
@@ -407,29 +483,26 @@ async def classify_text(request: ClassifyRequest):
 @app.post("/toxicity", response_model=ToxicityResponse)
 async def detect_toxicity(request: TextInput):
     """Detect toxicity in text."""
-    if toxicity_model is None:
-        raise HTTPException(status_code=503, detail="Toxicity model not loaded")
+    if active_provider is None:
+        raise HTTPException(status_code=503, detail="ML provider not initialised")
 
-    # Check cache
-    cached = cache.get("toxicity", request.text)
+    pv = config.PROMPT_VERSION_TOXICITY
+    cached = cache.get("toxicity", request.text, pv=pv)
     if cached:
         return cached
 
     started_at = time.perf_counter()
-    result = await run_inference(
-        toxicity_model.is_toxic,
-        request.text,
-        config.TOXICITY_THRESHOLD,
-    )
+    async with _get_semaphore():
+        result = await active_provider.detect_toxicity(request.text)
 
     response = ToxicityResponse(
         is_toxic=result["is_toxic"],
-        toxicity_score=round(result["toxicity_score"], 4),
+        toxicity_score=result["toxicity_score"],
         is_severe=result["is_severe"],
-        details={k: round(v, 4) for k, v in result["details"].items()},
+        details=result["details"],
         inference_metadata=build_model_metadata("toxicity"),
     )
-    cache.set("toxicity", request.text, response)
+    cache.set("toxicity", request.text, response, pv=pv)
     log_inference_event("/toxicity", "toxicity", started_at)
     return response
 
@@ -437,18 +510,18 @@ async def detect_toxicity(request: TextInput):
 @app.post("/risk", response_model=RiskResponse)
 async def compute_risk(request: RiskRequest):
     """Compute risk score for incident."""
-    if risk_scorer is None:
-        raise HTTPException(status_code=503, detail="Risk scorer not loaded")
+    if active_provider is None:
+        raise HTTPException(status_code=503, detail="ML provider not initialised")
 
     started_at = time.perf_counter()
-    result = await run_inference(
-        risk_scorer.compute_risk_score,
-        text=request.text,
-        category=request.category,
-        severity=request.severity,
-        duplicate_count=request.duplicate_count,
-        toxicity_score=request.toxicity_score,
-    )
+    async with _get_semaphore():
+        result = await active_provider.compute_risk(
+            text=request.text,
+            category=request.category,
+            severity=request.severity,
+            duplicate_count=request.duplicate_count,
+            toxicity_score=request.toxicity_score,
+        )
 
     log_inference_event("/risk", "risk", started_at)
     return RiskResponse(
@@ -464,90 +537,112 @@ async def compute_risk(request: RiskRequest):
 async def full_analysis(request: FullAnalysisRequest):
     """
     Perform full ML analysis on incident text.
-    Combines classification, toxicity, risk, and similarity in one call.
+    - Gemini provider: single API call returning all fields including LLM-only ones.
+    - Local provider: serial model inference; LLM-only fields return null.
     """
-    response = FullAnalysisResponse()
+    if active_provider is None:
+        raise HTTPException(status_code=503, detail="ML provider not initialised")
 
-    # Classification
-    if classifier_model:
+    started_at = time.perf_counter()
+    response = FullAnalysisResponse()
+    pv = config.PROMPT_VERSION_ANALYZE
+
+    # ── Gemini single-call path ───────────────────────────────────────────────
+    if config.ML_PROVIDER == "gemini":
         try:
-            started_at = time.perf_counter()
-            result = await run_inference(
-                classifier_model.predict_top,
-                request.text,
-                config.INCIDENT_CATEGORIES,
-            )
-            if result:
+            async with _get_semaphore():
+                result = await active_provider.full_analyze(
+                    text=request.text,
+                    category=request.category,
+                    severity=request.severity,
+                    duplicate_count=request.duplicate_count,
+                    categories=config.INCIDENT_CATEGORIES,
+                )
+
+            if result.get("classification"):
                 response.classification = ClassificationResponse(
-                    predicted_category=result["category"],
-                    confidence=round(result["confidence"], 4),
-                    all_scores={k: round(v, 4) for k, v in result["all_scores"].items()},
+                    **result["classification"],
                     inference_metadata=build_model_metadata("classifier"),
                 )
-                log_inference_event("/analyze", "classifier", started_at)
-        except Exception as e:
-            logger.warning(f"Classification failed: {e}")
+            if result.get("toxicity"):
+                response.toxicity = ToxicityResponse(
+                    **result["toxicity"],
+                    inference_metadata=build_model_metadata("toxicity"),
+                )
+            if result.get("risk"):
+                response.risk = RiskResponse(
+                    **result["risk"],
+                    inference_metadata=build_model_metadata("risk"),
+                )
+            response.summary = result.get("summary")
+            response.entities = result.get("entities")
+            response.spam_flag = result.get("spam_flag")
+            response.dispatch_suggestion = result.get("dispatch_suggestion")
 
-    # Toxicity
-    toxicity_score = 0.0
-    if toxicity_model:
-        try:
-            started_at = time.perf_counter()
-            result = await run_inference(
-                toxicity_model.is_toxic,
-                request.text,
-                config.TOXICITY_THRESHOLD,
-            )
-            toxicity_score = result["toxicity_score"]
-            response.toxicity = ToxicityResponse(
-                is_toxic=result["is_toxic"],
-                toxicity_score=round(result["toxicity_score"], 4),
-                is_severe=result["is_severe"],
-                details={k: round(v, 4) for k, v in result["details"].items()},
-                inference_metadata=build_model_metadata("toxicity"),
-            )
-            log_inference_event("/analyze", "toxicity", started_at)
         except Exception as e:
-            logger.warning(f"Toxicity detection failed: {e}")
+            logger.error(f"/analyze Gemini call failed: {e}")
+            # Return what we have rather than a 500; classification/toxicity/risk stay None.
 
-    # Risk scoring
-    if risk_scorer:
-        try:
-            predicted_cat = (
-                response.classification.predicted_category
-                if response.classification
-                else request.category
-            )
-            started_at = time.perf_counter()
-            result = await run_inference(
-                risk_scorer.compute_risk_score,
-                text=request.text,
-                category=predicted_cat or request.category,
-                severity=request.severity,
-                duplicate_count=request.duplicate_count,
-                toxicity_score=toxicity_score,
-            )
-            response.risk = RiskResponse(
-                risk_score=result["risk_score"],
-                is_high_risk=result["is_high_risk"],
-                is_critical=result["is_critical"],
-                breakdown=result["breakdown"],
-                inference_metadata=build_model_metadata("risk"),
-            )
-            log_inference_event("/analyze", "risk", started_at)
-        except Exception as e:
-            logger.warning(f"Risk scoring failed: {e}")
+        # Similarity still requires a separate embedding call (always true for any provider)
+        if request.candidate_texts:
+            try:
+                async with _get_semaphore():
+                    similarities = await active_provider.batch_similarity(
+                        request.text, request.candidate_texts
+                    )
+                sim_results = [
+                    {
+                        "index": idx,
+                        "score": round(score, 4),
+                        "is_duplicate": score >= config.SIMILARITY_THRESHOLD,
+                    }
+                    for idx, score in enumerate(similarities)
+                ]
+                response.similarity = SimilarityResponse(
+                    similarities=sorted(sim_results, key=lambda x: x["score"], reverse=True),
+                    threshold=config.SIMILARITY_THRESHOLD,
+                )
+            except Exception as e:
+                logger.warning(f"/analyze similarity failed: {e}")
 
-    # Similarity (if candidates provided)
-    if embedding_model and request.candidate_texts:
+        log_inference_event("/analyze", "gemini", started_at)
+        return response
+
+    # ── Local serial inference path ───────────────────────────────────────────
+    async with _get_semaphore():
+        result = await active_provider.full_analyze(
+            text=request.text,
+            category=request.category,
+            severity=request.severity,
+            duplicate_count=request.duplicate_count,
+            categories=config.INCIDENT_CATEGORIES,
+        )
+
+    if result.get("classification"):
+        response.classification = ClassificationResponse(
+            **result["classification"],
+            inference_metadata=build_model_metadata("classifier"),
+        )
+    if result.get("toxicity"):
+        response.toxicity = ToxicityResponse(
+            **result["toxicity"],
+            inference_metadata=build_model_metadata("toxicity"),
+        )
+    if result.get("risk"):
+        response.risk = RiskResponse(
+            **result["risk"],
+            inference_metadata=build_model_metadata("risk"),
+        )
+    # LLM-only fields are None for local provider
+
+    # Similarity
+    if request.candidate_texts:
         try:
-            started_at = time.perf_counter()
-            similarities = await run_inference(
-                embedding_model.batch_similarity,
-                request.text,
-                request.candidate_texts,
-            )
-            results = [
+            async with _get_semaphore():
+                similarities = await active_provider.batch_similarity(
+                    request.text, request.candidate_texts
+                )
+            sim_results = [
                 {
                     "index": idx,
                     "score": round(score, 4),
@@ -556,13 +651,13 @@ async def full_analysis(request: FullAnalysisRequest):
                 for idx, score in enumerate(similarities)
             ]
             response.similarity = SimilarityResponse(
-                similarities=sorted(results, key=lambda x: x["score"], reverse=True),
+                similarities=sorted(sim_results, key=lambda x: x["score"], reverse=True),
                 threshold=config.SIMILARITY_THRESHOLD,
             )
-            log_inference_event("/analyze", "embedding", started_at)
         except Exception as e:
-            logger.warning(f"Similarity computation failed: {e}")
+            logger.warning(f"/analyze similarity failed: {e}")
 
+    log_inference_event("/analyze", "local", started_at)
     return response
 
 
