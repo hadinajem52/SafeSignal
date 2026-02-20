@@ -9,6 +9,19 @@ const DEFAULT_REGION = {
   longitudeDelta: 0.05,
 };
 
+// expo-location v17+ dropped the 'timeout' option from getCurrentPositionAsync.
+// Use Promise.race to enforce a real timeout instead.
+const withTimeout = (promise, ms, code = 'E_LOCATION_TIMEOUT') =>
+  Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(
+        () => reject(Object.assign(new Error('Location request timed out'), { code })),
+        ms
+      )
+    ),
+  ]);
+
 const useLocationPicker = ({
   onClearLocationError,
   onLocationError,
@@ -64,10 +77,10 @@ const useLocationPicker = ({
 
       let position;
       try {
-        position = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.High,
-          timeout: 15000,
-        });
+        position = await withTimeout(
+          Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }),
+          15000
+        );
       } catch (positionError) {
         const lastKnown = await Location.getLastKnownPositionAsync({
           maxAge: 5 * 60 * 1000,
@@ -126,65 +139,8 @@ const useLocationPicker = ({
   }, [locationServicesEnabled, onClearLocationError, onLocationError]);
 
   const openMapForSelection = useCallback(async () => {
-    if (!locationServicesEnabled && !location) {
-      setMapRegion(DEFAULT_REGION);
-      setSelectedMapLocation(null);
-      setShowMapModal(true);
-      return;
-    }
-
-    if (!location) {
-      const servicesEnabled = await Location.hasServicesEnabledAsync();
-      if (!servicesEnabled) {
-        Alert.alert(
-          'Location Services Off',
-          'Location services are disabled. You can still pick a location on the map.',
-          [{ text: 'OK' }]
-        );
-      }
-
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
-        try {
-          const position = await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.Balanced,
-          });
-          const { latitude, longitude } = position.coords;
-          setMapRegion({
-            latitude,
-            longitude,
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.01,
-          });
-          setSelectedMapLocation({ latitude, longitude });
-        } catch (error) {
-          try {
-            const lastKnown = await Location.getLastKnownPositionAsync({
-              maxAge: 5 * 60 * 1000,
-              requiredAccuracy: 100,
-            });
-            if (lastKnown?.coords) {
-              setMapRegion({
-                latitude: lastKnown.coords.latitude,
-                longitude: lastKnown.coords.longitude,
-                latitudeDelta: 0.01,
-                longitudeDelta: 0.01,
-              });
-              setSelectedMapLocation({
-                latitude: lastKnown.coords.latitude,
-                longitude: lastKnown.coords.longitude,
-              });
-            } else {
-              setMapRegion(DEFAULT_REGION);
-            }
-          } catch (fallbackError) {
-            setMapRegion(DEFAULT_REGION);
-          }
-        }
-      } else {
-        setMapRegion(DEFAULT_REGION);
-      }
-    } else {
+    // If there is already a confirmed location, center on it and open immediately.
+    if (location) {
       setMapRegion({
         latitude: location.latitude,
         longitude: location.longitude,
@@ -192,9 +148,63 @@ const useLocationPicker = ({
         longitudeDelta: 0.01,
       });
       setSelectedMapLocation(location);
+      setShowMapModal(true);
+      return;
     }
 
+    // No existing location — open immediately with a sensible default so the
+    // modal is never blocked on a slow / missing GPS fix.
+    if (!locationServicesEnabled) {
+      setMapRegion(DEFAULT_REGION);
+      setSelectedMapLocation(null);
+      setShowMapModal(true);
+      return;
+    }
+
+    setMapRegion(DEFAULT_REGION);
+    setSelectedMapLocation(null);
     setShowMapModal(true);
+
+    // After the modal is open, quietly try to center on the user's position.
+    try {
+      const servicesEnabled = await Location.hasServicesEnabledAsync();
+      if (!servicesEnabled) {
+        return;
+      }
+
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        return;
+      }
+
+      let position;
+      try {
+        position = await withTimeout(
+          Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+          8000
+        );
+      } catch {
+        const lastKnown = await Location.getLastKnownPositionAsync({
+          maxAge: 5 * 60 * 1000,
+          requiredAccuracy: 100,
+        });
+        if (!lastKnown?.coords) {
+          return;
+        }
+        position = lastKnown;
+      }
+
+      const { latitude, longitude } = position.coords;
+      setMapRegion({
+        latitude,
+        longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      });
+      setSelectedMapLocation({ latitude, longitude });
+    } catch (error) {
+      console.log('Could not center map on user location:', error);
+    }
   }, [location, locationServicesEnabled]);
 
   const handleMapPress = useCallback(async (event) => {
