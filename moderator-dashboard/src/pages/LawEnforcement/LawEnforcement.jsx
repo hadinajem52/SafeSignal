@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, ChevronDown, ChevronUp, Map as MapIcon, Radio, Shield } from 'lucide-react'
+import { AlertTriangle, ChevronDown, ChevronUp, Clock, Map as MapIcon, Radio, Shield, Zap } from 'lucide-react'
 import { io } from 'socket.io-client'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import FilterDropdown from '../../components/FilterDropdown'
@@ -195,6 +195,8 @@ function IncidentQueueTable({
   onSearchChange,
   statusFilter,
   onStatusFilterChange,
+  sortMode,
+  onSortModeChange,
   statusMutationPending,
   onRequestAction,
 }) {
@@ -214,6 +216,33 @@ function IncidentQueueTable({
           onChange={(e) => onStatusFilterChange(e.target.value)}
           options={LEI_STATUS_FILTERS}
         />
+        <div className="rounded-lg border border-border bg-surface overflow-hidden">
+          <button
+            onClick={() => onSortModeChange('urgency')}
+            title="Sort by urgency"
+            className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors ${
+              sortMode === 'urgency'
+                ? 'bg-primary text-white'
+                : 'text-muted hover:text-text hover:bg-surface'
+            }`}
+          >
+            <Zap size={13} />
+            Urgency
+          </button>
+          <span className="inline-block h-5 w-px bg-border align-middle" />
+          <button
+            onClick={() => onSortModeChange('time')}
+            title="Sort by newest reports"
+            className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors ${
+              sortMode === 'time'
+                ? 'bg-primary text-white'
+                : 'text-muted hover:text-text hover:bg-surface'
+            }`}
+          >
+            <Clock size={13} />
+            Newest
+          </button>
+        </div>
       </div>
 
       {/* Table */}
@@ -538,6 +567,7 @@ function LawEnforcement() {
   const [activeView, setActiveView] = useState('queue')
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('verified')
+  const [sortMode, setSortMode] = useState('urgency')
   const [selectedIncidentId, setSelectedIncidentId] = useState(null)
   const [leiAlerts, setLeiAlerts] = useState([])
   const [lastRealtimeAlertAt, setLastRealtimeAlertAt] = useState(null)
@@ -604,6 +634,10 @@ function LawEnforcement() {
         return title.toLowerCase().includes(q) || desc.toLowerCase().includes(q)
       })
       .sort((a, b) => {
+        if (sortMode === 'time') {
+          return new Date(b.incident_date || b.created_at) - new Date(a.incident_date || a.created_at)
+        }
+
         const rank = { critical: 1, high: 2, medium: 3, low: 4 }
         const diff = (rank[a.severity] || 5) - (rank[b.severity] || 5)
         if (diff !== 0) return diff
@@ -614,7 +648,7 @@ function LawEnforcement() {
         id: inc.incident_id,
         reportedAt: inc.incident_date || inc.created_at,
       }))
-  }, [incidents, searchTerm])
+  }, [incidents, searchTerm, sortMode])
 
   // Auto-select first incident when list loads
   useEffect(() => {
@@ -871,6 +905,8 @@ function LawEnforcement() {
                   onSearchChange={setSearchTerm}
                   statusFilter={statusFilter}
                   onStatusFilterChange={setStatusFilter}
+                  sortMode={sortMode}
+                  onSortModeChange={setSortMode}
                   statusMutationPending={statusMutation.isPending}
                   onRequestAction={requestStatusUpdate}
                 />

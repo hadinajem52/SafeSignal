@@ -84,6 +84,15 @@ class LocalProvider(BaseProvider):
             self._embedding.batch_similarity, query_text, candidate_texts
         )
 
+    async def pairwise_compare(
+        self, base_text: str, candidate_text: str
+    ) -> Optional[Dict]:
+        """
+        Local provider has no LLM — stage-2 contextual comparison is not available.
+        Returning None causes the backend to skip stage-2 gracefully.
+        """
+        return None
+
     async def full_analyze(
         self,
         text: str,

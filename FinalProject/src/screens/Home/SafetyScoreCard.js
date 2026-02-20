@@ -101,7 +101,7 @@ const SafetyScoreCard = ({ safetyScore, location, unavailableReason, ctaLabel, o
               {safetyScore.description}
             </AppText>
             <AppText variant="bodySmall" style={[styles.safetyNote, { color: theme.textTertiary }]}> 
-              Based on incidents within 5km radius
+              Based on incidents within 1km radius
             </AppText>
           </View>
         </View>

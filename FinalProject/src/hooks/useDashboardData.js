@@ -43,7 +43,7 @@ const useDashboardData = () => {
 
   const queryFn = useCallback(async () => {
     const params = location
-      ? { latitude: roundedLat, longitude: roundedLng, radius: 5 }
+      ? { latitude: roundedLat, longitude: roundedLng, radius: 1 }
       : {};
 
     const result = await statsAPI.getDashboardStats(params);

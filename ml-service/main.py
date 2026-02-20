@@ -198,6 +198,18 @@ class FullAnalysisRequest(BaseModel):
     duplicate_count: int = Field(default=0, ge=0)
 
 
+class DedupCompareRequest(BaseModel):
+    base_text: str = Field(..., min_length=1, max_length=10000)
+    candidate_text: str = Field(..., min_length=1, max_length=10000)
+
+
+class DedupCompareResponse(BaseModel):
+    is_duplicate: bool
+    confidence: float
+    reasoning: str
+    provider_supported: bool = True
+
+
 class EmbeddingResponse(BaseModel):
     embedding: List[float]
     dimensions: int
@@ -412,6 +424,42 @@ async def compute_similarity(request: SimilarityRequest):
         similarities=sorted(results, key=lambda x: x["score"], reverse=True),
         threshold=request.threshold,
     )
+
+
+@app.post("/dedup/compare", response_model=DedupCompareResponse)
+async def dedup_compare(request: DedupCompareRequest):
+    """
+    Stage-2 contextual duplicate detection.
+
+    Reads both incident reports in full and asks the LLM to determine whether
+    they describe the same real-world event.  Returns a structured verdict with
+    a confidence score and a short reasoning trace.
+
+    Only meaningful when ML_PROVIDER=gemini.  Returns provider_supported=False
+    (is_duplicate=False, confidence=0) for the local provider so callers can
+    detect the no-op and skip stage-2 gracefully.
+    """
+    if active_provider is None:
+        raise HTTPException(status_code=503, detail="ML provider not initialised")
+
+    started_at = time.perf_counter()
+    async with _get_semaphore():
+        result = await active_provider.pairwise_compare(
+            request.base_text, request.candidate_text
+        )
+
+    log_inference_event("/dedup/compare", "pairwise", started_at)
+
+    if result is None:
+        # Local provider: no LLM available
+        return DedupCompareResponse(
+            is_duplicate=False,
+            confidence=0.0,
+            reasoning="Pairwise LLM comparison not available for local provider.",
+            provider_supported=False,
+        )
+
+    return DedupCompareResponse(**result)
 
 
 @app.post("/classify", response_model=ClassificationResponse)

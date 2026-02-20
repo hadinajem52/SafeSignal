@@ -709,6 +709,96 @@ async function createIncident(incidentData, reporterId) {
           }
         }
 
+        // ── Stage-2: LLM contextual pairwise comparison ────────────────
+        // Stage-1 scores are computed from numeric signals (distance, time,
+        // text/semantic similarity, entities).  Stage-2 reads BOTH report texts
+        // in full and asks Gemini: "Are these the same real-world event?"
+        //
+        // This catches cases stage-1 misses:
+        //   • Heavily paraphrased descriptions (text similarity near 0 despite
+        //     being the same event).
+        //   • Different locations mentioned due to different vantage points.
+        //   • Reporter A says "gun shots" while Reporter B says "armed robbery".
+        //
+        // Gate: only candidates with stage-1 score >= 0.35 are sent — filters
+        // obvious noise and limits the number of LLM calls per submission.
+        //
+        // All comparisons are fired in parallel so total added latency ≈
+        // max(single call) rather than N × call.
+        //
+        // Override logic (only applied when LLM confidence >= 0.70):
+        //   is_duplicate: true  → final score = 0.80 + (confidence - 0.70) × 0.5
+        //   is_duplicate: false → final score capped at min(stage-1, 0.55)
+        // When LLM is uncertain (< 0.70) the stage-1 score is preserved.
+
+        const STAGE2_GATE = 0.35;
+        const STAGE2_CONFIDENCE_FLOOR = 0.70;
+        const STAGE2_MAX_CALLS = 3; // cap LLM calls per submission
+
+        const stage2Candidates = useExternalMl
+          ? scoredCandidates
+              .filter((c) => c.score >= STAGE2_GATE)
+              .slice(0, STAGE2_MAX_CALLS) // already sorted by score desc
+          : [];
+
+        if (stage2Candidates.length > 0) {
+          try {
+            const verdictResults = await Promise.allSettled(
+              stage2Candidates.map((c) =>
+                mlClient.dedupCompare(mlText, `${c.title} ${c.description}`)
+              )
+            );
+
+            const verdictMap = new Map();
+            verdictResults.forEach((result, index) => {
+              if (result.status === 'fulfilled' && result.value !== null) {
+                verdictMap.set(stage2Candidates[index].incidentId, result.value);
+              }
+            });
+
+            if (verdictMap.size > 0) {
+              scoredCandidates = scoredCandidates.map((candidate) => {
+                const verdict = verdictMap.get(candidate.incidentId);
+                if (!verdict) return candidate;
+
+                const { isDuplicate, confidence, reasoning } = verdict;
+                const llmVerdict = { isDuplicate, confidence, reasoning, overrode: false };
+
+                if (confidence < STAGE2_CONFIDENCE_FLOOR) {
+                  // LLM is uncertain — keep stage-1 score, just record the reasoning.
+                  return { ...candidate, llmVerdict };
+                }
+
+                // LLM is confident — override the composite score.
+                let overriddenScore;
+                if (isDuplicate) {
+                  // Scale 0.80 → 0.95 based on LLM confidence above the floor.
+                  overriddenScore = 0.80 + (confidence - STAGE2_CONFIDENCE_FLOOR) * 0.5;
+                } else {
+                  // Confirmed distinct — cap below the highConfidenceDuplicates threshold.
+                  overriddenScore = Math.min(candidate.score, 0.55);
+                }
+
+                return {
+                  ...candidate,
+                  score: Number(Math.min(overriddenScore, 1.0).toFixed(3)),
+                  llmVerdict: { ...llmVerdict, overrode: true },
+                };
+              }).sort((a, b) => b.score - a.score);
+
+              const overriddenCount = scoredCandidates.filter(
+                (c) => c.llmVerdict?.overrode
+              ).length;
+              logger.info(
+                `Stage-2 LLM compare: ${verdictMap.size} comparisons, ` +
+                `${overriddenCount} score overrides on incident ${incident.incident_id}`
+              );
+            }
+          } catch (stage2Error) {
+            logger.warn(`Stage-2 pairwise compare failed: ${stage2Error.message}`);
+          }
+        }
+
         const topScore = scoredCandidates[0]?.score || 0;
         // 0.70 calibrated against test data: SAME-report pairs score ~0.80+,
         // DIFF-report pairs score ~0.56–0.57. 0.55 caused false positives that

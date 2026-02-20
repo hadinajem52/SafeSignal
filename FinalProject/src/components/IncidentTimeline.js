@@ -17,7 +17,7 @@ import io from 'socket.io-client';
 import { tokenStorage } from '../services/api';
 import getSocketUrl from '../utils/socketUrl';
 
-const IncidentTimeline = ({ incidentId, incidentStatus }) => {
+const IncidentTimeline = ({ incidentId }) => {
   const { theme } = useTheme();
   const { user } = useAuth();
   const [timeline, setTimeline] = useState([]);
@@ -130,6 +130,24 @@ const IncidentTimeline = ({ incidentId, incidentStatus }) => {
     return date.toLocaleDateString();
   };
 
+  const getStatusChangedMessage = (notes) => {
+    const noteText = typeof notes === 'string' ? notes.trim() : String(notes ?? '').trim();
+    if (!noteText) return 'Status updated';
+
+    const normalizedNotes = noteText.toLowerCase();
+    const policeClosedPatterns = [
+      'closed with outcome:',
+      'status changed to police_closed',
+      'police_closed',
+    ];
+
+    if (policeClosedPatterns.some((pattern) => normalizedNotes.includes(pattern))) {
+      return 'Incident resolved by law enforcement';
+    }
+
+    return `Status changed - ${noteText}`;
+  };
+
   const renderTimelineItem = (item, index) => {
     const isSystemMessage = item.item_type === 'system';
     const isOwnMessage = item.user_id === user?.userId;
@@ -190,7 +208,7 @@ const IncidentTimeline = ({ incidentId, incidentStatus }) => {
   const getSystemMessage = (item) => {
     switch (item.action_type) {
       case 'status_changed':
-        return `Status changed ${item.notes ? `- ${item.notes}` : ''}`;
+        return getStatusChangedMessage(item.notes);
       case 'verified':
         return 'Report verified by moderator';
       case 'rejected':
