@@ -37,7 +37,6 @@ const useLocationPicker = ({
   const mapRef = useRef(null);
 
   const getCurrentLocation = useCallback(async () => {
-    console.log('[Location] getCurrentLocation called, locationServicesEnabled=', locationServicesEnabled);
     if (!locationServicesEnabled) {
       Alert.alert(
         'Location Disabled',
@@ -51,32 +50,24 @@ const useLocationPicker = ({
     onClearLocationError?.();
 
     try {
-      console.log('[Location] checking hasServicesEnabledAsync...');
       const servicesEnabled = await Location.hasServicesEnabledAsync();
-      console.log('[Location] hasServicesEnabledAsync =', servicesEnabled);
-
       if (!servicesEnabled) {
-        console.log('[Location] services off — calling enableNetworkProviderAsync...');
+        // On Android, show the native Google "Turn on Location" in-app dialog.
+        // On iOS this is a no-op that resolves immediately.
         try {
           await Location.enableNetworkProviderAsync();
-          console.log('[Location] enableNetworkProviderAsync resolved (user tapped Turn On)');
-        } catch (e) {
-          console.log('[Location] enableNetworkProviderAsync rejected (user declined):', e?.message);
+        } catch {
+          // User tapped "No, thanks" — stop silently.
           setIsLoadingLocation(false);
           return;
         }
       }
 
-      console.log('[Location] requesting foreground permission...');
       const { status: existingStatus } = await Location.getForegroundPermissionsAsync();
-      console.log('[Location] existing permission status =', existingStatus);
       let status = existingStatus;
       if (existingStatus !== 'granted') {
-        console.log('[Location] not yet granted — calling requestForegroundPermissionsAsync...');
         ({ status } = await Location.requestForegroundPermissionsAsync());
-        console.log('[Location] request result =', status);
       }
-      console.log('[Location] permission status =', status);
 
       if (status !== 'granted') {
         setIsLoadingLocation(false);
@@ -94,38 +85,34 @@ const useLocationPicker = ({
       let position;
 
       // Fast path: use a cached position if one exists (returns in < 1 s).
-      console.log('[Location] trying getLastKnownPositionAsync (fast)...');
       const lastKnownFast = await withTimeout(
         Location.getLastKnownPositionAsync({
           maxAge: 10 * 60 * 1000,
           requiredAccuracy: 2000,
         }),
         2000
-      ).catch((e) => { console.log('[Location] getLastKnownPositionAsync (fast) failed:', e?.message); return null; });
-      console.log('[Location] lastKnownFast =', lastKnownFast ? `lat=${lastKnownFast.coords?.latitude}` : 'null');
+      ).catch(() => null);
 
       if (lastKnownFast?.coords) {
         position = lastKnownFast;
       } else {
-        console.log('[Location] no cache — calling getCurrentPositionAsync (Balanced)...');
+        // No cache — request a live fix. Use Balanced (network + GPS) rather
+        // than High (GPS-only) so it resolves in seconds instead of minutes.
         try {
           position = await withTimeout(
             Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
             12000
           );
-          console.log('[Location] getCurrentPositionAsync resolved:', position?.coords?.latitude, position?.coords?.longitude);
         } catch (positionError) {
-          console.log('[Location] getCurrentPositionAsync failed:', positionError?.message, positionError?.code);
-          console.log('[Location] trying stale getLastKnownPositionAsync...');
+          // One last attempt: accept any cached position regardless of age/accuracy.
           const lastKnownStale = await withTimeout(
             Location.getLastKnownPositionAsync({
               maxAge: 60 * 60 * 1000,
               requiredAccuracy: 10000,
             }),
             2000
-          ).catch((e) => { console.log('[Location] stale lastKnown failed:', e?.message); return null; });
+          ).catch(() => null);
 
-          console.log('[Location] lastKnownStale =', lastKnownStale ? `lat=${lastKnownStale.coords?.latitude}` : 'null');
           if (!lastKnownStale?.coords) {
             throw positionError;
           }
