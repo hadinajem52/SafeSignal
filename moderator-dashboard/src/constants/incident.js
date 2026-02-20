@@ -92,7 +92,10 @@ export const STATUS_LABELS = INCIDENT_STATUSES.reduce((acc, status) => {
 
 export const MODERATOR_STATUS_FILTERS = [
   { value: 'all', label: 'All Reports' },
+  { value: 'submitted,auto_flagged,auto_processed', label: 'Needs Review' },
   { value: 'submitted', label: 'Pending' },
+  { value: 'auto_flagged', label: 'Auto Flagged' },
+  { value: 'auto_processed', label: 'Auto Processed' },
   { value: 'in_review', label: 'In Review' },
   { value: 'verified', label: 'Verified' },
   { value: 'rejected', label: 'Rejected' },

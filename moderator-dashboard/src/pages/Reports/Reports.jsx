@@ -18,9 +18,10 @@ function getPriorityScore(report) {
 }
 
 function Reports() {
-  // Default to 'submitted' — the actual mod inbox, not every report ever
+  // Default to the combined 'Needs Review' view so auto_flagged reports are visible
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('submitted')
+  const [statusFilter, setStatusFilter] = useState('submitted,auto_flagged,auto_processed')
+  const [sortMode, setSortMode] = useState('urgency') // 'urgency' | 'time'
   const [selectedReport, setSelectedReport] = useState(null)
   const [selectedReportIds, setSelectedReportIds] = useState([])
   const [bulkActionPending, setBulkActionPending] = useState(null)
@@ -78,12 +79,17 @@ function Reports() {
 
   const filteredReports = useMemo(() => {
     const q = searchTerm.toLowerCase()
+    // Build a set so multi-value filters like 'submitted,auto_flagged' work correctly
+    const activeStatuses = statusFilter === 'all'
+      ? null
+      : new Set(statusFilter.split(',').map((s) => s.trim()))
+
     return reports
       .filter((report) => {
         const matchesSearch =
           report.title.toLowerCase().includes(q) ||
           report.description.toLowerCase().includes(q)
-        const matchesStatus = statusFilter === 'all' || report.status === statusFilter
+        const matchesStatus = !activeStatuses || activeStatuses.has(report.status)
         return matchesSearch && matchesStatus
       })
       .map((report) => ({
@@ -93,9 +99,12 @@ function Reports() {
         location: report.location_name || `${report.latitude}, ${report.longitude}`,
         createdAt: report.created_at || report.incident_date,
       }))
-      // Sort by composite priority: highest urgency first
-      .sort((a, b) => getPriorityScore(b) - getPriorityScore(a))
-  }, [reports, searchTerm, statusFilter])
+      .sort((a, b) =>
+        sortMode === 'time'
+          ? new Date(b.createdAt) - new Date(a.createdAt)
+          : getPriorityScore(b) - getPriorityScore(a)
+      )
+  }, [reports, searchTerm, statusFilter, sortMode])
 
   // Auto-select first report when list loads so the right panel isn't blank
   useEffect(() => {
@@ -215,7 +224,10 @@ function Reports() {
 
   return (
     <div className="space-y-3">
-      <PageHeader title="Reports Queue" description="Prioritised incoming reports — highest urgency first." />
+      <PageHeader
+        title="Reports Queue"
+        description={sortMode === 'time' ? 'Reports sorted by submission time — newest first.' : 'Reports sorted by urgency — highest priority first.'}
+      />
 
       {/* Toast stack */}
       <div className="fixed bottom-6 right-6 z-50 space-y-2">
@@ -240,6 +252,8 @@ function Reports() {
         onSearchChange={(event) => setSearchTerm(event.target.value)}
         statusFilter={statusFilter}
         onStatusFilterChange={(event) => setStatusFilter(event.target.value)}
+        sortMode={sortMode}
+        onSortModeChange={setSortMode}
         totalResults={filteredReports.length}
         selectedCount={selectedReportIds.length}
         bulkActionPending={bulkActionPending}
