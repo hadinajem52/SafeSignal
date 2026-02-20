@@ -1,4 +1,10 @@
 import json
+import os
+import sys
+
+# Allow running from tests/ subdirectory
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from cache_manager import RedisCacheManager
 
 # Initialize cache manager

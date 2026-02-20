@@ -2,6 +2,11 @@
 Minimal FastAPI Service - Redis Cache Demo
 Tests Redis caching without ML model dependencies
 """
+import os
+import sys
+
+# Allow running from scripts/ subdirectory
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
