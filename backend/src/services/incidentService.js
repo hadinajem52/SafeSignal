@@ -971,9 +971,18 @@ async function getAllIncidents(filters = {}) {
   }
 
   if (status) {
-    query += ` AND i.status = $${paramCount}`;
-    params.push(status);
-    paramCount++;
+    // Support comma-separated list of statuses (e.g. "submitted,auto_flagged,auto_processed")
+    const statuses = String(status).split(',').map((s) => s.trim()).filter(Boolean);
+    if (statuses.length === 1) {
+      query += ` AND i.status = $${paramCount}`;
+      params.push(statuses[0]);
+      paramCount += 1;
+    } else {
+      const placeholders = statuses.map((_, i) => `$${paramCount + i}`).join(', ');
+      query += ` AND i.status IN (${placeholders})`;
+      params.push(...statuses);
+      paramCount += statuses.length;
+    }
   }
 
   if (severity) {

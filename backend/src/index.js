@@ -188,13 +188,31 @@ app.use((req, res, next) => {
   next();
 });
 
+// General API limiter — generous enough for a multi-panel dashboard that fires
+// several concurrent queries per page load / window-focus refetch.
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 1000,
+  standardHeaders: true,
+  legacyHeaders: false,
   message: { status: 'ERROR', message: 'Too many requests' },
+  skip: (req) => req.method === 'OPTIONS',
+});
+
+// Tight limiter scoped only to auth mutation endpoints (login / register).
+// Prevents brute-force without blocking normal dashboard traffic.
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { status: 'ERROR', message: 'Too many login attempts, please try again later' },
+  skipSuccessfulRequests: true,
 });
 
 app.use('/api/', apiLimiter);
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
 
 // Health check
 app.get('/api/health', (req, res) => {

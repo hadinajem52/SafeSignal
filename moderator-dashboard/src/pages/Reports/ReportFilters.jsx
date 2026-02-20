@@ -1,5 +1,5 @@
 import React from 'react'
-import { Filter, Search } from 'lucide-react'
+import { Clock, Filter, Search, Zap } from 'lucide-react'
 import { MODERATOR_STATUS_FILTERS } from '../../constants/incident'
 
 function ReportFilters({
@@ -7,6 +7,8 @@ function ReportFilters({
   onSearchChange,
   statusFilter,
   onStatusFilterChange,
+  sortMode,
+  onSortModeChange,
   totalResults,
   selectedCount,
   bulkActionPending,
@@ -45,6 +47,35 @@ function ReportFilters({
               </option>
             ))}
           </select>
+        </div>
+
+        {/* Sort mode toggle */}
+        <div className="flex items-center rounded-lg border border-border bg-surface overflow-hidden">
+          <button
+            onClick={() => onSortModeChange('urgency')}
+            title="Sort by urgency"
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors ${
+              sortMode === 'urgency'
+                ? 'bg-primary text-white'
+                : 'text-muted hover:text-text hover:bg-surface'
+            }`}
+          >
+            <Zap size={13} />
+            Urgency
+          </button>
+          <div className="w-px h-5 bg-border" />
+          <button
+            onClick={() => onSortModeChange('time')}
+            title="Sort by submission time"
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors ${
+              sortMode === 'time'
+                ? 'bg-primary text-white'
+                : 'text-muted hover:text-text hover:bg-surface'
+            }`}
+          >
+            <Clock size={13} />
+            Newest
+          </button>
         </div>
 
         {/* Separator + count */}
