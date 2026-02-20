@@ -609,6 +609,37 @@ router.post(
 );
 
 /**
+ * @route   POST /api/incidents/:id/dedup/dismiss
+ * @desc    Dismiss the AI's duplicate flag — confirm the incident is distinct.
+ *          Records a 'not_duplicate' verdict in report_ml for offline calibration.
+ * @access  Private (Moderator/Admin)
+ */
+router.post(
+  '/:id/dedup/dismiss',
+  authenticateToken,
+  requireRole(['moderator', 'admin']),
+  [param('id').isInt()],
+  async (req, res) => {
+    if (handleValidationErrors(req, res)) return;
+
+    try {
+      const result = await incidentService.dismissDuplicateFlag(
+        parseInt(req.params.id),
+        req.user
+      );
+
+      res.json({
+        status: 'OK',
+        message: 'Duplicate flag dismissed',
+        data: result,
+      });
+    } catch (error) {
+      handleServiceError(error, res, 'Failed to dismiss duplicate flag');
+    }
+  }
+);
+
+/**
  * @route   POST /api/incidents/:id/reject
  * @desc    Reject an incident
  * @access  Private (Moderator/Admin)

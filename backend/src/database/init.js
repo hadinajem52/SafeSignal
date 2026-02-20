@@ -240,6 +240,27 @@ const initDatabase = async () => {
       ADD COLUMN IF NOT EXISTS is_toxic BOOLEAN DEFAULT FALSE;
     `);
 
+    // Moderator dedup verdict columns — ground-truth labels for ML predictions
+    await db.none(`
+      ALTER TABLE report_ml
+      ADD COLUMN IF NOT EXISTS dedup_verdict VARCHAR(30)
+        CHECK (dedup_verdict IS NULL OR dedup_verdict IN ('confirmed_duplicate', 'not_duplicate'));
+    `);
+    await db.none(`
+      ALTER TABLE report_ml
+      ADD COLUMN IF NOT EXISTS dedup_verdict_by INTEGER REFERENCES users(user_id) ON DELETE SET NULL;
+    `);
+    await db.none(`
+      ALTER TABLE report_ml
+      ADD COLUMN IF NOT EXISTS dedup_verdict_at TIMESTAMP;
+    `);
+
+    // Incident embedding — store Gemini embedding at creation time for in-process cosine similarity
+    await db.none(`
+      ALTER TABLE incidents
+      ADD COLUMN IF NOT EXISTS text_embedding FLOAT4[];
+    `);
+
     // Create Incident_Comments table for timeline feature
     await db.none(`
       CREATE TABLE IF NOT EXISTS incident_comments (
@@ -288,6 +309,8 @@ const initDatabase = async () => {
       CREATE INDEX IF NOT EXISTS idx_report_ml_report ON report_ml (report_id);
       CREATE INDEX IF NOT EXISTS idx_report_ml_risk ON report_ml (risk_score DESC);
       CREATE INDEX IF NOT EXISTS idx_report_ml_toxic ON report_ml (is_toxic, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_report_ml_dedup_verdict ON report_ml (dedup_verdict) WHERE dedup_verdict IS NOT NULL;
+      CREATE INDEX IF NOT EXISTS idx_incidents_has_embedding ON incidents (incident_id) WHERE text_embedding IS NOT NULL;
       CREATE INDEX IF NOT EXISTS idx_incident_comments_incident_id ON incident_comments (incident_id, created_at ASC);
       CREATE INDEX IF NOT EXISTS idx_incident_comments_user_id ON incident_comments (user_id);
       CREATE INDEX IF NOT EXISTS idx_incident_comments_visibility ON incident_comments (incident_id, is_internal, created_at ASC);

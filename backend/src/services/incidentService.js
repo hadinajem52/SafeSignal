@@ -128,6 +128,31 @@ const jaccardSimilarity = (setA, setB) => {
   return union === 0 ? 0 : intersection / union;
 };
 
+/**
+ * Compute cosine similarity between a query vector and each candidate vector.
+ * Returns a score per candidate in the same order as candidateVecs.
+ * Stored embeddings come from the DB as FLOAT4[] (plain JS arrays).
+ */
+const cosineSimilarityBatch = (queryVec, candidateVecs) => {
+  const qArr = Array.isArray(queryVec) ? queryVec : Array.from(queryVec);
+  let qNorm = 0;
+  for (let i = 0; i < qArr.length; i++) qNorm += qArr[i] * qArr[i];
+  qNorm = Math.sqrt(qNorm);
+  if (qNorm === 0) return candidateVecs.map(() => 0);
+
+  return candidateVecs.map((vec) => {
+    const cArr = Array.isArray(vec) ? vec : Array.from(vec);
+    let dot = 0;
+    let cNorm = 0;
+    for (let i = 0; i < cArr.length; i++) {
+      dot += qArr[i] * cArr[i];
+      cNorm += cArr[i] * cArr[i];
+    }
+    cNorm = Math.sqrt(cNorm);
+    return cNorm === 0 ? 0 : dot / (qNorm * cNorm);
+  });
+};
+
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
 const normalizeEntityToken = (token) => {
@@ -490,6 +515,7 @@ async function createIncident(incidentData, reporterId) {
             i.category,
             i.incident_date,
             i.reporter_id,
+            i.text_embedding,
             ST_Distance(
               i.location,
               ST_SetSRID(ST_MakePoint($1::float, $2::float), 4326)::geography
@@ -519,25 +545,56 @@ async function createIncident(incidentData, reporterId) {
         ]);
       }
 
+      // ── ML call strategy based on stored embedding availability ─────────
+      // Fast path  (all candidates have stored embeddings):
+      //   /analyze handles classification + toxicity + risk only.
+      //   /embed runs concurrently to get the query vector.
+      //   Cosine similarity is then computed in-process — zero extra ML calls.
+      //
+      // Transition path (some/all candidates lack stored embeddings):
+      //   Bundle candidateTexts into /analyze (one call covers everything).
+      const allCandidatesHaveEmbedding = candidates.length > 0
+        && candidates.every((c) => Array.isArray(c.text_embedding) && c.text_embedding.length > 0);
+
       // Try external ML service first, fallback to heuristics.
-      // Candidate texts are bundled into the same call — no second ML round-trip.
       let mlResults = null;
+      let queryEmbedding = null;
       let useExternalMl = false;
       if (allowExternalMl) {
         try {
-          const candidateTexts = candidates.length > 0
-            ? candidates.map((c) => `${c.title} ${c.description}`)
-            : null;
-          mlResults = await mlClient.analyzeIncident({
-            text: mlText,
-            category: incident.category,
-            severity: incident.severity,
-            candidateTexts,
-            duplicateCount: 0,
-          });
+          if (allCandidatesHaveEmbedding) {
+            // Fast path: run analyze and embed concurrently.
+            // Both are independent Gemini requests; FastAPI semaphore (GEMINI_MAX_CONCURRENCY=20)
+            // lets them run in parallel, so total latency ≈ max(analyze, embed).
+            [mlResults, queryEmbedding] = await Promise.all([
+              mlClient.analyzeIncident({
+                text: mlText,
+                category: incident.category,
+                severity: incident.severity,
+                candidateTexts: null,
+                duplicateCount: 0,
+              }),
+              mlClient.getEmbedding(mlText),
+            ]);
+          } else {
+            // Transition path: bundle candidate texts so /analyze returns similarity scores.
+            const candidateTexts = candidates.length > 0
+              ? candidates.map((c) => `${c.title} ${c.description}`)
+              : null;
+            mlResults = await mlClient.analyzeIncident({
+              text: mlText,
+              category: incident.category,
+              severity: incident.severity,
+              candidateTexts,
+              duplicateCount: 0,
+            });
+          }
           useExternalMl = mlResults !== null;
           if (useExternalMl) {
-            logger.info(`Using external ML service for incident ${incident.incident_id}`);
+            logger.info(
+              `ML applied to incident ${incident.incident_id} ` +
+              `(stored embeddings: ${allCandidatesHaveEmbedding})`
+            );
           }
         } catch (mlError) {
           logger.warn(`External ML service unavailable, using heuristics: ${mlError.message}`);
@@ -555,10 +612,15 @@ async function createIncident(incidentData, reporterId) {
         ? { score: mlResults.toxicity.toxicityScore, isToxic: mlResults.toxicity.isToxic }
         : assessToxicity(mlText);
 
+      // Only trust ML-sourced confidence for auto-verification.
+      // Heuristic keyword matching can produce false high-confidence scores
+      // (it starts at 40% for any single keyword hit).
+      // If the external ML service was unavailable, leave confidencePercent null
+      // so applyAutoVerificationIfEligible returns reason='no_confidence'.
       autoVerificationContext.confidencePercent =
-        categoryConfidence === null || categoryConfidence === undefined
-          ? null
-          : Number((Number(categoryConfidence) * 100).toFixed(2));
+        useExternalMl && mlResults?.classification
+          ? Number((Number(categoryConfidence) * 100).toFixed(2))
+          : null;
       autoVerificationContext.isToxic = Boolean(toxicity.isToxic);
 
       if (!Number.isNaN(latitudeValue) && !Number.isNaN(longitudeValue)) {
@@ -585,22 +647,37 @@ async function createIncident(incidentData, reporterId) {
         // Compute dedup with optional ML-enhanced similarity
         let scoredCandidates = buildDedupCandidates(dedupIncident, candidates);
 
-        // Apply ML semantic similarity from the bundled analyzeIncident response.
-        // Candidate texts were passed in the initial call — no second round-trip needed.
-        // Unlike the standalone /similarity endpoint, /analyze returns scores for ALL
-        // candidates (unfiltered), so even low-similarity pairs get accurate ML scores.
-        const mlSimilarities = mlResults?.similarity?.similarities;
-        if (useExternalMl && mlSimilarities?.length > 0) {
-          try {
-            // Indices in mlSimilarities map to the original SQL candidate order.
-            // scoredCandidates may already be re-ordered, so key by incident id.
-            const similarityByIncidentId = new Map(
+        // ── ML semantic similarity — two paths ─────────────────────────
+        //
+        // Fast path  (all candidates had stored embeddings):
+        //   queryEmbedding was fetched concurrently; compute cosine in-process.
+        //   No additional ML calls needed.
+        //
+        // Transition path (some/all candidates lacked stored embeddings):
+        //   Scores come from the bundled /analyze response.
+        let similarityByIncidentId = new Map();
+
+        if (useExternalMl && allCandidatesHaveEmbedding && queryEmbedding) {
+          const scores = cosineSimilarityBatch(
+            queryEmbedding,
+            candidates.map((c) => c.text_embedding)
+          );
+          similarityByIncidentId = new Map(
+            candidates.map((c, idx) => [c.incident_id, { score: scores[idx] }])
+          );
+        } else {
+          const mlSimilarities = mlResults?.similarity?.similarities;
+          if (useExternalMl && mlSimilarities?.length > 0) {
+            similarityByIncidentId = new Map(
               mlSimilarities
                 .filter((s) => Number.isInteger(s.index) && s.index >= 0 && s.index < candidates.length)
                 .map((s) => [candidates[s.index].incident_id, s])
             );
+          }
+        }
 
-            // Enhance scores with ML similarity
+        if (useExternalMl && similarityByIncidentId.size > 0) {
+          try {
             scoredCandidates = scoredCandidates.map((candidate) => {
               const mlSim = similarityByIncidentId.get(candidate.incidentId);
               if (mlSim && Number.isFinite(mlSim.score)) {
@@ -810,6 +887,30 @@ async function createIncident(incidentData, reporterId) {
             severity: updatedIncident.severity,
           });
         }
+        // ── Store new incident's embedding for future dedup reuse ──────
+        // Persisted so future submissions can compute cosine similarity
+        // in-process without re-embedding this incident's text.
+        //
+        // If the fast path was used, queryEmbedding is already available.
+        // Otherwise, fetch it asynchronously (does not block the response).
+        const embeddingToStore = queryEmbedding || null;
+        if (embeddingToStore) {
+          db.none(
+            'UPDATE incidents SET text_embedding = $1 WHERE incident_id = $2',
+            [embeddingToStore, incident.incident_id]
+          ).catch((e) => logger.warn(`Failed to store incident embedding: ${e.message}`));
+        } else if (useExternalMl) {
+          mlClient.getEmbedding(mlText)
+            .then((emb) => {
+              if (!emb) return;
+              return db.none(
+                'UPDATE incidents SET text_embedding = $1 WHERE incident_id = $2',
+                [emb, incident.incident_id]
+              );
+            })
+            .catch((e) => logger.warn(`Failed to store incident embedding async: ${e.message}`));
+        }
+
       }
     } catch (error) {
       logger.warn(`Dedup/ML processing failed for incident ${incident.incident_id}: ${error.message}`);
@@ -1094,6 +1195,23 @@ async function linkDuplicateIncident(incidentId, duplicateIncidentId, requesting
   await logAction(incidentId, requestingUser.userId, 'merged', `Merged duplicate incident ${duplicateIncidentId}`);
   await logAction(duplicateIncidentId, requestingUser.userId, 'merged', `Marked as duplicate of ${incidentId}`);
 
+  // Record moderator verdict in report_ml so the ground-truth label is captured
+  // alongside the AI's original dedup score for offline calibration.
+  try {
+    await db.none(
+      `UPDATE report_ml
+       SET dedup_verdict = 'confirmed_duplicate',
+           dedup_verdict_by = $1,
+           dedup_verdict_at = CURRENT_TIMESTAMP
+       WHERE report_id = (
+         SELECT report_id FROM reports WHERE incident_id = $2 ORDER BY created_at DESC LIMIT 1
+       )`,
+      [requestingUser.userId, duplicateIncidentId]
+    );
+  } catch (verdictError) {
+    logger.warn(`Failed to record dedup verdict for incident ${duplicateIncidentId}: ${verdictError.message}`);
+  }
+
   emitToRoles(['moderator', 'admin'], 'incident:update', {
     incidentId: updatedDuplicate.incident_id,
     status: updatedDuplicate.status,
@@ -1115,6 +1233,47 @@ async function linkDuplicateIncident(incidentId, duplicateIncidentId, requesting
     duplicateIncidentId,
     status: updatedDuplicate.status,
   };
+}
+
+/**
+ * Record a moderator's explicit dismissal of the AI's duplicate flag.
+ * Logs 'not_duplicate' verdict in report_ml for offline calibration.
+ * Does NOT change the incident's status — the flag is simply noted as wrong.
+ *
+ * @param {number} incidentId - The incident whose duplicate flag is being dismissed
+ * @param {Object} requestingUser
+ */
+async function dismissDuplicateFlag(incidentId, requestingUser) {
+  const incident = await db.oneOrNone('SELECT incident_id FROM incidents WHERE incident_id = $1', [incidentId]);
+  if (!incident) {
+    throw ServiceError.notFound('Incident');
+  }
+
+  const updated = await db.oneOrNone(
+    `UPDATE report_ml
+     SET dedup_verdict = 'not_duplicate',
+         dedup_verdict_by = $1,
+         dedup_verdict_at = CURRENT_TIMESTAMP
+     WHERE report_id = (
+       SELECT report_id FROM reports WHERE incident_id = $2 ORDER BY created_at DESC LIMIT 1
+     )
+     RETURNING ml_id`,
+    [requestingUser.userId, incidentId]
+  );
+
+  if (!updated) {
+    throw ServiceError.notFound('No ML record found for this incident');
+  }
+
+  await logAction(
+    incidentId,
+    requestingUser.userId,
+    'flagged',
+    'Duplicate flag dismissed by moderator — incident confirmed as distinct'
+  );
+
+  logger.info(`Dedup flag dismissed on incident ${incidentId} by user ${requestingUser.userId}`);
+  return { incidentId, verdict: 'not_duplicate' };
 }
 
 /**
@@ -1708,6 +1867,7 @@ module.exports = {
   deleteIncident,
   updateIncidentCategoryForModeration,
   linkDuplicateIncident,
+  dismissDuplicateFlag,
   verifyIncident,
   rejectIncident,
   escalateIncident,
