@@ -376,3 +376,30 @@ MODEL_VERSION_MAP = {
         "ruleset_version": RISK_RULESET_VERSION,
     },
 }
+
+# ── Provider selection ────────────────────────────────────────────────────────
+# "local"  → run HuggingFace models in-process (original behaviour)
+# "gemini" → use Google Generative AI API (requires GEMINI_API_KEY)
+ML_PROVIDER = os.getenv("ML_PROVIDER", "local")
+
+# ── Gemini config (only used when ML_PROVIDER=gemini) ─────────────────────────
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_CHAT_MODEL = os.getenv("GEMINI_CHAT_MODEL", "gemini-2.5-flash")
+GEMINI_EMBEDDING_MODEL = os.getenv("GEMINI_EMBEDDING_MODEL", "models/gemini-embedding-001")
+GEMINI_TIMEOUT_SECONDS = float(os.getenv("GEMINI_TIMEOUT_SECONDS", "30.0"))
+GEMINI_MAX_RETRIES = int(os.getenv("GEMINI_MAX_RETRIES", "2"))
+# I/O-bound API calls can safely run at higher concurrency than local GPU inference.
+GEMINI_MAX_CONCURRENCY = int(os.getenv("GEMINI_MAX_CONCURRENCY", "20"))
+
+# ── Shadow mode ───────────────────────────────────────────────────────────────
+# When enabled with ML_PROVIDER=local, calls Gemini in parallel, logs comparison,
+# but always returns the local model result. Safe for validating before switching.
+SHADOW_MODE_ENABLED = os.getenv("SHADOW_MODE_ENABLED", "false").lower() == "true"
+SHADOW_ENDPOINTS = _load_csv_env("SHADOW_ENDPOINTS", ["classify"])
+
+# ── Prompt versioning ─────────────────────────────────────────────────────────
+# Bump these when prompt text changes to prevent stale cached results.
+PROMPT_VERSION_CLASSIFY = os.getenv("PROMPT_VERSION_CLASSIFY", "classify-v1")
+PROMPT_VERSION_TOXICITY = os.getenv("PROMPT_VERSION_TOXICITY", "toxicity-v1")
+PROMPT_VERSION_RISK = os.getenv("PROMPT_VERSION_RISK", "risk-v1")
+PROMPT_VERSION_ANALYZE = os.getenv("PROMPT_VERSION_ANALYZE", "analyze-v1")
