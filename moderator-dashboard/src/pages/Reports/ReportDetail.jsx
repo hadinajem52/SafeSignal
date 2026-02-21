@@ -9,10 +9,10 @@ import StatusBadge from '../../components/StatusBadge'
 import { formatCategoryLabel, openMapsUrl } from '../../utils/incident'
 import ReportActions from './ReportActions'
 
-// Keyboard shortcut hint
+// Keyboard shortcut hint — used only in the empty state now
 function KbdHint({ label }) {
   return (
-    <kbd className="inline-flex items-center justify-center w-5 h-5 rounded bg-white/15 text-[10px] font-mono font-bold text-white/80">
+    <kbd className="inline-flex items-center justify-center size-5 rounded border border-border bg-surface text-[10px] font-mono font-bold text-text">
       {label}
     </kbd>
   )
@@ -52,54 +52,51 @@ function ReportDetail({
 
   return (
     <div className="flex flex-col h-full bg-card overflow-hidden">
-      {/* ── Refined header ── */}
-      <div className="flex-shrink-0 bg-gradient-to-r from-[#1a2744] to-[#0f2035] px-5 py-3 flex items-center justify-between gap-3 border-b border-white/5">
-        <div className="min-w-0">
-          <h2 className="text-[15px] font-bold text-white leading-tight truncate">{report.title}</h2>
-          <div className="flex items-center gap-2 mt-1.5 text-[11px] text-white/50">
-            <KbdHint label="E" /> <span>escalate</span>
-            <KbdHint label="R" /> <span>reject</span>
-            <KbdHint label="N" /> <span>next</span>
-          </div>
+      {/* ── Header bar ── */}
+      <div className="flex-shrink-0 px-5 py-3 flex items-center justify-between gap-4 bg-card border-b border-border">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-sm font-bold text-text text-balance leading-snug truncate">{report.title}</h2>
         </div>
-        <div className="flex gap-1.5 flex-shrink-0">
-          <button
-            onClick={onNext}
-            className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-semibold text-white/80 transition-colors"
-          >
-            Next
-          </button>
-        </div>
+        <button
+          onClick={onNext}
+          aria-label="Next report"
+          className="flex-shrink-0 px-3 py-1.5 rounded border border-border text-muted text-xs font-semibold
+            hover:bg-surface hover:text-text transition-colors"
+        >
+          Next →
+        </button>
       </div>
 
       {/* ── Two-column content ── */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left: report info + actions */}
         <div className="w-1/2 overflow-y-auto p-5 space-y-5 border-r border-border">
-          {/* Badges row */}
+          {/* Badges row — plain bordered chips, no pills */}
           <div className="flex items-center gap-2 flex-wrap">
-            <StatusBadge status={report.status} size="sm" />
-            <span className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-surface text-muted border border-border uppercase tracking-wide">
+            <StatusBadge status={report.status} size="sm" className="!rounded" />
+            <span className="px-2.5 py-1 rounded text-[11px] font-semibold bg-surface text-muted border border-border uppercase tracking-wide">
               {formatCategoryLabel(report.category)}
             </span>
-            <SeverityBadge severity={report.severity} display="pill" />
+            <SeverityBadge severity={report.severity} display="initial" />
           </div>
 
           {/* Description */}
           <p className="text-sm text-muted leading-relaxed">{report.description}</p>
 
-          {/* Meta grid */}
+          {/* Meta grid — LE Interface pattern (condensed mono labels, 600 data) */}
           <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-            {[
-              ['Reporter', report.reporter],
-              ['Location', report.location],
-              ['Submitted', new Date(report.createdAt).toLocaleString()],
-            ].map(([label, value]) => (
-              <div key={label}>
-                <p className="text-[11px] font-semibold text-muted uppercase tracking-wider">{label}</p>
-                <p className="text-sm font-medium text-text mt-0.5">{value}</p>
-              </div>
-            ))}
+            <div>
+              <p className="text-[10px] font-mono font-bold text-muted uppercase tracking-widest">Reporter</p>
+              <p className="text-sm font-semibold text-text mt-0.5">{report.reporter}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-mono font-bold text-muted uppercase tracking-widest">Location</p>
+              <p className="text-sm font-semibold text-text mt-0.5 leading-snug">{report.location}</p>
+            </div>
+            <div className="col-span-2">
+              <p className="text-[10px] font-mono font-bold text-muted uppercase tracking-widest">Submitted</p>
+              <p className="text-sm font-semibold text-text mt-0.5 tabular-nums">{new Date(report.createdAt).toLocaleString()}</p>
+            </div>
           </div>
 
           {/* Map */}
@@ -199,9 +196,9 @@ function ReportDetail({
 
         {/* Right: timeline */}
         <div className="w-1/2 flex flex-col bg-surface/40 overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-border flex-shrink-0">
-            <h3 className="text-sm font-bold text-text">Timeline & Communication</h3>
-            <p className="text-[11px] text-muted mt-0.5">Notes and reporter messages</p>
+          <div className="px-4 py-3 border-b border-border flex-shrink-0">
+            <p className="text-[10px] font-mono font-bold text-muted uppercase tracking-widest">Timeline & Comms</p>
+            <p className="text-[11px] text-muted mt-0.5">Notes &amp; reporter messages</p>
           </div>
           <div className="flex-1 overflow-hidden">
             <IncidentTimeline incidentId={report.id} />

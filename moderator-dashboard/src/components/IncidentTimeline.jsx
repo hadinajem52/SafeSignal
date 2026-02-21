@@ -123,60 +123,59 @@ const IncidentTimeline = ({ incidentId }) => {
   }
 
   const renderTimelineItem = (item, index) => {
+    const isLast = index === timeline.length - 1
     const isSystemMessage = item.item_type === 'system'
+    const isItemInternal = item.is_internal
     const isStaff = ['moderator', 'admin', 'law_enforcement'].includes(item.role)
 
     if (isSystemMessage) {
       return (
-        <div key={index} className="flex justify-center my-3">
-          <div className="bg-surface/70 px-3.5 py-1.5 rounded-full border border-border">
-            <p className="text-[11px] text-muted italic">{getSystemMessage(item)}</p>
-            <p className="text-[10px] text-muted/60 text-center mt-0.5">{formatTime(item.created_at)}</p>
+        <div key={index} className="relative flex gap-3 pb-5">
+          {/* Vertical connector */}
+          {!isLast && <div className="absolute left-[8px] top-[18px] bottom-0 w-px bg-border" />}
+          {/* Muted system dot */}
+          <div className="size-[18px] rounded-full border border-border bg-surface flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0 pt-0.5">
+            <p className="text-[11px] text-muted italic leading-snug">{getSystemMessage(item)}</p>
+            <p className="text-[10px] text-muted/60 mt-0.5 tabular-nums">{formatTime(item.created_at)}</p>
           </div>
         </div>
       )
     }
 
+    // Internal notes → amber; public replies → primary blue
+    const dotClass = isItemInternal
+      ? 'bg-warning/20 border-warning/40'
+      : 'bg-primary/20 border-primary/40'
+
     return (
-      <div key={index} className="mb-3.5">
-        <div className="flex items-start gap-2.5">
-          {/* Avatar */}
-          <div
-            className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 ${isStaff
-                ? 'bg-primary/15 text-primary border border-primary/20'
-                : 'bg-surface text-muted border border-border'
-              }`}
-          >
-            {item.username?.charAt(0).toUpperCase() || '?'}
+      <div key={index} className="relative flex gap-3 pb-5">
+        {!isLast && <div className="absolute left-[8px] top-[18px] bottom-0 w-px bg-border" />}
+        <div className={`size-[18px] rounded-full border flex-shrink-0 mt-1 ${dotClass}`} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+            <span className="text-xs font-semibold text-text">{item.username}</span>
+            {isStaff && (
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded border border-primary/20 bg-primary/10 text-primary">
+                Staff
+              </span>
+            )}
+            {isItemInternal && (
+              <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded border border-warning/25 bg-warning/10 text-warning">
+                <Lock size={9} />
+                Internal
+              </span>
+            )}
+            <span className="text-[10px] text-muted tabular-nums ml-auto">{formatTime(item.created_at)}</span>
           </div>
-
-          <div className="flex-1 min-w-0">
-            {/* Name + badges */}
-            <div className="flex items-center gap-1.5 mb-1">
-              <span className="font-semibold text-xs text-text">{item.username}</span>
-              {isStaff && (
-                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/15">
-                  Staff
-                </span>
-              )}
-              {item.is_internal && (
-                <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-warning/10 text-warning border border-warning/15">
-                  <Lock size={9} />
-                  Internal
-                </span>
-              )}
-              <span className="text-[10px] text-muted ml-auto">{formatTime(item.created_at)}</span>
-            </div>
-
-            {/* Message bubble */}
-            <div
-              className={`rounded-lg p-2.5 text-sm leading-relaxed ${item.is_internal
-                  ? 'bg-warning/6 border border-warning/12 text-text'
-                  : 'bg-card border border-border text-text'
-                }`}
-            >
-              <p className="whitespace-pre-wrap text-[13px]">{item.content}</p>
-            </div>
+          <div
+            className={`rounded px-3 py-2 text-[13px] leading-relaxed border ${
+              isItemInternal
+                ? 'bg-warning/5 border-warning/15 text-text'
+                : 'bg-surface border-border text-text'
+            }`}
+          >
+            <p className="whitespace-pre-wrap">{item.content}</p>
           </div>
         </div>
       </div>
@@ -207,11 +206,11 @@ const IncidentTimeline = ({ incidentId }) => {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Messages area */}
-      <div className="flex-1 overflow-y-auto px-4 py-3">
+      {/* Thread area */}
+      <div className="flex-1 overflow-y-auto px-4 py-4">
         {timeline.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-            <p className="text-sm text-muted">No messages yet. Start the conversation!</p>
+            <p className="text-sm text-muted text-center">No activity yet. Start the conversation!</p>
           </div>
         ) : (
           <>
@@ -221,32 +220,32 @@ const IncidentTimeline = ({ incidentId }) => {
         )}
       </div>
 
-      {/* Composer */}
-      <div className="border-t border-border bg-card/80 backdrop-blur-sm p-3.5">
-        {/* Toggle row */}
-        <div className="flex gap-1.5 mb-2.5">
+      {/* Composer — underline-indicator tab toggle */}
+      <div className="border-t border-border bg-card flex-shrink-0 p-3.5">
+        <div className="flex border-b border-border mb-3 -mx-3.5 px-3.5">
           <button
             onClick={() => setIsInternal(false)}
-            className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors ${!isInternal
-                ? 'bg-primary/15 text-primary border border-primary/25'
-                : 'bg-surface text-muted border border-border hover:bg-bg'
-              }`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border-b-2 transition-colors mr-0.5 -mb-px ${
+              !isInternal
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted hover:text-text'
+            }`}
           >
             Public Reply
           </button>
           <button
             onClick={() => setIsInternal(true)}
-            className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors flex items-center gap-1 ${isInternal
-                ? 'bg-warning/15 text-warning border border-warning/25'
-                : 'bg-surface text-muted border border-border hover:bg-bg'
-              }`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border-b-2 transition-colors -mb-px ${
+              isInternal
+                ? 'border-warning text-warning'
+                : 'border-transparent text-muted hover:text-text'
+            }`}
           >
-            <Lock size={11} />
+            <Lock size={10} />
             Internal Note
           </button>
         </div>
 
-        {/* Input + send */}
         <div className="flex gap-2">
           <textarea
             value={message}
@@ -258,27 +257,34 @@ const IncidentTimeline = ({ incidentId }) => {
               }
             }}
             placeholder={isInternal ? 'Add internal note (staff only)…' : 'Reply to citizen…'}
-            className={`flex-1 px-3 py-2 text-sm rounded-lg resize-none focus:outline-none focus:ring-2 transition-shadow ${isInternal
-                ? 'border border-warning/20 focus:ring-warning/20 bg-warning/5 text-text placeholder:text-muted/50'
-                : 'border border-border bg-surface text-text focus:ring-primary/20 placeholder:text-muted/50'
-              }`}
+            className={`flex-1 px-3 py-2 text-sm rounded resize-none focus:outline-none focus:ring-1 transition-shadow ${
+              isInternal
+                ? 'border border-warning/25 focus:ring-warning/30 bg-warning/5 text-text placeholder:text-muted/50'
+                : 'border border-border bg-surface text-text focus:ring-primary/30 placeholder:text-muted/50'
+            }`}
             rows={2}
             maxLength={10000}
           />
           <button
             onClick={handleSend}
             disabled={!message.trim() || sending}
-            className={`px-3 py-2 rounded-lg font-semibold transition-colors flex items-center gap-1.5 text-xs ${message.trim() && !sending
+            aria-label="Send message"
+            className={`self-end px-3 py-2 rounded font-semibold transition-colors flex items-center gap-1.5 text-xs ${
+              message.trim() && !sending
                 ? isInternal
-                  ? 'bg-warning/15 text-warning hover:bg-warning/25 border border-warning/20'
-                  : 'bg-primary/15 text-primary hover:bg-primary/25 border border-primary/20'
+                  ? 'bg-warning/15 text-warning hover:bg-warning/25 border border-warning/25'
+                  : 'bg-primary/15 text-primary hover:bg-primary/25 border border-primary/25'
                 : 'bg-surface text-muted/50 border border-border cursor-not-allowed'
-              }`}
+            }`}
           >
-            {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send size={13} />}
+            {sending ? <Loader2 className="size-3.5 animate-spin" /> : <Send size={13} />}
             Send
           </button>
         </div>
+
+        <p className={`text-[10px] mt-1.5 ${isInternal ? 'text-warning/70' : 'text-muted'}`}>
+          {isInternal ? 'Staff only — not visible to reporter' : 'Visible to the reporter'}
+        </p>
       </div>
     </div>
   )

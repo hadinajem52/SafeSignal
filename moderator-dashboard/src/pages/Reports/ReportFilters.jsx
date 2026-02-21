@@ -1,6 +1,13 @@
 import React from 'react'
-import { Clock, Filter, Search, Zap } from 'lucide-react'
-import { MODERATOR_STATUS_FILTERS } from '../../constants/incident'
+import { Clock, Search, Zap } from 'lucide-react'
+
+// Simplified tabs matching the moderator workflow screenshot.
+const STATUS_TABS = [
+  { value: 'all', label: 'All Reports' },
+  { value: 'submitted,auto_flagged,auto_processed', label: 'Pending' },
+  { value: 'rejected', label: 'Rejected' },
+  { value: 'police_closed', label: 'Closed' },
+]
 
 function ReportFilters({
   searchTerm,
@@ -16,112 +23,117 @@ function ReportFilters({
   onBulkReject,
 }) {
   return (
-    <div className="bg-card/60 backdrop-blur-sm border border-border rounded-xl px-4 py-3">
-      {/* Main row: search + filter + count + bulk actions */}
-      <div className="flex items-center gap-3 flex-wrap">
-        {/* Search */}
-        <div className="relative flex-1 min-w-[200px] max-w-[400px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" size={15} />
+    <div className="bg-card border border-border rounded-lg overflow-hidden">
+      {/* Row 1: search + count + bulk actions + keyboard hints */}
+      <div className="px-4 py-2.5 flex items-center gap-3 border-b border-border flex-wrap">
+        <div className="relative flex-1 min-w-[180px] max-w-[340px]">
+          <Search
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none"
+            size={13}
+          />
           <input
             type="text"
             value={searchTerm}
             onChange={onSearchChange}
             placeholder="Search reports…"
-            className="w-full pl-9 pr-3 py-2 text-sm bg-surface border border-border text-text rounded-lg
-              placeholder:text-muted/60 focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-shadow"
+            className="w-full pl-8 pr-3 py-1.5 text-sm bg-surface border border-border text-text rounded
+              placeholder:text-muted/60 focus:outline-none focus:ring-1 focus:ring-primary/40 transition-shadow"
           />
         </div>
 
-        {/* Status filter */}
-        <div className="relative min-w-[140px]">
-          <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" size={14} />
-          <select
-            value={statusFilter}
-            onChange={onStatusFilterChange}
-            className="w-full pl-8 pr-3 py-2 text-sm bg-surface border border-border text-text rounded-lg
-              focus:ring-2 focus:ring-primary/30 focus:border-primary/50 appearance-none cursor-pointer transition-shadow"
-          >
-            {MODERATOR_STATUS_FILTERS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Sort mode toggle */}
-        <div className="flex items-center rounded-lg border border-border bg-surface overflow-hidden">
-          <button
-            onClick={() => onSortModeChange('urgency')}
-            title="Sort by urgency"
-            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors ${
-              sortMode === 'urgency'
-                ? 'bg-primary text-white'
-                : 'text-muted hover:text-text hover:bg-surface'
-            }`}
-          >
-            <Zap size={13} />
-            Urgency
-          </button>
-          <div className="w-px h-5 bg-border" />
-          <button
-            onClick={() => onSortModeChange('time')}
-            title="Sort by submission time"
-            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors ${
-              sortMode === 'time'
-                ? 'bg-primary text-white'
-                : 'text-muted hover:text-text hover:bg-surface'
-            }`}
-          >
-            <Clock size={13} />
-            Newest
-          </button>
-        </div>
-
-        {/* Separator + count */}
-        <div className="h-6 w-px bg-border hidden sm:block" />
-        <span className="text-xs text-muted tabular-nums whitespace-nowrap">
-          {totalResults} report{totalResults !== 1 ? 's' : ''}
-          {selectedCount > 0 && (
-            <span className="text-primary font-semibold"> · {selectedCount} selected</span>
-          )}
-        </span>
-
-        {/* Bulk actions — only visible when items are selected */}
         {selectedCount > 0 && (
           <>
-            <div className="h-6 w-px bg-border hidden sm:block" />
-            <div className="flex gap-2">
-              <button
-                onClick={onBulkVerify}
-                disabled={bulkActionPending === 'reject'}
-                className="px-3 py-1.5 rounded-lg bg-success/15 text-success text-xs font-semibold
-                  hover:bg-success/25 disabled:opacity-40 transition-colors border border-success/20"
-              >
-                {bulkActionPending === 'verify' ? 'Escalating…' : 'Bulk Escalate'}
-              </button>
-              <button
-                onClick={onBulkReject}
-                disabled={bulkActionPending === 'verify'}
-                className="px-3 py-1.5 rounded-lg bg-error/15 text-error text-xs font-semibold
-                  hover:bg-error/25 disabled:opacity-40 transition-colors border border-error/20"
-              >
-                {bulkActionPending === 'reject' ? 'Rejecting…' : 'Bulk Reject'}
-              </button>
-            </div>
+            <div className="h-4 w-px bg-border hidden sm:block" />
+            <span className="text-xs text-muted tabular-nums whitespace-nowrap">
+              <span className="text-primary font-semibold">{selectedCount}</span> selected
+            </span>
+            <button
+              onClick={onBulkVerify}
+              disabled={bulkActionPending === 'reject'}
+              className="px-3 py-1.5 rounded border border-success/30 text-success text-xs font-semibold
+                hover:bg-success/10 disabled:opacity-40 transition-colors"
+            >
+              {bulkActionPending === 'verify' ? 'Escalating…' : 'Bulk Escalate'}
+            </button>
+            <button
+              onClick={onBulkReject}
+              disabled={bulkActionPending === 'verify'}
+              className="px-3 py-1.5 rounded border border-danger/30 text-danger text-xs font-semibold
+                hover:bg-danger/10 disabled:opacity-40 transition-colors"
+            >
+              {bulkActionPending === 'reject' ? 'Rejecting…' : 'Bulk Reject'}
+            </button>
           </>
         )}
 
-        {/* Keyboard shortcuts — pushed to far right */}
-        <div className="ml-auto hidden lg:flex items-center gap-3 text-[11px] text-muted">
-          {[['E', 'escalate'], ['R', 'reject'], ['N', 'next']].map(([key, action]) => (
-            <span key={key} className="inline-flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border font-mono font-bold text-text text-[10px]">
-                {key}
-              </kbd>
-              {action}
-            </span>
+        <div className="ml-auto flex items-center gap-4">
+          <span className="text-xs text-muted tabular-nums whitespace-nowrap">
+            {totalResults} report{totalResults !== 1 ? 's' : ''}
+          </span>
+          <div className="hidden lg:flex items-center gap-3 text-[11px] text-muted">
+            {[['E', 'escalate'], ['R', 'reject'], ['N', 'next']].map(([key, action]) => (
+              <span key={key} className="inline-flex items-center gap-1.5">
+                <kbd className="inline-flex items-center justify-center size-5 rounded border border-border
+                  bg-surface font-mono font-bold text-text text-[10px]">
+                  {key}
+                </kbd>
+                <span>{action}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Row 2: filter tabs + sort toggle */}
+      <div className="px-4 py-2 flex items-center gap-2 overflow-x-auto">
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {STATUS_TABS.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => onStatusFilterChange({ target: { value: tab.value } })}
+              className={`px-3 py-1.5 text-[11px] font-mono font-semibold uppercase tracking-wide rounded
+                transition-colors whitespace-nowrap ${
+                statusFilter === tab.value
+                  ? 'border border-primary text-primary bg-primary/10'
+                  : 'border border-border text-muted hover:text-text hover:bg-surface'
+              }`}
+            >
+              {tab.label}
+            </button>
           ))}
+        </div>
+
+        <div className="flex-1" />
+
+        {/* Sort toggle — same bordered sort-btn pattern as LE Interface */}
+        <div className="flex-shrink-0 inline-flex rounded border border-border bg-surface overflow-hidden">
+          <button
+            onClick={() => onSortModeChange('urgency')}
+            title="Sort by urgency"
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono font-semibold
+              uppercase tracking-wide transition-colors ${
+              sortMode === 'urgency'
+                ? 'bg-primary text-bg'
+                : 'text-muted hover:text-text hover:bg-surface'
+            }`}
+          >
+            <Zap size={11} />
+            Urgency
+          </button>
+          <span className="inline-block h-5 w-px bg-border self-center" />
+          <button
+            onClick={() => onSortModeChange('time')}
+            title="Sort by submission time"
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono font-semibold
+              uppercase tracking-wide transition-colors ${
+              sortMode === 'time'
+                ? 'bg-primary text-bg'
+                : 'text-muted hover:text-text hover:bg-surface'
+            }`}
+          >
+            <Clock size={11} />
+            Newest
+          </button>
         </div>
       </div>
     </div>
