@@ -1,6 +1,7 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { Toaster } from 'react-hot-toast'
 import Layout from './layouts/Layout'
 import Dashboard from './pages/Dashboard'
 import Reports from './pages/Reports'
@@ -9,6 +10,7 @@ import Settings from './pages/Settings'
 import Login from './pages/Login'
 import LawEnforcement from './pages/LawEnforcement'
 import AdminPanel from './pages/AdminPanel'
+import DataAnalysisCenter from './pages/DataAnalysisCenter'
 import { AuthProvider, useAuth } from './context/AuthContext'
 
 const queryClient = new QueryClient({
@@ -33,11 +35,11 @@ function FullPageLoading() {
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth()
-  
+
   if (loading) {
     return <FullPageLoading />
   }
-  
+
   return isAuthenticated ? children : <Navigate to="/login" />
 }
 
@@ -66,6 +68,7 @@ function AppRoutes() {
             <Layout>
               <Routes>
                 <Route path="/" element={<Dashboard />} />
+                <Route path="/data-analysis-center" element={<DataAnalysisCenter />} />
                 <Route
                   path="/reports"
                   element={
@@ -111,6 +114,7 @@ function AppRoutes() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <Toaster position="top-right" />
       <AuthProvider>
         <Router>
           <AppRoutes />

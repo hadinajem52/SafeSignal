@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   PanelLeftClose,
   PanelLeftOpen,
+  LayoutDashboard,
 } from 'lucide-react'
 
 function Navigation({ collapsed, onToggle }) {
@@ -21,6 +22,7 @@ function Navigation({ collapsed, onToggle }) {
 
   const navItems = [
     { path: '/', label: 'Dashboard', icon: Home },
+    { path: '/data-analysis-center', label: 'Data Analysis Center', icon: LayoutDashboard },
     ...(user?.role !== 'law_enforcement'
       ? [{ path: '/reports', label: 'Reports', icon: FileText }]
       : []),
