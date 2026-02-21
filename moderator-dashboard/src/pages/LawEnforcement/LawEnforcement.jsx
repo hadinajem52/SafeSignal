@@ -825,7 +825,6 @@ function LawEnforcement() {
       <PageHeader
         icon={Shield}
         title="Law Enforcement Operations"
-        description="Monitor active incidents, dispatch field response, and close cases with operational traceability."
       />
 
       {/* Toast stack */}
@@ -845,35 +844,34 @@ function LawEnforcement() {
         ))}
       </div>
 
-      {/* Real-time feed bar */}
-      <div className="bg-card border border-border rounded-lg shadow-soft px-4 py-2.5 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Radio
-            className={hasFreshRealtimeAlert ? 'text-danger animate-pulse' : 'text-success'}
-            size={16}
-          />
-          <p className="text-sm font-semibold text-text">
-            {hasFreshRealtimeAlert ? 'Live feed — new alert received' : 'Live feed connected'}
-          </p>
-        </div>
-        <p className="text-sm text-muted tabular-nums">{displayAlerts.length} unactioned alerts</p>
-      </div>
-
       {/* Sub-navigation */}
-      <div className="flex gap-1 bg-surface border border-border rounded-lg p-1">
-        {VIEWS.map((view) => (
-          <button
-            key={view.id}
-            onClick={() => setActiveView(view.id)}
-            className={`flex items-center gap-2 flex-1 justify-center px-4 py-2 rounded-md text-sm font-semibold transition-colors ${activeView === view.id
-              ? 'bg-card shadow-soft text-text border border-border'
-              : 'text-muted hover:text-text hover:bg-card/60'
-              }`}
-          >
-            <view.icon size={15} />
-            {view.label}
-          </button>
-        ))}
+      <div className="flex items-stretch gap-2">
+        <div className="flex-1 flex gap-1 bg-surface border border-border rounded-lg p-1">
+          {VIEWS.map((view) => (
+            <button
+              key={view.id}
+              onClick={() => setActiveView(view.id)}
+              className={`flex items-center gap-2 flex-1 justify-center px-4 py-2 rounded-md text-sm font-semibold transition-colors ${activeView === view.id
+                ? 'bg-card shadow-soft text-text border border-border'
+                : 'text-muted hover:text-text hover:bg-card/60'
+                }`}
+            >
+              <view.icon size={15} />
+              {view.label}
+            </button>
+          ))}
+        </div>
+        <div className="relative group flex-shrink-0 self-stretch">
+          <div className="flex h-full w-9 items-center justify-center rounded-lg border border-border bg-card">
+            <Radio className={hasFreshRealtimeAlert ? 'text-danger animate-pulse' : 'text-success'} size={14} />
+          </div>
+          <div className="pointer-events-none absolute right-0 top-full z-20 mt-1.5 hidden w-max rounded-md border border-border bg-card px-2.5 py-1.5 text-xs shadow-soft group-hover:block">
+            <span className="font-semibold text-text">
+              {hasFreshRealtimeAlert ? 'New alert received' : 'Live feed connected'}
+            </span>
+            <span className="ml-2 text-muted tabular-nums">{displayAlerts.length} unactioned</span>
+          </div>
+        </div>
       </div>
 
       {/* ── Incident Queue view ── */}
