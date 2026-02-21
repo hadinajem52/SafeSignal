@@ -7,7 +7,7 @@ import BigStatTile from '../components/BigStatTile'
 import IncidentRow from '../components/IncidentRow'
 import { severityClass } from '../components/helpers'
 
-export function AdminLeft({ s, incidents, applications, loading }) {
+export function AdminLeft({ s, incidents, applications, loading, timeframe = 'all' }) {
   const categoryMap = {}
   incidents.forEach((inc) => {
     const cat = inc.category || 'other'
@@ -17,12 +17,12 @@ export function AdminLeft({ s, incidents, applications, loading }) {
   const maxCat = categories[0]?.[1] || 1
 
   const platformStatus = [
-    { label: 'Pending Review', value: s.pendingReports,    color: 'text-warning' },
-    { label: 'Verified',       value: s.verifiedReports,   color: 'text-success' },
-    { label: 'Rejected',       value: s.rejectedReports,   color: 'text-error'   },
-    { label: 'Active Users',   value: s.activeUsers,       color: 'text-primary' },
-    { label: 'Suspended',      value: s.suspendedUsers,    color: 'text-muted'   },
-    { label: 'Applications',   value: applications.length, color: 'text-accent'  },
+    { label: 'Pending Review', value: s.pendingReports, color: 'text-warning' },
+    { label: 'Verified', value: s.verifiedReports, color: 'text-success' },
+    { label: 'Rejected', value: s.rejectedReports, color: 'text-error' },
+    { label: 'Active Users', value: s.activeUsers, color: 'text-primary' },
+    { label: 'Suspended', value: s.suspendedUsers, color: 'text-muted' },
+    { label: 'Applications', value: applications.length, color: 'text-accent' },
   ]
 
   return (
@@ -37,14 +37,15 @@ export function AdminLeft({ s, incidents, applications, loading }) {
             <p className="text-3xl font-bold font-display text-text leading-none">
               {loading ? '—' : s.totalIncidents.toLocaleString()}
             </p>
-            <p className="text-[11px] text-muted mt-1.5">Platform-wide · all time</p>
+            <p className="text-[11px] text-muted mt-1.5">
+              Platform-wide · {' '}
+              {timeframe === 'all' && 'All time'}
+              {timeframe === '24h' && 'Last 24 Hours'}
+              {timeframe === '7d' && 'Last 7 Days'}
+              {timeframe === '30d' && 'Last 30 Days'}
+              {timeframe === 'ytd' && 'Year to Date'}
+            </p>
           </div>
-          <button className="flex items-center gap-1 text-[11px] text-muted hover:text-text border border-border rounded-lg px-2.5 py-1 mt-0.5 transition-colors">
-            Weekly
-            <svg width="9" height="5" viewBox="0 0 9 5" fill="none">
-              <path d="M1 1L4.5 4L8 1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-            </svg>
-          </button>
         </div>
         <div className="mt-3 -mx-1">
           <SparklineChart value={s.totalIncidents} color="var(--color-accent)" />
@@ -155,10 +156,10 @@ export function AdminRight({ s, applications, loading }) {
       <SectionCard title="User Metrics">
         <div className="grid grid-cols-2 gap-2">
           {[
-            { label: 'Total',        value: s.totalUsers,        bg: 'bg-primary/10', text: 'text-primary' },
-            { label: 'Active',       value: s.activeUsers,       bg: 'bg-success/10', text: 'text-success' },
-            { label: 'Suspended',    value: s.suspendedUsers,    bg: 'bg-error/10',   text: 'text-error'   },
-            { label: 'Applications', value: applications.length, bg: 'bg-accent/10',  text: 'text-accent'  },
+            { label: 'Total', value: s.totalUsers, bg: 'bg-primary/10', text: 'text-primary' },
+            { label: 'Active', value: s.activeUsers, bg: 'bg-success/10', text: 'text-success' },
+            { label: 'Suspended', value: s.suspendedUsers, bg: 'bg-error/10', text: 'text-error' },
+            { label: 'Applications', value: applications.length, bg: 'bg-accent/10', text: 'text-accent' },
           ].map(({ label, value, bg, text }) => (
             <div key={label} className={`rounded-lg px-2 py-2.5 text-center ${bg}`}>
               <p className={`text-lg font-bold font-display leading-none ${text}`}>

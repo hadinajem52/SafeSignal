@@ -17,7 +17,7 @@ const STATUS_BG = {
 
 const LEI_STAGES = ['verified', 'dispatched', 'on_scene', 'investigating']
 
-export function LeiLeft({ leiIncidents, loading }) {
+export function LeiLeft({ leiIncidents, loading, timeframe = 'all' }) {
   const stageCounts = LEI_STAGES.map((st) => ({
     status: st,
     count: leiIncidents.filter((i) => i.status === st).length,
@@ -41,7 +41,14 @@ export function LeiLeft({ leiIncidents, loading }) {
             <p className="text-3xl font-bold font-display text-text leading-none">
               {loading ? '—' : activeCount}
             </p>
-            <p className="text-[11px] text-muted mt-1.5">Verified + dispatched + on-scene + investigating</p>
+            <p className="text-[11px] text-muted mt-1.5">
+              Verified + dispatched + on-scene + investigating · {' '}
+              {timeframe === 'all' && 'All time'}
+              {timeframe === '24h' && 'Last 24 Hours'}
+              {timeframe === '7d' && 'Last 7 Days'}
+              {timeframe === '30d' && 'Last 30 Days'}
+              {timeframe === 'ytd' && 'Year to Date'}
+            </p>
           </div>
         </div>
         <div className="mt-3 -mx-1">

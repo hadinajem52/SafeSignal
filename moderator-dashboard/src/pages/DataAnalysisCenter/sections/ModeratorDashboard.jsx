@@ -10,7 +10,7 @@ import { SkeletonLoader, EmptyState } from '../components/UIStates'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 
-export function ModeratorLeft({ s, incidents, loading }) {
+export function ModeratorLeft({ s, incidents, loading, timeframe = 'all' }) {
   const categories = useMemo(() => {
     const categoryMap = {}
     incidents.forEach((inc) => {
@@ -56,17 +56,15 @@ export function ModeratorLeft({ s, incidents, loading }) {
                 {s.totalIncidents.toLocaleString()}
               </motion.p>
             )}
-            <p className="text-[11px] text-muted mt-1.5">All time · updated live</p>
+            <p className="text-[11px] text-muted mt-1.5">
+              {timeframe === 'all' && 'All time'}
+              {timeframe === '24h' && 'Last 24 Hours'}
+              {timeframe === '7d' && 'Last 7 Days'}
+              {timeframe === '30d' && 'Last 30 Days'}
+              {timeframe === 'ytd' && 'Year to Date'}
+              {' · updated live'}
+            </p>
           </div>
-          <button
-            aria-label="Change timeframe"
-            className="flex items-center gap-1 text-[11px] text-muted hover:text-text border border-border rounded-lg px-2.5 py-1 mt-0.5 transition-colors"
-          >
-            Weekly
-            <svg width="9" height="5" viewBox="0 0 9 5" fill="none">
-              <path d="M1 1L4.5 4L8 1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-            </svg>
-          </button>
         </div>
         <div className="mt-3 -mx-1">
           <SparklineChart data={sparklineData} />
