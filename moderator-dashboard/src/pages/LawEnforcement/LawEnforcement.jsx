@@ -144,10 +144,9 @@ function AlertBanner({ alerts, onDispatch, statusMutationPending, onSelectIncide
           {alerts.map((alert) => (
             <div
               key={alert.incidentId}
-              className={`flex items-center justify-between gap-4 px-4 py-3 cursor-pointer hover:bg-surface ${alert.severity === 'critical' ? 'bg-danger/5' : 'bg-amber-50/40'
-                }`}
-              onClick={() => onSelectIncident(alert.incidentId)}
-            >
+                className={`flex items-center justify-between gap-4 px-4 py-3 cursor-pointer bg-card hover:bg-surface`}
+                onClick={() => onSelectIncident(alert.incidentId)}
+              >
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-text truncate">
                   {alert.title || `Incident #${alert.incidentId}`}
