@@ -17,6 +17,16 @@ function getPriorityScore(report) {
   return rank * Math.log(Math.max(ageHours, 0.01) + 1)
 }
 
+function normalizeReport(incident) {
+  return {
+    ...incident,
+    id: incident.incident_id,
+    reporter: incident.username || 'Anonymous',
+    location: incident.location_name || `${incident.latitude}, ${incident.longitude}`,
+    createdAt: incident.created_at || incident.incident_date,
+  }
+}
+
 function Reports() {
   // Default to the combined 'Needs Review' view so auto_flagged reports are visible
   const [searchTerm, setSearchTerm] = useState('')
@@ -92,13 +102,7 @@ function Reports() {
         const matchesStatus = !activeStatuses || activeStatuses.has(report.status)
         return matchesSearch && matchesStatus
       })
-      .map((report) => ({
-        ...report,
-        id: report.incident_id,
-        reporter: report.username || 'Anonymous',
-        location: report.location_name || `${report.latitude}, ${report.longitude}`,
-        createdAt: report.created_at || report.incident_date,
-      }))
+      .map(normalizeReport)
       .sort((a, b) =>
         sortMode === 'time'
           ? new Date(b.createdAt) - new Date(a.createdAt)
@@ -309,6 +313,27 @@ function Reports() {
             onVerify={() => handleVerify(selectedReport.id)}
             onReject={() => handleReject(selectedReport.id)}
             onNext={handleSelectNextReport}
+            onOpenDuplicateCandidate={async (duplicateIncidentId) => {
+              const duplicateId = Number(duplicateIncidentId)
+              if (!Number.isFinite(duplicateId)) {
+                pushToast('Unable to open duplicate incident: invalid incident id.', 'error')
+                return
+              }
+
+              const inQueue = filteredReports.find((r) => Number(r.id) === duplicateId)
+              if (inQueue) {
+                setSelectedReport(inQueue)
+                return
+              }
+
+              const result = await reportsAPI.getById(duplicateId)
+              if (!result.success || !result.data) {
+                pushToast(result.error || 'Failed to open duplicate incident.', 'error')
+                return
+              }
+
+              setSelectedReport(normalizeReport(result.data))
+            }}
           />
         </div>
       </div>

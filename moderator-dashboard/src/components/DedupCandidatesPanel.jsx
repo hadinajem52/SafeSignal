@@ -1,7 +1,7 @@
 import React from 'react'
 import GoogleMapPanel from './GoogleMapPanel'
 
-function DedupCandidatesPanel({ dedup, isLoading, onMerge, isMerging, sourceIncident }) {
+function DedupCandidatesPanel({ dedup, isLoading, onMerge, isMerging, sourceIncident, onOpenCandidate }) {
   const candidates = dedup?.dedupCandidates?.candidates || []
   const meta = dedup?.dedupCandidates || {}
   const source = sourceIncident || meta.sourceIncident || {}
@@ -75,7 +75,13 @@ function DedupCandidatesPanel({ dedup, isLoading, onMerge, isMerging, sourceInci
           {candidates.map((candidate) => (
             <div key={candidate.incidentId} className="bg-card border border-border rounded-lg p-3">
               <div className="flex items-center justify-between">
-                <span className="font-semibold text-sm text-text">Incident #{candidate.incidentId}</span>
+                <button
+                  type="button"
+                  onClick={() => onOpenCandidate?.(candidate.incidentId)}
+                  className="font-semibold text-sm text-text hover:text-primary hover:underline transition-colors"
+                >
+                  Incident #{candidate.incidentId}
+                </button>
                 <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/15">
                   Score {candidate.score}
                 </span>
@@ -84,7 +90,13 @@ function DedupCandidatesPanel({ dedup, isLoading, onMerge, isMerging, sourceInci
               {candidate.title && (
                 <div className="mt-2">
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-muted">Candidate</div>
-                  <div className="text-sm font-medium text-text mt-0.5">{candidate.title}</div>
+                  <button
+                    type="button"
+                    onClick={() => onOpenCandidate?.(candidate.incidentId)}
+                    className="text-left text-sm font-medium text-text mt-0.5 hover:text-primary hover:underline transition-colors"
+                  >
+                    {candidate.title}
+                  </button>
                 </div>
               )}
 
