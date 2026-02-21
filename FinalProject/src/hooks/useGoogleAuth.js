@@ -6,7 +6,6 @@ import { useEffect, useState, useCallback } from 'react';
 WebBrowser.maybeCompleteAuthSession();
 
 // Google OAuth Client IDs
-// Get these from Google Cloud Console: https://console.cloud.google.com/apis/credentials
 const GOOGLE_CONFIG = {
   expoClientId: 'YOUR_EXPO_CLIENT_ID.apps.googleusercontent.com',
   iosClientId: 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com',
@@ -14,10 +13,7 @@ const GOOGLE_CONFIG = {
   webClientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
 };
 
-/**
- * Custom hook for Google Authentication
- * Handles the OAuth flow and returns auth state and methods
- */
+
 export const useGoogleAuth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -56,8 +52,7 @@ export const useGoogleAuth = () => {
     if (authResponse?.type === 'success') {
       const { authentication } = authResponse;
       
-      // For expo-auth-session, we get an access token
-      // We need to exchange it for user info or use the id_token if available
+
       if (authentication?.idToken) {
         return authentication.idToken;
       }
