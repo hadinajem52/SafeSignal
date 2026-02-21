@@ -1,22 +1,202 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { reportsAPI, statsAPI } from '../services/api'
-import { 
-  TrendingUp, 
-  AlertCircle, 
-  CheckCircle, 
-  Clock,
-  BarChart3,
-  Users,
-  FileText
-} from 'lucide-react'
 import { getTimeAgo } from '../utils/dateUtils'
 import GoogleMapPanel from '../components/GoogleMapPanel'
 import LoadingState from '../components/LoadingState'
-import PageHeader from '../components/PageHeader'
-import StatCard from '../components/StatCard'
-import StatusBadge from '../components/StatusBadge'
 
+/* ─── Scoped styles ──────────────────────────────────────────────────────── */
+const DASH_CSS = `
+  .dash-section-row {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 12px;
+  }
+  .dash-section-title {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--muted, #3D4F65); white-space: nowrap;
+  }
+  .dash-section-line { flex: 1; height: 1px; background: var(--border, #1C2430); }
+  .dash-section-meta {
+    font-size: 10px; font-weight: 600; color: var(--text-dim, #5C7390);
+    white-space: nowrap; font-variant-numeric: tabular-nums;
+  }
+
+  .dash-stat-grid {
+    display: grid;
+    gap: 1px;
+    background: var(--border, #1C2430);
+    border: 1px solid var(--border, #1C2430);
+    margin-bottom: 20px;
+  }
+  .dash-stat-card {
+    background: var(--card, #0D1117);
+    padding: 14px 16px;
+    display: flex; flex-direction: column; gap: 8px;
+    position: relative; overflow: hidden;
+    transition: background 0.1s;
+  }
+  .dash-stat-card:hover { background: var(--card-hover, #131920); }
+  .dash-stat-card::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px;
+  }
+  .dash-stat-card.ab-blue::before  { background: var(--primary, #3B9EFF); }
+  .dash-stat-card.ab-amber::before { background: var(--warning, #F5A623); }
+  .dash-stat-card.ab-green::before { background: var(--success, #30A46C); }
+  .dash-stat-card.ab-red::before   { background: var(--error,   #E5484D); }
+  .dash-stat-card.ab-muted::before { background: var(--muted,   #3D4F65); }
+
+  .dash-stat-top { display: flex; align-items: flex-start; justify-content: space-between; }
+  .dash-stat-label {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--text-dim, #5C7390);
+  }
+  .dash-stat-icon {
+    width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--border2, #243040); color: var(--text-dim, #5C7390); flex-shrink: 0;
+  }
+  .dash-stat-value {
+    font-size: 30px; font-weight: 800; color: var(--text, #D9E4F0);
+    line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
+  }
+  .dash-stat-delta { font-size: 10px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .dash-delta-up      { color: var(--error,   #E5484D); }
+  .dash-delta-down    { color: var(--success,  #30A46C); }
+  .dash-delta-neutral { color: var(--muted,    #3D4F65); }
+
+  .dash-two-col {
+    display: grid; grid-template-columns: 1fr 300px; gap: 14px; margin-bottom: 20px;
+  }
+
+  .dash-card {
+    background: var(--card, #0D1117);
+    border: 1px solid var(--border, #1C2430);
+    overflow: hidden;
+  }
+  .dash-card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; border-bottom: 1px solid var(--border, #1C2430);
+  }
+  .dash-card-title {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--text-dim, #5C7390);
+  }
+  .dash-card-meta { font-size: 10px; font-weight: 600; color: var(--muted, #3D4F65); font-variant-numeric: tabular-nums; }
+  .dash-card-action {
+    font-size: 10px; font-weight: 700; color: var(--primary, #3B9EFF);
+    cursor: pointer; display: flex; align-items: center; gap: 3px;
+    text-decoration: none;
+  }
+
+  .dash-feed-list { overflow-y: auto; max-height: 320px; }
+  .dash-feed-list::-webkit-scrollbar { width: 2px; }
+  .dash-feed-list::-webkit-scrollbar-thumb { background: var(--border2, #243040); }
+  .dash-feed-item {
+    display: flex; gap: 10px; padding: 10px 14px;
+    border-bottom: 1px solid var(--border, #1C2430); align-items: flex-start;
+  }
+  .dash-feed-item:last-child { border-bottom: none; }
+  .dash-feed-dot-col { display: flex; flex-direction: column; align-items: center; padding-top: 3px; }
+  .dash-feed-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; border: 1.5px solid; }
+  .dash-feed-line { width: 1px; flex: 1; background: var(--border, #1C2430); min-height: 10px; margin-top: 3px; }
+  .dash-feed-action { font-size: 11px; font-weight: 600; color: var(--text, #D9E4F0); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dash-feed-meta { font-size: 10px; font-weight: 500; color: var(--muted, #3D4F65); font-variant-numeric: tabular-nums; }
+
+  .dash-bottom-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+
+  .dash-mini-table { width: 100%; border-collapse: collapse; }
+  .dash-mini-table th {
+    font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--muted, #3D4F65); padding: 8px 12px; border-bottom: 1px solid var(--border, #1C2430); text-align: left;
+  }
+  .dash-mini-table td {
+    padding: 8px 12px; font-size: 11px; font-weight: 500; color: var(--text, #D9E4F0);
+    border-bottom: 1px solid var(--border, #1C2430); font-variant-numeric: tabular-nums;
+  }
+  .dash-mini-table tr:last-child td { border-bottom: none; }
+  .dash-mini-table tr:hover td { background: var(--card-hover, #131920); }
+  .dash-td-dim { color: var(--text-dim, #5C7390) !important; }
+
+  .dash-chip {
+    display: inline-flex; align-items: center; font-size: 9px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.04em; padding: 2px 6px; border: 1px solid;
+  }
+
+  .dash-bar-chart { padding: 12px 14px; }
+  .dash-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+  .dash-bar-row:last-child { margin-bottom: 0; }
+  .dash-bar-label { font-size: 10px; font-weight: 600; color: var(--text-dim, #5C7390); width: 68px; flex-shrink: 0; text-align: right; }
+  .dash-bar-track { flex: 1; height: 5px; background: var(--card-hover, #131920); border: 1px solid var(--border, #1C2430); overflow: hidden; }
+  .dash-bar-fill { height: 100%; transition: width 0.4s ease; }
+  .dash-bar-count { font-size: 10px; font-weight: 700; color: var(--text, #D9E4F0); width: 22px; text-align: right; font-variant-numeric: tabular-nums; }
+
+  .dash-user-row {
+    display: flex; align-items: center; gap: 10px; padding: 9px 14px;
+    border-bottom: 1px solid var(--border, #1C2430);
+  }
+  .dash-user-row:last-child { border-bottom: none; }
+  .dash-user-avatar {
+    width: 26px; height: 26px; border: 1px solid var(--border2, #243040);
+    display: flex; align-items: center; justify-content: center; font-size: 10px;
+    font-weight: 700; color: var(--text-dim, #5C7390); background: var(--card-hover, #131920);
+    flex-shrink: 0; text-transform: uppercase;
+  }
+  .dash-user-name { font-size: 11px; font-weight: 600; color: var(--text, #D9E4F0); }
+  .dash-user-meta { font-size: 10px; font-weight: 500; color: var(--muted, #3D4F65); margin-top: 1px; }
+  .dash-user-right { margin-left: auto; text-align: right; }
+  .dash-user-count { font-size: 12px; font-weight: 700; color: var(--text, #D9E4F0); font-variant-numeric: tabular-nums; }
+  .dash-user-label { font-size: 9px; font-weight: 600; color: var(--muted, #3D4F65); text-transform: uppercase; letter-spacing: 0.04em; }
+
+  @media (max-width: 900px) {
+    .dash-two-col   { grid-template-columns: 1fr; }
+    .dash-bottom-row { grid-template-columns: 1fr; }
+    .dash-stat-grid  { grid-template-columns: 1fr 1fr !important; }
+  }
+`
+
+/* ─── SVG icons ──────────────────────────────────────────────────────────── */
+const IC = {
+  report: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>,
+  clock:  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+  check:  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+  x:      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+  user:   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+  users:  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>,
+  shield: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
+  arrow:  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>,
+}
+
+/* ─── Status config ──────────────────────────────────────────────────────── */
+const STATUS_CFG = {
+  rejected:      { label: 'Rejected',   color: '#E5484D', border: '#E5484D' },
+  police_closed: { label: 'Closed',     color: '#30A46C', border: '#30A46C' },
+  verified:      { label: 'Verified',   color: '#3B9EFF', border: '#3B9EFF' },
+  submitted:     { label: 'Pending',    color: '#F5A623', border: '#F5A623' },
+  in_review:     { label: 'In Review',  color: '#F5A623', border: '#F5A623' },
+  dispatched:    { label: 'Dispatched', color: '#3B9EFF', border: '#3B9EFF' },
+  resolved:      { label: 'Resolved',   color: '#30A46C', border: '#30A46C' },
+}
+function getStatusCfg(status) {
+  return STATUS_CFG[status] || { label: status || 'Unknown', color: '#3D4F65', border: '#3D4F65' }
+}
+
+/* ─── Feed classifier ────────────────────────────────────────────────────── */
+const CAT_COLORS = ['#E5484D', '#F5A623', '#3B9EFF', '#30A46C', '#3D4F65', '#3B9EFF', '#F5A623']
+
+function incidentToFeedItem(incident) {
+  const st = incident.status
+  let action, dot
+  if (st === 'rejected')                           { action = 'Report rejected';      dot = '#E5484D' }
+  else if (st === 'verified')                      { action = 'Report verified';      dot = '#30A46C' }
+  else if (st === 'dispatched' || st === 'on_scene') { action = 'Unit dispatched';   dot = '#3B9EFF' }
+  else if (st === 'submitted')                     { action = 'New report submitted'; dot = '#F5A623' }
+  else if (st === 'police_closed')                 { action = 'Report closed';        dot = '#30A46C' }
+  else                                             { action = 'Report updated';       dot = '#3D4F65' }
+  const loc   = incident.location_name || incident.area_name || ''
+  const title = incident.title ? `${incident.title}${loc ? ' · ' + loc : ''}` : loc
+  return { action, sub: `${title ? title + ' · ' : ''}${getTimeAgo(incident.created_at)}`, dot }
+}
+
+/* ─── Dashboard ──────────────────────────────────────────────────────────── */
 function Dashboard() {
   const { data: stats, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['dashboardStats'],
@@ -28,29 +208,81 @@ function Dashboard() {
     retry: 1,
   })
 
-  const { data: mapIncidents = [] } = useQuery({
-    queryKey: ['dashboard-active-map-incidents'],
+  const { data: allIncidents = [] } = useQuery({
+    queryKey: ['dashboard-all-incidents'],
     queryFn: async () => {
       const result = await reportsAPI.getAll({ limit: 200 })
-      if (!result.success) {
-        return []
-      }
-      return result.data || []
+      return result.success ? (result.data || []) : []
     },
   })
 
-  if (isLoading) {
-    return <LoadingState />
-  }
+  /* ── Derived data ──────────────────────────────────────────────────── */
+  const mapMarkers = useMemo(() => {
+    const active = new Set([
+      'submitted', 'in_review', 'verified', 'dispatched',
+      'on_scene', 'investigating', 'needs_info', 'auto_processed', 'auto_flagged',
+    ])
+    return allIncidents
+      .filter(i => active.has(i.status))
+      .filter(i => Number.isFinite(Number(i.latitude)) && Number.isFinite(Number(i.longitude)))
+      .map(i => ({
+        id: i.incident_id,
+        lat: i.latitude,
+        lng: i.longitude,
+        title: i.title || `Incident #${i.incident_id}`,
+        weight: i.severity === 'critical' ? 4 : i.severity === 'high' ? 3 : i.severity === 'medium' ? 2 : 1,
+      }))
+  }, [allIncidents])
+
+  const criticalCount = useMemo(
+    () => allIncidents.filter(i => i.severity === 'critical').length,
+    [allIncidents],
+  )
+
+  const leDispatchCount = useMemo(
+    () => allIncidents.filter(i => ['dispatched', 'on_scene', 'investigating'].includes(i.status)).length,
+    [allIncidents],
+  )
+
+  const categoryBars = useMemo(() => {
+    const counts = {}
+    allIncidents.forEach(i => { if (i.category) counts[i.category] = (counts[i.category] || 0) + 1 })
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5)
+    const max = sorted[0]?.[1] || 1
+    return sorted.map(([cat, count], idx) => ({
+      label: cat.charAt(0).toUpperCase() + cat.slice(1),
+      count,
+      pct: Math.round((count / max) * 100),
+      color: CAT_COLORS[idx] || '#3D4F65',
+    }))
+  }, [allIncidents])
+
+  const topReporters = useMemo(() => {
+    const map = {}
+    allIncidents.forEach(i => {
+      const name = i.reporter_username || i.username || 'Anonymous'
+      if (!map[name]) map[name] = { name, count: 0 }
+      map[name].count++
+    })
+    return Object.values(map).sort((a, b) => b.count - a.count).slice(0, 4)
+  }, [allIncidents])
+
+  const feedItems = useMemo(
+    () => (stats?.recentIncidents || []).slice(0, 8).map(incidentToFeedItem),
+    [stats],
+  )
+
+  /* ── States ────────────────────────────────────────────────────────── */
+  if (isLoading) return <LoadingState />
 
   if (isError) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
-        <p className="text-red-600 mb-4">{error?.message || 'Failed to load dashboard stats'}</p>
+      <div className="rounded border border-border bg-card p-6">
+        <h1 className="text-xl font-bold text-text mb-2">Dashboard</h1>
+        <p className="text-error mb-4">{error?.message || 'Failed to load dashboard stats'}</p>
         <button
           onClick={() => refetch()}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+          className="px-4 py-2 bg-primary hover:opacity-80 text-white font-medium rounded transition-opacity text-sm"
         >
           Retry
         </button>
@@ -58,178 +290,215 @@ function Dashboard() {
     )
   }
 
-  // Use real stats from API
-  const displayStats = stats || {
-    totalIncidents: 0,
-    pendingReports: 0,
-    verifiedReports: 0,
-    rejectedReports: 0,
-    totalUsers: 0,
-    activeUsers: 0,
-    suspendedUsers: 0,
-    recentIncidents: [],
-  }
+  const s = stats || {}
+  const totalIncidents  = s.totalIncidents  || 0
+  const pendingReports  = s.pendingReports  || 0
+  const verifiedReports = s.verifiedReports || 0
+  const rejectedReports = s.rejectedReports || 0
+  const totalUsers      = s.totalUsers      || 0
+  const activeUsers     = s.activeUsers     || 0
+  const suspendedUsers  = s.suspendedUsers  || 0
+  const recentIncidents = s.recentIncidents || []
 
-  const activeStatuses = new Set([
-    'submitted',
-    'in_review',
-    'verified',
-    'dispatched',
-    'on_scene',
-    'investigating',
-    'needs_info',
-    'auto_processed',
-    'auto_flagged',
-  ])
-  const mapMarkers = mapIncidents
-    .filter((incident) => activeStatuses.has(incident.status))
-    .filter((incident) => Number.isFinite(Number(incident.latitude)) && Number.isFinite(Number(incident.longitude)))
-    .map((incident) => ({
-      id: incident.incident_id,
-      lat: incident.latitude,
-      lng: incident.longitude,
-      title: incident.title || `Incident #${incident.incident_id}`,
-      weight: incident.severity === 'critical' ? 4 : incident.severity === 'high' ? 3 : incident.severity === 'medium' ? 2 : 1,
-    }))
-  const criticalCount = mapIncidents.filter((incident) => incident.severity === 'critical').length
+  const rejectedPct = totalIncidents > 0 ? Math.round((rejectedReports / totalIncidents) * 100) : 0
+  const activeRate  = totalUsers > 0       ? Math.round((activeUsers / totalUsers) * 100)        : 0
 
   return (
-    <div>
-      {/* Header */}
-      <PageHeader
-        title="Dashboard"
-        description="Welcome back! Here's what's happening with SafeSignal."
-      />
+    <>
+      <style>{DASH_CSS}</style>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <StatCard
-          icon={FileText}
-          label="Total Reports"
-          value={displayStats.totalIncidents}
-          color="bg-blue-500"
-        />
-        <StatCard
-          icon={Clock}
-          label="Pending Review"
-          value={displayStats.pendingReports}
-          color="bg-yellow-500"
-        />
-        <StatCard
-          icon={CheckCircle}
-          label="Verified Reports"
-          value={displayStats.verifiedReports}
-          color="bg-green-500"
-        />
-        <StatCard
-          icon={AlertCircle}
-          label="Rejected Reports"
-          value={displayStats.rejectedReports}
-          color="bg-red-500"
-        />
+      {/* ── Reports Overview ─────────────────────────────────────────── */}
+      <div className="dash-section-row">
+        <div className="dash-section-title">Reports Overview</div>
+        <div className="dash-section-line" />
+        <div className="dash-section-meta">Last 30 days</div>
       </div>
 
-      {/* User Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <StatCard
-          icon={Users}
-          label="Total Users"
-          value={displayStats.totalUsers}
-          color="bg-purple-500"
-        />
-        <StatCard
-          icon={TrendingUp}
-          label="Active Users"
-          value={displayStats.activeUsers}
-          color="bg-indigo-500"
-        />
-        <StatCard
-          icon={AlertCircle}
-          label="Suspended Users"
-          value={displayStats.suspendedUsers}
-          color="bg-orange-500"
-        />
+      <div className="dash-stat-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+        {[
+          { label: 'Total Reports',  value: totalIncidents,  accent: 'ab-blue',  icon: IC.report, delta: `${totalIncidents} total`,                                                                   deltaClass: 'dash-delta-neutral' },
+          { label: 'Pending Review', value: pendingReports,  accent: 'ab-amber', icon: IC.clock,  delta: pendingReports === 0 ? 'Queue clear' : `${pendingReports} awaiting`,                         deltaClass: pendingReports === 0 ? 'dash-delta-down' : 'dash-delta-up' },
+          { label: 'Verified',       value: verifiedReports, accent: 'ab-green', icon: IC.check,  delta: `${totalIncidents > 0 ? Math.round((verifiedReports / totalIncidents) * 100) : 0}% of total`, deltaClass: 'dash-delta-neutral' },
+          { label: 'Rejected',       value: rejectedReports, accent: 'ab-red',   icon: IC.x,      delta: `${rejectedPct}% of total`,                                                                  deltaClass: 'dash-delta-neutral' },
+        ].map(c => (
+          <div key={c.label} className={`dash-stat-card ${c.accent}`}>
+            <div className="dash-stat-top">
+              <div className="dash-stat-label">{c.label}</div>
+              <div className="dash-stat-icon">{c.icon}</div>
+            </div>
+            <div className="dash-stat-value">{c.value}</div>
+            <div className={`dash-stat-delta ${c.deltaClass}`}>{c.delta}</div>
+          </div>
+        ))}
       </div>
 
-      <div className="bg-white rounded-lg shadow p-6 mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-gray-900">Operational Map Overview</h2>
-          <div className="text-sm text-gray-600">
-            {mapMarkers.length} active incidents · {criticalCount} critical
+      {/* ── User Overview ────────────────────────────────────────────── */}
+      <div className="dash-section-row">
+        <div className="dash-section-title">User Overview</div>
+        <div className="dash-section-line" />
+      </div>
+
+      <div className="dash-stat-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+        {[
+          { label: 'Total Users',   value: totalUsers,      accent: 'ab-muted', icon: IC.user,   delta: `${totalUsers} registered`,                                                              deltaClass: 'dash-delta-neutral' },
+          { label: 'Active Users',  value: activeUsers,     accent: 'ab-green', icon: IC.users,  delta: `${activeRate}% active rate`,                                                             deltaClass: 'dash-delta-down' },
+          { label: 'Suspended',     value: suspendedUsers,  accent: 'ab-red',   icon: IC.x,      delta: suspendedUsers > 0 ? 'Flagged accounts' : 'None flagged',                                deltaClass: suspendedUsers > 0 ? 'dash-delta-up' : 'dash-delta-down' },
+          { label: 'LE Dispatches', value: leDispatchCount, accent: 'ab-blue',  icon: IC.shield, delta: leDispatchCount > 0 ? `+${leDispatchCount} this week` : 'None active',                   deltaClass: leDispatchCount > 0 ? 'dash-delta-up' : 'dash-delta-neutral' },
+        ].map(c => (
+          <div key={c.label} className={`dash-stat-card ${c.accent}`}>
+            <div className="dash-stat-top">
+              <div className="dash-stat-label">{c.label}</div>
+              <div className="dash-stat-icon">{c.icon}</div>
+            </div>
+            <div className="dash-stat-value">{c.value}</div>
+            <div className={`dash-stat-delta ${c.deltaClass}`}>{c.delta}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Operational Map ──────────────────────────────────────────── */}
+      <div className="dash-section-row">
+        <div className="dash-section-title">Operational Map</div>
+        <div className="dash-section-line" />
+        <div className="dash-section-meta">{mapMarkers.length} active · {criticalCount} critical</div>
+      </div>
+
+      <div className="dash-two-col">
+        {/* Map */}
+        <div className="dash-card">
+          <div className="dash-card-header">
+            <div className="dash-card-title">Live Incident Map</div>
+            <div className="dash-card-meta">{mapMarkers.length} markers</div>
+          </div>
+          <GoogleMapPanel
+            markers={mapMarkers}
+            height={300}
+            showClusters
+            showHeatmap
+            emptyMessage="No active incidents with coordinates."
+          />
+        </div>
+
+        {/* Activity Feed */}
+        <div className="dash-card" style={{ display: 'flex', flexDirection: 'column' }}>
+          <div className="dash-card-header">
+            <div className="dash-card-title">Activity Feed</div>
+            <div className="dash-card-meta" style={{ color: '#30A46C' }}>Live</div>
+          </div>
+          <div className="dash-feed-list">
+            {feedItems.length === 0
+              ? <div style={{ padding: '16px 14px', fontSize: 11, color: '#3D4F65' }}>No recent activity</div>
+              : feedItems.map((f, i) => (
+                <div key={i} className="dash-feed-item">
+                  <div className="dash-feed-dot-col">
+                    <div className="dash-feed-dot" style={{ background: f.dot, borderColor: f.dot }} />
+                    {i < feedItems.length - 1 && <div className="dash-feed-line" />}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="dash-feed-action">{f.action}</div>
+                    <div className="dash-feed-meta">{f.sub}</div>
+                  </div>
+                </div>
+              ))}
           </div>
         </div>
-        <GoogleMapPanel
-          markers={mapMarkers}
-          height={420}
-          showClusters
-          showHeatmap
-          emptyMessage="No active incidents with coordinates to display."
-        />
       </div>
 
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* ── Breakdown ────────────────────────────────────────────────── */}
+      <div className="dash-section-row">
+        <div className="dash-section-title">Breakdown</div>
+        <div className="dash-section-line" />
+      </div>
+
+      <div className="dash-bottom-row">
+
         {/* Recent Reports */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <FileText size={24} />
-            Recent Reports
-          </h2>
-          <div className="space-y-4">
-            {displayStats.recentIncidents && displayStats.recentIncidents.length > 0 ? (
-              displayStats.recentIncidents.map((report) => (
-                <div key={report.incident_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-gray-900">{report.title}</p>
-                    <p className="text-sm text-gray-600">{getTimeAgo(report.created_at)}</p>
+        <div className="dash-card">
+          <div className="dash-card-header">
+            <div className="dash-card-title">Recent Reports</div>
+            <a href="/reports" className="dash-card-action">View all {IC.arrow}</a>
+          </div>
+          <table className="dash-mini-table">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Location</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentIncidents.length === 0
+                ? <tr><td colSpan="3" style={{ color: '#3D4F65', textAlign: 'center', padding: '16px 12px' }}>No reports</td></tr>
+                : recentIncidents.map(r => {
+                    const sc = getStatusCfg(r.status)
+                    return (
+                      <tr key={r.incident_id}>
+                        <td style={{ maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.title || `#${r.incident_id}`}</td>
+                        <td className="dash-td-dim">{r.location_name || r.area_name || '—'}</td>
+                        <td>
+                          <span className="dash-chip" style={{ color: sc.color, borderColor: sc.border, background: `${sc.color}18` }}>
+                            {sc.label}
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })
+              }
+            </tbody>
+          </table>
+        </div>
+
+        {/* Category Breakdown */}
+        <div className="dash-card">
+          <div className="dash-card-header">
+            <div className="dash-card-title">By Category</div>
+            <div className="dash-card-meta">{totalIncidents} total</div>
+          </div>
+          <div className="dash-bar-chart">
+            {categoryBars.length === 0
+              ? <div style={{ fontSize: 11, color: '#3D4F65', padding: '8px 0' }}>No category data</div>
+              : categoryBars.map((b, i) => (
+                <div key={i} className="dash-bar-row">
+                  <div className="dash-bar-label">{b.label}</div>
+                  <div className="dash-bar-track">
+                    <div className="dash-bar-fill" style={{ width: `${b.pct}%`, background: b.color }} />
                   </div>
-                  <StatusBadge status={report.status} />
+                  <div className="dash-bar-count">{b.count}</div>
                 </div>
               ))
-            ) : (
-              <p className="text-gray-500 text-center py-4">No recent reports</p>
-            )}
+            }
           </div>
         </div>
 
-        {/* Activity Summary */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <BarChart3 size={24} />
-            Activity Summary
-          </h2>
-          <div className="space-y-4">
-            <div>
-              <div className="flex justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">Total Reports</span>
-                <span className="text-sm font-bold text-gray-900">{displayStats.totalIncidents}</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${Math.min(100, displayStats.totalIncidents / 10)}%` }}></div>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">Active Users</span>
-                <span className="text-sm font-bold text-gray-900">{displayStats.activeUsers}</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-purple-600 h-2 rounded-full" style={{ width: `${displayStats.totalUsers > 0 ? (displayStats.activeUsers / displayStats.totalUsers) * 100 : 0}%` }}></div>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">Verification Rate</span>
-                <span className="text-sm font-bold text-gray-900">{displayStats.totalIncidents > 0 ? Math.round((displayStats.verifiedReports / displayStats.totalIncidents) * 100) : 0}%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-green-600 h-2 rounded-full" style={{ width: `${displayStats.totalIncidents > 0 ? (displayStats.verifiedReports / displayStats.totalIncidents) * 100 : 0}%` }}></div>
-              </div>
-            </div>
+        {/* Top Reporters */}
+        <div className="dash-card">
+          <div className="dash-card-header">
+            <div className="dash-card-title">Top Reporters</div>
+            <a href="/users" className="dash-card-action">All users {IC.arrow}</a>
           </div>
+          {topReporters.length === 0
+            ? <div style={{ padding: '16px 14px', fontSize: 11, color: '#3D4F65' }}>No reporter data</div>
+            : topReporters.map((u, i) => {
+                const initials = u.name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase()
+                return (
+                  <div key={i} className="dash-user-row">
+                    <div className="dash-user-avatar">{initials}</div>
+                    <div>
+                      <div className="dash-user-name">{u.name}</div>
+                      <div className="dash-user-meta">Reporter</div>
+                    </div>
+                    <div className="dash-user-right">
+                      <div className="dash-user-count">{u.count}</div>
+                      <div className="dash-user-label">reports</div>
+                    </div>
+                  </div>
+                )
+              })
+          }
         </div>
+
       </div>
-    </div>
+    </>
   )
 }
 
