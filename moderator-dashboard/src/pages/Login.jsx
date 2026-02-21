@@ -1,28 +1,37 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { authAPI } from '../services/api'
 import { Eye, EyeOff, Shield, ArrowRight, Loader2 } from 'lucide-react'
+
+const RADAR_DURATION = 6 // seconds — must match CSS
 
 const loginAnimations = `
   @keyframes radar-sweep {
     from { transform: rotate(0deg); }
     to   { transform: rotate(360deg); }
   }
-  @keyframes ping-pulse {
-    0%   { transform: scale(1);   opacity: 0.8; }
-    70%  { transform: scale(2.6); opacity: 0;   }
-    100% { transform: scale(2.6); opacity: 0;   }
-  }
   @keyframes live-blink {
     0%, 100% { opacity: 1;   }
     50%      { opacity: 0.3; }
   }
-  .anim-radar   { animation: radar-sweep  6s  linear       infinite; }
-  .anim-ping-0  { animation: ping-pulse   2.5s ease-out    infinite; }
-  .anim-ping-1  { animation: ping-pulse   2.5s ease-out    infinite 0.9s; }
-  .anim-ping-2  { animation: ping-pulse   2.5s ease-out    infinite 1.8s; }
-  .anim-blink   { animation: live-blink   2s   ease-in-out infinite; }
+  /* raindrop core: bright flash then shrinks away */
+  @keyframes blip-core {
+    0%   { transform: scale(0);   opacity: 0; }
+    2%   { transform: scale(1.4); opacity: 1; }
+    12%  { transform: scale(1);   opacity: 0.9; }
+    35%  { transform: scale(0.6); opacity: 0; }
+    100% { transform: scale(0);   opacity: 0; }
+  }
+  /* raindrop ring: expands outward like a ripple and fades */
+  @keyframes blip-ring {
+    0%   { transform: scale(0);   opacity: 0; }
+    3%   { transform: scale(0.6); opacity: 0.7; }
+    50%  { transform: scale(5);   opacity: 0; }
+    100% { transform: scale(5);   opacity: 0; }
+  }
+  .anim-radar  { animation: radar-sweep ${RADAR_DURATION}s linear infinite; }
+  .anim-blink  { animation: live-blink  2s   ease-in-out infinite; }
 `
 
 function Login() {
@@ -106,6 +115,18 @@ function Login() {
     }
   }
 
+  // Pre-seeded radar blips: angle (deg clockwise from 12-o'clock), radius fraction 0–1, color
+  const radarBlips = useMemo(() => [
+    { angle: 38,  r: 0.55, color: '#00f0ff' },
+    { angle: 95,  r: 0.80, color: '#ff3333' },
+    { angle: 152, r: 0.62, color: '#00f0ff' },
+    { angle: 210, r: 0.45, color: '#30A46C' },
+    { angle: 255, r: 0.72, color: '#00f0ff' },
+    { angle: 308, r: 0.58, color: '#ffb000' },
+    { angle: 340, r: 0.35, color: '#00f0ff' },
+    { angle: 72,  r: 0.90, color: '#ff3333' },
+  ], [])
+
   const handleAutoFill = () => {
     setEmail('moderator@safesignal.com')
     setPassword('password123')
@@ -171,46 +192,62 @@ function Login() {
             style={{ background: 'radial-gradient(ellipse 70% 60% at 40% 50%, transparent 0%, #07090B 100%)' }}
           />
 
-          {/* Radar rings + sweep (opacity animated only) */}
-          <div className="absolute right-[-80px] top-1/2 -translate-y-1/2 w-[560px] h-[560px] opacity-[0.08] pointer-events-none">
+          {/* Radar rings + sweep + blips */}
+          <div className="absolute right-[-80px] top-1/2 -translate-y-1/2 w-[560px] h-[560px] pointer-events-none">
+            {/* rings */}
             {[560, 420, 280, 140].map(s => (
               <div
                 key={s}
-                className="absolute rounded-full border border-[#00f0ff]"
+                className="absolute rounded-full border border-[#00f0ff] opacity-[0.08]"
                 style={{ width: s, height: s, top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }}
               />
             ))}
+            {/* sweep */}
             <div
-              className="absolute inset-0 rounded-full anim-radar"
+              className="absolute inset-0 rounded-full anim-radar opacity-[0.08]"
               style={{ background: 'conic-gradient(from 0deg, transparent 340deg, rgba(0,240,255,0.7) 360deg)' }}
             />
+            {/* radar blips — fire just AFTER sweep line crosses their angle */}
+            {radarBlips.map((b, i) => {
+              const rad = (b.angle - 90) * (Math.PI / 180) // 0° = 12-o'clock
+              const cx = 50 + b.r * 50 * Math.cos(rad)    // % of container
+              const cy = 50 + b.r * 50 * Math.sin(rad)
+              // positive delay: blip starts exactly when sweep reaches this angle
+              const delay = (b.angle / 360) * RADAR_DURATION
+              return (
+                <div
+                  key={i}
+                  className="absolute"
+                  style={{
+                    left: `${cx}%`, top: `${cy}%`,
+                    width: 0, height: 0,  // zero-size anchor — children offset from center
+                  }}
+                >
+                  {/* expanding ripple ring — starts at blip center, scales outward */}
+                  <div style={{
+                    position: 'absolute',
+                    width: 6, height: 6,
+                    left: -3, top: -3,
+                    borderRadius: '50%',
+                    border: `1.5px solid ${b.color}`,
+                    animation: `blip-ring ${RADAR_DURATION}s linear infinite ${delay}s`,
+                    transformOrigin: 'center center',
+                  }} />
+                  {/* bright core dot */}
+                  <div style={{
+                    position: 'absolute',
+                    width: 4, height: 4,
+                    left: -2, top: -2,
+                    borderRadius: '50%',
+                    background: b.color,
+                    boxShadow: `0 0 5px 2px ${b.color}90`,
+                    animation: `blip-core ${RADAR_DURATION}s linear infinite ${delay}s`,
+                    transformOrigin: 'center center',
+                  }} />
+                </div>
+              )
+            })}
           </div>
-
-          {/* Signal pulse dots */}
-          {[
-            { top: '38%', left: '44%', color: '#00f0ff', pingCls: 'anim-ping-0' },
-            { top: '55%', left: '52%', color: '#ff3333', pingCls: 'anim-ping-1' },
-            { top: '46%', left: '35%', color: '#30A46C', pingCls: 'anim-ping-2' },
-          ].map((p, i) => (
-            <div key={i} className="absolute pointer-events-none" style={{ top: p.top, left: p.left }}>
-              <div className="relative w-2 h-2">
-                <div className="absolute inset-0 rounded-full" style={{ background: p.color }} />
-                <div className={`absolute inset-0 rounded-full ${p.pingCls}`} style={{ background: p.color }} />
-              </div>
-            </div>
-          ))}
-
-          {/* Decorative map roads */}
-          <svg className="absolute inset-0 w-full h-full opacity-[0.06] pointer-events-none" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice">
-            <line x1="0"   y1="240" x2="800" y2="270" stroke="#00f0ff" strokeWidth="1.5"/>
-            <line x1="0"   y1="340" x2="800" y2="310" stroke="#00f0ff" strokeWidth="1"/>
-            <line x1="280" y1="0"   x2="320" y2="600" stroke="#00f0ff" strokeWidth="1.5"/>
-            <line x1="500" y1="0"   x2="480" y2="600" stroke="#00f0ff" strokeWidth="1"/>
-            <line x1="0"   y1="160" x2="800" y2="180" stroke="#00f0ff" strokeWidth="0.5"/>
-            <line x1="0"   y1="450" x2="800" y2="430" stroke="#00f0ff" strokeWidth="0.5"/>
-            <line x1="140" y1="0"   x2="150" y2="600" stroke="#00f0ff" strokeWidth="0.5"/>
-            <line x1="660" y1="0"   x2="650" y2="600" stroke="#00f0ff" strokeWidth="0.5"/>
-          </svg>
 
           {/* Brand */}
           <div className="relative z-10 flex items-center gap-3">
