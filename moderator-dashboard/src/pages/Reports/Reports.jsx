@@ -36,6 +36,7 @@ function Reports() {
   const [selectedReportIds, setSelectedReportIds] = useState([])
   const [bulkActionPending, setBulkActionPending] = useState(null)
   const [bulkConfirmAction, setBulkConfirmAction] = useState(null) // 'verify' | 'reject' | null
+  const [singleConfirmAction, setSingleConfirmAction] = useState(null) // 'escalate' | 'reject' | null
   const [toasts, setToasts] = useState([])
 
   const queryClient = useQueryClient()
@@ -209,7 +210,26 @@ function Reports() {
     setSelectedReport(filteredReports[idx < 0 ? 0 : (idx + 1) % filteredReports.length])
   }, [filteredReports, selectedReport])
 
-  // Keyboard shortcuts — E escalate, R reject, N next
+  // Single-report action request — opens the AlertDialog
+  const handleEscalateRequest = useCallback(() => {
+    if (!selectedReport) return
+    setSingleConfirmAction('escalate')
+  }, [selectedReport])
+
+  const handleRejectRequest = useCallback(() => {
+    if (!selectedReport) return
+    setSingleConfirmAction('reject')
+  }, [selectedReport])
+
+  const executeSingleAction = async () => {
+    if (!selectedReport || !singleConfirmAction) return
+    const action = singleConfirmAction
+    setSingleConfirmAction(null)
+    if (action === 'escalate') await handleVerify(selectedReport.id)
+    else await handleReject(selectedReport.id)
+  }
+
+  // Keyboard shortcuts — E escalate (dialog), R reject (dialog), N next
   useEffect(() => {
     const handleKeydown = (event) => {
       const tag = event.target?.tagName
@@ -219,12 +239,12 @@ function Reports() {
       const key = event.key.toLowerCase()
       if (key === 'n') { event.preventDefault(); handleSelectNextReport(); return }
       if (!selectedReport) return
-      if (key === 'e' && !verifyMutation.isPending) { event.preventDefault(); handleVerify(selectedReport.id) }
-      if (key === 'r' && !rejectMutation.isPending) { event.preventDefault(); handleReject(selectedReport.id) }
+      if (key === 'e' && !verifyMutation.isPending) { event.preventDefault(); handleEscalateRequest() }
+      if (key === 'r' && !rejectMutation.isPending) { event.preventDefault(); handleRejectRequest() }
     }
     window.addEventListener('keydown', handleKeydown)
     return () => window.removeEventListener('keydown', handleKeydown)
-  }, [handleReject, handleSelectNextReport, handleVerify, rejectMutation.isPending, selectedReport, verifyMutation.isPending])
+  }, [handleEscalateRequest, handleRejectRequest, handleSelectNextReport, rejectMutation.isPending, selectedReport, verifyMutation.isPending])
 
   return (
     <div className="space-y-3">
@@ -306,8 +326,8 @@ function Reports() {
               queryClient.invalidateQueries({ queryKey: ['report-ml', selectedReport?.id] })
               pushToast('Category updated successfully.')
             }}
-            onVerify={() => handleVerify(selectedReport.id)}
-            onReject={() => handleReject(selectedReport.id)}
+            onVerify={handleEscalateRequest}
+            onReject={handleRejectRequest}
             onNext={handleSelectNextReport}
             onOpenDuplicateCandidate={async (duplicateIncidentId) => {
               const duplicateId = Number(duplicateIncidentId)
@@ -333,6 +353,26 @@ function Reports() {
           />
         </div>
       </div>
+
+      {/* Single-report action confirmation */}
+      <ConfirmDialog
+        visible={Boolean(singleConfirmAction)}
+        title={singleConfirmAction === 'escalate' ? 'Escalate this report?' : 'Reject this report?'}
+        message={
+          singleConfirmAction === 'escalate'
+            ? 'This will mark the report as verified and forward it to law enforcement. This cannot be undone.'
+            : 'This will permanently reject the report. This cannot be undone.'
+        }
+        confirmLabel={singleConfirmAction === 'escalate' ? 'Escalate' : 'Reject'}
+        confirmClassName={
+          singleConfirmAction === 'escalate'
+            ? 'bg-success text-bg hover:bg-success/90'
+            : 'bg-danger text-bg hover:bg-danger/90'
+        }
+        confirmDisabled={verifyMutation.isPending || rejectMutation.isPending}
+        onCancel={() => setSingleConfirmAction(null)}
+        onConfirm={executeSingleAction}
+      />
 
       {/* Bulk action confirmation — prevents accidental mass-actions */}
       <ConfirmDialog
