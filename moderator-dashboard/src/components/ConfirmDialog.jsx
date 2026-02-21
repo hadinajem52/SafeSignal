@@ -18,15 +18,16 @@ function ConfirmDialog({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div
-        role="dialog"
+        role="alertdialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
+        aria-describedby="confirm-dialog-desc"
         className="bg-card border border-border rounded-lg shadow-soft max-w-md w-full p-6"
       >
-        <h3 id="confirm-dialog-title" className="text-xl font-bold text-text mb-2">
+        <h3 id="confirm-dialog-title" className="text-xl font-bold text-text mb-2 font-condensed uppercase tracking-wide">
           {title}
         </h3>
-        <p className="text-muted mb-6">{message}</p>
+        <p id="confirm-dialog-desc" className="text-muted mb-6 text-pretty">{message}</p>
         <div className="flex gap-3 justify-end">
           <button
             onClick={onCancel}
@@ -38,7 +39,7 @@ function ConfirmDialog({
           <button
             onClick={onConfirm}
             disabled={confirmDisabled}
-            className={`px-4 py-2 rounded-lg text-white font-medium disabled:opacity-60 ${confirmClassName}`}
+            className={`px-4 py-2 rounded-lg font-medium disabled:opacity-60 ${confirmClassName}`}
           >
             {confirmLabel}
           </button>

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Source+Sans+3:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -19,25 +19,27 @@
   --color-success: #16a34a;
   --color-warning: #d97706;
   --color-error: #dc2626;
+  --color-danger: #dc2626;
   --color-info: #0284c7;
 }
 
 html.dark {
-  --color-primary: #38bdf8;
-  --color-accent: #fbbf24;
+  --color-primary: #00f0ff; /* ice blue */
+  --color-accent: #ffb000; /* amber */
 
-  --color-bg: #0c1322;
-  --color-surface: #151f32;
-  --color-card: #111a2e;
-  --color-border: #1e2d44;
+  --color-bg: #07090B; /* near-black base */
+  --color-surface: #0d1117;
+  --color-card: #0a0d12;
+  --color-border: #1a222d;
 
-  --color-text: #e8ecf2;
-  --color-text-muted: #7a8ba5;
+  --color-text: #e2e8f0;
+  --color-text-muted: #64748b;
 
-  --color-success: #34d399;
-  --color-warning: #fbbf24;
-  --color-error: #fb7185;
-  --color-info: #38bdf8;
+  --color-success: #00f0ff; /* ice blue for confirmed/action states */
+  --color-warning: #ffb000; /* amber for urgency flags */
+  --color-error: #ff3333; /* red only for severity */
+  --color-danger: #ff3333;
+  --color-info: #00f0ff;
 
   /* Badge surface tokens — dark‑mode‑safe tinted backgrounds */
   --color-badge-yellow-bg: rgba(251, 191, 36, 0.12);

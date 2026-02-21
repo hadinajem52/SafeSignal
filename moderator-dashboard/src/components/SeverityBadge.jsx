@@ -35,9 +35,15 @@ function SeverityBadge({ severity, variant = SEVERITY_VARIANTS.REPORTS, display 
   const styles = SEVERITY_STYLES[safeSeverity] || DEFAULT_STYLE
 
   if (display === 'initial') {
+    const dotCount = safeSeverity === 'low' ? 1 : safeSeverity === 'medium' ? 2 : safeSeverity === 'high' ? 3 : safeSeverity === 'critical' ? 4 : 0;
     return (
-      <div className={`text-2xl font-extrabold ${styles.letter}`}>
-        {safeSeverity.charAt(0).toUpperCase()}
+      <div className={`flex flex-col gap-1 ${styles.letter}`} aria-label={`Severity: ${safeSeverity}`}>
+        <span className="text-sm font-bold font-mono leading-none uppercase">{safeSeverity.charAt(0)}</span>
+        <div className="flex gap-0.5">
+          {Array.from({ length: dotCount }).map((_, i) => (
+            <div key={i} className="size-1.5 rounded-full bg-current" />
+          ))}
+        </div>
       </div>
     )
   }

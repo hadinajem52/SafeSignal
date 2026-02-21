@@ -1,14 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, ChevronDown, ChevronUp, Clock, Map as MapIcon, Radio, Shield, Zap } from 'lucide-react'
+import { AlertTriangle, ArrowUpRight, ChevronDown, ChevronUp, Clock, Flag, LayoutGrid, Radio, Shield, Wifi, Zap } from 'lucide-react'
 import { io } from 'socket.io-client'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import FilterDropdown from '../../components/FilterDropdown'
 import GoogleMapPanel from '../../components/GoogleMapPanel'
-import PageHeader from '../../components/PageHeader'
 import SearchInput from '../../components/SearchInput'
 import SeverityBadge from '../../components/SeverityBadge'
-import StatusBadge from '../../components/StatusBadge' // used in IncidentDetailPane only
 import { LEI_STATUS_FILTERS } from '../../constants/incident'
 import { useAuth } from '../../context/AuthContext'
 import { leiAPI } from '../../services/api'
@@ -38,40 +36,40 @@ const STATUS_TRANSITIONS = {
 const STATUS_ACTION_CONFIG = {
   dispatched: {
     label: 'Dispatch',
-    buttonClass: 'bg-primary text-white',
+    buttonClass: 'bg-primary text-bg font-mono uppercase tracking-wide',
     confirmTitle: 'Dispatch unit?',
     confirmMessage: 'This marks the incident as dispatched and notifies responders.',
-    confirmClassName: 'bg-primary hover:bg-primary/90',
+    confirmClassName: 'bg-primary hover:bg-primary/90 text-bg',
   },
   on_scene: {
     label: 'Mark On Scene',
-    buttonClass: 'bg-indigo-600 text-white',
+    buttonClass: 'bg-warning text-bg font-mono uppercase tracking-wide',
     confirmTitle: 'Mark unit on scene?',
     confirmMessage: 'Use this only when a responding unit has arrived at the location.',
-    confirmClassName: 'bg-indigo-600 hover:bg-indigo-700',
+    confirmClassName: 'bg-warning hover:bg-warning/90 text-bg',
   },
   investigating: {
     label: 'Mark Investigating',
-    buttonClass: 'bg-violet-600 text-white',
+    buttonClass: 'bg-warning/70 text-bg font-mono uppercase tracking-wide',
     confirmTitle: 'Move to investigating?',
     confirmMessage: 'This marks active scene handling as complete and starts investigation.',
-    confirmClassName: 'bg-violet-600 hover:bg-violet-700',
+    confirmClassName: 'bg-warning/70 hover:bg-warning/90 text-bg',
   },
   police_closed: {
     label: 'Close Case',
-    buttonClass: 'bg-emerald-600 text-white',
+    buttonClass: 'bg-success/20 text-success border border-success/40 font-mono uppercase tracking-wide',
     confirmTitle: 'Close this case?',
     confirmMessage: 'Closing is recorded in the audit log and ends the active LE workflow.',
-    confirmClassName: 'bg-emerald-600 hover:bg-emerald-700',
+    confirmClassName: 'bg-success/20 hover:bg-success/30 text-success border border-success/40',
   },
 }
 
 const STATUS_ROW_CLASS = {
-  verified: 'bg-amber-500/10',
-  dispatched: 'bg-blue-500/10',
-  on_scene: 'bg-indigo-500/10',
-  investigating: 'bg-violet-500/10',
-  police_closed: 'bg-emerald-500/10',
+  verified: 'bg-warning/10',
+  dispatched: 'bg-primary/10',
+  on_scene: 'bg-primary/10',
+  investigating: 'bg-warning/10',
+  police_closed: 'bg-success/5',
 }
 
 const UNACTIONED_AGE_THRESHOLD_MINUTES = 30
@@ -79,9 +77,9 @@ const UNACTIONED_AGE_THRESHOLD_MINUTES = 30
 // ─── Sub-nav tabs ─────────────────────────────────────────────────────────────
 
 const VIEWS = [
-  { id: 'queue', label: 'Incident Queue', icon: Shield },
-  { id: 'map', label: 'Operations Map', icon: MapIcon },
-  { id: 'closed', label: 'Closed Cases', icon: AlertTriangle },
+  { id: 'queue', label: 'Incident Queue', icon: Radio },
+  { id: 'map', label: 'Operations Map', icon: LayoutGrid },
+  { id: 'closed', label: 'Closed Cases', icon: Flag },
 ]
 
 // ─── Small pure helpers ────────────────────────────────────────────────────────
@@ -117,42 +115,38 @@ function AlertBanner({ alerts, onDispatch, statusMutationPending, onSelectIncide
 
   if (!alerts.length) return null
 
-  const criticalCount = alerts.filter((a) => a.severity === 'critical').length
-
   return (
-    <div className="bg-card border border-danger/30 rounded-lg shadow-soft overflow-hidden">
+    <div className="border-b border-border overflow-hidden">
       <button
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-surface transition-colors"
+        className="w-full flex items-center justify-between px-5 py-2.5 bg-warning/5 hover:bg-warning/10 transition-colors"
         onClick={() => setExpanded((prev) => !prev)}
       >
-        <div className="flex items-center gap-2">
-          <AlertTriangle size={16} className="text-danger" />
-          <span className="text-sm font-semibold text-danger">
-            {alerts.length} Unactioned Alert{alerts.length !== 1 ? 's' : ''}
-            {criticalCount > 0 && (
-              <span className="ml-2 rounded-full bg-danger/20 px-2 py-0.5 text-[11px]">
-                {criticalCount} critical
-              </span>
-            )}
+        <div className="flex items-center gap-2.5">
+          <AlertTriangle size={14} className="text-warning flex-shrink-0" />
+          <span className="size-5 rounded flex items-center justify-center bg-warning text-bg text-[11px] font-bold font-mono flex-shrink-0">
+            {alerts.length}
+          </span>
+          <span className="text-sm font-semibold text-warning font-condensed uppercase tracking-wide">
+            Unactioned alerts require immediate review
           </span>
         </div>
-        {expanded ? <ChevronUp size={16} className="text-muted" /> : <ChevronDown size={16} className="text-muted" />}
+        {expanded
+          ? <ChevronUp size={14} className="text-warning flex-shrink-0" />
+          : <ChevronDown size={14} className="text-warning flex-shrink-0" />}
       </button>
 
       {expanded && (
-        <div className="divide-y divide-border border-t border-danger/20">
+        <div className="divide-y divide-border">
           {alerts.map((alert) => (
             <div
               key={alert.incidentId}
-                className={`flex items-center justify-between gap-4 px-4 py-3 cursor-pointer bg-card hover:bg-surface`}
-                onClick={() => onSelectIncident(alert.incidentId)}
-              >
-              <div className="min-w-0">
+              className="flex items-center justify-between gap-4 px-5 py-2.5 cursor-pointer hover:bg-surface transition-colors"
+              onClick={() => onSelectIncident(alert.incidentId)}
+            >
+              <div className="min-w-0 flex items-center gap-3">
+                <span className="text-[10px] font-mono font-bold text-warning uppercase">{alert.severity}</span>
                 <p className="text-sm font-semibold text-text truncate">
                   {alert.title || `Incident #${alert.incidentId}`}
-                </p>
-                <p className="text-xs text-muted mt-0.5 uppercase tracking-wide">
-                  {alert.severity} · {alert.status}
                 </p>
               </div>
               <div className="flex items-center gap-3 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -161,17 +155,17 @@ function AlertBanner({ alerts, onDispatch, statusMutationPending, onSelectIncide
                     href={openMapsUrl(alert.latitude, alert.longitude)}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-xs text-primary hover:underline"
+                    className="text-xs font-mono text-primary hover:underline uppercase"
                   >
-                    Open map
+                    Map
                   </a>
                 )}
                 <button
                   onClick={() => onDispatch(alert)}
                   disabled={statusMutationPending || alert.status !== 'verified'}
-                  className="px-3 py-1.5 rounded bg-primary text-white text-xs font-semibold disabled:opacity-50"
+                  className="px-3 py-1 rounded border border-primary text-primary text-xs font-mono font-bold uppercase tracking-wide disabled:opacity-50 hover:bg-primary/10 transition-colors"
                 >
-                  Dispatch Now
+                  Dispatch
                 </button>
               </div>
             </div>
@@ -202,45 +196,47 @@ function IncidentQueueTable({
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Filters */}
-      <div className="p-3 border-b border-border flex-shrink-0 space-y-2">
+      <div className="px-3 pt-3 pb-2 border-b border-border flex-shrink-0 space-y-2">
         <SearchInput
           label="Search"
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Title or description..."
+          placeholder="Search by title or description..."
         />
-        <FilterDropdown
-          label="Status"
-          value={statusFilter}
-          onChange={(e) => onStatusFilterChange(e.target.value)}
-          options={LEI_STATUS_FILTERS}
-        />
-        <div className="inline-flex w-fit max-w-full rounded-lg border border-border bg-surface overflow-hidden">
-          <button
-            onClick={() => onSortModeChange('urgency')}
-            title="Sort by urgency"
-            className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors ${
-              sortMode === 'urgency'
-                ? 'bg-primary text-white'
-                : 'text-muted hover:text-text hover:bg-surface'
-            }`}
-          >
-            <Zap size={13} />
-            Urgency
-          </button>
-          <span className="inline-block h-5 w-px bg-border align-middle" />
-          <button
-            onClick={() => onSortModeChange('time')}
-            title="Sort by newest reports"
-            className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors ${
-              sortMode === 'time'
-                ? 'bg-primary text-white'
-                : 'text-muted hover:text-text hover:bg-surface'
-            }`}
-          >
-            <Clock size={13} />
-            Newest
-          </button>
+        <div className="flex items-center gap-2">
+          <FilterDropdown
+            label="Status"
+            value={statusFilter}
+            onChange={(e) => onStatusFilterChange(e.target.value)}
+            options={LEI_STATUS_FILTERS}
+          />
+          <div className="ml-auto inline-flex rounded border border-border bg-surface overflow-hidden flex-shrink-0">
+            <button
+              onClick={() => onSortModeChange('urgency')}
+              title="Sort by urgency"
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono font-semibold uppercase tracking-wide transition-colors ${
+                sortMode === 'urgency'
+                  ? 'bg-primary text-bg'
+                  : 'text-muted hover:text-text hover:bg-surface'
+              }`}
+            >
+              <Zap size={11} />
+              Urgency
+            </button>
+            <span className="inline-block h-5 w-px bg-border self-center" />
+            <button
+              onClick={() => onSortModeChange('time')}
+              title="Sort by newest reports"
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono font-semibold uppercase tracking-wide transition-colors ${
+                sortMode === 'time'
+                  ? 'bg-primary text-bg'
+                  : 'text-muted hover:text-text hover:bg-surface'
+              }`}
+            >
+              <Clock size={11} />
+              Newest
+            </button>
+          </div>
         </div>
       </div>
 
@@ -249,10 +245,10 @@ function IncidentQueueTable({
         <table className="w-full">
           <thead className="bg-surface border-b border-border sticky top-0 z-10">
             <tr>
-              <th className="px-3 py-2.5 text-left text-xs font-bold text-text">Incident</th>
-              <th className="px-3 py-2.5 text-left text-xs font-bold text-text">Severity</th>
-              <th className="px-3 py-2.5 text-left text-xs font-bold text-text">Age</th>
-              <th className="px-3 py-2.5 text-left text-xs font-bold text-text">Action</th>
+              <th className="px-3 py-2.5 text-left text-[11px] font-bold text-muted font-condensed uppercase tracking-widest">Incident</th>
+              <th className="px-3 py-2.5 text-left text-[11px] font-bold text-muted font-condensed uppercase tracking-widest">Sev</th>
+              <th className="px-3 py-2.5 text-left text-[11px] font-bold text-muted font-condensed uppercase tracking-widest">Age</th>
+              <th className="px-3 py-2.5 text-left text-[11px] font-bold text-muted font-condensed uppercase tracking-widest">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -290,7 +286,7 @@ function IncidentQueueTable({
                       />
                     </td>
                     <td className="px-3 py-2.5">
-                      <span className="text-xs text-text tabular-nums">{getTimeAgo(incident.reportedAt)}</span>
+                      <span className="text-xs text-text tabular-nums font-mono">{getTimeAgo(incident.reportedAt)}</span>
                       {aged && (
                         <span className="block mt-0.5 rounded-full bg-danger/20 px-1.5 py-0.5 text-[10px] font-semibold text-danger w-fit">
                           &gt;{UNACTIONED_AGE_THRESHOLD_MINUTES}m
@@ -302,7 +298,7 @@ function IncidentQueueTable({
                         <button
                           onClick={() => onRequestAction(incident, nextStatus)}
                           disabled={statusMutationPending || !canTransitionTo(incident, nextStatus)}
-                          className={`px-2 py-1 rounded text-xs font-semibold disabled:opacity-50 ${nextAction.buttonClass}`}
+                          className="px-2.5 py-1 rounded border border-primary text-primary text-[11px] font-mono font-bold uppercase tracking-wide hover:bg-primary/10 disabled:opacity-40 transition-colors whitespace-nowrap"
                         >
                           {nextAction.label}
                         </button>
@@ -336,93 +332,165 @@ function IncidentDetailPane({ incident, actionLog, statusMutationPending, onRequ
   const currentStepIndex = WORKFLOW_STEPS.findIndex((s) => s.id === incident.status)
   const nextStatus = getNextWorkflowStatus(incident.status)
   const nextAction = nextStatus ? STATUS_ACTION_CONFIG[nextStatus] : null
+  const isComplete = incident.status === 'police_closed'
 
   return (
-    <div className="overflow-y-auto h-full p-5 space-y-5">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="text-lg font-bold text-text leading-snug">{incident.title}</h3>
-          <p className="text-sm text-muted mt-1">{incident.description}</p>
+    <div className="overflow-y-auto h-full">
+      {/* ─ Title block ─ */}
+      <div className="p-6 pb-4">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <h3 className="text-3xl font-bold text-text leading-tight text-balance font-condensed uppercase tracking-wide flex-1">
+            {incident.title}
+          </h3>
+          <span className="flex-shrink-0 mt-1 px-3 py-1 rounded border border-primary text-primary text-xs font-mono font-bold uppercase tracking-widest">
+            {incident.status?.replace(/_/g, ' ')}
+          </span>
         </div>
-        <StatusBadge status={incident.status} size="sm" />
+        <p className="text-sm text-muted leading-relaxed text-pretty">{incident.description}</p>
       </div>
 
-      {/* Meta row */}
-      <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted">
-        <span>Reporter: <strong className="text-text">{incident.username || 'Unknown'}</strong></span>
-        <span>Reported: <strong className="text-text">{getTimeAgo(incident.reportedAt)}</strong></span>
-        {incident.location_name && (
-          <span>Location: <strong className="text-text">{incident.location_name}</strong></span>
+      {/* ─ Meta cards ─ */}
+      <div className="grid grid-cols-3 border-t border-b border-border">
+        <div className="px-4 py-3 border-r border-border">
+          <p className="text-[10px] font-mono font-bold text-muted uppercase tracking-widest mb-1">Reporter</p>
+          <p className="text-sm font-semibold text-text">{incident.username || 'Unknown'}</p>
+        </div>
+        <div className="px-4 py-3 border-r border-border">
+          <p className="text-[10px] font-mono font-bold text-muted uppercase tracking-widest mb-1">Reported</p>
+          <p className="text-sm font-semibold text-text tabular-nums font-mono">{getTimeAgo(incident.reportedAt)}</p>
+        </div>
+        <div className="px-4 py-3">
+          <p className="text-[10px] font-mono font-bold text-muted uppercase tracking-widest mb-1">Location</p>
+          <p className="text-sm font-semibold text-text leading-snug">
+            {incident.location_name || (
+              Number.isFinite(Number(incident.latitude))
+                ? `${Number(incident.latitude).toFixed(4)}, ${Number(incident.longitude).toFixed(4)}`
+                : 'Unknown'
+            )}
+          </p>
+        </div>
+      </div>
+
+      {/* ─ Workflow stepper ─ */}
+      <div className="px-6 pt-5 pb-4 border-b border-border">
+        <p className="text-[10px] font-mono font-bold text-muted uppercase tracking-widest mb-4">Status Workflow</p>
+
+        {/* Step circles + connecting line */}
+        <div className="relative flex items-start justify-between mb-5">
+          {/* connector line behind circles */}
+          <div className="absolute left-0 right-0 top-3 h-px bg-border" />
+          {WORKFLOW_STEPS.map((step, index) => {
+            const isDone = currentStepIndex >= index
+            const isNext = currentStepIndex + 1 === index
+            return (
+              <div key={step.id} className="relative flex flex-col items-center gap-2 z-10">
+                <div
+                  className={`size-6 rounded-full flex items-center justify-center text-[10px] font-bold font-mono border-2 transition-colors ${
+                    isDone
+                      ? 'border-primary bg-primary text-bg'
+                      : isNext
+                        ? 'border-warning bg-card text-warning'
+                        : 'border-border bg-card text-muted'
+                  }`}
+                >
+                  {isDone ? '✓' : index + 1}
+                </div>
+                <span
+                  className={`text-[9px] font-bold font-condensed uppercase tracking-wider text-center leading-tight ${
+                    isDone ? 'text-primary' : isNext ? 'text-warning' : 'text-muted'
+                  }`}
+                >
+                  {step.label}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Action button row */}
+        {isComplete ? (
+          <p className="text-xs text-muted font-mono uppercase tracking-wide">Case closed.</p>
+        ) : (
+          <div className="grid grid-cols-3 gap-2">
+            {/* Primary: next workflow step */}
+            {nextAction && (
+              <button
+                onClick={() => onRequestAction(incident, nextStatus)}
+                disabled={statusMutationPending}
+                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded border border-primary text-primary text-xs font-mono font-bold uppercase tracking-wide hover:bg-primary/10 disabled:opacity-40 transition-colors"
+              >
+                <ArrowUpRight size={12} />
+                {nextAction.label}
+              </button>
+            )}
+            {/* Flag for review */}
+            <button
+              disabled
+              className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded border border-border text-muted text-xs font-mono font-bold uppercase tracking-wide cursor-not-allowed opacity-50"
+            >
+              <Flag size={12} />
+              Flag for Review
+            </button>
+            {/* Direct close */}
+            {incident.status !== 'police_closed' && (
+              <button
+                onClick={() => onRequestAction(incident, 'police_closed')}
+                disabled={statusMutationPending}
+                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded border border-border text-muted text-xs font-mono font-bold uppercase tracking-wide hover:border-error/50 hover:text-error disabled:opacity-40 transition-colors"
+              >
+                Close Case
+              </button>
+            )}
+          </div>
         )}
+        {incident.status === 'dispatched' && (
+          <p className="mt-2 text-[11px] text-primary font-mono uppercase flex items-center gap-1.5">
+            <span className="size-1.5 rounded-full bg-primary animate-pulse-opacity" />
+            Dispatched {getTimeAgo(incident.updated_at || incident.created_at)}
+          </p>
+        )}
+      </div>
+
+      {/* ─ Incident location ─ */}
+      <div className="px-6 pt-5 pb-4 border-b border-border">
+        <p className="text-[10px] font-mono font-bold text-muted uppercase tracking-widest mb-3">Incident Location</p>
+        <div className="relative rounded border border-border overflow-hidden">
+          <GoogleMapPanel
+            markers={[{
+              id: `lei-detail-${incident.id || incident.incident_id}`,
+              lat: incident.latitude,
+              lng: incident.longitude,
+              title: incident.title,
+            }]}
+            center={{ lat: incident.latitude, lng: incident.longitude }}
+            zoom={15}
+            height={200}
+            autoFit={false}
+            emptyMessage="No coordinates available."
+          />
+          {Number.isFinite(Number(incident.latitude)) && (
+            <div className="absolute bottom-2 left-2 bg-card/90 backdrop-blur-sm border border-border px-2 py-0.5 rounded text-[10px] font-mono text-muted tabular-nums">
+              {Number(incident.latitude).toFixed(6)}, {Number(incident.longitude).toFixed(6)}
+            </div>
+          )}
+        </div>
         {Number.isFinite(Number(incident.latitude)) && (
           <a
             href={openMapsUrl(incident.latitude, incident.longitude)}
             target="_blank"
             rel="noreferrer"
-            className="text-primary hover:underline"
+            className="mt-2 inline-flex items-center gap-1.5 text-xs font-mono font-bold uppercase tracking-wide text-primary hover:underline"
           >
+            <ArrowUpRight size={12} />
             Open in Maps
           </a>
         )}
       </div>
 
-      {/* Workflow stepper */}
-      <div>
-        <p className="text-xs font-semibold text-text mb-2">Status Workflow</p>
-        <div className="grid grid-cols-5 gap-1">
-          {WORKFLOW_STEPS.map((step, index) => {
-            const isDone = currentStepIndex > index
-            const isCurrent = currentStepIndex === index
-            return (
-              <div
-                key={step.id}
-                className={`rounded px-1.5 py-1.5 text-[11px] font-semibold text-center border ${isCurrent
-                  ? 'bg-primary text-white border-primary'
-                  : isDone
-                    ? 'bg-success/10 text-success border-success/30'
-                    : 'bg-surface text-muted border-border'
-                  }`}
-              >
-                {step.label}
-              </div>
-            )
-          })}
-        </div>
-        <div className="mt-2">
-          {nextAction ? (
-            <button
-              onClick={() => onRequestAction(incident, nextStatus)}
-              disabled={statusMutationPending || !canTransitionTo(incident, nextStatus)}
-              className={`px-3 py-1.5 rounded text-sm font-semibold disabled:opacity-50 ${nextAction.buttonClass}`}
-            >
-              {nextAction.label}
-            </button>
-          ) : (
-            <p className="text-xs text-muted">Workflow complete.</p>
-          )}
-        </div>
-      </div>
-
-      {/* Map */}
-      <GoogleMapPanel
-        markers={[{
-          id: `lei-detail-${incident.id || incident.incident_id}`,
-          lat: incident.latitude,
-          lng: incident.longitude,
-          title: incident.title,
-        }]}
-        center={{ lat: incident.latitude, lng: incident.longitude }}
-        zoom={15}
-        height={220}
-        autoFit={false}
-        emptyMessage="No coordinates available."
-      />
-
-      {/* Evidence photos */}
+      {/* ─ Evidence photos ─ */}
       {incident.photo_urls?.length > 0 && (
-        <div>
-          <p className="text-xs font-semibold text-text mb-2">Evidence</p>
+        <div className="px-6 pt-5 pb-4 border-b border-border">
+          <p className="text-[10px] font-mono font-bold text-muted uppercase tracking-widest mb-3">Evidence</p>
           <div className="grid grid-cols-3 gap-2">
             {incident.photo_urls.map((url, i) => (
               <img
@@ -436,15 +504,15 @@ function IncidentDetailPane({ incident, actionLog, statusMutationPending, onRequ
         </div>
       )}
 
-      {/* Action log */}
-      <div>
-        <p className="text-xs font-semibold text-text mb-2">Chain of Custody</p>
+      {/* ─ Chain of custody ─ */}
+      <div className="px-6 pt-5 pb-6">
+        <p className="text-[10px] font-mono font-bold text-muted uppercase tracking-widest mb-3">Chain of Custody</p>
         {actionLog.length ? (
           <ul className="space-y-2">
             {actionLog.map((entry) => (
               <li key={entry.action_id} className="border border-border rounded p-2.5 bg-surface">
-                <p className="text-xs font-semibold text-text">{entry.action_type.replace(/_/g, ' ')}</p>
-                <p className="text-[11px] text-muted mt-0.5">
+                <p className="text-xs font-semibold text-text font-condensed uppercase tracking-wide">{entry.action_type.replace(/_/g, ' ')}</p>
+                <p className="text-[11px] text-muted mt-0.5 font-mono tabular-nums">
                   {entry.moderator_name || 'System'} · {new Date(entry.timestamp).toLocaleString()}
                 </p>
                 {entry.notes && <p className="text-[11px] text-muted mt-0.5">{entry.notes}</p>}
@@ -452,7 +520,7 @@ function IncidentDetailPane({ incident, actionLog, statusMutationPending, onRequ
             ))}
           </ul>
         ) : (
-          <p className="text-xs text-muted">No actions recorded.</p>
+          <p className="text-xs text-muted font-mono">No actions recorded.</p>
         )}
       </div>
     </div>
@@ -462,7 +530,7 @@ function IncidentDetailPane({ incident, actionLog, statusMutationPending, onRequ
 /**
  * Operations Map view — all active incidents as markers.
  */
-function OpsMapView({ incidents, onSelectIncident }) {
+function OpsMapView({ incidents, onSelectIncident: _onSelectIncident }) {
   const markers = incidents
     .filter((inc) => Number.isFinite(Number(inc.latitude)) && Number.isFinite(Number(inc.longitude)))
     .map((inc) => ({
@@ -475,7 +543,7 @@ function OpsMapView({ incidents, onSelectIncident }) {
   return (
     <div className="bg-card border border-border rounded-lg shadow-soft overflow-hidden">
       <div className="px-4 py-3 border-b border-border">
-        <p className="text-sm font-semibold text-text">
+        <p className="text-sm font-bold text-text font-condensed uppercase tracking-wide">
           All Active Incidents — {markers.length} with coordinates
         </p>
         <p className="text-xs text-muted mt-0.5">Click a marker to select an incident in the Queue.</p>
@@ -506,16 +574,16 @@ function ClosedCasesView() {
   return (
     <div className="bg-card border border-border rounded-lg shadow-soft overflow-hidden">
       <div className="px-4 py-3 border-b border-border">
-        <p className="text-sm font-semibold text-text">Closed Cases ({closedIncidents.length})</p>
+        <p className="text-sm font-bold text-text font-condensed uppercase tracking-wide">Closed Cases ({closedIncidents.length})</p>
       </div>
       <table className="w-full">
         <thead className="bg-surface border-b border-border">
           <tr>
-            <th className="px-4 py-3 text-left text-xs font-bold text-text">Incident</th>
-            <th className="px-4 py-3 text-left text-xs font-bold text-text">Severity</th>
-            <th className="px-4 py-3 text-left text-xs font-bold text-text">Reporter</th>
-            <th className="px-4 py-3 text-left text-xs font-bold text-text">Closed At</th>
-            <th className="px-4 py-3 text-left text-xs font-bold text-text">Outcome</th>
+            <th className="px-4 py-3 text-left text-[11px] font-bold text-muted font-condensed uppercase tracking-widest">Incident</th>
+            <th className="px-4 py-3 text-left text-[11px] font-bold text-muted font-condensed uppercase tracking-widest">Sev</th>
+            <th className="px-4 py-3 text-left text-[11px] font-bold text-muted font-condensed uppercase tracking-widest">Reporter</th>
+            <th className="px-4 py-3 text-left text-[11px] font-bold text-muted font-condensed uppercase tracking-widest">Closed At</th>
+            <th className="px-4 py-3 text-left text-[11px] font-bold text-muted font-condensed uppercase tracking-widest">Outcome</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
@@ -541,8 +609,8 @@ function ClosedCasesView() {
                     display="initial"
                   />
                 </td>
-                <td className="px-4 py-3 text-sm text-muted">{inc.username || 'Unknown'}</td>
-                <td className="px-4 py-3 text-sm text-muted tabular-nums">
+                <td className="px-4 py-3 text-sm text-muted font-mono tabular-nums">{inc.username || 'Unknown'}</td>
+                <td className="px-4 py-3 text-sm text-muted font-mono tabular-nums">
                   {inc.updated_at ? new Date(inc.updated_at).toLocaleDateString() : '—'}
                 </td>
                 <td className="px-4 py-3 text-sm text-muted capitalize">
@@ -809,8 +877,8 @@ function LawEnforcement() {
   if (user?.role !== 'law_enforcement' && user?.role !== 'admin') {
     return (
       <div className="bg-card border border-border rounded-lg shadow-soft p-8 text-center">
-        <AlertTriangle size={48} className="mx-auto text-yellow-500 mb-4" />
-        <h2 className="text-2xl font-bold text-text">Access Restricted</h2>
+        <AlertTriangle size={48} className="mx-auto text-warning mb-4" />
+        <h2 className="text-2xl font-bold text-text font-condensed uppercase tracking-wide">Access Restricted</h2>
         <p className="text-muted mt-2">You do not have permission to view the Law Enforcement Interface.</p>
       </div>
     )
@@ -821,22 +889,54 @@ function LawEnforcement() {
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-4">
-      <PageHeader
-        icon={Shield}
-        title="Law Enforcement Operations"
-      />
+    <div>
+      {/* ── Integrated header bar (full-bleed out of layout padding) ── */}
+      <div className="-mx-8 -mt-8 mb-5 border-b border-border bg-card">
+        <div className="flex items-center justify-between px-8">
+          {/* Left: title */}
+          <div className="flex items-center gap-3 py-5">
+            <Shield size={18} className="text-primary flex-shrink-0" />
+            <h1 className="text-xl font-bold font-condensed uppercase tracking-widest text-text leading-none">
+              Law Enforcement Operations
+            </h1>
+          </div>
+          {/* Right: tabs + LIVE indicator */}
+          <div className="flex items-center">
+            {VIEWS.map((view) => (
+              <button
+                key={view.id}
+                onClick={() => setActiveView(view.id)}
+                className={`flex items-center gap-2 px-5 py-5 text-[11px] font-mono font-bold uppercase tracking-widest border-b-2 transition-colors ${
+                  activeView === view.id
+                    ? 'text-primary border-primary'
+                    : 'text-muted border-transparent hover:text-text'
+                }`}
+              >
+                <view.icon size={13} />
+                {view.label}
+              </button>
+            ))}
+            <div className="w-px h-5 bg-border mx-4" />
+            <div className={`flex items-center gap-1.5 text-[11px] font-mono font-bold uppercase tracking-widest ${hasFreshRealtimeAlert ? 'text-warning' : 'text-success'}`}>
+              <span className={`size-1.5 rounded-full bg-current ${hasFreshRealtimeAlert ? 'animate-pulse-opacity' : ''}`} />
+              Live
+              <Wifi size={13} />
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Toast stack */}
-      <div className="fixed bottom-6 right-6 z-50 space-y-2">
+      <div className="fixed bottom-6 right-6 z-50 space-y-2 pointer-events-none">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`min-w-[280px] max-w-[420px] rounded-lg border px-4 py-3 shadow-soft ${toast.type === 'error'
-              ? 'border-danger/40 bg-danger/10 text-danger'
-              : toast.type === 'warning'
-                ? 'border-amber-300 bg-amber-50 text-amber-800'
-                : 'border-success/40 bg-success/10 text-success'
+            className={`min-w-[280px] max-w-[420px] rounded border px-4 py-3 text-xs font-mono pointer-events-auto ${
+              toast.type === 'error'
+                ? 'border-error/40 bg-error/10 text-error'
+                : toast.type === 'warning'
+                  ? 'border-warning/40 bg-warning/10 text-warning'
+                  : 'border-success/40 bg-success/10 text-success'
               }`}
           >
             {toast.message}
@@ -844,40 +944,13 @@ function LawEnforcement() {
         ))}
       </div>
 
-      {/* Sub-navigation */}
-      <div className="flex items-stretch gap-2">
-        <div className="flex-1 flex gap-1 bg-surface border border-border rounded-lg p-1">
-          {VIEWS.map((view) => (
-            <button
-              key={view.id}
-              onClick={() => setActiveView(view.id)}
-              className={`flex items-center gap-2 flex-1 justify-center px-4 py-2 rounded-md text-sm font-semibold transition-colors ${activeView === view.id
-                ? 'bg-card shadow-soft text-text border border-border'
-                : 'text-muted hover:text-text hover:bg-card/60'
-                }`}
-            >
-              <view.icon size={15} />
-              {view.label}
-            </button>
-          ))}
-        </div>
-        <div className="relative group flex-shrink-0 self-stretch">
-          <div className="flex h-full w-9 items-center justify-center rounded-lg border border-border bg-card">
-            <Radio className={hasFreshRealtimeAlert ? 'text-danger animate-pulse' : 'text-success'} size={14} />
-          </div>
-          <div className="pointer-events-none absolute right-0 top-full z-20 mt-1.5 hidden w-max rounded-md border border-border bg-card px-2.5 py-1.5 text-xs shadow-soft group-hover:block">
-            <span className="font-semibold text-text">
-              {hasFreshRealtimeAlert ? 'New alert received' : 'Live feed connected'}
-            </span>
-            <span className="ml-2 text-muted tabular-nums">{displayAlerts.length} unactioned</span>
-          </div>
-        </div>
-      </div>
-
       {/* ── Incident Queue view ── */}
       {activeView === 'queue' && (
-        <div className="space-y-3">
-          {/* Collapsible alert banner */}
+        <div
+          className="bg-card border border-border rounded-lg overflow-hidden flex flex-col"
+          style={{ height: '72dvh', minHeight: '480px' }}
+        >
+          {/* Alert banner spans full width inside the card */}
           <AlertBanner
             alerts={displayAlerts}
             onDispatch={handleAlertDispatch}
@@ -885,39 +958,33 @@ function LawEnforcement() {
             onSelectIncident={setSelectedIncidentId}
           />
 
-          {/* Split-pane: table left, detail right */}
-          <div
-            className="bg-card border border-border rounded-lg shadow-soft overflow-hidden"
-            style={{ height: '68vh', minHeight: '480px' }}
-          >
-            <div className="grid h-full" style={{ gridTemplateColumns: '2fr 3fr' }}>
-              {/* Left: scrollable table */}
-              <div className="border-r border-border h-full overflow-hidden flex flex-col">
-                <IncidentQueueTable
-                  isLoading={isLoading}
-                  incidents={filteredIncidents}
-                  selectedIncidentId={selectedIncidentId}
-                  onSelectIncident={setSelectedIncidentId}
-                  searchTerm={searchTerm}
-                  onSearchChange={setSearchTerm}
-                  statusFilter={statusFilter}
-                  onStatusFilterChange={setStatusFilter}
-                  sortMode={sortMode}
-                  onSortModeChange={setSortMode}
-                  statusMutationPending={statusMutation.isPending}
-                  onRequestAction={requestStatusUpdate}
-                />
-              </div>
-
-              {/* Right: sticky detail */}
-              <div className="h-full overflow-hidden">
-                <IncidentDetailPane
-                  incident={selectedIncident}
-                  actionLog={actionLog}
-                  statusMutationPending={statusMutation.isPending}
-                  onRequestAction={requestStatusUpdate}
-                />
-              </div>
+          {/* Two-column split */}
+          <div className="grid flex-1 min-h-0" style={{ gridTemplateColumns: '2fr 3fr' }}>
+            {/* Left: table */}
+            <div className="border-r border-border h-full overflow-hidden flex flex-col">
+              <IncidentQueueTable
+                isLoading={isLoading}
+                incidents={filteredIncidents}
+                selectedIncidentId={selectedIncidentId}
+                onSelectIncident={setSelectedIncidentId}
+                searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                sortMode={sortMode}
+                onSortModeChange={setSortMode}
+                statusMutationPending={statusMutation.isPending}
+                onRequestAction={requestStatusUpdate}
+              />
+            </div>
+            {/* Right: detail pane */}
+            <div className="h-full overflow-hidden">
+              <IncidentDetailPane
+                incident={selectedIncident}
+                actionLog={actionLog}
+                statusMutationPending={statusMutation.isPending}
+                onRequestAction={requestStatusUpdate}
+              />
             </div>
           </div>
         </div>
