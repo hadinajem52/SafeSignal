@@ -541,20 +541,22 @@ function OpsMapView({ incidents, onSelectIncident: _onSelectIncident }) {
     }))
 
   return (
-    <div className="bg-card border border-border rounded-lg shadow-soft overflow-hidden">
-      <div className="px-4 py-3 border-b border-border">
+    <div className="h-full flex flex-col bg-card overflow-hidden">
+      <div className="px-4 py-3 border-b border-border flex-shrink-0">
         <p className="text-sm font-bold text-text font-condensed uppercase tracking-wide">
           All Active Incidents — {markers.length} with coordinates
         </p>
         <p className="text-xs text-muted mt-0.5">Click a marker to select an incident in the Queue.</p>
       </div>
-      <GoogleMapPanel
-        markers={markers}
-        height={580}
-        autoFit
-        showClusters={markers.length > 10}
-        emptyMessage="No active incidents with coordinates."
-      />
+      <div className="flex-1 min-h-0">
+        <GoogleMapPanel
+          markers={markers}
+          height="100%"
+          autoFit
+          showClusters={markers.length > 10}
+          emptyMessage="No active incidents with coordinates."
+        />
+      </div>
     </div>
   )
 }
@@ -889,9 +891,9 @@ function LawEnforcement() {
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <div>
-      {/* ── Integrated header bar (full-bleed out of layout padding) ── */}
-      <div className="-mx-8 -mt-8 mb-5 border-b border-border bg-card">
+    <div className="flex flex-col -m-8 h-dvh bg-bg">
+      {/* ── Integrated header bar ── */}
+      <div className="flex-shrink-0 border-b border-border bg-card">
         <div className="flex items-center justify-between px-8">
           {/* Left: title */}
           <div className="flex items-center gap-3 py-5">
@@ -946,11 +948,8 @@ function LawEnforcement() {
 
       {/* ── Incident Queue view ── */}
       {activeView === 'queue' && (
-        <div
-          className="bg-card border border-border rounded-lg overflow-hidden flex flex-col"
-          style={{ height: '72dvh', minHeight: '480px' }}
-        >
-          {/* Alert banner spans full width inside the card */}
+        <div className="flex-1 min-h-0 flex flex-col">
+          {/* Alert banner — full width, auto height */}
           <AlertBanner
             alerts={displayAlerts}
             onDispatch={handleAlertDispatch}
@@ -958,7 +957,7 @@ function LawEnforcement() {
             onSelectIncident={setSelectedIncidentId}
           />
 
-          {/* Two-column split */}
+          {/* Two-column split fills remaining height */}
           <div className="grid flex-1 min-h-0" style={{ gridTemplateColumns: '2fr 3fr' }}>
             {/* Left: table */}
             <div className="border-r border-border h-full overflow-hidden flex flex-col">
@@ -992,17 +991,23 @@ function LawEnforcement() {
 
       {/* ── Operations Map view ── */}
       {activeView === 'map' && (
-        <OpsMapView
-          incidents={allLeiIncidents}
-          onSelectIncident={(id) => {
-            setSelectedIncidentId(id)
-            setActiveView('queue')
-          }}
-        />
+        <div className="flex-1 min-h-0">
+          <OpsMapView
+            incidents={allLeiIncidents}
+            onSelectIncident={(id) => {
+              setSelectedIncidentId(id)
+              setActiveView('queue')
+            }}
+          />
+        </div>
       )}
 
       {/* ── Closed Cases view ── */}
-      {activeView === 'closed' && <ClosedCasesView />}
+      {activeView === 'closed' && (
+        <div className="flex-1 min-h-0 overflow-auto p-8">
+          <ClosedCasesView />
+        </div>
+      )}
 
       {/* Confirm dialog */}
       <ConfirmDialog
