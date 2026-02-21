@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "@shopify/restyle": "^2.4.5"
+    "@shopify/restyle": "^2.4.5",
+    "lucide-react": "^0.575.0"
   }
 }
