@@ -36,6 +36,16 @@ Never silently fill in ambiguous requirements. The most common failure mode is m
 
 ---
 
+## Compliance Rules - Critical
+
+- **Skills override defaults.** If a skill specifies a pattern, library, file structure, or approach, use it — even if you'd do it differently otherwise.
+- **Multiple skills may apply.** A task involving a UI component inside a document requires both the UI skill and the relevant document skill. Read all applicable skills before starting.
+- **When in doubt, read more skills.** The cost of reading an extra skill file is low. The cost of implementing incorrectly and rebuilding is high.
+- **Skill files are the source of truth for UI work.** Skills in `/.agents/skills/` take precedence over general knowledge, past patterns, or personal defaults.
+
+
+---
+
 ## 2. Confusion Management — CRITICAL
 
 When you encounter inconsistencies, conflicting requirements, or unclear specifications:
@@ -237,14 +247,6 @@ BEFORE ANY UI WORK:
 
 This is not optional. Skills contain condensed best practices from extensive trial and error. Skipping them produces inferior output.
 
----
-
-## Compliance Rules
-
-- **Skills override defaults.** If a skill specifies a pattern, library, file structure, or approach, use it — even if you'd do it differently otherwise.
-- **Multiple skills may apply.** A task involving a UI component inside a document requires both the UI skill and the relevant document skill. Read all applicable skills before starting.
-- **When in doubt, read more skills.** The cost of reading an extra skill file is low. The cost of implementing incorrectly and rebuilding is high.
-- **Skill files are the source of truth for UI work.** Skills in `/.agents/skills/` take precedence over general knowledge, past patterns, or personal defaults.
 
 ---
 

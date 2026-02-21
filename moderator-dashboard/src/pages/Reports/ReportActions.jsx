@@ -1,7 +1,7 @@
 import React from 'react'
 import { CheckCircle, XCircle } from 'lucide-react'
 
-function ReportActions({ verifyPending, rejectPending, onVerify, onReject, onClose }) {
+function ReportActions({ verifyPending, rejectPending, onVerify, onReject }) {
   return (
     <div className="pt-5 border-t border-border flex gap-2">
       <button
@@ -12,7 +12,7 @@ function ReportActions({ verifyPending, rejectPending, onVerify, onReject, onClo
           disabled:opacity-40 text-sm"
       >
         <CheckCircle size={16} />
-        {verifyPending ? 'Verifying…' : 'Verify'}
+        {verifyPending ? 'Escalating…' : 'Escalate'}
       </button>
       <button
         onClick={onReject}
@@ -23,13 +23,6 @@ function ReportActions({ verifyPending, rejectPending, onVerify, onReject, onClo
       >
         <XCircle size={16} />
         {rejectPending ? 'Rejecting…' : 'Reject'}
-      </button>
-      <button
-        onClick={onClose}
-        className="flex-1 bg-surface hover:bg-bg border border-border text-muted
-          font-semibold py-2.5 rounded-lg transition-colors text-sm"
-      >
-        Close
       </button>
     </div>
   )

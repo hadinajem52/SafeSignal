@@ -98,7 +98,7 @@ function ReportFilters({
                 className="px-3 py-1.5 rounded-lg bg-success/15 text-success text-xs font-semibold
                   hover:bg-success/25 disabled:opacity-40 transition-colors border border-success/20"
               >
-                {bulkActionPending === 'verify' ? 'Verifying…' : 'Bulk Verify'}
+                {bulkActionPending === 'verify' ? 'Escalating…' : 'Bulk Escalate'}
               </button>
               <button
                 onClick={onBulkReject}
@@ -114,7 +114,7 @@ function ReportFilters({
 
         {/* Keyboard shortcuts — pushed to far right */}
         <div className="ml-auto hidden lg:flex items-center gap-3 text-[11px] text-muted">
-          {[['V', 'verify'], ['R', 'reject'], ['N', 'next']].map(([key, action]) => (
+          {[['E', 'escalate'], ['R', 'reject'], ['N', 'next']].map(([key, action]) => (
             <span key={key} className="inline-flex items-center gap-1">
               <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border font-mono font-bold text-text text-[10px]">
                 {key}

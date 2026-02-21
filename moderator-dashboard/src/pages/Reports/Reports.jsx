@@ -129,13 +129,13 @@ function Reports() {
   const handleVerify = useCallback(async (reportId, source = 'single') => {
     const result = await verifyMutation.mutateAsync(reportId)
     if (!result.success) {
-      pushToast(result.error || 'Failed to verify report.', 'error')
+      pushToast(result.error || 'Failed to escalate report.', 'error')
       return false
     }
     invalidateReports()
     setSelectedReportIds((prev) => prev.filter((id) => id !== reportId))
     if (selectedReport?.id === reportId) setSelectedReport(null)
-    if (source === 'single') pushToast('Report verified successfully.')
+    if (source === 'single') pushToast('Report escalated successfully.')
     return true
   }, [invalidateReports, pushToast, selectedReport?.id, verifyMutation])
 
@@ -152,7 +152,7 @@ function Reports() {
     return true
   }, [invalidateReports, pushToast, rejectMutation, selectedReport?.id])
 
-  // Called after confirmation dialog is accepted
+  // Called after confirmation dialog is confirmed
   const executeBulkAction = async (action) => {
     if (!selectedReportIds.length || bulkActionPending) return
     setBulkActionPending(action)
@@ -175,7 +175,7 @@ function Reports() {
       }
 
       if (failedCount === 0) {
-        pushToast(`${successCount} reports ${action === 'verify' ? 'verified' : 'rejected'} successfully.`)
+        pushToast(`${successCount} reports ${action === 'verify' ? 'escalated' : 'rejected'} successfully.`)
       } else {
         pushToast(
           `${successCount} succeeded, ${failedCount} failed during bulk ${action}.`,
@@ -209,7 +209,7 @@ function Reports() {
     setSelectedReport(filteredReports[idx < 0 ? 0 : (idx + 1) % filteredReports.length])
   }, [filteredReports, selectedReport])
 
-  // Keyboard shortcuts — V verify, R reject, N next
+  // Keyboard shortcuts — E escalate, R reject, N next
   useEffect(() => {
     const handleKeydown = (event) => {
       const tag = event.target?.tagName
@@ -219,7 +219,7 @@ function Reports() {
       const key = event.key.toLowerCase()
       if (key === 'n') { event.preventDefault(); handleSelectNextReport(); return }
       if (!selectedReport) return
-      if (key === 'v' && !verifyMutation.isPending) { event.preventDefault(); handleVerify(selectedReport.id) }
+      if (key === 'e' && !verifyMutation.isPending) { event.preventDefault(); handleVerify(selectedReport.id) }
       if (key === 'r' && !rejectMutation.isPending) { event.preventDefault(); handleReject(selectedReport.id) }
     }
     window.addEventListener('keydown', handleKeydown)
@@ -284,7 +284,6 @@ function Reports() {
         <div className="h-full overflow-hidden">
           <ReportDetail
             report={selectedReport}
-            onClose={() => setSelectedReport(null)}
             mlSummary={mlSummary}
             isMlLoading={isMlLoading}
             dedupData={dedupData}
@@ -338,13 +337,13 @@ function Reports() {
       {/* Bulk action confirmation — prevents accidental mass-actions */}
       <ConfirmDialog
         visible={Boolean(bulkConfirmAction)}
-        title={`Bulk ${bulkConfirmAction === 'verify' ? 'Verify' : 'Reject'} ${selectedReportIds.length} report${selectedReportIds.length !== 1 ? 's' : ''}?`}
+        title={`Bulk ${bulkConfirmAction === 'verify' ? 'Escalate' : 'Reject'} ${selectedReportIds.length} report${selectedReportIds.length !== 1 ? 's' : ''}?`}
         message={
           bulkConfirmAction === 'verify'
-            ? `This will mark all ${selectedReportIds.length} selected reports as verified and forward them to law enforcement.`
+            ? `This will escalate all ${selectedReportIds.length} selected reports and forward them to law enforcement.`
             : `This will reject all ${selectedReportIds.length} selected reports. This cannot be undone.`
         }
-        confirmLabel={bulkConfirmAction === 'verify' ? 'Verify All' : 'Reject All'}
+        confirmLabel={bulkConfirmAction === 'verify' ? 'Escalate All' : 'Reject All'}
         confirmClassName={
           bulkConfirmAction === 'verify' ? 'bg-success hover:bg-success/90' : 'bg-danger hover:bg-danger/90'
         }

@@ -245,32 +245,34 @@ const ReportIncidentScreen = ({ navigation, route }) => {
         // Clear the local draft only on successful submission (not when saving as draft)
         if (!asDraft) {
           await clearDraft();
+
+          // Reset form state immediately so returning to this screen starts clean
+          resetForm();
+          setLocation(null);
+          setLocationName('');
+          setSelectedMapLocation(null);
+          setMapRegion(null);
+          setPhotos([]);
+          setDraftId(null);
+          setEnableMlClassification(true);
+          setEnableMlRisk(true);
+          setIsAnonymous(!!preferences.defaultAnonymous);
         }
 
+        setIsSubmitting(false);
+        isSubmittingRef.current = false;
+
         Alert.alert(
-          'Success',
+          asDraft ? 'Draft saved' : 'Report submitted',
           asDraft 
-            ? 'Your draft has been saved!' 
-            : 'Your incident report has been submitted successfully!',
+            ? 'Your draft is saved. You can continue editing anytime.' 
+            : 'Thanks for reporting this. We received your report and will review it shortly.',
           [
             {
               text: 'OK',
               onPress: () => {
-                // Reset form only when fully submitted, not when saving draft
                 if (!asDraft) {
-                  resetForm();
-                  setLocation(null);
-                  setLocationName('');
-                  setSelectedMapLocation(null);
-                  setMapRegion(null);
-                  setPhotos([]);
-                  setDraftId(null);
-                  
                   navigation.navigate('Home');
-                } else {
-                  // When saving as draft, just close the alert
-                  setIsSubmitting(false);
-                  isSubmittingRef.current = false;
                 }
               },
             },
