@@ -34,6 +34,7 @@ function ReportDetail({
   onVerify,
   onReject,
   onNext,
+  onOpenDuplicateCandidate,
 }) {
   if (!report) {
     return (
@@ -192,6 +193,7 @@ function ReportDetail({
               longitude: report.longitude,
             }}
             onMerge={onMerge}
+            onOpenCandidate={onOpenDuplicateCandidate}
           />
 
           {/* Actions */}
