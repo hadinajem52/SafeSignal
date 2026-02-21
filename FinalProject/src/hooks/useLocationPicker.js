@@ -3,8 +3,8 @@ import { Alert, Linking } from 'react-native';
 import * as Location from 'expo-location';
 
 const DEFAULT_REGION = {
-  latitude: 40.7128,
-  longitude: -74.006,
+  latitude: 33.8938,
+  longitude: 35.5018,
   latitudeDelta: 0.05,
   longitudeDelta: 0.05,
 };
@@ -144,12 +144,6 @@ const useLocationPicker = ({
       });
 
       setIsLoadingLocation(false);
-
-      Alert.alert(
-        'Location Set',
-        `Your location has been captured.\n\nLat: ${latitude.toFixed(6)}\nLng: ${longitude.toFixed(6)}`,
-        [{ text: 'OK' }]
-      );
     } catch (error) {
       setIsLoadingLocation(false);
       console.error('Location error:', error);

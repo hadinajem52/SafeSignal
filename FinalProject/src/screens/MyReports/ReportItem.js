@@ -36,19 +36,20 @@ const getProgressStage = (status) => {
       return 1;
     case 'in_review':
     case 'needs_info':
-    case 'rejected':
       return 2;
     case 'verified':
     case 'dispatched':
     case 'on_scene':
     case 'investigating':
     case 'published':
-    case 'police_closed':
     case 'merged':
       return 3;
+    case 'police_closed':
     case 'resolved':
     case 'archived':
       return 4;
+    case 'rejected':
+      return 3;
     default:
       return 1;
   }
@@ -70,6 +71,8 @@ const ReportItem = ({ item, onPress }) => {
     : item.locationName || 'Location not set';
   const createdAtText = formatTimeAgo(item.createdAt || item.timestamp || new Date().toISOString());
   const stage = getProgressStage(item.status);
+  const isRejected = item.status === 'rejected';
+  const progressColor = isRejected ? theme.error : theme.primary;
 
   return (
     <Pressable onPress={() => onPress(item)} style={styles.incidentCard}>
@@ -118,8 +121,8 @@ const ReportItem = ({ item, onPress }) => {
                       style={[
                         styles.progressDot,
                         {
-                          backgroundColor: isComplete ? theme.primary : theme.surface2,
-                          borderColor: isComplete ? theme.primary : theme.border,
+                          backgroundColor: isComplete ? progressColor : theme.surface2,
+                          borderColor: isComplete ? progressColor : theme.border,
                         },
                       ]}
                     />
@@ -127,7 +130,7 @@ const ReportItem = ({ item, onPress }) => {
                       <View
                         style={[
                           styles.progressLine,
-                          { backgroundColor: stage > stepIndex ? theme.primary : theme.border },
+                          { backgroundColor: stage > stepIndex ? progressColor : theme.border },
                         ]}
                       />
                     ) : null}

@@ -1,5 +1,5 @@
 import React from 'react'
-import { ChevronRight, X } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import DetailSection from '../../components/DetailSection'
 import DedupCandidatesPanel from '../../components/DedupCandidatesPanel'
 import GoogleMapPanel from '../../components/GoogleMapPanel'
@@ -20,7 +20,6 @@ function KbdHint({ label }) {
 
 function ReportDetail({
   report,
-  onClose,
   mlSummary,
   isMlLoading,
   dedupData,
@@ -58,7 +57,7 @@ function ReportDetail({
         <div className="min-w-0">
           <h2 className="text-[15px] font-bold text-white leading-tight truncate">{report.title}</h2>
           <div className="flex items-center gap-2 mt-1.5 text-[11px] text-white/50">
-            <KbdHint label="V" /> <span>verify</span>
+            <KbdHint label="E" /> <span>escalate</span>
             <KbdHint label="R" /> <span>reject</span>
             <KbdHint label="N" /> <span>next</span>
           </div>
@@ -69,13 +68,6 @@ function ReportDetail({
             className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-semibold text-white/80 transition-colors"
           >
             Next
-          </button>
-          <button
-            aria-label="Deselect report"
-            onClick={onClose}
-            className="p-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-white/60 transition-colors"
-          >
-            <X size={16} />
           </button>
         </div>
       </div>
@@ -202,7 +194,6 @@ function ReportDetail({
             rejectPending={rejectPending}
             onVerify={onVerify}
             onReject={onReject}
-            onClose={onClose}
           />
         </div>
 

@@ -215,7 +215,7 @@ function IncidentQueueTable({
           onChange={(e) => onStatusFilterChange(e.target.value)}
           options={LEI_STATUS_FILTERS}
         />
-        <div className="rounded-lg border border-border bg-surface overflow-hidden">
+        <div className="inline-flex w-fit max-w-full rounded-lg border border-border bg-surface overflow-hidden">
           <button
             onClick={() => onSortModeChange('urgency')}
             title="Sort by urgency"
