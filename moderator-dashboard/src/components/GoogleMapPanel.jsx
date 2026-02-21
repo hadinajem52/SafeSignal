@@ -142,6 +142,17 @@ function GoogleMapPanelContent({
     }))
   }, [canRenderHeatmap, showHeatmap, validMarkers])
 
+  useEffect(() => {
+    if (!isLoaded) return
+    const timer = setTimeout(() => {
+      const zoomIn = document.querySelector('button[title="Zoom in"]')
+      const zoomOut = document.querySelector('button[title="Zoom out"]')
+      if (zoomIn) zoomIn.setAttribute('aria-label', 'Zoom in')
+      if (zoomOut) zoomOut.setAttribute('aria-label', 'Zoom out')
+    }, 1000)
+    return () => clearTimeout(timer)
+  }, [isLoaded])
+
   if (!googleMapsApiKey) {
     return (
       <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
