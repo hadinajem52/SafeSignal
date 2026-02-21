@@ -228,10 +228,7 @@ function Reports() {
 
   return (
     <div className="space-y-3">
-      <PageHeader
-        title="Reports Queue"
-        description={sortMode === 'time' ? 'Reports sorted by submission time — newest first.' : 'Reports sorted by urgency — highest priority first.'}
-      />
+      <PageHeader title="Reports Queue" />
 
       {/* Toast stack */}
       <div className="fixed bottom-6 right-6 z-50 space-y-2">
