@@ -42,6 +42,7 @@ Never silently fill in ambiguous requirements. The most common failure mode is m
 - **Multiple skills may apply.** A task involving a UI component inside a document requires both the UI skill and the relevant document skill. Read all applicable skills before starting.
 - **When in doubt, read more skills.** The cost of reading an extra skill file is low. The cost of implementing incorrectly and rebuilding is high.
 - **Skill files are the source of truth for UI work.** Skills in `/.agents/skills/` take precedence over general knowledge, past patterns, or personal defaults.
+- **Spawn subagents** Spawn subagents to help you preserve context and help you in the wide codespace
 
 
 ---
@@ -252,7 +253,10 @@ This is not optional. Skills contain condensed best practices from extensive tri
 
 # Part 5: Validation Pipeline
 
-Run this after every **substantial** coding job. A job is substantial if it: adds a new feature, touches 3+ files, modifies core logic, or crosses module boundaries. Bug fixes to a single function are not substantial.
+# agents available at: 
+-> ".opencode\agents"
+
+Run this after every **substantial** coding job. A job is substantial if it: adds a new feature, touches 3+ files, modifies core logic, or crosses module boundaries. Bug fixes to a single function are not substantial, not every agent should be spawned for the pipeline,only the needed ones, beside the code quality pragmatist should be always spawned
 
 ---
 
@@ -260,28 +264,27 @@ Run this after every **substantial** coding job. A job is substantial if it: add
 
 ```
 AFTER SUBSTANTIAL CODING WORK:
-
-[0] @Karen — Reality Check
+[0] @code-quality-pragmatist — Simplicity Audit
+    └─ Checks for KISS/DRY/YAGNI violations
+    └─ Flags over-engineering and unnecessary abstractions
+    └─ Reports: Critical | High | Medium | Low        
+     ↓
+[1] @Karen — Reality Check
     └─ Assesses actual vs claimed completeness FIRST
     └─ Creates a gap list before validation begins
     └─ If gaps are critical → fix them before proceeding
          ↓
-[1] @Jenny — Spec Verification
+[2] @Jenny — Spec Verification
     └─ Verifies implementation matches specifications
     └─ Gap analysis with file references
     └─ Reports: Critical | High | Medium | Low
          ↓
-[2] @task-completion-validator — Functional Testing
+[3] @task-completion-validator — Functional Testing
     └─ Verifies it actually works end-to-end
     └─ Validates, not just stub-checks
     └─ Reports: Critical | High | Medium | Low
          ↓
-[3] @code-quality-pragmatist — Simplicity Audit
-    └─ Checks for KISS/DRY/YAGNI violations
-    └─ Flags over-engineering and unnecessary abstractions
-    └─ Reports: Critical | High | Medium | Low
-         ↓
-[4] @claude-md-compliance-checker — Rules Verification
+[4] @agent-md-compliance-checker — Rules Verification
     └─ Verifies AGENT.md and project convention compliance
     └─ Reports: Critical | High | Medium | Low
          ↓
@@ -369,13 +372,13 @@ These are the specific errors of a slightly sloppy, hasty junior dev. Avoid all 
 11. Removing things you don't fully understand
 12. Losing context in long sessions and guessing forward
 13. Skipping Karen and validating fundamentally incomplete work
-14. Skipping the full pipeline because the task "felt small"
+14. Skipping the pipeline because the task "felt small"
 15. Starting UI implementation without reading `/.agents/skills/` skill files first
 16. Applying personal defaults or past patterns over what the skill file specifies
 
 ---
 
-## Available Agents — Quick Reference
+## Available Agents — Quick Reference 
 
 | Agent | Purpose | Pipeline Position |
 |---|---|---|

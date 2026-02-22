@@ -33,7 +33,7 @@ export const formatCategoryLabel = (category) => {
 export const getSeverityColor = (severity, variant = SEVERITY_VARIANTS.REPORTS) => {
   switch (severity) {
     case 'critical':
-      return 'text-error'
+      return 'text-purple-400'
     case 'high':
       return 'text-error'
     case 'medium':

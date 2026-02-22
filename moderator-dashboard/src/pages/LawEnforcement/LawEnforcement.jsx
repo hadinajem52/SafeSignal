@@ -144,7 +144,13 @@ function AlertBanner({ alerts, onDispatch, statusMutationPending, onSelectIncide
               onClick={() => onSelectIncident(alert.incidentId)}
             >
               <div className="min-w-0 flex items-center gap-3">
-                <span className="text-[10px] font-mono font-bold text-warning uppercase">{alert.severity}</span>
+                <span
+                  className={`text-[10px] font-mono font-bold uppercase ${
+                    alert.severity === 'critical' ? 'text-purple-400' : 'text-warning'
+                  }`}
+                >
+                  {alert.severity}
+                </span>
                 <p className="text-sm font-semibold text-text truncate">
                   {alert.title || `Incident #${alert.incidentId}`}
                 </p>
