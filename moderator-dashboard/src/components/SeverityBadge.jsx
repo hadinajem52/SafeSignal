@@ -18,9 +18,9 @@ const SEVERITY_STYLES = {
     letter: 'text-error',
   },
   critical: {
-    pill: 'bg-[var(--color-badge-red-bg,#fee2e2)] text-[var(--color-badge-red-text,#991b1b)] border border-[var(--color-badge-red-border,#fecaca)]',
-    color: 'text-error',
-    letter: 'text-error',
+    pill: 'bg-[var(--color-badge-purple-bg,rgba(168,85,247,0.12))] text-[var(--color-badge-purple-text,#a855f7)] border border-[var(--color-badge-purple-border,rgba(168,85,247,0.20))]',
+    color: 'text-purple-400',
+    letter: 'text-purple-400',
   },
 }
 

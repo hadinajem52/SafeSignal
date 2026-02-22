@@ -1,6 +1,6 @@
 export function severityClass(sev) {
   return sev === 'critical'
-    ? 'text-error'
+    ? 'text-purple-400'
     : sev === 'high'
     ? 'text-warning'
     : sev === 'medium'
