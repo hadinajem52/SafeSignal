@@ -10,7 +10,7 @@ import Navigation from './Navigation'
 
 function Layout({ children }) {
   const location = useLocation()
-  const isFullBleed = location.pathname === '/reports'
+  const isFullBleed = location.pathname === '/reports' || location.pathname === '/users' || location.pathname === '/admin' || location.pathname === '/settings'
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const [notifications, setNotifications] = useState([])
