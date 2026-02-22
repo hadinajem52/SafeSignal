@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { FileText } from 'lucide-react'
 import ConfirmDialog from '../../components/ConfirmDialog'
-import PageHeader from '../../components/PageHeader'
+import IncidentTimeline from '../../components/IncidentTimeline'
 import { reportsAPI } from '../../services/api'
 import ReportDetail from './ReportDetail'
 import ReportFilters from './ReportFilters'
@@ -247,19 +248,18 @@ function Reports() {
   }, [handleEscalateRequest, handleRejectRequest, handleSelectNextReport, rejectMutation.isPending, selectedReport, verifyMutation.isPending])
 
   return (
-    <div className="space-y-3">
-      <PageHeader title="Reports Queue" />
+    <div className="flex flex-col h-dvh overflow-hidden bg-bg">
 
       {/* Toast stack */}
-      <div className="fixed bottom-6 right-6 z-50 space-y-2">
+      <div className="fixed bottom-6 right-6 z-50 space-y-2 pointer-events-none">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`min-w-[280px] max-w-[420px] rounded-lg border px-4 py-3 shadow-soft ${toast.type === 'error'
-              ? 'border-danger/40 bg-danger/10 text-danger'
+            className={`min-w-[280px] max-w-[420px] border px-4 py-3 shadow-soft pointer-events-auto ${toast.type === 'error'
+              ? 'border-danger/40 bg-surface text-danger'
               : toast.type === 'warning'
-                ? 'border-amber-300 bg-amber-50 text-amber-800'
-                : 'border-success/40 bg-success/10 text-success'
+                ? 'border-warning/40 bg-surface text-warning'
+                : 'border-success/40 bg-surface text-success'
               }`}
           >
             {toast.message}
@@ -267,7 +267,25 @@ function Reports() {
         ))}
       </div>
 
-      {/* Filters bar */}
+      {/* ── Topbar ── */}
+      <div className="flex-shrink-0 flex items-center h-[52px] px-6 bg-surface border-b border-border">
+        <div className="flex items-center gap-2.5 mr-8 font-display font-extrabold text-[17px] tracking-wide uppercase text-text flex-shrink-0">
+          <FileText size={14} />
+          Reports Queue
+        </div>
+        <div className="ml-auto flex items-center gap-4 text-[11px] text-muted font-medium flex-shrink-0">
+          {[['E', 'escalate'], ['R', 'reject'], ['N', 'next']].map(([key, action]) => (
+            <span key={key} className="inline-flex items-center gap-1.5">
+              <kbd className="inline-flex items-center justify-center w-5 h-5 border border-border bg-surface2 font-mono font-bold text-text text-[10px] rounded-none">
+                {key}
+              </kbd>
+              {action}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Toolbar (filters) ── */}
       <ReportFilters
         searchTerm={searchTerm}
         onSearchChange={(event) => setSearchTerm(event.target.value)}
@@ -282,13 +300,11 @@ function Reports() {
         onBulkReject={() => setBulkConfirmAction('reject')}
       />
 
-      {/* ── Split-pane: queue left, detail right ── */}
-      <div
-        className="grid overflow-hidden rounded-xl border border-border bg-card"
-        style={{ gridTemplateColumns: '5fr 8fr', height: '74vh', minHeight: '520px' }}
-      >
-        {/* Left: scrollable report queue */}
-        <div className="border-r border-border h-full overflow-hidden flex flex-col">
+      {/* ── Three-panel body ── */}
+      <div className="flex flex-1 overflow-hidden">
+
+        {/* Panel 1: report list (380px) */}
+        <div className="w-[380px] flex-shrink-0 border-r border-border overflow-hidden flex flex-col">
           <ReportList
             reports={filteredReports}
             isLoading={isLoading}
@@ -300,8 +316,8 @@ function Reports() {
           />
         </div>
 
-        {/* Right: detail panel */}
-        <div className="h-full overflow-hidden">
+        {/* Panel 2: report detail */}
+        <div className="flex-1 overflow-hidden min-w-0">
           <ReportDetail
             report={selectedReport}
             mlSummary={mlSummary}
@@ -335,23 +351,35 @@ function Reports() {
                 pushToast('Unable to open duplicate incident: invalid incident id.', 'error')
                 return
               }
-
               const inQueue = filteredReports.find((r) => Number(r.id) === duplicateId)
-              if (inQueue) {
-                setSelectedReport(inQueue)
-                return
-              }
-
+              if (inQueue) { setSelectedReport(inQueue); return }
               const result = await reportsAPI.getById(duplicateId)
               if (!result.success || !result.data) {
                 pushToast(result.error || 'Failed to open duplicate incident.', 'error')
                 return
               }
-
               setSelectedReport(normalizeReport(result.data))
             }}
           />
         </div>
+
+        {/* Panel 3: timeline (300px) */}
+        <div className="w-[300px] flex-shrink-0 border-l border-border overflow-hidden flex flex-col bg-surface/30">
+          <div className="flex-shrink-0 h-[52px] px-4 flex flex-col justify-center border-b border-border bg-surface">
+            <p className="text-[11px] font-bold uppercase tracking-[0.04em] text-text">Timeline &amp; Comms</p>
+            <p className="text-[10px] text-muted mt-0.5">Notes &amp; reporter messages</p>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            {selectedReport ? (
+              <IncidentTimeline incidentId={selectedReport.id} />
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full gap-2 text-muted text-[11px] font-semibold uppercase tracking-[0.04em]">
+                No report selected
+              </div>
+            )}
+          </div>
+        </div>
+
       </div>
 
       {/* Single-report action confirmation */}
@@ -374,7 +402,7 @@ function Reports() {
         onConfirm={executeSingleAction}
       />
 
-      {/* Bulk action confirmation — prevents accidental mass-actions */}
+      {/* Bulk action confirmation */}
       <ConfirmDialog
         visible={Boolean(bulkConfirmAction)}
         title={`Bulk ${bulkConfirmAction === 'verify' ? 'Escalate' : 'Reject'} ${selectedReportIds.length} report${selectedReportIds.length !== 1 ? 's' : ''}?`}

@@ -220,25 +220,29 @@ const IncidentTimeline = ({ incidentId }) => {
         )}
       </div>
 
-      {/* Composer — underline-indicator tab toggle */}
-      <div className="border-t border-border bg-card flex-shrink-0 p-3.5">
-        <div className="flex border-b border-border mb-3 -mx-3.5 px-3.5">
+      {/* Composer — bordered tab toggle matching Reports Queue design */}
+      <div className="border-t border-border bg-card flex-shrink-0 p-3">
+        {/* Tab switcher */}
+        <div className="flex mb-2">
           <button
             onClick={() => setIsInternal(false)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border-b-2 transition-colors mr-0.5 -mb-px ${
+            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-[10px] font-bold uppercase
+              tracking-[0.04em] border transition-all ${
               !isInternal
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted hover:text-text'
+                ? 'bg-primary/8 border-primary text-primary'
+                : 'border-border border-r-0 text-muted hover:text-text hover:bg-surface/60'
             }`}
           >
+            <Send size={10} />
             Public Reply
           </button>
           <button
             onClick={() => setIsInternal(true)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border-b-2 transition-colors -mb-px ${
+            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-[10px] font-bold uppercase
+              tracking-[0.04em] border transition-all ${
               isInternal
-                ? 'border-warning text-warning'
-                : 'border-transparent text-muted hover:text-text'
+                ? 'bg-warning/8 border-warning text-warning'
+                : 'border-border text-muted hover:text-text hover:bg-surface/60'
             }`}
           >
             <Lock size={10} />
@@ -246,45 +250,45 @@ const IncidentTimeline = ({ incidentId }) => {
           </button>
         </div>
 
-        <div className="flex gap-2">
-          <textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                handleSend()
-              }
-            }}
-            placeholder={isInternal ? 'Add internal note (staff only)…' : 'Reply to citizen…'}
-            className={`flex-1 px-3 py-2 text-sm rounded resize-none focus:outline-none focus:ring-1 transition-shadow ${
-              isInternal
-                ? 'border border-warning/25 focus:ring-warning/30 bg-warning/5 text-text placeholder:text-muted/50'
-                : 'border border-border bg-surface text-text focus:ring-primary/30 placeholder:text-muted/50'
-            }`}
-            rows={2}
-            maxLength={10000}
-          />
+        <textarea
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              handleSend()
+            }
+          }}
+          placeholder={isInternal ? 'Add internal note (staff only)…' : 'Reply to citizen…'}
+          className={`w-full px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 transition-shadow block ${
+            isInternal
+              ? 'border border-warning/25 focus:ring-warning/30 bg-warning/5 text-text placeholder:text-muted/50'
+              : 'border border-border bg-surface text-text focus:ring-primary/30 placeholder:text-muted/50'
+          }`}
+          rows={2}
+          maxLength={10000}
+        />
+
+        <div className="flex items-center justify-between mt-2">
+          <p className={`text-[10px] font-semibold ${isInternal ? 'text-warning/70' : 'text-muted'}`}>
+            {isInternal ? 'Staff only — not visible to reporter' : 'Visible to the reporter'}
+          </p>
           <button
             onClick={handleSend}
             disabled={!message.trim() || sending}
             aria-label="Send message"
-            className={`self-end px-3 py-2 rounded font-semibold transition-colors flex items-center gap-1.5 text-xs ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.04em] border transition-all ${
               message.trim() && !sending
                 ? isInternal
-                  ? 'bg-warning/15 text-warning hover:bg-warning/25 border border-warning/25'
-                  : 'bg-primary/15 text-primary hover:bg-primary/25 border border-primary/25'
-                : 'bg-surface text-muted/50 border border-border cursor-not-allowed'
+                  ? 'border-warning bg-warning/8 text-warning hover:bg-warning hover:text-bg'
+                  : 'border-primary bg-primary/8 text-primary hover:bg-primary hover:text-bg'
+                : 'border-border bg-surface text-muted/50 cursor-not-allowed'
             }`}
           >
-            {sending ? <Loader2 className="size-3.5 animate-spin" /> : <Send size={13} />}
+            {sending ? <Loader2 className="size-3 animate-spin" /> : <Send size={11} />}
             Send
           </button>
         </div>
-
-        <p className={`text-[10px] mt-1.5 ${isInternal ? 'text-warning/70' : 'text-muted'}`}>
-          {isInternal ? 'Staff only — not visible to reporter' : 'Visible to the reporter'}
-        </p>
       </div>
     </div>
   )

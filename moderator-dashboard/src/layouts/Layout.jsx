@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { io } from 'socket.io-client'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../context/AuthContext'
@@ -8,6 +9,8 @@ import { applyDarkMode, persistDarkMode } from '../utils/theme'
 import Navigation from './Navigation'
 
 function Layout({ children }) {
+  const location = useLocation()
+  const isFullBleed = location.pathname === '/reports'
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const [notifications, setNotifications] = useState([])
@@ -112,7 +115,7 @@ function Layout({ children }) {
   return (
     <div className="flex h-dvh bg-bg">
       <Navigation collapsed={sidebarCollapsed} onToggle={handleSidebarToggle} />
-      <main className="flex-1 overflow-auto">
+      <main className={`flex-1 ${isFullBleed ? 'overflow-hidden flex flex-col' : 'overflow-auto'}`}>
         <div
           className="fixed z-50 space-y-2"
           style={{
@@ -134,17 +137,19 @@ function Layout({ children }) {
             </div>
           ))}
         </div>
-        <div
-          className="p-8"
-          style={{
-            paddingTop: 'calc(env(safe-area-inset-top, 0px) + 2rem)',
-            paddingRight: 'calc(env(safe-area-inset-right, 0px) + 2rem)',
-            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 2rem)',
-            paddingLeft: 'calc(env(safe-area-inset-left, 0px) + 2rem)',
-          }}
-        >
-          {children}
-        </div>
+        {isFullBleed ? children : (
+          <div
+            className="p-8"
+            style={{
+              paddingTop: 'calc(env(safe-area-inset-top, 0px) + 2rem)',
+              paddingRight: 'calc(env(safe-area-inset-right, 0px) + 2rem)',
+              paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 2rem)',
+              paddingLeft: 'calc(env(safe-area-inset-left, 0px) + 2rem)',
+            }}
+          >
+            {children}
+          </div>
+        )}
       </main>
     </div>
   )
