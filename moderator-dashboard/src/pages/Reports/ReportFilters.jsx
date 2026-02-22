@@ -23,9 +23,9 @@ function ReportFilters({
   onBulkReject,
 }) {
   return (
-    <div className="bg-card border border-border rounded-lg overflow-hidden">
-      {/* Row 1: search + count + bulk actions + keyboard hints */}
-      <div className="px-4 py-2.5 flex items-center gap-3 border-b border-border flex-wrap">
+    <div className="bg-surface border-b border-border flex-shrink-0">
+      {/* Row 1: search + count + bulk actions */}
+      <div className="px-6 py-2.5 flex items-center gap-3 border-b border-border flex-wrap">
         <div className="relative flex-1 min-w-[180px] max-w-[340px]">
           <Search
             className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none"
@@ -70,22 +70,11 @@ function ReportFilters({
           <span className="text-xs text-muted tabular-nums whitespace-nowrap">
             {totalResults} report{totalResults !== 1 ? 's' : ''}
           </span>
-          <div className="hidden lg:flex items-center gap-3 text-[11px] text-muted">
-            {[['E', 'escalate'], ['R', 'reject'], ['N', 'next']].map(([key, action]) => (
-              <span key={key} className="inline-flex items-center gap-1.5">
-                <kbd className="inline-flex items-center justify-center size-5 rounded border border-border
-                  bg-surface font-mono font-bold text-text text-[10px]">
-                  {key}
-                </kbd>
-                <span>{action}</span>
-              </span>
-            ))}
-          </div>
         </div>
       </div>
 
       {/* Row 2: filter tabs + sort toggle */}
-      <div className="px-4 py-2 flex items-center gap-2 overflow-x-auto">
+      <div className="px-6 py-2 flex items-center gap-2 overflow-x-auto">
         <div className="flex items-center gap-1 flex-shrink-0">
           {STATUS_TABS.map((tab) => (
             <button
@@ -105,30 +94,29 @@ function ReportFilters({
 
         <div className="flex-1" />
 
-        {/* Sort toggle — same bordered sort-btn pattern as LE Interface */}
-        <div className="flex-shrink-0 inline-flex rounded border border-border bg-surface overflow-hidden">
+        {/* Sort toggle — bordered sort-btn pattern matching LE Interface */}
+        <div className="flex-shrink-0 inline-flex border border-border overflow-hidden">
           <button
             onClick={() => onSortModeChange('urgency')}
             title="Sort by urgency"
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono font-semibold
-              uppercase tracking-wide transition-colors ${
+              uppercase tracking-wide transition-colors border-r border-border ${
               sortMode === 'urgency'
-                ? 'bg-primary text-bg'
-                : 'text-muted hover:text-text hover:bg-surface'
+                ? 'bg-primary/8 border-r-primary text-primary'
+                : 'text-muted hover:text-text bg-surface hover:bg-surface'
             }`}
           >
             <Zap size={11} />
             Urgency
           </button>
-          <span className="inline-block h-5 w-px bg-border self-center" />
           <button
             onClick={() => onSortModeChange('time')}
             title="Sort by submission time"
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono font-semibold
               uppercase tracking-wide transition-colors ${
               sortMode === 'time'
-                ? 'bg-primary text-bg'
-                : 'text-muted hover:text-text hover:bg-surface'
+                ? 'bg-primary/8 text-primary'
+                : 'text-muted hover:text-text bg-surface hover:bg-surface'
             }`}
           >
             <Clock size={11} />
