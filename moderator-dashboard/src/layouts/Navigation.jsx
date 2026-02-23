@@ -14,15 +14,54 @@ import {
   LayoutDashboard,
 } from 'lucide-react'
 
+function NavSection({ label, collapsed }) {
+  if (collapsed) return <div className="h-px bg-border mx-2 my-2" />
+  return (
+    <div className="px-3 pt-4 pb-1.5">
+      <span className="text-[9px] font-bold uppercase tracking-[0.06em] text-muted/70 select-none">
+        {label}
+      </span>
+    </div>
+  )
+}
+
+function NavItem({ path, label, icon: Icon, active, collapsed }) {
+  return (
+    <Link
+      to={path}
+      title={collapsed ? label : undefined}
+      className={`
+        flex items-center gap-2.5 transition-colors w-full
+        ${collapsed
+          ? 'justify-center h-10 w-10 mx-auto'
+          : `px-[10px] py-2 border-l-2 text-[13px] font-[500]
+             ${active
+               ? 'border-l-primary bg-primary/[0.08] text-primary'
+               : 'border-l-transparent text-muted/80 hover:bg-card hover:text-text'
+             }`
+        }
+        ${!collapsed && active ? '' : collapsed && active ? 'text-primary' : ''}
+      `}
+    >
+      <Icon size={14} className="flex-shrink-0" />
+      {!collapsed && <span>{label}</span>}
+      {active && collapsed && <span className="sr-only">{label}</span>}
+    </Link>
+  )
+}
+
 function Navigation({ collapsed, onToggle }) {
   const { logout, user } = useAuth()
   const location = useLocation()
 
   const isActive = (path) => location.pathname === path
 
-  const navItems = [
+  const navGroup = [
     { path: '/', label: 'Dashboard', icon: Home },
     { path: '/data-analysis-center', label: 'Data Analysis Center', icon: LayoutDashboard },
+  ]
+
+  const opsGroup = [
     ...(user?.role !== 'law_enforcement'
       ? [{ path: '/reports', label: 'Reports', icon: FileText }]
       : []),
@@ -57,7 +96,6 @@ function Navigation({ collapsed, onToggle }) {
             </div>
           </div>
         )}
-
         <button
           onClick={onToggle}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
@@ -68,53 +106,36 @@ function Navigation({ collapsed, onToggle }) {
             ${collapsed ? 'w-9 h-9' : 'w-7 h-7'}
           `}
         >
-          {collapsed
-            ? <PanelLeftOpen size={16} />
-            : <PanelLeftClose size={16} />
-          }
+          {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
         </button>
       </div>
 
-      {/* Nav items */}
-      <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
-        {navItems.map(({ path, label, icon: Icon }) => {
-          const active = isActive(path)
-          return (
-            <Link
-              key={path}
-              to={path}
-              title={collapsed ? label : undefined}
-              className={`
-                flex items-center rounded-lg transition-colors
-                ${collapsed ? 'justify-center h-10 w-10 mx-auto' : 'gap-3 px-3 py-2.5'}
-                ${active
-                  ? 'bg-primary/15 text-primary'
-                  : 'text-muted hover:bg-surface hover:text-text'
-                }
-              `}
-            >
-              <Icon size={18} className="flex-shrink-0" />
-              {!collapsed && <span className="text-sm font-medium">{label}</span>}
-              {active && collapsed && (
-                <span className="sr-only">{label}</span>
-              )}
-            </Link>
-          )
-        })}
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto py-1">
+        <NavSection label="Navigation" collapsed={collapsed} />
+        {navGroup.map(({ path, label, icon }) => (
+          <NavItem key={path} path={path} label={label} icon={icon}
+            active={isActive(path)} collapsed={collapsed} />
+        ))}
+
+        <NavSection label="Operations" collapsed={collapsed} />
+        {opsGroup.map(({ path, label, icon }) => (
+          <NavItem key={path} path={path} label={label} icon={icon}
+            active={isActive(path)} collapsed={collapsed} />
+        ))}
       </nav>
 
       {/* Logout */}
-      <div className="p-2 border-t border-border flex-shrink-0">
+      <div className={`border-t border-border flex-shrink-0 ${collapsed ? 'py-1' : 'p-3'}`}>
         <button
           onClick={logout}
           title={collapsed ? 'Logout' : undefined}
-          className={`
-            w-full flex items-center rounded-lg text-muted hover:bg-surface hover:text-text transition-colors
-            ${collapsed ? 'justify-center h-10 w-10 mx-auto' : 'gap-3 px-3 py-2.5'}
-          `}
+          className={`flex items-center gap-2.5 text-[13px] font-[500] text-muted/80
+            hover:text-text transition-colors w-full
+            ${collapsed ? 'justify-center h-10 w-10 mx-auto' : 'px-[10px] py-2 border-l-2 border-l-transparent hover:bg-card'}`}
         >
-          <LogOut size={18} className="flex-shrink-0" />
-          {!collapsed && <span className="text-sm font-medium">Logout</span>}
+          <LogOut size={14} className="flex-shrink-0" />
+          {!collapsed && <span>Logout</span>}
         </button>
       </div>
     </div>
