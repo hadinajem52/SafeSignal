@@ -47,7 +47,7 @@ class MapErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+        <div className="border border-red-200 bg-red-50 p-3 text-sm text-red-700">
           Map failed to render.
         </div>
       )
@@ -155,7 +155,7 @@ function GoogleMapPanelContent({
 
   if (!googleMapsApiKey) {
     return (
-      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+      <div className="border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
         Google Maps unavailable. Set `VITE_GOOGLE_MAPS_API_KEY` in `moderator-dashboard/.env`.
       </div>
     )
@@ -163,7 +163,7 @@ function GoogleMapPanelContent({
 
   if (loadError) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+      <div className="border border-red-200 bg-red-50 p-3 text-sm text-red-700">
         Failed to load Google Maps.
       </div>
     )
@@ -171,7 +171,7 @@ function GoogleMapPanelContent({
 
   if (!isLoaded) {
     return (
-      <div className="rounded-lg border border-border bg-surface p-3 text-sm text-muted">
+      <div className="border border-border bg-surface p-3 text-sm text-muted">
         Loading map...
       </div>
     )
@@ -179,7 +179,7 @@ function GoogleMapPanelContent({
 
   if (validMarkers.length === 0) {
     return (
-      <div className="rounded-lg border border-border bg-surface p-3 text-sm text-muted">
+      <div className="border border-border bg-surface p-3 text-sm text-muted">
         {emptyMessage}
       </div>
     )
@@ -225,7 +225,7 @@ function GoogleMapPanelContent({
   }
 
   return (
-    <div className="rounded-lg overflow-hidden border border-border bg-card">
+    <div className="overflow-hidden border border-border bg-card">
       <GoogleMap
         mapContainerStyle={mapContainerStyle}
         center={effectiveCenter}
