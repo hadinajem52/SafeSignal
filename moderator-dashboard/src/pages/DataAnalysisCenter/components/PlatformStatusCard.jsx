@@ -2,9 +2,17 @@ import { ChevronRight } from "lucide-react";
 import { SkeletonLoader } from "./UIStates";
 import SectionCard from "./SectionCard";
 
-export default function PlatformStatusCard({ stats, extras = [], loading = false }) {
+export default function PlatformStatusCard({
+  stats = {},
+  extras = [],
+  loading = false,
+}) {
   const platformStatus = [
-    { label: "Pending Review", value: stats.pendingReports, color: "text-warning" },
+    {
+      label: "Pending Review",
+      value: stats.pendingReports,
+      color: "text-warning",
+    },
     { label: "Verified", value: stats.verifiedReports, color: "text-success" },
     { label: "Rejected", value: stats.rejectedReports, color: "text-error" },
     { label: "Active Users", value: stats.activeUsers, color: "text-primary" },

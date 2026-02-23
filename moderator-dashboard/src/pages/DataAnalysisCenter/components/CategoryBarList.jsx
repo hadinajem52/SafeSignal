@@ -2,7 +2,7 @@ import { ChevronRight, FileText } from "lucide-react";
 import { SkeletonLoader, EmptyState } from "./UIStates";
 
 export default function CategoryBarList({
-  incidents,
+  incidents = [],
   maxCategories = 6,
   accentColor = "bg-primary",
   loading = false,
