@@ -56,42 +56,45 @@ function ReportDetail({
 
       {/* ── Header: title + action buttons (Escalate / Reject / Next) ── */}
       <div className="flex-shrink-0 h-[52px] px-5 flex items-center gap-2 bg-surface border-b border-border">
-        <h2 className="flex-1 min-w-0 text-sm font-extrabold text-text uppercase tracking-wide leading-snug truncate">
+        <h2 className="flex-1 min-w-0 text-sm font-extrabold text-text uppercase tracking-wide leading-snug truncate text-balance">
           {report.title}
         </h2>
         <div className="flex-shrink-0 flex items-center gap-1.5">
 
-          {/* Escalate — hover → amber */}
+          {/* Escalate — hover → success */}
           <button
             onClick={onVerify}
             disabled={verifyPending}
+            aria-label="Escalate report"
             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.04em]
-              border border-border text-muted bg-transparent transition-all
+              border border-border text-muted bg-transparent transition-colors
               hover:border-success hover:text-success disabled:opacity-40"
           >
             <KbdChip label="E" /> {verifyPending ? 'Escalating…' : 'Escalate'}
           </button>
 
-          {/* Reject — hover → red */}
+          {/* Reject — hover → danger */}
           <button
             onClick={onReject}
             disabled={rejectPending}
+            aria-label="Reject report"
             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.04em]
-              border border-border text-muted bg-transparent transition-all
+              border border-border text-muted bg-transparent transition-colors
               hover:border-danger hover:text-danger disabled:opacity-40"
           >
             <KbdChip label="R" /> {rejectPending ? 'Rejecting…' : 'Reject'}
           </button>
 
-          {/* Next — always blue-tinted */}
+          {/* Next — bordered, no bg fill */}
           <button
             onClick={onNext}
+            aria-label="Next report"
             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.04em]
-              border border-primary bg-primary/8 text-primary transition-all
-              hover:bg-primary hover:text-bg"
+              border border-border text-muted transition-colors
+              hover:border-border/80 hover:text-text"
           >
             Next
-            <KbdChip label="N" style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)', background: 'rgba(var(--color-primary-rgb, 59,158,255),0.15)' }} />
+            <KbdChip label="N" />
           </button>
 
         </div>
@@ -193,7 +196,7 @@ function ReportDetail({
                 <button
                   onClick={() => onApplySuggestedCategory(mlSummary.predictedCategory)}
                   disabled={updateCategoryPending}
-                  className="mt-2 w-full bg-primary/15 hover:bg-primary/25 text-primary text-sm font-semibold py-2 disabled:opacity-50 transition-colors border border-primary/20"
+                  className="mt-2 w-full bg-surface hover:bg-surface/80 text-text text-xs font-bold uppercase tracking-[0.04em] py-2 disabled:opacity-50 transition-colors border border-border"
                 >
                   {updateCategoryPending ? 'Updating…' : 'Apply Suggested Category'}
                 </button>
