@@ -222,6 +222,7 @@ const leStyles = `
     border-bottom: 1px solid var(--le-border);
     flex-shrink: 0;
     background: var(--le-surface);
+    gap: 8px;
   }
   .lei-col-label {
     font-size: 9px;
@@ -238,23 +239,25 @@ const leStyles = `
   .lei-incident-row {
     display: grid;
     grid-template-columns: 1fr 72px 80px 90px;
-    padding: 11px 16px;
+    padding: 10px 16px;
     border-bottom: 1px solid var(--le-border);
     cursor: pointer;
     transition: background 0.1s;
-    align-items: start;
+    align-items: center;
     background: var(--le-surface);
+    gap: 8px;
   }
+  .lei-incident-row > div:first-child { min-width: 0; }
   .lei-incident-row:hover { background: var(--le-surface2); }
   .lei-incident-row.selected { background: rgba(59,158,255,0.05); border-left: 2px solid var(--le-blue); padding-left: 14px; }
   .lei-incident-row.aged { background: rgba(229,72,77,0.06); }
-  .lei-incident-title { font-size: 13px; font-weight: 600; color: var(--le-text); margin-bottom: 3px; line-height: 1.3; }
-  .lei-incident-preview { font-size: 10px; color: var(--le-text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 190px; }
-  .lei-sev-badge { display: flex; flex-direction: column; align-items: center; gap: 3px; padding-top: 2px; }
+  .lei-incident-title { font-size: 13px; font-weight: 600; color: var(--le-text); margin-bottom: 2px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lei-incident-preview { font-size: 10px; color: var(--le-text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lei-sev-badge { display: flex; flex-direction: column; align-items: center; gap: 3px; }
   .lei-sev-label { font-size: 9px; letter-spacing: 0.05em; font-weight: 700; }
   .lei-sev-dots { display: flex; gap: 2px; }
   .lei-sev-dot { width: 5px; height: 5px; border-radius: 50%; }
-  .lei-age-cell { font-size: 11px; color: var(--le-text-dim); font-variant-numeric: tabular-nums; padding-top: 2px; }
+  .lei-age-cell { font-size: 11px; color: var(--le-text-dim); font-variant-numeric: tabular-nums; }
   .lei-age-flag { font-size: 9px; color: var(--le-amber); margin-top: 2px; }
   .lei-action-btn {
     font-size: 10px;
