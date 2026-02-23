@@ -7,13 +7,15 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { getTimeAgo } from "../../../utils/dateUtils";
-import SparklineChart from "../components/SparklineChart";
-import SectionCard from "../components/SectionCard";
-import BigStatTile from "../components/BigStatTile";
-import IncidentRow from "../components/IncidentRow";
+import {
+  BigStatTile,
+  IncidentRow,
+  SectionCard,
+  SparklineChart,
+  TimeframeLabel,
+} from "../components";
 import { severityClass, leiStatusColor } from "../components/helpers";
 import { UNACTIONED_THRESHOLD_MS } from "../components/constants";
-import TimeframeLabel from "../components/TimeframeLabel";
 
 const STATUS_BG = {
   verified: "bg-warning",

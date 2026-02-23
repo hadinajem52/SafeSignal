@@ -9,17 +9,20 @@ import {
   Activity,
 } from "lucide-react";
 import { getTimeAgo } from "../../../utils/dateUtils";
-import SparklineChart from "../components/SparklineChart";
-import SectionCard from "../components/SectionCard";
-import BigStatTile from "../components/BigStatTile";
-import IncidentRow from "../components/IncidentRow";
+import {
+  BigStatTile,
+  CategoryBarList,
+  IncidentRow,
+  PlatformStatusCard,
+  SectionCard,
+  SparklineChart,
+  TimeframeLabel,
+  EmptyState,
+  SkeletonLoader,
+} from "../components";
 import { severityClass } from "../components/helpers";
-import { SkeletonLoader, EmptyState } from "../components/UIStates";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import TimeframeLabel from "../components/TimeframeLabel";
-import CategoryBarList from "../components/CategoryBarList";
-import PlatformStatusCard from "../components/PlatformStatusCard";
 
 export function ModeratorLeft({ s, incidents, loading, timeframe = "all" }) {
   // Fake history for demo
