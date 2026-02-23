@@ -28,7 +28,7 @@ function DedupCandidatesPanel({ dedup, isLoading, onMerge, isMerging, sourceInci
     : []
 
   return (
-    <div className="border border-border rounded-lg p-4 bg-surface/50">
+    <div className="border border-border p-4 bg-surface/50">
       <div className="flex items-center justify-between mb-3">
         <h4 className="font-bold text-text text-sm">Potential Duplicates</h4>
         <span className="text-[11px] text-muted">
@@ -37,7 +37,7 @@ function DedupCandidatesPanel({ dedup, isLoading, onMerge, isMerging, sourceInci
       </div>
 
       {source.title && (
-        <div className="mb-3 rounded-lg border border-primary/15 bg-primary/5 p-2.5">
+        <div className="mb-3 border border-primary/15 bg-primary/5 p-2.5">
           <div className="text-[10px] font-semibold uppercase tracking-wider text-primary/70">Current Incident</div>
           <div className="text-sm font-medium text-text mt-0.5">{source.title}</div>
         </div>
@@ -73,7 +73,7 @@ function DedupCandidatesPanel({ dedup, isLoading, onMerge, isMerging, sourceInci
       ) : (
         <div className="space-y-2.5">
           {candidates.map((candidate) => (
-            <div key={candidate.incidentId} className="bg-card border border-border rounded-lg p-3">
+            <div key={candidate.incidentId} className="bg-card border border-border p-3">
               <div className="flex items-center justify-between">
                 <button
                   type="button"
@@ -82,7 +82,7 @@ function DedupCandidatesPanel({ dedup, isLoading, onMerge, isMerging, sourceInci
                 >
                   Incident #{candidate.incidentId}
                 </button>
-                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/15">
+                <span className="text-[11px] font-semibold px-2 py-0.5 bg-primary/10 text-primary border border-primary/15">
                   Score {candidate.score}
                 </span>
               </div>
@@ -121,7 +121,7 @@ function DedupCandidatesPanel({ dedup, isLoading, onMerge, isMerging, sourceInci
                     {candidate.sharedKeywords.map((keyword) => (
                       <span
                         key={`${candidate.incidentId}-${keyword}`}
-                        className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-warning/10 text-warning border border-warning/15"
+                        className="px-2 py-0.5 text-[10px] font-semibold bg-warning/10 text-warning border border-warning/15"
                       >
                         {keyword}
                       </span>
@@ -136,7 +136,7 @@ function DedupCandidatesPanel({ dedup, isLoading, onMerge, isMerging, sourceInci
                 <button
                   onClick={() => onMerge?.(candidate.incidentId)}
                   disabled={isMerging}
-                  className="text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 border border-primary/15 px-3 py-1 rounded-lg disabled:opacity-40 transition-colors"
+                  className="text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 border border-primary/15 px-3 py-1 disabled:opacity-40 transition-colors"
                 >
                   {isMerging ? 'Linking…' : 'Mark as Duplicate'}
                 </button>

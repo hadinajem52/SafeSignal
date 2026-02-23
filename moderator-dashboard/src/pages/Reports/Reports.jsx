@@ -8,14 +8,15 @@ import ReportDetail from './ReportDetail'
 import ReportFilters from './ReportFilters'
 import ReportList from './ReportList'
 
-// Priority score: severity weight × log-age so old critical reports float to top
-// and fresh low-severity ones don't crowd them out.
+// Priority score: severity is the primary sort key; age (log-scaled) is a
+// tiebreaker within the same tier so stale reports don't beat newer ones.
 const SEVERITY_RANK = { critical: 4, high: 3, medium: 2, low: 1 }
 
 function getPriorityScore(report) {
   const rank = SEVERITY_RANK[report.severity] || 0
   const ageHours = (Date.now() - new Date(report.createdAt).getTime()) / 3_600_000
-  return rank * Math.log(Math.max(ageHours, 0.01) + 1)
+  // Multiply rank by 1000 so no age difference can push a lower tier above a higher one
+  return rank * 1000 + Math.log(Math.max(ageHours, 0.01) + 1)
 }
 
 function normalizeReport(incident) {
