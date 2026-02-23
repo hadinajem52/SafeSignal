@@ -2,15 +2,17 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { reportsAPI, usersAPI } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
-import Tooltip from "./components/Tooltip";
-import KpiRow from "./components/KpiRow";
-import ResponseTimeCards from "./components/ResponseTimeCards";
-import HeatmapCard from "./components/HeatmapCard";
-import FunnelCard from "./components/FunnelCard";
-import CategoryTrendCard from "./components/CategoryTrendCard";
-import SLACard from "./components/SLACard";
-import HotspotsCard from "./components/HotspotsCard";
-import ReporterQualityCard from "./components/ReporterQualityCard";
+import {
+  CategoryTrendCard,
+  FunnelCard,
+  HeatmapCard,
+  HotspotsCard,
+  KpiRow,
+  ReporterQualityCard,
+  ResponseTimeCards,
+  SLACard,
+  Tooltip,
+} from "./components";
 import { useAnalyticsData } from "./hooks/useAnalyticsData";
 import "./dac.css";
 
@@ -91,9 +93,15 @@ export default function DataAnalysisCenter() {
         </div>
 
         <div className="dac-scroll">
-          {loading && <div className="dac-loading">Loading analytics data…</div>}
+          {loading && (
+            <div className="dac-loading">Loading analytics data…</div>
+          )}
 
-          <KpiRow kpis={kpis} incidentsCount={incidents.length} period={period} />
+          <KpiRow
+            kpis={kpis}
+            incidentsCount={incidents.length}
+            period={period}
+          />
 
           <ResponseTimeCards
             kpis={kpis}
@@ -119,7 +127,9 @@ export default function DataAnalysisCenter() {
           />
 
           <div className="dac-section-row">
-            <div className="dac-section-title">Case Funnel &amp; Resolution</div>
+            <div className="dac-section-title">
+              Case Funnel &amp; Resolution
+            </div>
             <div className="dac-section-line" />
           </div>
           <div className="dac-grid-3col">

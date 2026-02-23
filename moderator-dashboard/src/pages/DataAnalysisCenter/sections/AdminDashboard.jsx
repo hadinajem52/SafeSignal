@@ -8,14 +8,16 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { getTimeAgo } from "../../../utils/dateUtils";
-import SparklineChart from "../components/SparklineChart";
-import SectionCard from "../components/SectionCard";
-import BigStatTile from "../components/BigStatTile";
-import IncidentRow from "../components/IncidentRow";
+import {
+  BigStatTile,
+  CategoryBarList,
+  IncidentRow,
+  PlatformStatusCard,
+  SectionCard,
+  SparklineChart,
+  TimeframeLabel,
+} from "../components";
 import { severityClass } from "../components/helpers";
-import TimeframeLabel from "../components/TimeframeLabel";
-import CategoryBarList from "../components/CategoryBarList";
-import PlatformStatusCard from "../components/PlatformStatusCard";
 
 export function AdminLeft({
   s,
