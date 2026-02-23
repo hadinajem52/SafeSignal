@@ -2,9 +2,15 @@ import React from 'react'
 
 function EmptyState({ icon: Icon, message }) {
   return (
-    <div className="bg-card border border-border shadow-soft p-12 text-center">
-      {Icon ? <Icon size={48} className="mx-auto text-muted mb-4" /> : null}
-      <p className="text-muted">{message}</p>
+    <div className="flex flex-col items-center justify-center h-full py-16 px-6 text-center select-none">
+      {Icon ? (
+        <div className="mb-3 text-border">
+          <Icon size={20} strokeWidth={1.5} />
+        </div>
+      ) : null}
+      <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted/60">
+        {message}
+      </p>
     </div>
   )
 }
