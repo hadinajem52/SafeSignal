@@ -394,8 +394,8 @@ function Reports() {
         confirmLabel={singleConfirmAction === 'escalate' ? 'Escalate' : 'Reject'}
         confirmClassName={
           singleConfirmAction === 'escalate'
-            ? 'bg-success text-bg hover:bg-success/90'
-            : 'bg-danger text-bg hover:bg-danger/90'
+            ? 'border border-success/60 text-success hover:bg-success/10'
+            : 'border border-danger/60 text-danger hover:bg-danger/10'
         }
         confirmDisabled={verifyMutation.isPending || rejectMutation.isPending}
         onCancel={() => setSingleConfirmAction(null)}
@@ -413,7 +413,7 @@ function Reports() {
         }
         confirmLabel={bulkConfirmAction === 'verify' ? 'Escalate All' : 'Reject All'}
         confirmClassName={
-          bulkConfirmAction === 'verify' ? 'bg-success hover:bg-success/90' : 'bg-danger hover:bg-danger/90'
+          bulkConfirmAction === 'verify' ? 'border border-success/60 text-success hover:bg-success/10' : 'border border-danger/60 text-danger hover:bg-danger/10'
         }
         confirmDisabled={Boolean(bulkActionPending)}
         onCancel={() => setBulkConfirmAction(null)}

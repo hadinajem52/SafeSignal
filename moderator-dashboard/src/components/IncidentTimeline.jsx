@@ -156,12 +156,12 @@ const IncidentTimeline = ({ incidentId }) => {
           <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
             <span className="text-xs font-semibold text-text">{item.username}</span>
             {isStaff && (
-              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded border border-primary/20 bg-primary/10 text-primary">
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 border border-primary/20 bg-primary/10 text-primary">
                 Staff
               </span>
             )}
             {isItemInternal && (
-              <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded border border-warning/25 bg-warning/10 text-warning">
+              <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 border border-warning/25 bg-warning/10 text-warning">
                 <Lock size={9} />
                 Internal
               </span>
@@ -169,7 +169,7 @@ const IncidentTimeline = ({ incidentId }) => {
             <span className="text-[10px] text-muted tabular-nums ml-auto">{formatTime(item.created_at)}</span>
           </div>
           <div
-            className={`rounded px-3 py-2 text-[13px] leading-relaxed border ${
+            className={`px-3 py-2 text-[13px] leading-relaxed border ${
               isItemInternal
                 ? 'bg-warning/5 border-warning/15 text-text'
                 : 'bg-surface border-border text-text'
@@ -196,7 +196,7 @@ const IncidentTimeline = ({ incidentId }) => {
         <p className="text-error text-sm">{error}</p>
         <button
           onClick={loadTimeline}
-          className="px-3 py-1.5 bg-primary/15 text-primary text-xs font-semibold rounded-lg hover:bg-primary/25 transition-colors border border-primary/20"
+          className="px-3 py-1.5 bg-surface text-text text-xs font-semibold hover:bg-surface/80 transition-colors border border-border"
         >
           Retry
         </button>

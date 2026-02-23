@@ -8,7 +8,7 @@ function ConfirmDialog({
   cancelLabel = 'Cancel',
   onConfirm,
   onCancel,
-  confirmClassName = 'bg-red-600 hover:bg-red-700',
+  confirmClassName = 'border border-danger/60 text-danger hover:bg-danger/10',
   confirmDisabled = false,
 }) {
   if (!visible) {
@@ -16,30 +16,36 @@ function ConfirmDialog({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
       <div
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
         aria-describedby="confirm-dialog-desc"
-        className="bg-card border border-border rounded-lg shadow-soft max-w-md w-full p-6"
+        className="bg-surface border border-border shadow-soft max-w-md w-full p-6"
       >
-        <h3 id="confirm-dialog-title" className="text-xl font-bold text-text mb-2 font-condensed uppercase tracking-wide">
+        <h3
+          id="confirm-dialog-title"
+          className="text-base font-extrabold text-text mb-2 font-display uppercase tracking-wide text-balance"
+        >
           {title}
         </h3>
-        <p id="confirm-dialog-desc" className="text-muted mb-6 text-pretty">{message}</p>
+        <p id="confirm-dialog-desc" className="text-muted mb-6 text-sm text-pretty leading-relaxed">
+          {message}
+        </p>
         <div className="flex gap-3 justify-end">
           <button
             onClick={onCancel}
             disabled={confirmDisabled}
-            className="px-4 py-2 rounded-lg border border-border text-text hover:bg-surface disabled:opacity-60"
+            className="px-4 py-2 border border-border text-muted text-sm font-semibold
+              hover:text-text hover:bg-surface/80 transition-colors disabled:opacity-60"
           >
             {cancelLabel}
           </button>
           <button
             onClick={onConfirm}
             disabled={confirmDisabled}
-            className={`px-4 py-2 rounded-lg font-medium disabled:opacity-60 ${confirmClassName}`}
+            className={`px-4 py-2 text-sm font-bold uppercase tracking-[0.04em] transition-colors disabled:opacity-60 ${confirmClassName}`}
           >
             {confirmLabel}
           </button>
