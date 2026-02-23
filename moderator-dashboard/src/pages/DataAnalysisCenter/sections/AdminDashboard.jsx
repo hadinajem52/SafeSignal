@@ -1,30 +1,29 @@
-import React from 'react'
-import { TrendingUp, FileText, Clock, CheckCircle2, UserCheck, ChevronRight } from 'lucide-react'
-import { getTimeAgo } from '../../../utils/dateUtils'
-import SparklineChart from '../components/SparklineChart'
-import SectionCard from '../components/SectionCard'
-import BigStatTile from '../components/BigStatTile'
-import IncidentRow from '../components/IncidentRow'
-import { severityClass } from '../components/helpers'
+import React from "react";
+import {
+  TrendingUp,
+  FileText,
+  Clock,
+  CheckCircle2,
+  UserCheck,
+  ChevronRight,
+} from "lucide-react";
+import { getTimeAgo } from "../../../utils/dateUtils";
+import SparklineChart from "../components/SparklineChart";
+import SectionCard from "../components/SectionCard";
+import BigStatTile from "../components/BigStatTile";
+import IncidentRow from "../components/IncidentRow";
+import { severityClass } from "../components/helpers";
+import TimeframeLabel from "../components/TimeframeLabel";
+import CategoryBarList from "../components/CategoryBarList";
+import PlatformStatusCard from "../components/PlatformStatusCard";
 
-export function AdminLeft({ s, incidents, applications, loading, timeframe = 'all' }) {
-  const categoryMap = {}
-  incidents.forEach((inc) => {
-    const cat = inc.category || 'other'
-    categoryMap[cat] = (categoryMap[cat] || 0) + 1
-  })
-  const categories = Object.entries(categoryMap).sort((a, b) => b[1] - a[1]).slice(0, 5)
-  const maxCat = categories[0]?.[1] || 1
-
-  const platformStatus = [
-    { label: 'Pending Review', value: s.pendingReports, color: 'text-warning' },
-    { label: 'Verified', value: s.verifiedReports, color: 'text-success' },
-    { label: 'Rejected', value: s.rejectedReports, color: 'text-error' },
-    { label: 'Active Users', value: s.activeUsers, color: 'text-primary' },
-    { label: 'Suspended', value: s.suspendedUsers, color: 'text-muted' },
-    { label: 'Applications', value: applications.length, color: 'text-accent' },
-  ]
-
+export function AdminLeft({
+  s,
+  incidents,
+  applications,
+  loading,
+  timeframe = "all",
+}) {
   return (
     <>
       <div className="bg-card border border-border rounded-xl p-4">
@@ -32,75 +31,85 @@ export function AdminLeft({ s, incidents, applications, loading, timeframe = 'al
           <div>
             <div className="flex items-center gap-1.5 mb-1">
               <TrendingUp size={12} className="text-accent" />
-              <span className="text-[11px] text-muted font-semibold uppercase tracking-widest">Total Reports</span>
+              <span className="text-[11px] text-muted font-semibold uppercase tracking-widest">
+                Total Reports
+              </span>
             </div>
             <p className="text-3xl font-bold font-display text-text leading-none">
-              {loading ? '—' : s.totalIncidents.toLocaleString()}
+              {loading ? "—" : s.totalIncidents.toLocaleString()}
             </p>
             <p className="text-[11px] text-muted mt-1.5">
-              Platform-wide · {' '}
-              {timeframe === 'all' && 'All time'}
-              {timeframe === '24h' && 'Last 24 Hours'}
-              {timeframe === '7d' && 'Last 7 Days'}
-              {timeframe === '30d' && 'Last 30 Days'}
-              {timeframe === 'ytd' && 'Year to Date'}
+              Platform-wide · <TimeframeLabel timeframe={timeframe} />
             </p>
           </div>
         </div>
         <div className="mt-3 -mx-1">
-          <SparklineChart value={s.totalIncidents} color="var(--color-accent)" />
+          <SparklineChart
+            value={s.totalIncidents}
+            color="var(--color-accent)"
+          />
         </div>
       </div>
 
       <SectionCard title="Incident Categories">
-        {categories.length === 0 ? (
-          <p className="text-xs text-muted text-center py-3">No data</p>
-        ) : categories.map(([cat, count], i) => (
-          <div key={cat} className={`flex items-center gap-3 py-2.5 ${i < categories.length - 1 ? 'border-b border-border' : ''}`}>
-            <div className="w-6 h-6 rounded bg-surface flex items-center justify-center flex-shrink-0">
-              <FileText size={10} className="text-muted" />
-            </div>
-            <span className="flex-1 text-xs text-text capitalize min-w-0 truncate">{cat.replace(/_/g, ' ')}</span>
-            <span className="text-xs text-muted w-5 text-right flex-shrink-0">{count}</span>
-            <div className="w-16 h-1.5 bg-surface rounded-full overflow-hidden flex-shrink-0">
-              <div className="h-full bg-accent rounded-full" style={{ width: `${Math.round((count / maxCat) * 100)}%` }} />
-            </div>
-            <ChevronRight size={12} className="text-muted flex-shrink-0" />
-          </div>
-        ))}
+        <CategoryBarList
+          incidents={incidents}
+          maxCategories={5}
+          accentColor="bg-accent"
+          loading={loading}
+          emptyDescription=""
+          emptyText="No data"
+        />
       </SectionCard>
 
-      <SectionCard title="Platform Status">
-        {platformStatus.map((item, i) => (
-          <div key={item.label} className={`flex items-center gap-3 py-2.5 ${i < platformStatus.length - 1 ? 'border-b border-border' : ''}`}>
-            <span className="flex-1 text-xs text-text">{item.label}</span>
-            <span className={`text-xs font-bold ${item.color} w-8 text-right`}>
-              {loading ? '—' : item.value}
-            </span>
-            <ChevronRight size={12} className="text-muted flex-shrink-0" />
-          </div>
-        ))}
-      </SectionCard>
+      <PlatformStatusCard
+        stats={s}
+        loading={loading}
+        extras={[
+          {
+            label: "Applications",
+            value: applications.length,
+            color: "text-accent",
+          },
+        ]}
+      />
     </>
-  )
+  );
 }
 
 export function AdminCenter({ s, incidents, applications, loading }) {
   const urgent = [
-    ...(s.recentIncidents || []).filter((i) => i.severity === 'critical' || i.severity === 'high'),
+    ...(s.recentIncidents || []).filter(
+      (i) => i.severity === "critical" || i.severity === "high",
+    ),
     ...incidents
-      .filter((i) =>
-        (i.severity === 'critical' || i.severity === 'high') &&
-        !(s.recentIncidents || []).find((r) => r.incident_id === i.incident_id)
+      .filter(
+        (i) =>
+          (i.severity === "critical" || i.severity === "high") &&
+          !(s.recentIncidents || []).find(
+            (r) => r.incident_id === i.incident_id,
+          ),
       )
       .slice(0, 4),
-  ].slice(0, 4)
+  ].slice(0, 4);
 
   return (
     <>
       <div className="grid grid-cols-2 gap-4">
-        <BigStatTile label="Pending" value={s.pendingReports} icon={Clock} iconColor="text-warning" loading={loading} />
-        <BigStatTile label="Verified" value={s.verifiedReports} icon={CheckCircle2} iconColor="text-success" loading={loading} />
+        <BigStatTile
+          label="Pending"
+          value={s.pendingReports}
+          icon={Clock}
+          iconColor="text-warning"
+          loading={loading}
+        />
+        <BigStatTile
+          label="Verified"
+          value={s.verifiedReports}
+          icon={CheckCircle2}
+          iconColor="text-success"
+          loading={loading}
+        />
       </div>
 
       <SectionCard title="Staff Applications">
@@ -109,61 +118,107 @@ export function AdminCenter({ s, incidents, applications, loading }) {
         ) : applications.length === 0 ? (
           <div className="flex items-center gap-2 py-3">
             <UserCheck size={14} className="text-success" />
-            <p className="text-xs text-success font-medium">No pending applications</p>
+            <p className="text-xs text-success font-medium">
+              No pending applications
+            </p>
           </div>
-        ) : applications.slice(0, 5).map((app, i, arr) => (
-          <div key={app.user_id} className={`flex items-center gap-2.5 py-2.5 ${i < arr.length - 1 ? 'border-b border-border' : ''}`}>
-            <div className="w-7 h-7 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
-              <UserCheck size={11} className="text-accent" />
+        ) : (
+          applications.slice(0, 5).map((app, i, arr) => (
+            <div
+              key={app.user_id}
+              className={`flex items-center gap-2.5 py-2.5 ${i < arr.length - 1 ? "border-b border-border" : ""}`}
+            >
+              <div className="w-7 h-7 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
+                <UserCheck size={11} className="text-accent" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-text truncate">
+                  {app.username || app.email}
+                </p>
+                <p className="text-[10px] text-muted capitalize">
+                  {app.role?.replace(/_/g, " ")} · {getTimeAgo(app.created_at)}
+                </p>
+              </div>
+              <span className="text-[10px] font-bold text-accent flex-shrink-0">
+                PENDING
+              </span>
+              <ChevronRight size={12} className="text-muted flex-shrink-0" />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-text truncate">{app.username || app.email}</p>
-              <p className="text-[10px] text-muted capitalize">
-                {app.role?.replace(/_/g, ' ')} · {getTimeAgo(app.created_at)}
-              </p>
-            </div>
-            <span className="text-[10px] font-bold text-accent flex-shrink-0">PENDING</span>
-            <ChevronRight size={12} className="text-muted flex-shrink-0" />
-          </div>
-        ))}
+          ))
+        )}
         {applications.length > 5 && (
-          <p className="text-[10px] text-muted text-center pt-2">+{applications.length - 5} more</p>
+          <p className="text-[10px] text-muted text-center pt-2">
+            +{applications.length - 5} more
+          </p>
         )}
       </SectionCard>
 
       <SectionCard title="High-Priority Incidents">
         {urgent.length === 0 ? (
-          <p className="text-xs text-muted text-center py-4">No critical or high-severity reports</p>
-        ) : urgent.map((inc, i) => (
-          <IncidentRow
-            key={inc.incident_id} inc={inc} idx={i} total={urgent.length}
-            badge={inc.severity?.toUpperCase()} badgeClass={severityClass(inc.severity)}
-          />
-        ))}
+          <p className="text-xs text-muted text-center py-4">
+            No critical or high-severity reports
+          </p>
+        ) : (
+          urgent.map((inc, i) => (
+            <IncidentRow
+              key={inc.incident_id}
+              inc={inc}
+              idx={i}
+              total={urgent.length}
+              badge={inc.severity?.toUpperCase()}
+              badgeClass={severityClass(inc.severity)}
+            />
+          ))
+        )}
       </SectionCard>
     </>
-  )
+  );
 }
 
 export function AdminRight({ s, applications, loading }) {
-  const recentList = (s.recentIncidents || []).slice(0, 5)
+  const recentList = (s.recentIncidents || []).slice(0, 5);
   const urgent = (s.recentIncidents || [])
-    .filter((i) => i.severity === 'critical' || i.severity === 'high')
-    .slice(0, 3)
+    .filter((i) => i.severity === "critical" || i.severity === "high")
+    .slice(0, 3);
 
   return (
     <>
       <SectionCard title="User Metrics">
         <div className="grid grid-cols-2 gap-2">
           {[
-            { label: 'Total', value: s.totalUsers, bg: 'bg-primary/10', text: 'text-primary' },
-            { label: 'Active', value: s.activeUsers, bg: 'bg-success/10', text: 'text-success' },
-            { label: 'Suspended', value: s.suspendedUsers, bg: 'bg-error/10', text: 'text-error' },
-            { label: 'Applications', value: applications.length, bg: 'bg-accent/10', text: 'text-accent' },
+            {
+              label: "Total",
+              value: s.totalUsers,
+              bg: "bg-primary/10",
+              text: "text-primary",
+            },
+            {
+              label: "Active",
+              value: s.activeUsers,
+              bg: "bg-success/10",
+              text: "text-success",
+            },
+            {
+              label: "Suspended",
+              value: s.suspendedUsers,
+              bg: "bg-error/10",
+              text: "text-error",
+            },
+            {
+              label: "Applications",
+              value: applications.length,
+              bg: "bg-accent/10",
+              text: "text-accent",
+            },
           ].map(({ label, value, bg, text }) => (
-            <div key={label} className={`rounded-lg px-2 py-2.5 text-center ${bg}`}>
-              <p className={`text-lg font-bold font-display leading-none ${text}`}>
-                {loading ? '—' : value}
+            <div
+              key={label}
+              className={`rounded-lg px-2 py-2.5 text-center ${bg}`}
+            >
+              <p
+                className={`text-lg font-bold font-display leading-none ${text}`}
+              >
+                {loading ? "—" : value}
               </p>
               <p className="text-[10px] text-muted mt-1">{label}</p>
             </div>
@@ -173,35 +228,53 @@ export function AdminRight({ s, applications, loading }) {
 
       <SectionCard title="Recent Incidents">
         {recentList.length === 0 ? (
-          <p className="text-xs text-muted text-center py-3">No recent incidents</p>
-        ) : recentList.map((inc, i) => (
-          <div key={inc.incident_id} className={`flex items-center gap-2 py-2 ${i < recentList.length - 1 ? 'border-b border-border' : ''}`}>
-            <FileText size={11} className="text-muted flex-shrink-0" />
-            <span className="flex-1 text-xs text-text truncate min-w-0">
-              {inc.title || `Incident #${inc.incident_id}`}
-            </span>
-            <ChevronRight size={12} className="text-muted flex-shrink-0" />
-          </div>
-        ))}
+          <p className="text-xs text-muted text-center py-3">
+            No recent incidents
+          </p>
+        ) : (
+          recentList.map((inc, i) => (
+            <div
+              key={inc.incident_id}
+              className={`flex items-center gap-2 py-2 ${i < recentList.length - 1 ? "border-b border-border" : ""}`}
+            >
+              <FileText size={11} className="text-muted flex-shrink-0" />
+              <span className="flex-1 text-xs text-text truncate min-w-0">
+                {inc.title || `Incident #${inc.incident_id}`}
+              </span>
+              <ChevronRight size={12} className="text-muted flex-shrink-0" />
+            </div>
+          ))
+        )}
       </SectionCard>
 
       <SectionCard title="Critical Alerts">
         {urgent.length === 0 ? (
-          <p className="text-xs text-muted text-center py-3">No critical alerts</p>
-        ) : urgent.map((inc, i, arr) => (
-          <div key={inc.incident_id} className={`py-2.5 ${i < arr.length - 1 ? 'border-b border-border' : ''}`}>
-            <p className="text-xs font-semibold text-text truncate">
-              {inc.title || `Incident #${inc.incident_id}`}
-            </p>
-            <div className="flex items-center justify-between mt-0.5">
-              <span className={`text-[10px] font-bold ${severityClass(inc.severity)}`}>
-                {inc.severity?.toUpperCase()}
-              </span>
-              <span className="text-[10px] text-muted">{getTimeAgo(inc.created_at)}</span>
+          <p className="text-xs text-muted text-center py-3">
+            No critical alerts
+          </p>
+        ) : (
+          urgent.map((inc, i, arr) => (
+            <div
+              key={inc.incident_id}
+              className={`py-2.5 ${i < arr.length - 1 ? "border-b border-border" : ""}`}
+            >
+              <p className="text-xs font-semibold text-text truncate">
+                {inc.title || `Incident #${inc.incident_id}`}
+              </p>
+              <div className="flex items-center justify-between mt-0.5">
+                <span
+                  className={`text-[10px] font-bold ${severityClass(inc.severity)}`}
+                >
+                  {inc.severity?.toUpperCase()}
+                </span>
+                <span className="text-[10px] text-muted">
+                  {getTimeAgo(inc.created_at)}
+                </span>
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </SectionCard>
     </>
-  )
+  );
 }
