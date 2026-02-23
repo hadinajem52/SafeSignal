@@ -5,114 +5,15 @@ import { useAuth } from "../../context/AuthContext";
 import SLAGauge from "./components/SLAGauge";
 import Tooltip from "./components/Tooltip";
 import TrendLine from "./components/TrendLine";
+import { filterByPeriod, diffMinutes, heatColor } from "./components/helpers";
+import { HIST_BUCKETS, DAYS_LABELS } from "./components/constants";
+import {
+  ACTIONED_STATUSES,
+  CLOSED_STATUSES,
+  FUNNEL_STAGES,
+} from "../../constants/incidentStatuses";
+import { CAT_DISPLAY } from "../../constants/categoryConfig";
 import "./dac.css";
-
-// ─── HELPERS ──────────────────────────────────────────────────────────────────
-
-function getPeriodMs(period) {
-  const day = 86400000;
-  return (
-    { "7d": 7 * day, "30d": 30 * day, "90d": 90 * day, "1y": 365 * day }[
-      period
-    ] ?? 30 * day
-  );
-}
-
-function filterByPeriod(items, period) {
-  const cutoff = Date.now() - getPeriodMs(period);
-  return items.filter((i) => new Date(i.created_at).getTime() >= cutoff);
-}
-
-function diffMinutes(a, b) {
-  return (new Date(b) - new Date(a)) / 60000;
-}
-
-function heatColor(val, max) {
-  if (val === 0) return "var(--dac-surface2)";
-  const t = val / max;
-  if (t < 0.25) return "rgba(59,158,255,0.15)";
-  if (t < 0.5) return "rgba(59,158,255,0.4)";
-  if (t < 0.75) return "rgba(245,166,35,0.5)";
-  return "rgba(229,72,77,0.7)";
-}
-
-const ACTIONED_STATUSES = new Set([
-  "verified",
-  "dispatched",
-  "on_scene",
-  "investigating",
-  "police_closed",
-  "published",
-  "resolved",
-  "archived",
-]);
-const CLOSED_STATUSES = new Set(["police_closed", "resolved", "archived"]);
-
-const FUNNEL_STAGES = [
-  { label: "Received", match: () => true, color: "var(--dac-blue)" },
-  {
-    label: "Verified",
-    match: (s) => ACTIONED_STATUSES.has(s),
-    color: "var(--dac-blue)",
-  },
-  {
-    label: "Dispatched",
-    match: (s) =>
-      [
-        "dispatched",
-        "on_scene",
-        "investigating",
-        "police_closed",
-        "resolved",
-        "archived",
-      ].includes(s),
-    color: "var(--dac-amber)",
-  },
-  {
-    label: "On Scene",
-    match: (s) =>
-      [
-        "on_scene",
-        "investigating",
-        "police_closed",
-        "resolved",
-        "archived",
-      ].includes(s),
-    color: "var(--dac-amber)",
-  },
-  {
-    label: "Closed",
-    match: (s) => CLOSED_STATUSES.has(s),
-    color: "var(--dac-green)",
-  },
-];
-
-const CAT_DISPLAY = {
-  theft: { label: "Theft", color: "var(--dac-red)" },
-  assault: { label: "Assault", color: "#C87533" },
-  vandalism: { label: "Vandalism", color: "var(--dac-amber)" },
-  suspicious_activity: { label: "Suspicious", color: "#8B6FBF" },
-  traffic_incident: { label: "Traffic", color: "var(--dac-blue)" },
-  noise_complaint: { label: "Noise", color: "#5BA4CF" },
-  fire: { label: "Fire", color: "#E85D04" },
-  medical_emergency: { label: "Medical", color: "#2ECC71" },
-  hazard: { label: "Hazard", color: "#FFC300" },
-  other: { label: "Other", color: "var(--dac-muted)" },
-};
-
-function trendPath(data, W, H, maxVal) {
-  const step = W / Math.max(data.length - 1, 1);
-  return data
-    .map((v, i) => {
-      const x = i * step;
-      const y = H - (v / (maxVal || 1)) * H * 0.92;
-      return `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`;
-    })
-    .join(" ");
-}
-function trendArea(data, W, H, maxVal) {
-  return trendPath(data, W, H, maxVal) + ` L ${W} ${H} L 0 ${H} Z`;
-}
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 
@@ -199,15 +100,6 @@ export default function DataAnalysisCenter() {
   }, [incidents]);
 
   // Histogram
-  const HIST_BUCKETS = [
-    { label: "0-5m", max: 5, color: "var(--dac-green)" },
-    { label: "5-15m", max: 15, color: "var(--dac-green)" },
-    { label: "15-30m", max: 30, color: "var(--dac-blue)" },
-    { label: "30-60m", max: 60, color: "var(--dac-blue)" },
-    { label: "1-2h", max: 120, color: "var(--dac-amber)" },
-    { label: "2-4h", max: 240, color: "var(--dac-amber)" },
-    { label: ">4h", max: Infinity, color: "var(--dac-red)" },
-  ];
   const histogramData = useMemo(() => {
     const counts = HIST_BUCKETS.map(() => 0);
     kpis.responseTimes.forEach((m) => {
@@ -260,7 +152,6 @@ export default function DataAnalysisCenter() {
   });
 
   // Heatmap
-  const DAYS_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const heatmap = useMemo(() => {
     const grid = Array.from({ length: 7 }, () => Array(24).fill(0));
     incidents.forEach((inc) => {
