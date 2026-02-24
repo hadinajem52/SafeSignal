@@ -1,12 +1,14 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
+  useLocation,
+  useNavigate,
 } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "react-hot-toast";
+import { Toaster, toast } from "react-hot-toast";
 import Layout from "./layouts/Layout";
 import Dashboard from "./pages/Dashboard";
 import Reports from "./pages/Reports";
@@ -57,13 +59,23 @@ function RoleProtectedRoute({ allowedRoles, children }) {
   }
 
   if (!user || !allowedRoles.includes(user.role)) {
-    return <Navigate to={ROUTES.HOME} />;
+    return <Navigate to={ROUTES.HOME} replace state={{ forbidden: true }} />;
   }
 
   return children;
 }
 
 function AppRoutes() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!location.state?.forbidden) return;
+
+    toast.error("Access denied.");
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.pathname, location.state, navigate]);
+
   return (
     <Routes>
       <Route path={ROUTES.LOGIN} element={<Login />} />

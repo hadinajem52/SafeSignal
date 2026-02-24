@@ -57,7 +57,11 @@ export const authAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to submit application",
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to submit application",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -85,7 +89,8 @@ export const authAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Session expired",
+        error:
+          error.response?.data?.message || error.message || "Session expired",
         status: error.response?.status ?? null,
       };
     }
@@ -101,7 +106,11 @@ export const reportsAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to fetch reports",
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch reports",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -113,7 +122,11 @@ export const reportsAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to fetch report",
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch report",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -126,7 +139,10 @@ export const reportsAPI = {
       return {
         success: false,
         error:
-          error.response?.data?.message || "Failed to fetch dedup candidates",
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch dedup candidates",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -138,7 +154,11 @@ export const reportsAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to fetch ML summary",
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch ML summary",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -152,7 +172,11 @@ export const reportsAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to update category",
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to update category",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -166,7 +190,11 @@ export const reportsAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to link duplicate",
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to link duplicate",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -178,7 +206,11 @@ export const reportsAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to update report",
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to update report",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -190,7 +222,11 @@ export const reportsAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to verify report",
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to verify report",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -202,7 +238,11 @@ export const reportsAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to reject report",
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to reject report",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -217,7 +257,11 @@ export const usersAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to fetch users",
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch users",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -229,7 +273,11 @@ export const usersAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to fetch user",
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch user",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -241,7 +289,11 @@ export const usersAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to suspend user",
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to suspend user",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -253,7 +305,11 @@ export const usersAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to unsuspend user",
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to unsuspend user",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -265,7 +321,11 @@ export const usersAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to update user role",
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to update user role",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -280,7 +340,11 @@ export const statsAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to fetch stats",
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch stats",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -295,7 +359,11 @@ export const settingsAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to fetch settings",
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch settings",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -307,7 +375,11 @@ export const settingsAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to save settings",
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to save settings",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -319,7 +391,11 @@ export const settingsAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to reset settings",
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to reset settings",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -331,7 +407,11 @@ export const settingsAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to send weekly digest",
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to send weekly digest",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -346,7 +426,11 @@ export const leiAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to fetch LEI incidents",
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch LEI incidents",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -358,7 +442,11 @@ export const leiAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to fetch LEI incident",
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch LEI incident",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -370,7 +458,11 @@ export const leiAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to update LEI status",
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to update LEI status",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -387,7 +479,9 @@ export const adminAPI = {
         success: false,
         error:
           error.response?.data?.message ||
+          error.message ||
           "Failed to fetch pending applications",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -399,7 +493,11 @@ export const adminAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to approve application",
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to approve application",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -411,7 +509,11 @@ export const adminAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to reject application",
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to reject application",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -424,7 +526,10 @@ export const adminAPI = {
       return {
         success: false,
         error:
-          error.response?.data?.message || "Failed to fetch database tables",
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch database tables",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -441,7 +546,11 @@ export const adminAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to fetch table rows",
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch table rows",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -455,7 +564,11 @@ export const adminAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to delete row",
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to delete row",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -469,7 +582,11 @@ export const adminAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to clear table",
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to clear table",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -481,7 +598,11 @@ export const adminAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to clear all data",
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to clear all data",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -493,7 +614,11 @@ export const adminAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to reset reports",
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to reset reports",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -508,7 +633,11 @@ export const timelineAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to fetch timeline",
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch timeline",
+        status: error.response?.status ?? null,
       };
     }
   },
@@ -529,7 +658,11 @@ export const timelineAPI = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to post comment",
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to post comment",
+        status: error.response?.status ?? null,
       };
     }
   },

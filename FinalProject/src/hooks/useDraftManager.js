@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
@@ -9,6 +9,11 @@ const useDraftManager = ({ userId, onLoadDraft, getDraftPayload }) => {
   const [hasDraft, setHasDraft] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [draftId, setDraftId] = useState(null);
+  const onLoadDraftRef = useRef(onLoadDraft);
+
+  useEffect(() => {
+    onLoadDraftRef.current = onLoadDraft;
+  }, [onLoadDraft]);
 
   const clearDraft = useCallback(async () => {
     try {
@@ -71,14 +76,14 @@ const useDraftManager = ({ userId, onLoadDraft, getDraftPayload }) => {
           },
           {
             text: 'Continue',
-            onPress: () => onLoadDraft?.(draft),
+            onPress: () => onLoadDraftRef.current?.(draft),
           },
         ]);
       }
     } catch (error) {
       console.error('Error loading draft:', error);
     }
-  }, [clearDraft, onLoadDraft, userId]);
+  }, [clearDraft, userId]);
 
   const saveDraft = useCallback(
     async (showAlert = true) => {

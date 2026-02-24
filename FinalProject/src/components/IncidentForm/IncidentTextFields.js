@@ -97,4 +97,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default IncidentTextFields;
+export default React.memo(IncidentTextFields);
