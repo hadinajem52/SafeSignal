@@ -2,6 +2,7 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
+import logger from '../utils/logger';
 
 // API base URL - automatically handles different environments
 // For Android physical device with ADB reverse: adb reverse tcp:3000 tcp:3000
@@ -58,7 +59,7 @@ export const tokenStorage = {
       await SecureStore.setItemAsync(TOKEN_KEY, token);
       return true;
     } catch (error) {
-      console.error('Error storing token:', error);
+      logger.error('Error storing token:', error);
       return false;
     }
   },
@@ -70,7 +71,7 @@ export const tokenStorage = {
     try {
       return await SecureStore.getItemAsync(TOKEN_KEY);
     } catch (error) {
-      console.error('Error retrieving token:', error);
+      logger.error('Error retrieving token:', error);
       return null;
     }
   },
@@ -83,7 +84,7 @@ export const tokenStorage = {
       await SecureStore.deleteItemAsync(TOKEN_KEY);
       return true;
     } catch (error) {
-      console.error('Error removing token:', error);
+      logger.error('Error removing token:', error);
       return false;
     }
   },
@@ -96,7 +97,7 @@ export const tokenStorage = {
       await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
       return true;
     } catch (error) {
-      console.error('Error storing user data:', error);
+      logger.error('Error storing user data:', error);
       return false;
     }
   },
@@ -109,7 +110,7 @@ export const tokenStorage = {
       const data = await SecureStore.getItemAsync(USER_KEY);
       return data ? JSON.parse(data) : null;
     } catch (error) {
-      console.error('Error retrieving user data:', error);
+      logger.error('Error retrieving user data:', error);
       return null;
     }
   },
@@ -122,7 +123,7 @@ export const tokenStorage = {
       await SecureStore.deleteItemAsync(USER_KEY);
       return true;
     } catch (error) {
-      console.error('Error removing user data:', error);
+      logger.error('Error removing user data:', error);
       return false;
     }
   },
@@ -342,7 +343,7 @@ export const authAPI = {
 
       return { success: false, error: response.data.message };
     } catch (error) {
-      console.error('Google sign-in API error:', error.response?.data || error.message);
+      logger.error('Google sign-in API error:', error.response?.data || error.message);
       const message = error.response?.data?.message || 'Google sign-in failed';
       return { success: false, error: message };
     }

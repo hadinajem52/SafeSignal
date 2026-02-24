@@ -18,7 +18,7 @@ const IncidentDetailScreen = ({ route }) => {
   if (!incident) {
     return (
       <View style={[styles.emptyContainer, { backgroundColor: theme.surface }]}> 
-        <AppText variant="body" style={[styles.emptyText, { color: theme.textSecondary }]}>Incident details not available.</AppText>
+        <AppText variant="body" style={{ color: theme.textSecondary }}>Incident details not available.</AppText>
       </View>
     );
   }
@@ -52,7 +52,7 @@ const IncidentDetailScreen = ({ route }) => {
         <View style={styles.headerRow}>
           <View style={[styles.categoryBadge, { backgroundColor: theme.surface }]}> 
             <Ionicons name={categoryConfig.mapIcon || 'help-circle-outline'} size={15} color={theme.primary} style={styles.categoryIcon} />
-            <AppText variant="caption" style={[styles.categoryText, { color: theme.text }]}>{categoryConfig.label}</AppText>
+            <AppText variant="caption" style={{ color: theme.text }}>{categoryConfig.label}</AppText>
           </View>
           <View style={styles.badgesRow}>
             {incident.severity ? <SeverityBadge severity={incident.severity} /> : null}
@@ -60,7 +60,7 @@ const IncidentDetailScreen = ({ route }) => {
           </View>
         </View>
         <AppText variant="h3" style={[styles.title, { color: theme.text }]}>{incident.title}</AppText>
-        <AppText variant="bodySmall" style={[styles.subtitle, { color: theme.textSecondary }]}>{resolvedLabel}</AppText>
+        <AppText variant="bodySmall" style={{ color: theme.textSecondary }}>{resolvedLabel}</AppText>
         {closureOutcome ? (
           <AppText variant="caption" style={[styles.outcomeText, { color: theme.success }]}>Outcome: {closureOutcome}</AppText>
         ) : null}

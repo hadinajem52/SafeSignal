@@ -27,16 +27,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginRight: 6,
   },
-  categoryText: {
-  },
   badgesRow: {
     alignItems: 'flex-end',
     gap: 6,
   },
   title: {
     marginBottom: 6,
-  },
-  subtitle: {
   },
   outcomeText: {
     marginTop: 4,
@@ -54,8 +50,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  emptyText: {
   },
   timelineCard: {
     marginBottom: 12,
