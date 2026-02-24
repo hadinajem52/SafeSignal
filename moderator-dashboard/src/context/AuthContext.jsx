@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { applyDarkMode, readStoredDarkMode } from "../utils/theme";
-import { API_BASE_URL } from "../utils/network";
 import { STORAGE_KEYS } from "../constants/storageKeys";
+import { authAPI } from "../services/api";
 
 const AuthContext = createContext(null);
 
@@ -22,18 +22,10 @@ export function AuthProvider({ children }) {
       }
 
       try {
-        const response = await fetch(`${API_BASE_URL}/auth/me`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const result = await authAPI.me(token);
+        if (!result.success) throw new Error(result.error || "Session expired");
 
-        if (!response.ok) {
-          throw new Error("Session expired");
-        }
-
-        const data = await response.json();
-        const userData = data?.data?.user;
+        const userData = result.data?.user;
         if (!userData) {
           throw new Error("Invalid session");
         }
@@ -56,20 +48,16 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || "Login failed");
+      const result = await authAPI.login(email, password);
+      if (!result.success) {
+        return { success: false, error: result.error || "Login failed" };
       }
 
-      const data = await response.json();
-      const userData = data.data.user;
-      const token = data.data.token;
+      const userData = result.data?.user;
+      const token = result.data?.token;
+      if (!userData || !token) {
+        return { success: false, error: "Invalid login response" };
+      }
 
       localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
       localStorage.setItem(STORAGE_KEYS.TOKEN, token);
