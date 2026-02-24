@@ -14,6 +14,7 @@ export function AuthProvider({ children }) {
     applyDarkMode(readStoredDarkMode());
 
     const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+    const controller = new AbortController();
 
     const bootstrapAuth = async () => {
       if (!token) {
@@ -22,7 +23,9 @@ export function AuthProvider({ children }) {
       }
 
       try {
-        const result = await authAPI.me(token);
+        const result = await authAPI.me(token, controller.signal);
+        if (controller.signal.aborted) return;
+
         if (!result.success) throw new Error(result.error || "Session expired");
 
         const userData = result.data?.user;
@@ -34,16 +37,23 @@ export function AuthProvider({ children }) {
         setUser(userData);
         setIsAuthenticated(true);
       } catch (_error) {
+        if (controller.signal.aborted) return;
+
         localStorage.removeItem(STORAGE_KEYS.USER);
         localStorage.removeItem(STORAGE_KEYS.TOKEN);
         setUser(null);
         setIsAuthenticated(false);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
     bootstrapAuth();
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   const login = async (email, password) => {

@@ -75,10 +75,11 @@ export const authAPI = {
     }
   },
 
-  me: async (token) => {
+  me: async (token, signal) => {
     try {
       const response = await rawApi.get("/auth/me", {
         headers: { Authorization: `Bearer ${token}` },
+        signal,
       });
       return { success: true, data: response.data.data };
     } catch (error) {
