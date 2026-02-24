@@ -135,34 +135,23 @@ const IC = {
 /* ─── Feed classifier ────────────────────────────────────────────────────── */
 function incidentToFeedItem(incident) {
   const st = incident.status;
-  let action, dot;
-  if (st === "rejected") {
-    action = "Report rejected";
-    dot = "#E5484D";
-  } else if (st === "verified") {
-    action = "Report verified";
-    dot = "#30A46C";
-  } else if (st === "dispatched" || st === "on_scene") {
-    action = "Unit dispatched";
-    dot = "#3B9EFF";
-  } else if (st === "submitted") {
-    action = "New report submitted";
-    dot = "#F5A623";
-  } else if (st === "police_closed") {
-    action = "Report closed";
-    dot = "#30A46C";
-  } else {
-    action = "Report updated";
-    dot = "#3D4F65";
-  }
+  const cfg = getStatusCfg(st);
+  const ACTION_MAP = {
+    rejected: "Report rejected",
+    verified: "Report verified",
+    dispatched: "Unit dispatched",
+    on_scene: "Unit dispatched",
+    submitted: "New report submitted",
+    police_closed: "Report closed",
+  };
   const loc = incident.location_name || incident.area_name || "";
   const title = incident.title
     ? `${incident.title}${loc ? " · " + loc : ""}`
     : loc;
   return {
-    action,
+    action: ACTION_MAP[st] || "Report updated",
     sub: `${title ? title + " · " : ""}${getTimeAgo(incident.created_at)}`,
-    dot,
+    dot: cfg.color,
   };
 }
 
