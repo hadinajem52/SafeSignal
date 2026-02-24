@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { io } from "socket.io-client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -14,8 +14,10 @@ function Layout({ children }) {
   const location = useLocation();
   const isFullBleed = FULL_BLEED_ROUTES.has(location.pathname);
   const { user } = useAuth();
+  const userId = user?.user_id;
   const queryClient = useQueryClient();
   const [notifications, setNotifications] = useState([]);
+  const timeoutRefs = useRef({});
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     () => localStorage.getItem(STORAGE_KEYS.SIDEBAR_COLLAPSED) === "true",
   );
@@ -38,11 +40,6 @@ function Layout({ children }) {
     staleTime: 60 * 1000,
   });
 
-  const activeNotifications = useMemo(
-    () => notifications.slice(0, 4),
-    [notifications],
-  );
-
   useEffect(() => {
     if (typeof dashboardSettings?.darkMode !== "boolean") return;
     applyDarkMode(dashboardSettings.darkMode);
@@ -51,7 +48,7 @@ function Layout({ children }) {
 
   useEffect(() => {
     const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
-    if (!token || !user) return undefined;
+    if (!token || !userId) return undefined;
 
     const socket = io(SOCKET_URL, {
       auth: { token },
@@ -60,8 +57,9 @@ function Layout({ children }) {
     const pushNotification = (message, type = "info") => {
       const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
       setNotifications((prev) => [{ id, message, type }, ...prev].slice(0, 8));
-      setTimeout(() => {
+      timeoutRefs.current[id] = setTimeout(() => {
         setNotifications((prev) => prev.filter((item) => item.id !== id));
+        delete timeoutRefs.current[id];
       }, 6000);
     };
 
@@ -122,8 +120,10 @@ function Layout({ children }) {
 
     return () => {
       socket.disconnect();
+      Object.values(timeoutRefs.current).forEach(clearTimeout);
+      timeoutRefs.current = {};
     };
-  }, [queryClient, user]);
+  }, [queryClient, userId]);
 
   return (
     <div className="flex h-dvh bg-bg">
@@ -138,7 +138,7 @@ function Layout({ children }) {
             top: "calc(env(safe-area-inset-top, 0px) + 1.5rem)",
           }}
         >
-          {activeNotifications.map((notification) => (
+          {notifications.slice(0, 4).map((notification) => (
             <div
               key={notification.id}
               className={`min-w-[280px] max-w-[420px] rounded-lg border px-4 py-3 shadow-lg ${

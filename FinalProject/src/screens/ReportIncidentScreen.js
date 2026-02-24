@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
-  StyleSheet,
   ScrollView,
   Alert,
 } from 'react-native';
@@ -27,6 +26,7 @@ import {
   AnonymousToggle,
   MlFeatureToggles,
 } from '../components/IncidentForm';
+import styles from './reportIncidentStyles';
 
 const { INCIDENT_CATEGORIES, SEVERITY_LEVELS } = incidentConstants;
 
@@ -250,8 +250,6 @@ const ReportIncidentScreen = ({ navigation, route }) => {
       // Validate location is set for non-draft submissions
       if (!asDraft && !location) {
         Alert.alert('Error', 'Please set a location for your incident report.');
-        setIsSubmitting(false);
-        isSubmittingRef.current = false;
         return;
       }
 
@@ -302,9 +300,6 @@ const ReportIncidentScreen = ({ navigation, route }) => {
           setIsAnonymous(!!preferences.defaultAnonymous);
         }
 
-        setIsSubmitting(false);
-        isSubmittingRef.current = false;
-
         Alert.alert(
           asDraft ? 'Draft saved' : 'Report submitted',
           asDraft 
@@ -335,14 +330,11 @@ const ReportIncidentScreen = ({ navigation, route }) => {
         } else {
           Alert.alert('Error', result.error || 'Failed to submit incident');
         }
-        // Re-enable button on error
-        setIsSubmitting(false);
-        isSubmittingRef.current = false;
       }
     } catch (error) {
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
       console.error('Submit incident error:', error);
-      // Re-enable button on error
+    } finally {
       setIsSubmitting(false);
       isSubmittingRef.current = false;
     }
@@ -506,62 +498,5 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     </ScrollView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  contentContainer: {
-    paddingBottom: 40,
-  },
-  header: {
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-  },
-  headerTitle: {
-  },
-  draftBadge: {
-    position: 'absolute',
-    right: 20,
-    top: 55,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  draftBadgeText: {
-  },
-  noticeContainer: {
-    borderWidth: 1,
-    padding: 15,
-    margin: 20,
-    marginBottom: 10,
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  noticeIcon: {
-    marginRight: 10,
-  },
-  noticeText: {
-    flex: 1,
-  },
-  formContainer: {
-    padding: 20,
-  },
-  actionButtonsContainer: {
-    marginTop: 20,
-    gap: 12,
-  },
-  draftButton: {
-    marginBottom: 10,
-  },
-  submitButton: {
-    borderWidth: 0,
-  },
-  submitButtonDisabled: {
-    opacity: 0.7,
-  },
-});
 
 export default ReportIncidentScreen;

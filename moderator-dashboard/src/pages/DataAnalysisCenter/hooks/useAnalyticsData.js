@@ -112,18 +112,14 @@ export function useAnalyticsData({ allIncidents, allUsers, period }) {
     [trendLine],
   );
 
-  const trendPeakIdx = useMemo(
-    () => trendLine.indexOf(Math.max(...trendLine)),
-    [trendLine],
-  );
-
   const peakLabel = useMemo(() => {
-    const peakDate = new Date(Date.now() - (29 - trendPeakIdx) * 86400000);
+    const idx = trendLine.indexOf(Math.max(...trendLine));
+    const peakDate = new Date(Date.now() - (29 - idx) * 86400000);
     return peakDate.toLocaleDateString("en-US", {
       weekday: "short",
       day: "numeric",
     });
-  }, [trendPeakIdx]);
+  }, [trendLine]);
 
   const heatmap = useMemo(() => {
     const grid = Array.from({ length: 7 }, () => Array(24).fill(0));
