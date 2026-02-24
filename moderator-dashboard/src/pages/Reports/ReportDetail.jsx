@@ -5,7 +5,7 @@ import DedupCandidatesPanel from "../../components/DedupCandidatesPanel";
 import GoogleMapPanel from "../../components/GoogleMapPanel";
 import SeverityBadge from "../../components/SeverityBadge";
 import StatusBadge from "../../components/StatusBadge";
-import { formatCategoryLabel, openMapsUrl } from "../../utils/incident";
+import { formatCategoryLabel, openMapsUrl } from "../../utils/incidentUtils";
 
 // Bordered kbd chip — used in header action buttons and empty state
 function KbdChip({ label, style }) {
