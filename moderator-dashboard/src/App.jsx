@@ -1,17 +1,23 @@
-import React from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Toaster } from 'react-hot-toast'
-import Layout from './layouts/Layout'
-import Dashboard from './pages/Dashboard'
-import Reports from './pages/Reports'
-import Users from './pages/Users'
-import Settings from './pages/Settings'
-import Login from './pages/Login'
-import LawEnforcement from './pages/LawEnforcement'
-import AdminPanel from './pages/AdminPanel'
-import DataAnalysisCenter from './pages/DataAnalysisCenter'
-import { AuthProvider, useAuth } from './context/AuthContext'
+import React from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "react-hot-toast";
+import Layout from "./layouts/Layout";
+import Dashboard from "./pages/Dashboard";
+import Reports from "./pages/Reports";
+import Users from "./pages/Users";
+import Settings from "./pages/Settings";
+import Login from "./pages/Login";
+import LawEnforcement from "./pages/LawEnforcement";
+import AdminPanel from "./pages/AdminPanel";
+import DataAnalysisCenter from "./pages/DataAnalysisCenter";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import { ROUTES } from "./constants/routes";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,7 +26,7 @@ const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
     },
   },
-})
+});
 
 function FullPageLoading() {
   return (
@@ -30,85 +36,90 @@ function FullPageLoading() {
         <p className="mt-4 text-muted">Loading...</p>
       </div>
     </div>
-  )
+  );
 }
 
 function ProtectedRoute({ children }) {
-  const { isAuthenticated, loading } = useAuth()
+  const { isAuthenticated, loading } = useAuth();
 
   if (loading) {
-    return <FullPageLoading />
+    return <FullPageLoading />;
   }
 
-  return isAuthenticated ? children : <Navigate to="/login" />
+  return isAuthenticated ? children : <Navigate to={ROUTES.LOGIN} />;
 }
 
 function RoleProtectedRoute({ allowedRoles, children }) {
-  const { user, loading } = useAuth()
+  const { user, loading } = useAuth();
 
   if (loading) {
-    return <FullPageLoading />
+    return <FullPageLoading />;
   }
 
   if (!user || !allowedRoles.includes(user.role)) {
-    return <Navigate to="/" />
+    return <Navigate to={ROUTES.HOME} />;
   }
 
-  return children
+  return children;
 }
 
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
+      <Route path={ROUTES.LOGIN} element={<Login />} />
       <Route
         path="/*"
         element={
           <ProtectedRoute>
             <Layout>
               <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/data-analysis-center" element={<DataAnalysisCenter />} />
+                <Route path={ROUTES.HOME} element={<Dashboard />} />
                 <Route
-                  path="/reports"
+                  path={ROUTES.DATA_ANALYSIS}
+                  element={<DataAnalysisCenter />}
+                />
+                <Route
+                  path={ROUTES.REPORTS}
                   element={
-                    <RoleProtectedRoute allowedRoles={['moderator', 'admin']}>
+                    <RoleProtectedRoute allowedRoles={["moderator", "admin"]}>
                       <Reports />
                     </RoleProtectedRoute>
                   }
                 />
                 <Route
-                  path="/lei"
+                  path={ROUTES.LEI}
                   element={
-                    <RoleProtectedRoute allowedRoles={['law_enforcement', 'admin']}>
+                    <RoleProtectedRoute
+                      allowedRoles={["law_enforcement", "admin"]}
+                    >
                       <LawEnforcement />
                     </RoleProtectedRoute>
                   }
                 />
                 <Route
-                  path="/users"
+                  path={ROUTES.USERS}
                   element={
-                    <RoleProtectedRoute allowedRoles={['admin', 'moderator']}>
+                    <RoleProtectedRoute allowedRoles={["admin", "moderator"]}>
                       <Users />
                     </RoleProtectedRoute>
                   }
                 />
                 <Route
-                  path="/admin"
+                  path={ROUTES.ADMIN}
                   element={
-                    <RoleProtectedRoute allowedRoles={['admin']}>
+                    <RoleProtectedRoute allowedRoles={["admin"]}>
                       <AdminPanel />
                     </RoleProtectedRoute>
                   }
                 />
-                <Route path="/settings" element={<Settings />} />
+                <Route path={ROUTES.SETTINGS} element={<Settings />} />
               </Routes>
             </Layout>
           </ProtectedRoute>
         }
       />
     </Routes>
-  )
+  );
 }
 
 function App() {
@@ -121,7 +132,7 @@ function App() {
         </Router>
       </AuthProvider>
     </QueryClientProvider>
-  )
+  );
 }
 
-export default App
+export default App;
