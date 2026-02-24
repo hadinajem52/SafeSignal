@@ -6,6 +6,9 @@ import { ROUTES } from "../constants/routes";
 const api = axios.create({
   baseURL: API_BASE_URL,
 });
+const rawApi = axios.create({
+  baseURL: API_BASE_URL,
+});
 
 // Add token to requests
 api.interceptors.request.use((config) => {
@@ -55,6 +58,34 @@ export const authAPI = {
       return {
         success: false,
         error: error.response?.data?.message || "Failed to submit application",
+      };
+    }
+  },
+
+  login: async (email, password) => {
+    try {
+      const response = await rawApi.post("/auth/login", { email, password });
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || error.message || "Login failed",
+        status: error.response?.status ?? null,
+      };
+    }
+  },
+
+  me: async (token) => {
+    try {
+      const response = await rawApi.get("/auth/me", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || "Session expired",
+        status: error.response?.status ?? null,
       };
     }
   },
