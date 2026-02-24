@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { incidentAPI } from '../services/api';
 
 const getDraftStorageKey = (userId) => `safesignal_incident_draft_${userId}`;
@@ -39,7 +40,16 @@ const useMyReports = ({ user }) => {
           if (user?.user_id || user?.userId) {
             const userId = user.user_id || user.userId;
             const draftKey = getDraftStorageKey(userId);
-            const savedDraft = await AsyncStorage.getItem(draftKey);
+            let savedDraft = await SecureStore.getItemAsync(draftKey);
+            if (!savedDraft) {
+              const legacyDraft = await AsyncStorage.getItem(draftKey);
+              if (legacyDraft) {
+                savedDraft = legacyDraft;
+                await SecureStore.setItemAsync(draftKey, legacyDraft);
+                await AsyncStorage.removeItem(draftKey);
+              }
+            }
+
             if (savedDraft) {
               const draft = JSON.parse(savedDraft);
               draftItem = {

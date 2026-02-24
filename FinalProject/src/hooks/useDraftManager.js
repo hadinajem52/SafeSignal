@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 const getDraftStorageKey = (userId) => `safesignal_incident_draft_${userId}`;
 
@@ -17,7 +18,10 @@ const useDraftManager = ({ userId, onLoadDraft, getDraftPayload }) => {
       }
 
       const draftKey = getDraftStorageKey(userId);
-      await AsyncStorage.removeItem(draftKey);
+      await Promise.all([
+        SecureStore.deleteItemAsync(draftKey),
+        AsyncStorage.removeItem(draftKey),
+      ]);
       setHasDraft(false);
     } catch (error) {
       console.error('Error clearing draft:', error);
@@ -32,7 +36,17 @@ const useDraftManager = ({ userId, onLoadDraft, getDraftPayload }) => {
       }
 
       const draftKey = getDraftStorageKey(userId);
-      const savedDraft = await AsyncStorage.getItem(draftKey);
+      let savedDraft = await SecureStore.getItemAsync(draftKey);
+
+      if (!savedDraft) {
+        const legacyDraft = await AsyncStorage.getItem(draftKey);
+        if (legacyDraft) {
+          savedDraft = legacyDraft;
+          await SecureStore.setItemAsync(draftKey, legacyDraft);
+          await AsyncStorage.removeItem(draftKey);
+        }
+      }
+
       if (savedDraft) {
         const draft = JSON.parse(savedDraft);
         setHasDraft(true);
@@ -71,7 +85,7 @@ const useDraftManager = ({ userId, onLoadDraft, getDraftPayload }) => {
           savedAt: new Date().toISOString(),
         };
 
-        await AsyncStorage.setItem(draftKey, JSON.stringify(draftData));
+        await SecureStore.setItemAsync(draftKey, JSON.stringify(draftData));
         setHasDraft(true);
 
         if (showAlert) {

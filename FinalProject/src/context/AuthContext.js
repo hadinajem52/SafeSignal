@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { authAPI, tokenStorage } from '../services/api';
 
 // Create Auth Context
@@ -97,7 +98,10 @@ export const AuthProvider = ({ children }) => {
       if (user?.user_id || user?.userId) {
         const userId = user.user_id || user.userId;
         const draftKey = getDraftStorageKey(userId);
-        await AsyncStorage.removeItem(draftKey);
+        await Promise.all([
+          SecureStore.deleteItemAsync(draftKey),
+          AsyncStorage.removeItem(draftKey),
+        ]);
       }
     } catch (error) {
       console.error('Error clearing draft on logout:', error);
