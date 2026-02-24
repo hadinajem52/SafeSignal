@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { ChevronRight, FileText } from "lucide-react";
 import { SkeletonLoader, EmptyState } from "./UIStates";
 
@@ -10,16 +11,19 @@ export default function CategoryBarList({
   emptyDescription = "There are no incidents logged to categorize.",
   emptyText = "No data",
 }) {
-  const categoryMap = {};
-  incidents.forEach((inc) => {
-    const cat = inc.category || "other";
-    categoryMap[cat] = (categoryMap[cat] || 0) + 1;
-  });
+  const { categories, maxCat } = useMemo(() => {
+    const categoryMap = {};
+    incidents.forEach((inc) => {
+      const cat = inc.category || "other";
+      categoryMap[cat] = (categoryMap[cat] || 0) + 1;
+    });
 
-  const categories = Object.entries(categoryMap)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, maxCategories);
-  const maxCat = categories[0]?.[1] || 1;
+    const cats = Object.entries(categoryMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, maxCategories);
+
+    return { categories: cats, maxCat: cats[0]?.[1] || 1 };
+  }, [incidents, maxCategories]);
 
   if (loading) {
     return (

@@ -378,10 +378,10 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     >
       {/* Header */}
       <View style={[styles.header, { backgroundColor: theme.primary }]}> 
-        <AppText variant="h1" style={[styles.headerTitle, { color: theme.card }]}>Report Incident</AppText>
+        <AppText variant="h1" style={{ color: theme.card }}>Report Incident</AppText>
         {hasDraft && (
           <View style={[styles.draftBadge, { backgroundColor: theme.warning }]}> 
-            <AppText variant="caption" style={[styles.draftBadgeText, { color: theme.warningContrastText }]}>Draft</AppText>
+            <AppText variant="caption" style={{ color: theme.warningContrastText }}>Draft</AppText>
           </View>
         )}
       </View>

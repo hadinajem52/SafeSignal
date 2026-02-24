@@ -12,8 +12,6 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     paddingHorizontal: 20,
   },
-  headerTitle: {
-  },
   draftBadge: {
     position: 'absolute',
     right: 20,
@@ -21,8 +19,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
-  },
-  draftBadgeText: {
   },
   noticeContainer: {
     borderWidth: 1,

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
+import logger from '../utils/logger';
 
 const getDraftStorageKey = (userId) => `safesignal_incident_draft_${userId}`;
 
@@ -18,7 +19,7 @@ const useDraftManager = ({ userId, onLoadDraft, getDraftPayload }) => {
   const clearDraft = useCallback(async () => {
     try {
       if (!userId) {
-        console.warn('User ID not available for clearing draft');
+        logger.warn('User ID not available for clearing draft');
         return;
       }
 
@@ -29,14 +30,14 @@ const useDraftManager = ({ userId, onLoadDraft, getDraftPayload }) => {
       ]);
       setHasDraft(false);
     } catch (error) {
-      console.error('Error clearing draft:', error);
+      logger.error('Error clearing draft:', error);
     }
   }, [userId]);
 
   const loadDraft = useCallback(async () => {
     try {
       if (!userId) {
-        console.warn('User ID not available for loading draft');
+        logger.warn('User ID not available for loading draft');
         return;
       }
 
@@ -62,7 +63,7 @@ const useDraftManager = ({ userId, onLoadDraft, getDraftPayload }) => {
             AsyncStorage.removeItem(draftKey),
           ]);
           setHasDraft(false);
-          console.error('Invalid draft data cleared:', parseError);
+          logger.error('Invalid draft data cleared:', parseError);
           return;
         }
 
@@ -81,7 +82,7 @@ const useDraftManager = ({ userId, onLoadDraft, getDraftPayload }) => {
         ]);
       }
     } catch (error) {
-      console.error('Error loading draft:', error);
+      logger.error('Error loading draft:', error);
     }
   }, [clearDraft, userId]);
 
@@ -109,7 +110,7 @@ const useDraftManager = ({ userId, onLoadDraft, getDraftPayload }) => {
           Alert.alert('Draft Saved', 'Your report has been saved as a draft.');
         }
       } catch (error) {
-        console.error('Error saving draft:', error);
+        logger.error('Error saving draft:', error);
         if (showAlert) {
           Alert.alert('Error', 'Failed to save draft. Please try again.');
         }
