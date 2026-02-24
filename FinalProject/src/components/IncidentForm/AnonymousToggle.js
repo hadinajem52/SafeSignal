@@ -56,4 +56,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default AnonymousToggle;
+export default React.memo(AnonymousToggle);

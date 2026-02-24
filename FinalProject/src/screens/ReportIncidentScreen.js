@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -66,6 +66,14 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     applyDraftForm,
   } = useIncidentForm();
 
+  const clearLocationError = useCallback(() => {
+    setErrors((prev) => ({ ...prev, location: null }));
+  }, [setErrors]);
+
+  const setLocationError = useCallback((message) => {
+    setErrors((prev) => ({ ...prev, location: message }));
+  }, [setErrors]);
+
   // Location Hook
   const {
     location,
@@ -86,8 +94,8 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     confirmMapLocation,
     applyDraftLocation,
   } = useLocationPicker({
-    onClearLocationError: () => setErrors((prev) => ({ ...prev, location: null })),
-    onLocationError: (message) => setErrors((prev) => ({ ...prev, location: message })),
+    onClearLocationError: clearLocationError,
+    onLocationError: setLocationError,
     locationServicesEnabled: preferences.locationServices,
   });
 
@@ -107,7 +115,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     hasAppliedDefaultAnonymous.current = true;
   };
 
-  const getDraftPayload = () => ({
+  const getDraftPayload = useCallback(() => ({
     title,
     description,
     category: selectedCategory,
@@ -119,7 +127,19 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     enableMlClassification,
     enableMlRisk,
     photos,
-  });
+  }), [
+    description,
+    enableMlClassification,
+    enableMlRisk,
+    incidentDate,
+    isAnonymous,
+    location,
+    locationName,
+    photos,
+    selectedCategory,
+    severity,
+    title,
+  ]);
 
   const {
     hasDraft,
@@ -173,18 +193,41 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     }
   }, [enableMlClassification, selectedCategory, setErrors, setSelectedCategory]);
 
-  const handleToggleMlClassification = (value) => {
+  const handleToggleMlClassification = useCallback((value) => {
     setEnableMlClassification(value);
-  };
+  }, []);
 
-  const handleToggleMlRisk = (value) => {
+  const handleToggleMlRisk = useCallback((value) => {
     setEnableMlRisk(value);
-  };
+  }, []);
+
+  const handleTitleChange = useCallback((text) => {
+    setTitle(text);
+    setErrors((prev) => ({ ...prev, title: null }));
+  }, [setErrors, setTitle]);
+
+  const handleDescriptionChange = useCallback((text) => {
+    setDescription(text);
+    setErrors((prev) => ({ ...prev, description: null }));
+  }, [setDescription, setErrors]);
+
+  const handleCategorySelect = useCallback((value) => {
+    setSelectedCategory(value);
+    setErrors((prev) => ({ ...prev, category: null }));
+  }, [setErrors, setSelectedCategory]);
+
+  const handleCloseMapModal = useCallback(() => {
+    setShowMapModal(false);
+  }, [setShowMapModal]);
+
+  const handleSaveDraftPress = useCallback(() => {
+    saveDraft(true);
+  }, [saveDraft]);
 
   /**
    * Handle incident submission
    */
-  const handleSubmit = async (asDraft = false) => {
+  const handleSubmit = useCallback(async (asDraft = false) => {
     // Use ref to prevent race conditions from rapid clicks
     if (isSubmittingRef.current) {
       return;
@@ -303,7 +346,37 @@ const ReportIncidentScreen = ({ navigation, route }) => {
       setIsSubmitting(false);
       isSubmittingRef.current = false;
     }
-  };
+  }, [
+    clearDraft,
+    description,
+    draftId,
+    enableMlClassification,
+    enableMlRisk,
+    isAnonymous,
+    isSubmitting,
+    location,
+    locationName,
+    navigation,
+    photos,
+    preferences.defaultAnonymous,
+    resetForm,
+    selectedCategory,
+    severity,
+    setDraftId,
+    setIsAnonymous,
+    setLocation,
+    setLocationName,
+    setMapRegion,
+    setPhotos,
+    setSelectedMapLocation,
+    title,
+    validateForm,
+    incidentDate,
+  ]);
+
+  const handleSubmitPress = useCallback(() => {
+    handleSubmit(false);
+  }, [handleSubmit]);
 
   return (
     <ScrollView
@@ -345,15 +418,9 @@ const ReportIncidentScreen = ({ navigation, route }) => {
 
         <IncidentTextFields
           title={title}
-          onTitleChange={(text) => {
-            setTitle(text);
-            setErrors({ ...errors, title: null });
-          }}
+          onTitleChange={handleTitleChange}
           description={description}
-          onDescriptionChange={(text) => {
-            setDescription(text);
-            setErrors({ ...errors, description: null });
-          }}
+          onDescriptionChange={handleDescriptionChange}
           errors={errors}
         />
 
@@ -361,10 +428,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
           <IncidentCategoryPicker
             categories={INCIDENT_CATEGORIES}
             selectedCategory={selectedCategory}
-            onSelect={(value) => {
-              setSelectedCategory(value);
-              setErrors({ ...errors, category: null });
-            }}
+            onSelect={handleCategorySelect}
             error={errors.category}
           />
         )}
@@ -398,7 +462,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
           onOpenMap={openMapForSelection}
           error={errors.location}
           showMapModal={showMapModal}
-          onCloseMapModal={() => setShowMapModal(false)}
+          onCloseMapModal={handleCloseMapModal}
           onConfirmMapLocation={confirmMapLocation}
           mapRegion={mapRegion}
           onMapRegionChange={setMapRegion}
@@ -418,7 +482,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
           {/* Save Draft Button */}
           <Button
             title="Save Draft"
-            onPress={() => saveDraft(true)}
+            onPress={handleSaveDraftPress}
             loading={isSavingDraft}
             disabled={isSavingDraft}
             variant="secondary"
@@ -428,7 +492,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
           {/* Submit Button */}
           <Button
             title="Submit Report"
-            onPress={() => handleSubmit(false)}
+            onPress={handleSubmitPress}
             loading={isSubmitting}
             disabled={isSubmitting}
             style={[

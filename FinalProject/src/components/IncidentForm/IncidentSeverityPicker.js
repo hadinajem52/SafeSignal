@@ -76,4 +76,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default IncidentSeverityPicker;
+export default React.memo(IncidentSeverityPicker);

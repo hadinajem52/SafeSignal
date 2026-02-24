@@ -106,4 +106,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default IncidentPhotoUploader;
+export default React.memo(IncidentPhotoUploader);

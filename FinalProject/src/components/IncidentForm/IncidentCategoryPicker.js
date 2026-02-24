@@ -112,4 +112,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default IncidentCategoryPicker;
+export default React.memo(IncidentCategoryPicker);

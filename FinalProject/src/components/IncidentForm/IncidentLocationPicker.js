@@ -260,4 +260,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default IncidentLocationPicker;
+export default React.memo(IncidentLocationPicker);

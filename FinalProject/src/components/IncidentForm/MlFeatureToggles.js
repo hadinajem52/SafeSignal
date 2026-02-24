@@ -75,4 +75,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default MlFeatureToggles;
+export default React.memo(MlFeatureToggles);

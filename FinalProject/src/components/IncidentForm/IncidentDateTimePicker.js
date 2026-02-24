@@ -67,4 +67,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default IncidentDateTimePicker;
+export default React.memo(IncidentDateTimePicker);
