@@ -31,7 +31,7 @@ import {
   formatStatusLabel,
   openMapsUrl,
   SEVERITY_VARIANTS,
-} from "../../utils/incident";
+} from "../../utils/incidentUtils";
 import { SOCKET_URL } from "../../utils/network";
 
 // ─── CSS ──────────────────────────────────────────────────────────────────────

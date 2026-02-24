@@ -48,7 +48,19 @@ const useDraftManager = ({ userId, onLoadDraft, getDraftPayload }) => {
       }
 
       if (savedDraft) {
-        const draft = JSON.parse(savedDraft);
+        let draft;
+        try {
+          draft = JSON.parse(savedDraft);
+        } catch (parseError) {
+          await Promise.all([
+            SecureStore.deleteItemAsync(draftKey),
+            AsyncStorage.removeItem(draftKey),
+          ]);
+          setHasDraft(false);
+          console.error('Invalid draft data cleared:', parseError);
+          return;
+        }
+
         setHasDraft(true);
 
         Alert.alert('Draft Found', 'You have an unsaved draft. Would you like to continue editing it?', [

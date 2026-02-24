@@ -51,19 +51,32 @@ const useMyReports = ({ user }) => {
             }
 
             if (savedDraft) {
-              const draft = JSON.parse(savedDraft);
-              draftItem = {
-                id: `draft-${draft.savedAt || Date.now()}`,
-                title: draft.title || 'Untitled Draft',
-                description: draft.description || 'No description yet.',
-                category: draft.category || 'other',
-                location: draft.location || null,
-                locationName: draft.locationName || '',
-                createdAt: draft.savedAt || draft.incidentDate || new Date().toISOString(),
-                status: 'draft',
-                isDraft: true,
-                draftData: draft,
-              };
+              let draft;
+              try {
+                draft = JSON.parse(savedDraft);
+              } catch (parseError) {
+                await Promise.all([
+                  SecureStore.deleteItemAsync(draftKey),
+                  AsyncStorage.removeItem(draftKey),
+                ]);
+                console.error('Invalid draft data cleared:', parseError);
+                draft = null;
+              }
+
+              if (draft) {
+                draftItem = {
+                  id: `draft-${draft.savedAt || Date.now()}`,
+                  title: draft.title || 'Untitled Draft',
+                  description: draft.description || 'No description yet.',
+                  category: draft.category || 'other',
+                  location: draft.location || null,
+                  locationName: draft.locationName || '',
+                  createdAt: draft.savedAt || draft.incidentDate || new Date().toISOString(),
+                  status: 'draft',
+                  isDraft: true,
+                  draftData: draft,
+                };
+              }
             }
           }
         } catch (draftError) {
