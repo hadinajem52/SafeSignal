@@ -1,5 +1,10 @@
 # Mobile Cleanup Plan (Phased, Safe Rollout)
 
+## Current Status (2026-02-25)
+- Phase 0: Started and baseline captured in `docs/mobile-phase0-baseline.md`.
+- Phase 1: Started with service-layer decomposition while preserving `src/services/api.js` public exports.
+- Validation state: `node --check` completed for service modules; lint and manual smoke tests are still pending before Phase 0/1 closeout.
+
 ## Goals
 - Break large mobile files into smaller, single-purpose modules.
 - Keep behavior stable while improving maintainability.
