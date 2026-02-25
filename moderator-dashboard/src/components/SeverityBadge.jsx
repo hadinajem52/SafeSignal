@@ -35,7 +35,7 @@ const DEFAULT_STYLE = {
 
 function SeverityBadge({
   severity,
-  variant = SEVERITY_VARIANTS.REPORTS,
+  variant: _variant = SEVERITY_VARIANTS.REPORTS,
   display = "pill",
 }) {
   const safeSeverity = severity || "unknown";
