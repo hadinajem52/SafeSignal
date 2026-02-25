@@ -1,13 +1,13 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { io } from "socket.io-client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../context/AuthContext";
 import { settingsAPI } from "../services/api";
-import { SOCKET_URL } from "../utils/network";
 import { applyDarkMode, persistDarkMode } from "../utils/theme";
 import { STORAGE_KEYS } from "../constants/storageKeys";
 import { FULL_BLEED_ROUTES } from "../constants/routes";
+import { useRealtimeInvalidation } from "./hooks/useRealtimeInvalidation";
+import { useToastQueue } from "./hooks/useToastQueue";
 import Navigation from "./Navigation";
 
 function Layout({ children }) {
@@ -16,8 +16,7 @@ function Layout({ children }) {
   const { user } = useAuth();
   const userId = user?.user_id;
   const queryClient = useQueryClient();
-  const [notifications, setNotifications] = useState([]);
-  const timeoutRefs = useRef({});
+  const { notifications, pushNotification } = useToastQueue();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     () => localStorage.getItem(STORAGE_KEYS.SIDEBAR_COLLAPSED) === "true",
   );
@@ -46,84 +45,7 @@ function Layout({ children }) {
     persistDarkMode(dashboardSettings.darkMode);
   }, [dashboardSettings?.darkMode]);
 
-  useEffect(() => {
-    const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
-    if (!token || !userId) return undefined;
-
-    const socket = io(SOCKET_URL, {
-      auth: { token },
-    });
-
-    const pushNotification = (message, type = "info") => {
-      const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-      setNotifications((prev) => [{ id, message, type }, ...prev].slice(0, 8));
-      timeoutRefs.current[id] = setTimeout(() => {
-        setNotifications((prev) => prev.filter((item) => item.id !== id));
-        delete timeoutRefs.current[id];
-      }, 6000);
-    };
-
-    const refreshRealtimeQueries = () => {
-      queryClient.invalidateQueries({ queryKey: ["dashboardStats"] });
-      queryClient.invalidateQueries({ queryKey: ["reports"] });
-      queryClient.invalidateQueries({ queryKey: ["lei-incidents"] });
-      queryClient.invalidateQueries({ queryKey: ["lei-incident"] });
-      queryClient.invalidateQueries({ queryKey: ["users"] });
-      queryClient.invalidateQueries({ queryKey: ["admin-applications"] });
-    };
-
-    socket.on("incident:new", () => {
-      refreshRealtimeQueries();
-    });
-
-    socket.on("incident:update", () => {
-      refreshRealtimeQueries();
-    });
-
-    socket.on("incident:duplicate", () => {
-      refreshRealtimeQueries();
-    });
-
-    socket.on("lei_alert", () => {
-      refreshRealtimeQueries();
-    });
-
-    socket.on("notification:report_alert", (payload) => {
-      const severity = payload?.severity
-        ? payload.severity.toUpperCase()
-        : "HIGH";
-      pushNotification(
-        `[${severity}] ${payload?.title || "High-priority report received"}`,
-        "alert",
-      );
-      refreshRealtimeQueries();
-    });
-
-    socket.on("notification:weekly_digest", (payload) => {
-      const total = payload?.summary?.totalReports ?? 0;
-      const highPriority = payload?.summary?.highPriorityReports ?? 0;
-      pushNotification(
-        `Weekly digest: ${total} reports, ${highPriority} high-priority.`,
-        "digest",
-      );
-    });
-
-    socket.on("staff_application:new", (payload) => {
-      pushNotification(
-        `New ${payload?.role === "law_enforcement" ? "LE" : "moderator"} application: ${payload?.username || "Unknown user"}`,
-        "info",
-      );
-      queryClient.invalidateQueries({ queryKey: ["admin-applications"] });
-      queryClient.invalidateQueries({ queryKey: ["users"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboardStats"] });
-    });
-
-    return () => {
-      socket.disconnect();
-      Object.values(timeoutRefs.current).forEach(clearTimeout);
-      timeoutRefs.current = {};
-    };
-  }, [queryClient, userId]);
+  useRealtimeInvalidation({ userId, queryClient, pushNotification });
 
   return (
     <div className="flex h-dvh bg-bg">
