@@ -1,11 +1,5 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import React, { useCallback, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileText } from "lucide-react";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import IncidentTimeline from "../../components/IncidentTimeline";
@@ -13,14 +7,13 @@ import { reportsAPI } from "../../services/api";
 import ReportDetail from "./ReportDetail";
 import ReportFilters from "./ReportFilters";
 import ReportList from "./ReportList";
+import { useReportPanelResize } from "./hooks/useReportPanelResize";
+import { useReportSelection } from "./hooks/useReportSelection";
+import { useReportActions } from "./hooks/useReportActions";
 
 // Priority score: severity is the primary sort key; age (log-scaled) is a
 // tiebreaker within the same tier so stale reports don't beat newer ones.
 const SEVERITY_RANK = { critical: 4, high: 3, medium: 2, low: 1 };
-const LEFT_PANEL_WIDTH = { min: 280, max: 620, default: 380 };
-const RIGHT_PANEL_WIDTH = { min: 260, max: 520, default: 300 };
-const SPLITTER_WIDTH = 8;
-const IDEAL_MIN_DETAIL_WIDTH = 440;
 
 function getPriorityScore(report) {
   const rank = SEVERITY_RANK[report.severity] || 0;
@@ -48,82 +41,9 @@ function Reports() {
     "submitted,auto_flagged,auto_processed",
   );
   const [sortMode, setSortMode] = useState("urgency"); // 'urgency' | 'time'
-  const [selectedReport, setSelectedReport] = useState(null);
-  const [selectedReportIds, setSelectedReportIds] = useState([]);
-  const [bulkActionPending, setBulkActionPending] = useState(null);
-  const [bulkConfirmAction, setBulkConfirmAction] = useState(null); // 'verify' | 'reject' | null
-  const [singleConfirmAction, setSingleConfirmAction] = useState(null); // 'escalate' | 'reject' | null
   const [toasts, setToasts] = useState([]);
-  const [panelWidths, setPanelWidths] = useState({
-    left: LEFT_PANEL_WIDTH.default,
-    right: RIGHT_PANEL_WIDTH.default,
-  });
-  const [activeSplitter, setActiveSplitter] = useState(null); // 'left' | 'right' | null
-  const panelsContainerRef = useRef(null);
-  const dragStateRef = useRef(null);
 
   const queryClient = useQueryClient();
-
-  const clamp = useCallback(
-    (value, min, max) => Math.min(Math.max(value, min), max),
-    [],
-  );
-
-  const clampPanelWidths = useCallback(
-    (nextWidths, containerWidth) => {
-      const availableWidth = containerWidth - SPLITTER_WIDTH * 2;
-      if (availableWidth <= 0) return nextWidths;
-
-      const maxLeftFromLayout = Math.max(
-        LEFT_PANEL_WIDTH.min,
-        availableWidth - RIGHT_PANEL_WIDTH.min - IDEAL_MIN_DETAIL_WIDTH,
-      );
-      const maxRightFromLayout = Math.max(
-        RIGHT_PANEL_WIDTH.min,
-        availableWidth - LEFT_PANEL_WIDTH.min - IDEAL_MIN_DETAIL_WIDTH,
-      );
-
-      let left = clamp(
-        nextWidths.left,
-        LEFT_PANEL_WIDTH.min,
-        Math.min(LEFT_PANEL_WIDTH.max, maxLeftFromLayout),
-      );
-      let right = clamp(
-        nextWidths.right,
-        RIGHT_PANEL_WIDTH.min,
-        Math.min(RIGHT_PANEL_WIDTH.max, maxRightFromLayout),
-      );
-
-      const overflow = left + right + IDEAL_MIN_DETAIL_WIDTH - availableWidth;
-      if (overflow > 0) {
-        const shrinkRight = Math.min(overflow, right - RIGHT_PANEL_WIDTH.min);
-        right -= shrinkRight;
-        const remaining = overflow - shrinkRight;
-        if (remaining > 0) {
-          left -= Math.min(remaining, left - LEFT_PANEL_WIDTH.min);
-        }
-      }
-
-      return { left, right };
-    },
-    [clamp],
-  );
-
-  const handleSplitterPointerDown = useCallback(
-    (side, event) => {
-      if (event.button !== 0 || !panelsContainerRef.current) return;
-      event.preventDefault();
-      event.currentTarget.setPointerCapture?.(event.pointerId);
-      dragStateRef.current = {
-        side,
-        startX: event.clientX,
-        startLeft: panelWidths.left,
-        startRight: panelWidths.right,
-      };
-      setActiveSplitter(side);
-    },
-    [panelWidths.left, panelWidths.right],
-  );
 
   const pushToast = useCallback((message, type = "success") => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -142,43 +62,6 @@ function Reports() {
       const result = await reportsAPI.getAll(params);
       return result.success ? result.data : [];
     },
-  });
-
-  const { data: dedupData, isLoading: isDedupLoading } = useQuery({
-    queryKey: ["report-dedup", selectedReport?.id],
-    queryFn: async () => {
-      if (!selectedReport?.id) return null;
-      const result = await reportsAPI.getDedup(selectedReport.id);
-      return result.success ? result.data : null;
-    },
-    enabled: Boolean(selectedReport?.id),
-  });
-
-  const { data: mlSummary, isLoading: isMlLoading } = useQuery({
-    queryKey: ["report-ml", selectedReport?.id],
-    queryFn: async () => {
-      if (!selectedReport?.id) return null;
-      const result = await reportsAPI.getMlSummary(selectedReport.id);
-      return result.success ? result.data : null;
-    },
-    enabled: Boolean(selectedReport?.id),
-  });
-
-  const verifyMutation = useMutation({
-    mutationFn: (id) => reportsAPI.verify(id),
-  });
-  const rejectMutation = useMutation({
-    mutationFn: (id) => reportsAPI.reject(id, "Rejected by moderator"),
-  });
-
-  const linkDuplicateMutation = useMutation({
-    mutationFn: (duplicateIncidentId) =>
-      reportsAPI.linkDuplicate(selectedReport.id, duplicateIncidentId),
-  });
-
-  const updateCategoryMutation = useMutation({
-    mutationFn: (category) =>
-      reportsAPI.updateCategory(selectedReport.id, category),
   });
 
   const filteredReports = useMemo(() => {
@@ -206,244 +89,72 @@ function Reports() {
       );
   }, [reports, searchTerm, statusFilter, sortMode]);
 
-  useEffect(() => {
-    if (!activeSplitter) return;
+  const {
+    panelWidths,
+    activeSplitter,
+    panelsContainerRef,
+    handleSplitterPointerDown,
+  } = useReportPanelResize();
 
-    const handlePointerMove = (event) => {
-      const dragState = dragStateRef.current;
-      if (!dragState || !panelsContainerRef.current) return;
-      if (event.buttons === 0) {
-        dragStateRef.current = null;
-        setActiveSplitter(null);
-        return;
-      }
+  const {
+    selectedReport,
+    setSelectedReport,
+    selectedReportIds,
+    setSelectedReportIds,
+    handleToggleSelection,
+    handleToggleSelectAll,
+    handleSelectNextReport,
+  } = useReportSelection(filteredReports);
 
-      const containerWidth =
-        panelsContainerRef.current.getBoundingClientRect().width;
-      const deltaX = event.clientX - dragState.startX;
-
-      const nextWidths =
-        dragState.side === "left"
-          ? { left: dragState.startLeft + deltaX, right: dragState.startRight }
-          : { left: dragState.startLeft, right: dragState.startRight - deltaX };
-
-      setPanelWidths(clampPanelWidths(nextWidths, containerWidth));
-    };
-
-    const handlePointerUp = () => {
-      dragStateRef.current = null;
-      setActiveSplitter(null);
-    };
-
-    const previousUserSelect = document.body.style.userSelect;
-    const previousCursor = document.body.style.cursor;
-    document.body.style.userSelect = "none";
-    document.body.style.cursor = "col-resize";
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", handlePointerUp);
-    window.addEventListener("pointercancel", handlePointerUp);
-    window.addEventListener("blur", handlePointerUp);
-
-    return () => {
-      document.body.style.userSelect = previousUserSelect;
-      document.body.style.cursor = previousCursor;
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", handlePointerUp);
-      window.removeEventListener("pointercancel", handlePointerUp);
-      window.removeEventListener("blur", handlePointerUp);
-    };
-  }, [activeSplitter, clampPanelWidths]);
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (!panelsContainerRef.current) return;
-      const width = panelsContainerRef.current.getBoundingClientRect().width;
-      setPanelWidths((prev) => clampPanelWidths(prev, width));
-    };
-
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, [clampPanelWidths]);
-
-  // Auto-select first report when list loads so the right panel isn't blank
-  useEffect(() => {
-    if (!selectedReport && filteredReports.length > 0) {
-      setSelectedReport(filteredReports[0]);
-    }
-  }, [filteredReports, selectedReport]);
-
-  // Keep selection valid if filters remove the currently selected report
-  useEffect(() => {
-    setSelectedReportIds((prev) =>
-      prev.filter((id) => filteredReports.some((r) => r.id === id)),
-    );
-  }, [filteredReports]);
-
-  const invalidateReports = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ["reports"] });
-  }, [queryClient]);
-
-  const handleVerify = useCallback(
-    async (reportId, source = "single") => {
-      const result = await verifyMutation.mutateAsync(reportId);
-      if (!result.success) {
-        pushToast(result.error || "Failed to escalate report.", "error");
-        return false;
-      }
-      invalidateReports();
-      setSelectedReportIds((prev) => prev.filter((id) => id !== reportId));
-      if (selectedReport?.id === reportId) setSelectedReport(null);
-      if (source === "single") pushToast("Report escalated successfully.");
-      return true;
+  const { data: dedupData, isLoading: isDedupLoading } = useQuery({
+    queryKey: ["report-dedup", selectedReport?.id],
+    queryFn: async () => {
+      if (!selectedReport?.id) return null;
+      const result = await reportsAPI.getDedup(selectedReport.id);
+      return result.success ? result.data : null;
     },
-    [invalidateReports, pushToast, selectedReport?.id, verifyMutation],
-  );
+    enabled: Boolean(selectedReport?.id),
+  });
 
-  const handleReject = useCallback(
-    async (reportId, source = "single") => {
-      const result = await rejectMutation.mutateAsync(reportId);
-      if (!result.success) {
-        pushToast(result.error || "Failed to reject report.", "error");
-        return false;
-      }
-      invalidateReports();
-      setSelectedReportIds((prev) => prev.filter((id) => id !== reportId));
-      if (selectedReport?.id === reportId) setSelectedReport(null);
-      if (source === "single") pushToast("Report rejected successfully.");
-      return true;
+  const { data: mlSummary, isLoading: isMlLoading } = useQuery({
+    queryKey: ["report-ml", selectedReport?.id],
+    queryFn: async () => {
+      if (!selectedReport?.id) return null;
+      const result = await reportsAPI.getMlSummary(selectedReport.id);
+      return result.success ? result.data : null;
     },
-    [invalidateReports, pushToast, rejectMutation, selectedReport?.id],
-  );
+    enabled: Boolean(selectedReport?.id),
+  });
 
-  // Called after confirmation dialog is confirmed
-  const executeBulkAction = async (action) => {
-    if (!selectedReportIds.length || bulkActionPending) return;
-    setBulkActionPending(action);
-    try {
-      const actionFn =
-        action === "verify"
-          ? reportsAPI.verify
-          : (id) => reportsAPI.reject(id, "Rejected by moderator");
-
-      const outcomes = await Promise.all(
-        selectedReportIds.map((id) => actionFn(id)),
-      );
-      const successCount = outcomes.filter((r) => r.success).length;
-      const failedCount = outcomes.length - successCount;
-
-      if (successCount > 0) {
-        invalidateReports();
-        setSelectedReportIds([]);
-        if (selectedReport && selectedReportIds.includes(selectedReport.id)) {
-          setSelectedReport(null);
-        }
-      }
-
-      if (failedCount === 0) {
-        pushToast(
-          `${successCount} reports ${action === "verify" ? "escalated" : "rejected"} successfully.`,
-        );
-      } else {
-        pushToast(
-          `${successCount} succeeded, ${failedCount} failed during bulk ${action}.`,
-          failedCount === outcomes.length ? "error" : "warning",
-        );
-      }
-    } catch {
-      pushToast(`Bulk ${action} failed. Please try again.`, "error");
-    } finally {
-      setBulkActionPending(null);
-    }
-  };
-
-  const handleToggleSelection = (reportId) => {
-    setSelectedReportIds((prev) =>
-      prev.includes(reportId)
-        ? prev.filter((id) => id !== reportId)
-        : [...prev, reportId],
-    );
-  };
-
-  const handleToggleSelectAll = () => {
-    if (!filteredReports.length) return;
-    setSelectedReportIds(
-      selectedReportIds.length === filteredReports.length
-        ? []
-        : filteredReports.map((r) => r.id),
-    );
-  };
-
-  const handleSelectNextReport = useCallback(() => {
-    if (!filteredReports.length) return;
-    if (!selectedReport) {
-      setSelectedReport(filteredReports[0]);
-      return;
-    }
-    const idx = filteredReports.findIndex((r) => r.id === selectedReport.id);
-    setSelectedReport(
-      filteredReports[idx < 0 ? 0 : (idx + 1) % filteredReports.length],
-    );
-  }, [filteredReports, selectedReport]);
-
-  // Single-report action request — opens the AlertDialog
-  const handleEscalateRequest = useCallback(() => {
-    if (!selectedReport) return;
-    setSingleConfirmAction("escalate");
-  }, [selectedReport]);
-
-  const handleRejectRequest = useCallback(() => {
-    if (!selectedReport) return;
-    setSingleConfirmAction("reject");
-  }, [selectedReport]);
-
-  const executeSingleAction = async () => {
-    if (!selectedReport || !singleConfirmAction) return;
-    const action = singleConfirmAction;
-    setSingleConfirmAction(null);
-    if (action === "escalate") await handleVerify(selectedReport.id);
-    else await handleReject(selectedReport.id);
-  };
-
-  // Keyboard shortcuts — E escalate (dialog), R reject (dialog), N next
-  useEffect(() => {
-    const handleKeydown = (event) => {
-      const tag = event.target?.tagName;
-      if (
-        tag === "INPUT" ||
-        tag === "TEXTAREA" ||
-        tag === "SELECT" ||
-        event.target?.isContentEditable
-      )
-        return;
-      if (event.ctrlKey || event.metaKey || event.altKey) return;
-
-      const key = event.key.toLowerCase();
-      if (key === "n") {
-        event.preventDefault();
-        handleSelectNextReport();
-        return;
-      }
-      if (!selectedReport) return;
-      if (key === "e" && !verifyMutation.isPending) {
-        event.preventDefault();
-        handleEscalateRequest();
-      }
-      if (key === "r" && !rejectMutation.isPending) {
-        event.preventDefault();
-        handleRejectRequest();
-      }
-    };
-    window.addEventListener("keydown", handleKeydown);
-    return () => window.removeEventListener("keydown", handleKeydown);
-  }, [
+  const {
+    bulkActionPending,
+    bulkConfirmAction,
+    singleConfirmAction,
+    setBulkConfirmAction,
+    setSingleConfirmAction,
+    verifyMutation,
+    rejectMutation,
+    linkDuplicateMutation,
+    updateCategoryMutation,
+    executeBulkAction,
     handleEscalateRequest,
     handleRejectRequest,
-    handleSelectNextReport,
-    rejectMutation.isPending,
+    executeSingleAction,
+    onMerge,
+    onApplySuggestedCategory,
+    onOpenDuplicateCandidate,
+  } = useReportActions({
+    queryClient,
+    reportsAPI,
+    filteredReports,
     selectedReport,
-    verifyMutation.isPending,
-  ]);
+    setSelectedReport,
+    selectedReportIds,
+    setSelectedReportIds,
+    handleSelectNextReport,
+    pushToast,
+    normalizeReport,
+  });
 
   return (
     <div className="flex flex-col h-dvh overflow-hidden bg-bg">
@@ -545,67 +256,12 @@ function Reports() {
               updateCategoryPending={updateCategoryMutation.isPending}
               verifyPending={verifyMutation.isPending}
               rejectPending={rejectMutation.isPending}
-              onMerge={async (duplicateIncidentId) => {
-                const result =
-                  await linkDuplicateMutation.mutateAsync(duplicateIncidentId);
-                if (!result.success) {
-                  pushToast(
-                    result.error || "Failed to merge duplicate.",
-                    "error",
-                  );
-                  return;
-                }
-                queryClient.invalidateQueries({ queryKey: ["reports"] });
-                queryClient.invalidateQueries({
-                  queryKey: ["report-dedup", selectedReport?.id],
-                });
-                pushToast("Duplicate linked successfully.");
-              }}
-              onApplySuggestedCategory={async (category) => {
-                const result =
-                  await updateCategoryMutation.mutateAsync(category);
-                if (!result.success) {
-                  pushToast(
-                    result.error || "Failed to update category.",
-                    "error",
-                  );
-                  return;
-                }
-                queryClient.invalidateQueries({ queryKey: ["reports"] });
-                queryClient.invalidateQueries({
-                  queryKey: ["report-ml", selectedReport?.id],
-                });
-                pushToast("Category updated successfully.");
-              }}
+              onMerge={onMerge}
+              onApplySuggestedCategory={onApplySuggestedCategory}
               onVerify={handleEscalateRequest}
               onReject={handleRejectRequest}
               onNext={handleSelectNextReport}
-              onOpenDuplicateCandidate={async (duplicateIncidentId) => {
-                const duplicateId = Number(duplicateIncidentId);
-                if (!Number.isFinite(duplicateId)) {
-                  pushToast(
-                    "Unable to open duplicate incident: invalid incident id.",
-                    "error",
-                  );
-                  return;
-                }
-                const inQueue = filteredReports.find(
-                  (r) => Number(r.id) === duplicateId,
-                );
-                if (inQueue) {
-                  setSelectedReport(inQueue);
-                  return;
-                }
-                const result = await reportsAPI.getById(duplicateId);
-                if (!result.success || !result.data) {
-                  pushToast(
-                    result.error || "Failed to open duplicate incident.",
-                    "error",
-                  );
-                  return;
-                }
-                setSelectedReport(normalizeReport(result.data));
-              }}
+              onOpenDuplicateCandidate={onOpenDuplicateCandidate}
             />
           </div>
 
