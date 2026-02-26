@@ -1,1 +1,1 @@
-export { default } from './LawEnforcement/LawEnforcement'
+export { default } from "./LawEnforcement/LawEnforcement";
