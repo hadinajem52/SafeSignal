@@ -1,24 +1,24 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { incidentAPI } from '../../services/api';
-import { useTheme } from '../../context/ThemeContext';
-import useUserPreferences from '../../hooks/useUserPreferences';
-import incidentConstants from '../../../../constants/incident';
-import useIncidentFilters from '../../hooks/useIncidentFilters';
-import useMapRegion from '../../hooks/useMapRegion';
-import { AppText, Button, MapLegend } from '../../components';
-import CategoryFilterBar from './CategoryFilterBar';
-import IncidentMapDetail from './IncidentMapDetail';
-import MapControls from './MapControls';
-import MapCanvas from './MapView';
-import mapStyles from './mapStyles';
-import TimeframeSelector from './TimeframeSelector';
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { ActivityIndicator, View } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { incidentAPI } from "../../services/api";
+import { useTheme } from "../../context/ThemeContext";
+import useUserPreferences from "../../hooks/useUserPreferences";
+import incidentConstants from "../../../../constants/incident";
+import useIncidentFilters from "../../hooks/useIncidentFilters";
+import useMapRegion from "../../hooks/useMapRegion";
+import { AppText, Button, MapLegend } from "../../components";
+import CategoryFilterBar from "./CategoryFilterBar";
+import IncidentMapDetail from "./IncidentMapDetail";
+import MapControls from "./MapControls";
+import MapCanvas from "./MapView";
+import mapStyles from "./mapStyles";
+import TimeframeSelector from "./TimeframeSelector";
 
 const { CATEGORY_DISPLAY } = incidentConstants;
-const MAP_HINT_STORAGE_KEY = 'map_first_visit_hint_seen';
+const MAP_HINT_STORAGE_KEY = "map_first_visit_hint_seen";
 
 const DEFAULT_REGION = {
   latitude: 33.8938,
@@ -47,9 +47,15 @@ const MapScreen = () => {
     setSelectedCategory,
     selectedTimeframe,
     setSelectedTimeframe,
-  } = useIncidentFilters({ defaultTimeframe: '30d' });
+  } = useIncidentFilters({ defaultTimeframe: "30d" });
 
-  const { region, setRegion, locationLoading, goToMyLocation, resetToDefaultRegion } = useMapRegion({
+  const {
+    region,
+    setRegion,
+    locationLoading,
+    goToMyLocation,
+    resetToDefaultRegion,
+  } = useMapRegion({
     defaultRegion: DEFAULT_REGION,
     mapRef,
     locationServicesEnabled: preferences.locationServices,
@@ -80,19 +86,25 @@ const MapScreen = () => {
         }
 
         if (!result.success) {
-          setError(result.error || 'Failed to load incidents');
+          setError(result.error || "Failed to load incidents");
           return;
         }
 
-        const allowedStatuses = new Set(['verified', 'dispatched', 'on_scene']);
+        // Status visibility is enforced by the backend map endpoint.
+        // Client-side filtering here only guards against invalid coordinates.
         const filteredIncidents = result.incidents.filter((incident) => {
           const latitude = Number(incident?.location?.latitude);
           const longitude = Number(incident?.location?.longitude);
-          return allowedStatuses.has(incident.status) && Number.isFinite(latitude) && Number.isFinite(longitude);
+          return Number.isFinite(latitude) && Number.isFinite(longitude);
         });
         setIncidents(filteredIncidents);
 
-        if (filteredIncidents.length > 0 && mapRef.current && !isRefresh && !preferences.locationServices) {
+        if (
+          filteredIncidents.length > 0 &&
+          mapRef.current &&
+          !isRefresh &&
+          !preferences.locationServices
+        ) {
           const coordinates = filteredIncidents.map((incident) => ({
             latitude: incident.location.latitude,
             longitude: incident.location.longitude,
@@ -109,8 +121,8 @@ const MapScreen = () => {
         if (activeRequestId.current !== requestId) {
           return;
         }
-        console.error('Error fetching incidents:', fetchError);
-        setError('Failed to load incidents. Please try again.');
+        console.error("Error fetching incidents:", fetchError);
+        setError("Failed to load incidents. Please try again.");
       } finally {
         if (activeRequestId.current === requestId) {
           setLoading(false);
@@ -118,7 +130,7 @@ const MapScreen = () => {
         }
       }
     },
-    [preferences.locationServices, selectedCategory, selectedTimeframe]
+    [preferences.locationServices, selectedCategory, selectedTimeframe],
   );
 
   useEffect(() => {
@@ -129,7 +141,7 @@ const MapScreen = () => {
     let hintTimer;
     const loadHintState = async () => {
       const hintSeen = await AsyncStorage.getItem(MAP_HINT_STORAGE_KEY);
-      if (hintSeen === '1') {
+      if (hintSeen === "1") {
         setShowMapHint(false);
         return;
       }
@@ -137,7 +149,7 @@ const MapScreen = () => {
       setShowMapHint(true);
       hintTimer = setTimeout(async () => {
         setShowMapHint(false);
-        await AsyncStorage.setItem(MAP_HINT_STORAGE_KEY, '1');
+        await AsyncStorage.setItem(MAP_HINT_STORAGE_KEY, "1");
       }, 4200);
     };
 
@@ -174,15 +186,26 @@ const MapScreen = () => {
 
   if (error && !loading && incidents.length === 0) {
     return (
-      <View style={[mapStyles.centerContainer, { backgroundColor: theme.background }]}>
+      <View
+        style={[
+          mapStyles.centerContainer,
+          { backgroundColor: theme.background },
+        ]}
+      >
         <Ionicons name="alert-circle" size={64} color={theme.error} />
-        <AppText variant="body" style={[mapStyles.errorText, { color: theme.textSecondary }]}>
+        <AppText
+          variant="body"
+          style={[mapStyles.errorText, { color: theme.textSecondary }]}
+        >
           {error}
         </AppText>
         <Button
           title="Retry"
           onPress={() => fetchIncidents()}
-          style={[mapStyles.retryButton, { backgroundColor: theme.mapMarkerDefault }]}
+          style={[
+            mapStyles.retryButton,
+            { backgroundColor: theme.mapMarkerDefault },
+          ]}
         />
       </View>
     );
@@ -199,7 +222,7 @@ const MapScreen = () => {
         categoryDisplay={CATEGORY_DISPLAY}
         onMarkerPress={(incident) => {
           setShowMapHint(false);
-          AsyncStorage.setItem(MAP_HINT_STORAGE_KEY, '1').catch(() => {});
+          AsyncStorage.setItem(MAP_HINT_STORAGE_KEY, "1").catch(() => {});
           setSelectedIncident(incident);
         }}
       />
@@ -225,9 +248,21 @@ const MapScreen = () => {
       </View>
 
       {showMapHint ? (
-        <View style={[mapStyles.mapHintWrap, { backgroundColor: `${theme.card}e8`, borderColor: theme.border }]}> 
-          <Ionicons name="finger-print-outline" size={16} color={theme.primary} />
-          <AppText variant="caption" style={[mapStyles.mapHintText, { color: theme.textSecondary }]}> 
+        <View
+          style={[
+            mapStyles.mapHintWrap,
+            { backgroundColor: `${theme.card}e8`, borderColor: theme.border },
+          ]}
+        >
+          <Ionicons
+            name="finger-print-outline"
+            size={16}
+            color={theme.primary}
+          />
+          <AppText
+            variant="caption"
+            style={[mapStyles.mapHintText, { color: theme.textSecondary }]}
+          >
             Tap a marker to open incident details.
           </AppText>
         </View>
@@ -244,10 +279,23 @@ const MapScreen = () => {
       />
 
       {loading ? (
-        <View style={[mapStyles.loadingOverlay, { backgroundColor: `${theme.background}bf` }]}>
-          <View style={[mapStyles.loadingContainer, { backgroundColor: theme.card }]}> 
+        <View
+          style={[
+            mapStyles.loadingOverlay,
+            { backgroundColor: `${theme.background}bf` },
+          ]}
+        >
+          <View
+            style={[
+              mapStyles.loadingContainer,
+              { backgroundColor: theme.card },
+            ]}
+          >
             <ActivityIndicator size="large" color={theme.mapMarkerDefault} />
-            <AppText variant="body" style={[mapStyles.loadingText, { color: theme.text }]}> 
+            <AppText
+              variant="body"
+              style={[mapStyles.loadingText, { color: theme.text }]}
+            >
               Loading incidents...
             </AppText>
           </View>
