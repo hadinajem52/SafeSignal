@@ -1,21 +1,17 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  View,
-  ScrollView,
-  Alert,
-} from 'react-native';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
-import { incidentAPI } from '../services/api';
-import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
-import useDraftManager from '../hooks/useDraftManager';
-import useImagePicker from '../hooks/useImagePicker';
-import useIncidentForm from '../hooks/useIncidentForm';
-import useLocationPicker from '../hooks/useLocationPicker';
-import useUserPreferences from '../hooks/useUserPreferences';
-import incidentConstants from '../../../constants/incident';
-import { AppText, Button } from '../components';
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { View, ScrollView, Alert } from "react-native";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { Ionicons } from "@expo/vector-icons";
+import { incidentAPI } from "../services/api";
+import { useAuth } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
+import useDraftManager from "../hooks/useDraftManager";
+import useImagePicker from "../hooks/useImagePicker";
+import useIncidentForm from "../hooks/useIncidentForm";
+import useLocationPicker from "../hooks/useLocationPicker";
+import useUserPreferences from "../hooks/useUserPreferences";
+import incidentConstants from "../../../constants/incident";
+import { AppText, Button } from "../components";
 import {
   IncidentCategoryPicker,
   IncidentSeverityPicker,
@@ -25,8 +21,8 @@ import {
   IncidentTextFields,
   AnonymousToggle,
   MlFeatureToggles,
-} from '../components/IncidentForm';
-import styles from './reportIncidentStyles';
+} from "../components/IncidentForm";
+import styles from "./reportIncidentStyles";
 
 const { INCIDENT_CATEGORIES, SEVERITY_LEVELS } = incidentConstants;
 
@@ -37,7 +33,9 @@ const ReportIncidentScreen = ({ navigation, route }) => {
   const userId = user?.user_id || user?.userId;
   const { preferences, isLoading: isLoadingPreferences } = useUserPreferences();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccessMessage, setSubmitSuccessMessage] = useState("");
   const isSubmittingRef = useRef(false);
+  const successNavigationTimerRef = useRef(null);
   const hasAppliedDefaultAnonymous = useRef(false);
   const [enableMlClassification, setEnableMlClassification] = useState(true);
   const [enableMlRisk, setEnableMlRisk] = useState(true);
@@ -70,9 +68,12 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     setErrors((prev) => ({ ...prev, location: null }));
   }, [setErrors]);
 
-  const setLocationError = useCallback((message) => {
-    setErrors((prev) => ({ ...prev, location: message }));
-  }, [setErrors]);
+  const setLocationError = useCallback(
+    (message) => {
+      setErrors((prev) => ({ ...prev, location: message }));
+    },
+    [setErrors],
+  );
 
   // Location Hook
   const {
@@ -115,31 +116,34 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     hasAppliedDefaultAnonymous.current = true;
   };
 
-  const getDraftPayload = useCallback(() => ({
-    title,
-    description,
-    category: selectedCategory,
-    location,
-    locationName,
-    incidentDate: incidentDate.toISOString(),
-    severity,
-    isAnonymous,
-    enableMlClassification,
-    enableMlRisk,
-    photos,
-  }), [
-    description,
-    enableMlClassification,
-    enableMlRisk,
-    incidentDate,
-    isAnonymous,
-    location,
-    locationName,
-    photos,
-    selectedCategory,
-    severity,
-    title,
-  ]);
+  const getDraftPayload = useCallback(
+    () => ({
+      title,
+      description,
+      category: selectedCategory,
+      location,
+      locationName,
+      incidentDate: incidentDate.toISOString(),
+      severity,
+      isAnonymous,
+      enableMlClassification,
+      enableMlRisk,
+      photos,
+    }),
+    [
+      description,
+      enableMlClassification,
+      enableMlRisk,
+      incidentDate,
+      isAnonymous,
+      location,
+      locationName,
+      photos,
+      selectedCategory,
+      severity,
+      title,
+    ],
+  );
 
   const {
     hasDraft,
@@ -156,6 +160,9 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     loadDraft();
     return () => {
       isSubmittingRef.current = false;
+      if (successNavigationTimerRef.current) {
+        clearTimeout(successNavigationTimerRef.current);
+      }
     };
   }, [loadDraft]);
 
@@ -181,17 +188,27 @@ const ReportIncidentScreen = ({ navigation, route }) => {
 
     setIsAnonymous(!!preferences.defaultAnonymous);
     hasAppliedDefaultAnonymous.current = true;
-  }, [isLoadingPreferences, preferences.defaultAnonymous, route?.params?.draft, setIsAnonymous]);
+  }, [
+    isLoadingPreferences,
+    preferences.defaultAnonymous,
+    route?.params?.draft,
+    setIsAnonymous,
+  ]);
 
   useEffect(() => {
     if (enableMlClassification && !selectedCategory) {
-      setSelectedCategory('other');
+      setSelectedCategory("other");
     }
 
     if (enableMlClassification) {
       setErrors((prev) => ({ ...prev, category: null }));
     }
-  }, [enableMlClassification, selectedCategory, setErrors, setSelectedCategory]);
+  }, [
+    enableMlClassification,
+    selectedCategory,
+    setErrors,
+    setSelectedCategory,
+  ]);
 
   const handleToggleMlClassification = useCallback((value) => {
     setEnableMlClassification(value);
@@ -201,20 +218,29 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     setEnableMlRisk(value);
   }, []);
 
-  const handleTitleChange = useCallback((text) => {
-    setTitle(text);
-    setErrors((prev) => ({ ...prev, title: null }));
-  }, [setErrors, setTitle]);
+  const handleTitleChange = useCallback(
+    (text) => {
+      setTitle(text);
+      setErrors((prev) => ({ ...prev, title: null }));
+    },
+    [setErrors, setTitle],
+  );
 
-  const handleDescriptionChange = useCallback((text) => {
-    setDescription(text);
-    setErrors((prev) => ({ ...prev, description: null }));
-  }, [setDescription, setErrors]);
+  const handleDescriptionChange = useCallback(
+    (text) => {
+      setDescription(text);
+      setErrors((prev) => ({ ...prev, description: null }));
+    },
+    [setDescription, setErrors],
+  );
 
-  const handleCategorySelect = useCallback((value) => {
-    setSelectedCategory(value);
-    setErrors((prev) => ({ ...prev, category: null }));
-  }, [setErrors, setSelectedCategory]);
+  const handleCategorySelect = useCallback(
+    (value) => {
+      setSelectedCategory(value);
+      setErrors((prev) => ({ ...prev, category: null }));
+    },
+    [setErrors, setSelectedCategory],
+  );
 
   const handleCloseMapModal = useCallback(() => {
     setShowMapModal(false);
@@ -227,144 +253,156 @@ const ReportIncidentScreen = ({ navigation, route }) => {
   /**
    * Handle incident submission
    */
-  const handleSubmit = useCallback(async (asDraft = false) => {
-    // Use ref to prevent race conditions from rapid clicks
-    if (isSubmittingRef.current) {
-      return;
-    }
-
-    if (!asDraft && !validateForm(location)) {
-      Alert.alert('Validation Error', 'Please fill in all required fields correctly.');
-      return;
-    }
-
-    // Prevent multiple submissions
-    if (isSubmitting) {
-      return;
-    }
-
-    isSubmittingRef.current = true;
-    setIsSubmitting(true);
-
-    try {
-      // Validate location is set for non-draft submissions
-      if (!asDraft && !location) {
-        Alert.alert('Error', 'Please set a location for your incident report.');
+  const handleSubmit = useCallback(
+    async (asDraft = false) => {
+      // Use ref to prevent race conditions from rapid clicks
+      if (isSubmittingRef.current) {
         return;
       }
 
-      const incidentData = {
-        title: title.trim(),
-        description: description.trim(),
-        category: selectedCategory,
-        latitude: location?.latitude || 0,
-        longitude: location?.longitude || 0,
-        locationName: locationName || null,
-        incidentDate: incidentDate.toISOString(),
-        severity,
-        isAnonymous,
-        enableMlClassification,
-        enableMlRisk,
-        isDraft: asDraft,
-        photoUrls: photos, // In production, upload these to cloud storage first
-      };
-
-      let result;
-      const draftIdValue = draftId != null ? String(draftId) : '';
-      
-      // For drafts stored locally (with temp ID like "draft-123"), always submit as new
-      // For drafts stored in DB (with numeric ID), update if submitting with isDraft=false, otherwise submit new
-      if (draftIdValue && !draftIdValue.startsWith('draft-') && !asDraft) {
-        // Update existing database draft to submitted status
-        result = await incidentAPI.updateIncident(draftIdValue, incidentData);
-      } else {
-        // Create new incident (handles both new reports and local draft submissions)
-        result = await incidentAPI.submitIncident(incidentData);
-      }
-
-      if (result.success) {
-        // Clear the local draft only on successful submission (not when saving as draft)
-        if (!asDraft) {
-          await clearDraft();
-
-          // Reset form state immediately so returning to this screen starts clean
-          resetForm();
-          setLocation(null);
-          setLocationName('');
-          setSelectedMapLocation(null);
-          setMapRegion(null);
-          setPhotos([]);
-          setDraftId(null);
-          setEnableMlClassification(true);
-          setEnableMlRisk(true);
-          setIsAnonymous(!!preferences.defaultAnonymous);
-        }
-
+      if (!asDraft && !validateForm(location)) {
         Alert.alert(
-          asDraft ? 'Draft saved' : 'Report submitted',
-          asDraft 
-            ? 'Your draft is saved. You can continue editing anytime.' 
-            : 'Thanks for reporting this. We received your report and will review it shortly.',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                if (!asDraft) {
-                  navigation.navigate('Home');
-                }
-              },
-            },
-          ]
+          "Validation Error",
+          "Please fill in all required fields correctly.",
         );
-      } else {
-        if (result.validationErrors && Array.isArray(result.validationErrors)) {
-          // Extract error messages from validation error objects
-          const errorMessages = result.validationErrors.map(err => {
-            if (typeof err === 'string') {
-              return err;
-            }
-            // Handle express-validator error objects { param, msg, value }
-            return err.msg || JSON.stringify(err);
-          });
-          Alert.alert('Validation Error', errorMessages.join('\n'));
-        } else {
-          Alert.alert('Error', result.error || 'Failed to submit incident');
-        }
+        return;
       }
-    } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
-      console.error('Submit incident error:', error);
-    } finally {
-      setIsSubmitting(false);
-      isSubmittingRef.current = false;
-    }
-  }, [
-    clearDraft,
-    description,
-    draftId,
-    enableMlClassification,
-    enableMlRisk,
-    isAnonymous,
-    isSubmitting,
-    location,
-    locationName,
-    navigation,
-    photos,
-    preferences.defaultAnonymous,
-    resetForm,
-    selectedCategory,
-    severity,
-    setDraftId,
-    setIsAnonymous,
-    setLocation,
-    setLocationName,
-    setMapRegion,
-    setPhotos,
-    setSelectedMapLocation,
-    title,
-    validateForm,
-    incidentDate,
-  ]);
+
+      // Prevent multiple submissions
+      if (isSubmitting) {
+        return;
+      }
+
+      isSubmittingRef.current = true;
+      setIsSubmitting(true);
+
+      try {
+        // Validate location is set for non-draft submissions
+        if (!asDraft && !location) {
+          Alert.alert(
+            "Error",
+            "Please set a location for your incident report.",
+          );
+          return;
+        }
+
+        const incidentData = {
+          title: title.trim(),
+          description: description.trim(),
+          category: selectedCategory,
+          latitude: location?.latitude || 0,
+          longitude: location?.longitude || 0,
+          locationName: locationName || null,
+          incidentDate: incidentDate.toISOString(),
+          severity,
+          isAnonymous,
+          enableMlClassification,
+          enableMlRisk,
+          isDraft: asDraft,
+          photoUrls: photos, // In production, upload these to cloud storage first
+        };
+
+        let result;
+        const draftIdValue = draftId != null ? String(draftId) : "";
+
+        // For drafts stored locally (with temp ID like "draft-123"), always submit as new
+        // For drafts stored in DB (with numeric ID), update if submitting with isDraft=false, otherwise submit new
+        if (draftIdValue && !draftIdValue.startsWith("draft-") && !asDraft) {
+          // Update existing database draft to submitted status
+          result = await incidentAPI.updateIncident(draftIdValue, incidentData);
+        } else {
+          // Create new incident (handles both new reports and local draft submissions)
+          result = await incidentAPI.submitIncident(incidentData);
+        }
+
+        if (result.success) {
+          // Clear the local draft only on successful submission (not when saving as draft)
+          if (!asDraft) {
+            await clearDraft();
+
+            // Reset form state immediately so returning to this screen starts clean
+            resetForm();
+            setLocation(null);
+            setLocationName("");
+            setSelectedMapLocation(null);
+            setMapRegion(null);
+            setPhotos([]);
+            setDraftId(null);
+            setEnableMlClassification(true);
+            setEnableMlRisk(true);
+            setIsAnonymous(!!preferences.defaultAnonymous);
+            setSubmitSuccessMessage(
+              "Report submitted. Thanks for reporting this.",
+            );
+
+            if (successNavigationTimerRef.current) {
+              clearTimeout(successNavigationTimerRef.current);
+            }
+
+            successNavigationTimerRef.current = setTimeout(() => {
+              setSubmitSuccessMessage("");
+              navigation.navigate("Home");
+            }, 1800);
+          } else {
+            Alert.alert(
+              "Draft saved",
+              "Your draft is saved. You can continue editing anytime.",
+            );
+          }
+        } else {
+          if (
+            result.validationErrors &&
+            Array.isArray(result.validationErrors)
+          ) {
+            // Extract error messages from validation error objects
+            const errorMessages = result.validationErrors.map((err) => {
+              if (typeof err === "string") {
+                return err;
+              }
+              // Handle express-validator error objects { param, msg, value }
+              return err.msg || JSON.stringify(err);
+            });
+            Alert.alert("Validation Error", errorMessages.join("\n"));
+          } else {
+            Alert.alert("Error", result.error || "Failed to submit incident");
+          }
+        }
+      } catch (error) {
+        Alert.alert("Error", "An unexpected error occurred. Please try again.");
+        console.error("Submit incident error:", error);
+      } finally {
+        setIsSubmitting(false);
+        isSubmittingRef.current = false;
+      }
+    },
+    [
+      clearDraft,
+      description,
+      draftId,
+      enableMlClassification,
+      enableMlRisk,
+      isAnonymous,
+      isSubmitting,
+      location,
+      locationName,
+      navigation,
+      photos,
+      preferences.defaultAnonymous,
+      resetForm,
+      selectedCategory,
+      severity,
+      setDraftId,
+      setIsAnonymous,
+      setLocation,
+      setLocationName,
+      setMapRegion,
+      setPhotos,
+      setSelectedMapLocation,
+      title,
+      validateForm,
+      incidentDate,
+    ],
+  );
 
   const handleSubmitPress = useCallback(() => {
     handleSubmit(false);
@@ -373,40 +411,77 @@ const ReportIncidentScreen = ({ navigation, route }) => {
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: theme.background }]}
-      contentContainerStyle={[styles.contentContainer, { paddingBottom: tabBarHeight + 8 }]}
+      contentContainerStyle={[
+        styles.contentContainer,
+        { paddingBottom: tabBarHeight + 8 },
+      ]}
       showsVerticalScrollIndicator={false}
     >
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: theme.primary }]}> 
-        <AppText variant="h1" style={{ color: theme.card }}>Report Incident</AppText>
+      <View style={[styles.header, { backgroundColor: theme.primary }]}>
+        <AppText variant="h1" style={{ color: theme.card }}>
+          Report Incident
+        </AppText>
         {hasDraft && (
-          <View style={[styles.draftBadge, { backgroundColor: theme.warning }]}> 
-            <AppText variant="caption" style={{ color: theme.warningContrastText }}>Draft</AppText>
+          <View style={[styles.draftBadge, { backgroundColor: theme.warning }]}>
+            <AppText
+              variant="caption"
+              style={{ color: theme.warningContrastText }}
+            >
+              Draft
+            </AppText>
           </View>
         )}
       </View>
 
       {/* Safety Notice */}
-      <View style={[
-        styles.noticeContainer,
-        {
-          backgroundColor: theme.warningNoticeBg,
-          borderColor: theme.warning,
-        },
-      ]}
+      <View
+        style={[
+          styles.noticeContainer,
+          {
+            backgroundColor: theme.warningNoticeBg,
+            borderColor: theme.warning,
+          },
+        ]}
       >
-        <Ionicons name="warning-outline" size={18} color={theme.warning} style={styles.noticeIcon} />
-        <AppText variant="body" style={[styles.noticeText, { color: theme.warningNoticeText }]}> 
-          If you are in immediate danger, call emergency services (911) immediately.
+        <Ionicons
+          name="warning-outline"
+          size={18}
+          color={theme.warning}
+          style={styles.noticeIcon}
+        />
+        <AppText
+          variant="body"
+          style={[styles.noticeText, { color: theme.warningNoticeText }]}
+        >
+          If you are in immediate danger, call emergency services (911)
+          immediately.
         </AppText>
       </View>
 
       {/* Form */}
       <View style={styles.formContainer}>
-        <AnonymousToggle 
-          isAnonymous={isAnonymous} 
-          onToggle={setIsAnonymous} 
-        />
+        {!!submitSuccessMessage && (
+          <View
+            style={[
+              styles.submitSuccessBanner,
+              {
+                borderColor: `${theme.success}40`,
+                backgroundColor: `${theme.success}14`,
+              },
+            ]}
+          >
+            <Ionicons name="checkmark-circle" size={16} color={theme.success} />
+            <AppText
+              variant="caption"
+              style={[styles.submitSuccessText, { color: theme.success }]}
+            >
+              {submitSuccessMessage}
+            </AppText>
+          </View>
+        )}
+
+        <AnonymousToggle isAnonymous={isAnonymous} onToggle={setIsAnonymous} />
 
         <IncidentTextFields
           title={title}

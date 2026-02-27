@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet } from "react-native";
 
 const styles = StyleSheet.create({
   container: {
@@ -13,7 +13,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   draftBadge: {
-    position: 'absolute',
+    position: "absolute",
     right: 20,
     top: 55,
     paddingHorizontal: 10,
@@ -26,8 +26,8 @@ const styles = StyleSheet.create({
     margin: 20,
     marginBottom: 10,
     borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   noticeIcon: {
     marginRight: 10,
@@ -37,6 +37,19 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     padding: 20,
+  },
+  submitSuccessBanner: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  submitSuccessText: {
+    flex: 1,
   },
   actionButtonsContainer: {
     marginTop: 20,
