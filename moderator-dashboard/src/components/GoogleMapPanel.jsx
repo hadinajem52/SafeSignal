@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CircleF,
   GoogleMap,
@@ -170,6 +170,22 @@ function GoogleMapPanelContent({
     [isLoaded],
   );
 
+  const renderClusteredMarkers = useCallback(
+    (clusterer) => (
+      <>
+        {validMarkers.map((marker) => (
+          <MarkerF
+            key={marker.id}
+            clusterer={clusterer}
+            position={{ lat: marker.lat, lng: marker.lng }}
+            title={marker.title}
+          />
+        ))}
+      </>
+    ),
+    [validMarkers],
+  );
+
   const heatmapData = useMemo(() => {
     if (!showHeatmap || !canRenderHeatmap || validMarkers.length === 0) {
       return [];
@@ -308,18 +324,7 @@ function GoogleMapPanelContent({
 
         {showClusters ? (
           <MarkerClustererF>
-            {(clusterer) => (
-              <>
-                {validMarkers.map((marker) => (
-                  <MarkerF
-                    key={marker.id}
-                    clusterer={clusterer}
-                    position={{ lat: marker.lat, lng: marker.lng }}
-                    title={marker.title}
-                  />
-                ))}
-              </>
-            )}
+            {renderClusteredMarkers}
           </MarkerClustererF>
         ) : (
           <>
