@@ -66,6 +66,22 @@ const toNumber = (value) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+/**
+ * Build a custom teardrop-pin icon for Google Maps colored by severity.
+ * Uses the SVG path symbol interface so no `new google.maps.Size/Point()` needed.
+ */
+const makePinIcon = (color) => ({
+  // Material "place" icon path, viewBox 0 0 24 24
+  path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z",
+  fillColor: color,
+  fillOpacity: 1,
+  strokeColor: "rgba(255,255,255,0.85)",
+  strokeWeight: 1.5,
+  scale: 1.9,
+  anchor: { x: 12, y: 22 },
+  labelOrigin: { x: 12, y: 9 },
+});
+
 class MapErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -104,6 +120,7 @@ function GoogleMapPanelContent({
   autoFit = true,
   emptyMessage = "No location data available.",
 }) {
+  const [activeMarkerId, setActiveMarkerId] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(() =>
     Boolean(
       typeof document !== "undefined" &&
@@ -144,6 +161,9 @@ function GoogleMapPanelContent({
         weight: Number.isFinite(Number(marker.weight))
           ? Number(marker.weight)
           : 1,
+        color: marker.color || null,
+        label: marker.label || null,
+        meta: marker.meta || null,
       }))
       .filter((marker) => marker.lat !== null && marker.lng !== null);
   }, [markers]);
@@ -179,11 +199,23 @@ function GoogleMapPanelContent({
             clusterer={clusterer}
             position={{ lat: marker.lat, lng: marker.lng }}
             title={marker.title}
+            icon={marker.color ? makePinIcon(marker.color) : undefined}
+            label={
+              marker.color && marker.label
+                ? { text: marker.label, color: "white", fontSize: "9px", fontWeight: "900", fontFamily: "Arial,sans-serif" }
+                : undefined
+            }
+            onClick={() => setActiveMarkerId(marker.id)}
           />
         ))}
       </>
     ),
     [validMarkers],
+  );
+
+  const activeMarker = useMemo(
+    () => validMarkers.find((m) => m.id === activeMarkerId) ?? null,
+    [validMarkers, activeMarkerId],
   );
 
   const heatmapData = useMemo(() => {
@@ -303,7 +335,7 @@ function GoogleMapPanelContent({
   return (
     <div
       className="overflow-hidden border border-border bg-card"
-      style={panelStyle}
+      style={{ ...panelStyle, position: "relative" }}
     >
       <GoogleMap
         mapContainerStyle={mapContainerStyle}
@@ -311,6 +343,7 @@ function GoogleMapPanelContent({
         zoom={zoom}
         onLoad={onMapLoad}
         options={mapOptions}
+        onClick={() => setActiveMarkerId(null)}
       >
         {showHeatmap && canRenderHeatmap && heatmapData.length > 0 && (
           <HeatmapLayerF
@@ -333,6 +366,13 @@ function GoogleMapPanelContent({
                 key={marker.id}
                 position={{ lat: marker.lat, lng: marker.lng }}
                 title={marker.title}
+                icon={marker.color ? makePinIcon(marker.color) : undefined}
+                label={
+                  marker.color && marker.label
+                    ? { text: marker.label, color: "white", fontSize: "9px", fontWeight: "900", fontFamily: "Arial,sans-serif" }
+                    : undefined
+                }
+                onClick={() => setActiveMarkerId(marker.id)}
               />
             ))}
           </>
@@ -351,7 +391,109 @@ function GoogleMapPanelContent({
             }}
           />
         )}
+
       </GoogleMap>
+
+      {/* Custom incident popup — overlaid on map, avoids Maps API InfoWindow library */}
+      {activeMarker && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: 32,
+            left: 16,
+            zIndex: 10,
+            fontFamily: "'Inter', 'Segoe UI', Arial, sans-serif",
+            background: "#141e2d",
+            color: "#d9e4f0",
+            borderRadius: 8,
+            padding: "12px 14px",
+            minWidth: 230,
+            maxWidth: 300,
+            boxShadow: "0 4px 20px rgba(0,0,0,0.7)",
+            border: "1px solid rgba(255,255,255,0.1)",
+          }}
+        >
+          {/* Header row: severity badge + ID + close */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
+            {activeMarker.meta?.severityColor && (
+              <span style={{
+                background: activeMarker.meta.severityColor,
+                color: "#fff",
+                fontSize: 10,
+                fontWeight: 800,
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                padding: "2px 7px",
+                borderRadius: 4,
+                flexShrink: 0,
+              }}>
+                {activeMarker.meta.severityLabel}
+              </span>
+            )}
+            <span style={{ fontSize: 10, color: "#5c7390", letterSpacing: "0.04em", flex: 1 }}>
+              #{activeMarker.meta?.incidentId ?? "—"}
+            </span>
+            <button
+              onClick={() => setActiveMarkerId(null)}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#5c7390",
+                cursor: "pointer",
+                fontSize: 16,
+                lineHeight: 1,
+                padding: "0 2px",
+                flexShrink: 0,
+              }}
+              aria-label="Close"
+            >
+              ×
+            </button>
+          </div>
+
+          {/* Title */}
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#d9e4f0", lineHeight: 1.35, marginBottom: 8, wordBreak: "break-word" }}>
+            {activeMarker.meta?.title ?? activeMarker.title}
+          </div>
+
+          {/* Divider */}
+          <div style={{ height: 1, background: "rgba(255,255,255,0.07)", marginBottom: 7 }} />
+
+          {/* Meta rows */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11 }}>
+              <span style={{ color: "#5c7390", minWidth: 52 }}>Type</span>
+              <span style={{
+                background: "rgba(255,255,255,0.09)",
+                borderRadius: 3,
+                padding: "1px 6px",
+                fontSize: 10,
+                fontWeight: 800,
+                color: "#d9e4f0",
+                marginRight: 4,
+              }}>
+                {activeMarker.meta?.categoryLabel}
+              </span>
+              <span style={{ color: "#8baabf" }}>{activeMarker.meta?.categoryName}</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11 }}>
+              <span style={{ color: "#5c7390", minWidth: 52 }}>Status</span>
+              <span style={{ color: "#8baabf", textTransform: "capitalize" }}>{activeMarker.meta?.status ?? "—"}</span>
+            </div>
+            {activeMarker.meta?.date && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11 }}>
+                <span style={{ color: "#5c7390", minWidth: 52 }}>Date</span>
+                <span style={{ color: "#8baabf" }}>
+                  {new Date(activeMarker.meta.date).toLocaleDateString(undefined, {
+                    month: "short", day: "numeric", year: "numeric",
+                    hour: "2-digit", minute: "2-digit",
+                  })}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -366,6 +366,13 @@ const leStyles = `
   .lei-ops-map-header { padding:14px 20px; border-bottom:1px solid var(--le-border); background:var(--le-surface); flex-shrink:0; }
   .lei-ops-map-title { font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--le-text); }
   .lei-ops-map-sub { font-size:11px; color:var(--le-text-dim); margin-top:3px; }
+  .lei-ops-map-legend { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin-top:8px; padding-top:8px; border-top:1px solid var(--le-border); }
+  .lei-ops-map-legend-item { display:flex; align-items:center; gap:5px; }
+  .lei-ops-map-legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  .lei-ops-map-legend-label { font-size:10px; color:var(--le-text-dim); text-transform:capitalize; letter-spacing:0.03em; }
+  .lei-ops-map-legend-sep { width:1px; height:12px; background:var(--le-border); }
+  .lei-ops-map-legend-cat { display:flex; align-items:center; gap:4px; font-size:10px; color:var(--le-text-dim); }
+  .lei-ops-map-legend-cat-dot { width:16px; height:16px; border-radius:3px; background:var(--le-border); display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:800; color:var(--le-text); }
 
   .lei-evidence-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
   .lei-evidence-img { width:100%; height:96px; object-fit:cover; border:1px solid var(--le-border); }
