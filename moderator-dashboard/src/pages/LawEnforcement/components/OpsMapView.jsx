@@ -68,7 +68,7 @@ function OpsMapView({ incidents }) {
           markers={markers}
           height="100%"
           autoFit
-          showClusters={markers.length > 10}
+          showClusters={false}
           emptyMessage="No active incidents with coordinates."
         />
       </div>
