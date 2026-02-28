@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -9,6 +8,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useToast } from '../../context/ToastContext';
 import { AppText, Button } from '../../components';
 import { configureGoogleAuth, signInWithGoogle, statusCodes } from '../../services/googleAuth';
 import AnimatedBackground from './AnimatedBackground';
@@ -21,6 +21,7 @@ import GoogleSignInButton from './GoogleSignInButton';
 const LoginScreen = ({ navigation }) => {
   const { login, googleSignIn } = useAuth();
   const { theme } = useTheme();
+  const { showToast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -40,24 +41,24 @@ const LoginScreen = ({ navigation }) => {
       const name = userInfo.data?.user?.name;
 
       if (!idToken || !googleEmail) {
-        Alert.alert('Error', 'Failed to get authentication token from Google');
+        showToast('Failed to get authentication token from Google', 'error');
         return;
       }
 
       const result = await googleSignIn(idToken, googleEmail, name);
       if (!result.success) {
-        Alert.alert('Sign-In Failed', result.error || 'Google authentication failed');
+        showToast(result.error || 'Google authentication failed', 'error');
       }
     } catch (error) {
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
         return;
       }
       if (error.code === statusCodes.IN_PROGRESS) {
-        Alert.alert('Sign-In', 'Sign-in is already in progress');
+        showToast('Sign-in is already in progress', 'info');
       } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        Alert.alert('Error', 'Google Play Services is not available');
+        showToast('Google Play Services is not available', 'error');
       } else {
-        Alert.alert('Error', `An error occurred: ${error.message || 'Unknown error'}`);
+        showToast(error.message || 'An error occurred during sign-in', 'error');
       }
     } finally {
       setIsGoogleLoading(false);
@@ -92,19 +93,14 @@ const LoginScreen = ({ navigation }) => {
 
       if (!result.success) {
         if (result.requiresVerification) {
-          Alert.alert('Email Not Verified', 'Please verify your email to continue.', [
-            {
-              text: 'Verify Now',
-              onPress: () => navigation.navigate('Verification', { email: result.email }),
-            },
-            { text: 'Cancel', style: 'cancel' },
-          ]);
+          showToast('Please verify your email to continue.', 'warning');
+          navigation.navigate('Verification', { email: result.email });
         } else {
-          Alert.alert('Login Failed', result.error || 'Please check your credentials');
+          setErrors({ general: result.error || 'Please check your credentials' });
         }
       }
     } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      showToast('An unexpected error occurred. Please try again.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -146,8 +142,8 @@ const LoginScreen = ({ navigation }) => {
               value={email}
               onChangeText={(text) => {
                 setEmail(text);
-                if (errors.email) {
-                  setErrors((prev) => ({ ...prev, email: null }));
+                if (errors.email || errors.general) {
+                  setErrors((prev) => ({ ...prev, email: null, general: null }));
                 }
               }}
               keyboardType="email-address"
@@ -163,8 +159,8 @@ const LoginScreen = ({ navigation }) => {
               value={password}
               onChangeText={(text) => {
                 setPassword(text);
-                if (errors.password) {
-                  setErrors((prev) => ({ ...prev, password: null }));
+                if (errors.password || errors.general) {
+                  setErrors((prev) => ({ ...prev, password: null, general: null }));
                 }
               }}
               secureTextEntry
@@ -172,6 +168,15 @@ const LoginScreen = ({ navigation }) => {
               error={errors.password}
             />
           </View>
+
+          {!!errors.general && (
+            <AppText
+              variant="bodySmall"
+              style={{ color: '#ef4444', marginBottom: 8, textAlign: 'center' }}
+            >
+              {errors.general}
+            </AppText>
+          )}
 
           <Button
             title="Sign In"

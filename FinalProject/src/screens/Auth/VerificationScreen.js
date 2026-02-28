@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Animated,
   KeyboardAvoidingView,
   Platform,
@@ -17,6 +16,7 @@ import { fontFamilies } from '../../../../constants/typography';
 import { AppText, Button } from '../../components';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useToast } from '../../context/ToastContext';
 import { authAPI } from '../../services/api';
 import AuthHeader from './AuthHeader';
 import authStyles from './authStyles';
@@ -25,10 +25,12 @@ const VerificationScreen = ({ navigation, route }) => {
   const email = route?.params?.email ?? '';
   const { checkAuthStatus } = useAuth();
   const { theme } = useTheme();
+  const { showToast } = useToast();
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [verifyError, setVerifyError] = useState('');
   const inputRefs = useRef([]);
   const pulse = useRef(new Animated.Value(0.6)).current;
 
@@ -54,36 +56,38 @@ const VerificationScreen = ({ navigation, route }) => {
 
   const handleVerify = async (verificationCode = null) => {
     if (!email) {
-      Alert.alert('Error', 'Missing verification email. Please register again.');
+      showToast('Missing verification email. Please register again.', 'error');
       return;
     }
 
     const codeToVerify = verificationCode || code.join('');
 
     if (codeToVerify.length !== 6) {
-      Alert.alert('Error', 'Please enter the complete 6-digit code');
       return;
     }
 
     setIsLoading(true);
+    setVerifyError('');
     try {
       const result = await authAPI.verifyEmail(email, codeToVerify);
 
       if (result.success) {
-        Alert.alert('Success', 'Email verified successfully!', [{ text: 'OK', onPress: () => checkAuthStatus() }]);
+        showToast('Email verified successfully!', 'success', 2000);
+        checkAuthStatus();
       } else {
-        Alert.alert('Verification Failed', result.error || 'Invalid verification code');
+        setVerifyError(result.error || 'Invalid verification code');
         setCode(['', '', '', '', '', '']);
         inputRefs.current[0]?.focus();
       }
     } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred');
+      showToast('An unexpected error occurred', 'error');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleCodeChange = (text, index) => {
+    if (verifyError) setVerifyError('');
     const digits = text.replace(/[^0-9]/g, '');
 
     if (digits.length > 1) {
@@ -141,7 +145,7 @@ const VerificationScreen = ({ navigation, route }) => {
       }
 
       if (digits.length === 0) {
-        Alert.alert('No Code Found', 'No verification code found in clipboard');
+        showToast('No verification code found in clipboard', 'info');
         return;
       }
 
@@ -156,13 +160,13 @@ const VerificationScreen = ({ navigation, route }) => {
         inputRefs.current[nextEmpty]?.focus();
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to read clipboard');
+      showToast('Failed to read clipboard', 'error');
     }
   };
 
   const handleResendCode = async () => {
     if (!email) {
-      Alert.alert('Error', 'Missing verification email. Please register again.');
+      showToast('Missing verification email. Please register again.', 'error');
       return;
     }
 
@@ -175,15 +179,15 @@ const VerificationScreen = ({ navigation, route }) => {
       const result = await authAPI.resendVerificationCode(email);
 
       if (result.success) {
-        Alert.alert('Code Sent', 'A new verification code has been sent to your email');
+        showToast('A new verification code has been sent to your email', 'success');
         setCountdown(60);
         setCode(['', '', '', '', '', '']);
         inputRefs.current[0]?.focus();
       } else {
-        Alert.alert('Error', result.error || 'Failed to resend code');
+        showToast(result.error || 'Failed to resend code', 'error');
       }
     } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred');
+      showToast('An unexpected error occurred', 'error');
     } finally {
       setIsResending(false);
     }
@@ -272,6 +276,15 @@ const VerificationScreen = ({ navigation, route }) => {
               />
             ))}
           </View>
+
+          {!!verifyError && (
+            <AppText
+              variant="bodySmall"
+              style={{ color: '#ef4444', textAlign: 'center', marginTop: 8, marginBottom: 2 }}
+            >
+              {verifyError}
+            </AppText>
+          )}
 
           <TouchableOpacity style={authStyles.pasteButton} onPress={handlePasteCode} disabled={isLoading}>
             <View style={authStyles.pasteInner}>

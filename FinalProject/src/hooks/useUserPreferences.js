@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import preferenceConstants from '../../../constants/preferences';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 const { DEFAULT_PREFERENCES, PREFERENCE_KEYS } = preferenceConstants;
 const DEFAULT_STORAGE_KEY = PREFERENCE_KEYS.STORAGE_KEY;
@@ -21,6 +21,7 @@ const getPreferenceStorageKey = (user) => {
 
 const useUserPreferences = () => {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [preferences, setPreferences] = useState(DEFAULT_PREFERENCES);
   const [isLoading, setIsLoading] = useState(true);
   const storageKey = getPreferenceStorageKey(user);
@@ -30,9 +31,9 @@ const useUserPreferences = () => {
       await AsyncStorage.setItem(key, JSON.stringify(nextPreferences));
     } catch (error) {
       console.error('Error saving preferences:', error);
-      Alert.alert('Error', 'Failed to save preferences. Please try again.');
+      showToast('Failed to save preferences. Please try again.', 'error');
     }
-  }, []);
+  }, [showToast]);
 
   const loadPreferences = useCallback(async () => {
     setIsLoading(true);

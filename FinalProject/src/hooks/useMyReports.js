@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { incidentAPI } from '../services/api';
+import { useToast } from '../context/ToastContext';
 
 const getDraftStorageKey = (userId) => `safesignal_incident_draft_${userId}`;
 
 const useMyReports = ({ user }) => {
+  const { showToast } = useToast();
   const [incidents, setIncidents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -30,7 +31,7 @@ const useMyReports = ({ user }) => {
           incidentsFromApi = result.incidents;
           paginationData = result.pagination;
         } else {
-          Alert.alert('Error', result.error || 'Failed to load incidents');
+          showToast(result.error || 'Failed to load incidents', 'error');
         }
       }
 
@@ -99,7 +100,7 @@ const useMyReports = ({ user }) => {
       setPagination(paginationData);
     } catch (error) {
       console.error('Error fetching incidents:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      showToast('An unexpected error occurred', 'error');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);

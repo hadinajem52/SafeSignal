@@ -1,13 +1,14 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Alert, Linking, PermissionsAndroid, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import { Linking, PermissionsAndroid, Platform, ScrollView, TouchableOpacity } from 'react-native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
-import { AppText } from '../../components';
+import { AppText, ConfirmModal } from '../../components';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useToast } from '../../context/ToastContext';
 import useUserPreferences from '../../hooks/useUserPreferences';
 import { sendTestNotification } from '../../services/mobileNotifications';
 import AccessStatusSection from './AccessStatusSection';
@@ -22,12 +23,15 @@ import ThemeSection from './ThemeSection';
 const AccountScreen = () => {
   const { logout, user } = useAuth();
   const { theme, isDark, mode, setThemeMode } = useTheme();
+  const { showToast } = useToast();
   const { preferences, updatePreference } = useUserPreferences();
   const tabBarHeight = useBottomTabBarHeight();
   const [isEditingName, setIsEditingName] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const [inlinePreferenceFeedback, setInlinePreferenceFeedback] = useState('');
   const [pendingName, setPendingName] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [accessStatus, setAccessStatus] = useState({
     location: { status: 'unknown', detail: '' },
     notifications: { status: 'unknown', detail: '' },
@@ -53,27 +57,19 @@ const AccountScreen = () => {
       .join('') || 'U';
 
   const confirmDeleteAccount = () => {
-    Alert.alert(
-      'Delete Account',
-      'This action is permanent and cannot be undone. Do you want to continue?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            const email = 'support@safesignal.org';
-            const subject = encodeURIComponent('Account Deletion Request');
-            const body = encodeURIComponent(
-              `Please delete my SafeSignal account.\n\nUser: ${user?.email || 'Unknown'}`
-            );
-            Linking.openURL(`mailto:${email}?subject=${subject}&body=${body}`).catch(() => {
-              Alert.alert('Error', 'Unable to open mail app. Please contact support.');
-            });
-          },
-        },
-      ]
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteAccountConfirmed = () => {
+    setShowDeleteModal(false);
+    const email = 'support@safesignal.org';
+    const subject = encodeURIComponent('Account Deletion Request');
+    const body = encodeURIComponent(
+      `Please delete my SafeSignal account.\n\nUser: ${user?.email || 'Unknown'}`
     );
+    Linking.openURL(`mailto:${email}?subject=${subject}&body=${body}`).catch(() => {
+      showToast('Unable to open mail app. Please contact support@safesignal.org directly.', 'error');
+    });
   };
 
   const openLink = (url) => {
@@ -88,43 +84,32 @@ const AccountScreen = () => {
   };
 
   const handleAvatarPress = () => {
-    Alert.alert('Profile Photo', 'Update your profile photo', [
-      {
-        text: 'Choose Photo',
-        onPress: async () => {
-          try {
-            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-            if (status !== 'granted') {
-              Alert.alert(
-                'Permission Required',
-                'Photo library permission is needed to choose a photo.'
-              );
-              return;
-            }
+    setShowAvatarModal(true);
+  };
 
-            const result = await ImagePicker.launchImageLibraryAsync({
-              mediaTypes: ['images'],
-              allowsEditing: true,
-              aspect: [1, 1],
-              quality: 0.8,
-            });
+  const handleChoosePhoto = async () => {
+    setShowAvatarModal(false);
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        showToast('Photo library permission is needed to choose a photo.', 'warning');
+        return;
+      }
 
-            if (!result.canceled && result.assets[0]) {
-              updatePreference('avatarUri', result.assets[0].uri);
-            }
-          } catch (error) {
-            console.error('Error picking avatar:', error);
-            Alert.alert('Error', 'Failed to update profile photo.');
-          }
-        },
-      },
-      {
-        text: 'Remove Photo',
-        style: 'destructive',
-        onPress: () => updatePreference('avatarUri', ''),
-      },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        updatePreference('avatarUri', result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error picking avatar:', error);
+      showToast('Failed to update profile photo.', 'error');
+    }
   };
 
   const openEditName = () => {
@@ -135,7 +120,7 @@ const AccountScreen = () => {
   const handleSaveName = () => {
     const trimmed = pendingName.trim();
     if (!trimmed) {
-      Alert.alert('Invalid Name', 'Please enter a display name.');
+      showToast('Please enter a display name.', 'warning');
       return;
     }
 
@@ -157,13 +142,13 @@ const AccountScreen = () => {
 
   const handleSendTestNotification = async () => {
     if (!preferences.pushNotifications) {
-      Alert.alert('Notifications Disabled', 'Enable Push Notifications first.');
+      showToast('Enable Push Notifications first.', 'warning');
       return;
     }
 
     const success = await sendTestNotification();
     if (!success) {
-      Alert.alert('Notification Failed', 'Notification permission may be denied on this device.');
+      showToast('Notification permission may be denied on this device.', 'error');
     }
   };
 
@@ -297,6 +282,35 @@ const AccountScreen = () => {
         onChangeName={setPendingName}
         onCancel={() => setIsEditingName(false)}
         onSave={handleSaveName}
+      />
+
+      {/* Avatar picker modal */}
+      <ConfirmModal
+        visible={showAvatarModal}
+        title="Profile Photo"
+        message="Update your profile photo"
+        actions={[
+          { text: 'Choose Photo', onPress: handleChoosePhoto },
+          {
+            text: 'Remove Photo',
+            style: 'destructive',
+            onPress: () => { setShowAvatarModal(false); updatePreference('avatarUri', ''); },
+          },
+          { text: 'Cancel', style: 'cancel', onPress: () => setShowAvatarModal(false) },
+        ]}
+        onRequestClose={() => setShowAvatarModal(false)}
+      />
+
+      {/* Delete account confirmation modal */}
+      <ConfirmModal
+        visible={showDeleteModal}
+        title="Delete Account"
+        message="This action is permanent and cannot be undone. Do you want to continue?"
+        actions={[
+          { text: 'Cancel', style: 'cancel', onPress: () => setShowDeleteModal(false) },
+          { text: 'Delete', style: 'destructive', onPress: handleDeleteAccountConfirmed },
+        ]}
+        onRequestClose={() => setShowDeleteModal(false)}
       />
     </ScrollView>
   );
