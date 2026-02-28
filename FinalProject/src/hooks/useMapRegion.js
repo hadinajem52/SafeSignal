@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert } from 'react-native';
 import * as Location from 'expo-location';
+import { useToast } from '../context/ToastContext';
 
 // expo-location v17+ dropped the 'timeout' option from getCurrentPositionAsync.
 // Use Promise.race to enforce a real timeout instead.
@@ -37,6 +37,7 @@ const fetchCoords = async () => {
 };
 
 const useMapRegion = ({ defaultRegion, mapRef, locationServicesEnabled = true }) => {
+  const { showToast } = useToast();
   const [region, setRegion] = useState(defaultRegion);
   const [userLocation, setUserLocation] = useState(null);
   const [locationLoading, setLocationLoading] = useState(false);
@@ -59,11 +60,7 @@ const useMapRegion = ({ defaultRegion, mapRef, locationServicesEnabled = true })
 
   const goToMyLocation = useCallback(async () => {
     if (!locationServicesEnabled) {
-      Alert.alert(
-        'Location Disabled',
-        'Location services are disabled in account settings. Enable them to use My Location.',
-        [{ text: 'OK' }]
-      );
+      showToast('Location services are disabled in account settings. Enable them to use My Location.', 'warning');
       return;
     }
 
@@ -88,27 +85,19 @@ const useMapRegion = ({ defaultRegion, mapRef, locationServicesEnabled = true })
       }
 
       if (status !== 'granted') {
-        Alert.alert(
-          'Permission Denied',
-          'Location permission is required to show your current location on the map.',
-          [{ text: 'OK' }]
-        );
+        showToast('Location permission is required to show your location on the map.', 'warning');
         return;
       }
 
       const coords = await fetchCoords();
       centerMapToCoords(coords.latitude, coords.longitude);
     } catch {
-      Alert.alert(
-        'Location Unavailable',
-        'Could not determine your location. Please check your GPS settings.',
-        [{ text: 'OK' }]
-      );
+      showToast('Could not determine your location. Please check your GPS settings.', 'error');
       mapRef?.current?.animateToRegion(defaultRegion, 1000);
     } finally {
       setLocationLoading(false);
     }
-  }, [centerMapToCoords, defaultRegion, locationServicesEnabled, mapRef]);
+  }, [centerMapToCoords, defaultRegion, locationServicesEnabled, mapRef, showToast]);
 
   // Auto-fetch real GPS location on mount
   useEffect(() => {

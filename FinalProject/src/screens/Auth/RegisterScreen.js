@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -10,6 +9,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useToast } from '../../context/ToastContext';
 import { AppText, Button } from '../../components';
 import { configureGoogleAuth, signInWithGoogle, statusCodes } from '../../services/googleAuth';
 import AuthDivider from './AuthDivider';
@@ -21,6 +21,7 @@ import GoogleSignInButton from './GoogleSignInButton';
 const RegisterScreen = ({ navigation }) => {
   const { register, googleSignIn } = useAuth();
   const { theme } = useTheme();
+  const { showToast } = useToast();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -48,24 +49,24 @@ const RegisterScreen = ({ navigation }) => {
       const name = userInfo.data?.user?.name;
 
       if (!idToken || !googleEmail) {
-        Alert.alert('Error', 'Failed to get authentication token');
+        showToast('Failed to get authentication token', 'error');
         return;
       }
 
       const result = await googleSignIn(idToken, googleEmail, name);
       if (!result.success) {
-        Alert.alert('Sign-Up Failed', result.error || 'Google authentication failed');
+        showToast(result.error || 'Google authentication failed', 'error');
       }
     } catch (error) {
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
         return;
       }
       if (error.code === statusCodes.IN_PROGRESS) {
-        Alert.alert('Sign-Up', 'Sign-up is already in progress');
+        showToast('Sign-up is already in progress', 'info');
       } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        Alert.alert('Error', 'Google Play Services is not available');
+        showToast('Google Play Services is not available', 'error');
       } else {
-        Alert.alert('Error', 'An error occurred during Google sign-up');
+        showToast('An error occurred during Google sign-up', 'error');
       }
     } finally {
       setIsGoogleLoading(false);
@@ -129,10 +130,10 @@ const RegisterScreen = ({ navigation }) => {
         });
         setErrors(serverErrors);
       } else {
-        Alert.alert('Registration Failed', result.error || 'Please try again');
+        setErrors({ general: result.error || 'Registration failed. Please try again.' });
       }
     } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      showToast('An unexpected error occurred. Please try again.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -239,6 +240,15 @@ const RegisterScreen = ({ navigation }) => {
               error={errors.confirmPassword}
             />
           </View>
+
+          {!!errors.general && (
+            <AppText
+              variant="bodySmall"
+              style={{ color: '#ef4444', marginBottom: 8, textAlign: 'center' }}
+            >
+              {errors.general}
+            </AppText>
+          )}
 
           <Button
             title="Create Account"

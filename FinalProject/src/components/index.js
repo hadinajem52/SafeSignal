@@ -3,6 +3,7 @@ export { default as Card } from './Card';
 export { default as Badge } from './Badge';
 export { default as AppText } from './Text';
 export { default as Modal } from './Modal';
+export { default as ConfirmModal } from './ConfirmModal';
 export { default as StatusBadge } from './StatusBadge';
 export { default as SeverityBadge } from './SeverityBadge';
 export { default as CategoryFilter } from './CategoryFilter';

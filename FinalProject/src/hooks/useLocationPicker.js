@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
-import { Alert, Linking } from 'react-native';
+import { Linking } from 'react-native';
 import * as Location from 'expo-location';
+import { useToast } from '../context/ToastContext';
 
 const DEFAULT_REGION = {
   latitude: 33.8938,
@@ -27,6 +28,7 @@ const useLocationPicker = ({
   onLocationError,
   locationServicesEnabled = true,
 } = {}) => {
+  const { showToast } = useToast();
   const [location, setLocation] = useState(null);
   const [locationName, setLocationName] = useState('');
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
@@ -38,11 +40,7 @@ const useLocationPicker = ({
 
   const getCurrentLocation = useCallback(async () => {
     if (!locationServicesEnabled) {
-      Alert.alert(
-        'Location Disabled',
-        'Location services are disabled in settings. Enable them to use GPS.',
-        [{ text: 'OK' }]
-      );
+      showToast('Location services are disabled in settings. Enable them to use GPS.', 'warning');
       return;
     }
 
@@ -71,14 +69,8 @@ const useLocationPicker = ({
 
       if (status !== 'granted') {
         setIsLoadingLocation(false);
-        Alert.alert(
-          'Permission Denied',
-          'Location permission is required to get your current location. Please enable it in settings.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Open Settings', onPress: () => Linking.openSettings() },
-          ]
-        );
+        showToast('Location permission is required. Enable it in device Settings.', 'warning');
+        Linking.openSettings().catch(() => {});
         return;
       }
 
@@ -156,9 +148,9 @@ const useLocationPicker = ({
       }
 
       onLocationError?.(errorMessage);
-      Alert.alert('Location Error', errorMessage);
+      showToast(errorMessage, 'error');
     }
-  }, [locationServicesEnabled, onClearLocationError, onLocationError]);
+  }, [locationServicesEnabled, onClearLocationError, onLocationError, showToast]);
 
   const openMapForSelection = useCallback(async () => {
     // If there is already a confirmed location, center on it and open immediately.

@@ -1,17 +1,18 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { View, ScrollView, Alert } from "react-native";
+import { View, ScrollView } from "react-native";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { incidentAPI } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
+import { useToast } from "../context/ToastContext";
 import useDraftManager from "../hooks/useDraftManager";
 import useImagePicker from "../hooks/useImagePicker";
 import useIncidentForm from "../hooks/useIncidentForm";
 import useLocationPicker from "../hooks/useLocationPicker";
 import useUserPreferences from "../hooks/useUserPreferences";
 import incidentConstants from "../../../constants/incident";
-import { AppText, Button } from "../components";
+import { AppText, Button, ConfirmModal } from "../components";
 import {
   IncidentCategoryPicker,
   IncidentSeverityPicker,
@@ -29,11 +30,13 @@ const { INCIDENT_CATEGORIES, SEVERITY_LEVELS } = incidentConstants;
 const ReportIncidentScreen = ({ navigation, route }) => {
   const { user } = useAuth();
   const { theme } = useTheme();
+  const { showToast } = useToast();
   const tabBarHeight = useBottomTabBarHeight();
   const userId = user?.user_id || user?.userId;
   const { preferences, isLoading: isLoadingPreferences } = useUserPreferences();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccessMessage, setSubmitSuccessMessage] = useState("");
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
   const isSubmittingRef = useRef(false);
   const successNavigationTimerRef = useRef(null);
   const hasAppliedDefaultAnonymous = useRef(false);
@@ -101,7 +104,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
   });
 
   // Image Picker Hook
-  const { photos, setPhotos, removePhoto, showPhotoOptions } = useImagePicker();
+  const { photos, setPhotos, removePhoto, pickImage, takePhoto } = useImagePicker();
 
   // Draft Management Logic
   const applyDraft = (draft) => {
@@ -150,6 +153,9 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     isSavingDraft,
     draftId,
     setDraftId,
+    pendingDraft,
+    confirmDraft,
+    discardDraft,
     loadDraft,
     saveDraft,
     clearDraft,
@@ -261,10 +267,8 @@ const ReportIncidentScreen = ({ navigation, route }) => {
       }
 
       if (!asDraft && !validateForm(location)) {
-        Alert.alert(
-          "Validation Error",
-          "Please fill in all required fields correctly.",
-        );
+        // Inline errors are shown on each field — scroll to top to see them
+        showToast('Please fill in all required fields correctly.', 'warning');
         return;
       }
 
@@ -279,10 +283,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
       try {
         // Validate location is set for non-draft submissions
         if (!asDraft && !location) {
-          Alert.alert(
-            "Error",
-            "Please set a location for your incident report.",
-          );
+          showToast('Please set a location for your incident report.', 'warning');
           return;
         }
 
@@ -344,10 +345,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
               navigation.navigate("Home");
             }, 1800);
           } else {
-            Alert.alert(
-              "Draft saved",
-              "Your draft is saved. You can continue editing anytime.",
-            );
+            showToast('Draft saved. You can continue editing anytime.', 'success');
           }
         } else {
           if (
@@ -362,13 +360,13 @@ const ReportIncidentScreen = ({ navigation, route }) => {
               // Handle express-validator error objects { param, msg, value }
               return err.msg || JSON.stringify(err);
             });
-            Alert.alert("Validation Error", errorMessages.join("\n"));
+            showToast(errorMessages.join(' · '), 'error');
           } else {
-            Alert.alert("Error", result.error || "Failed to submit incident");
+            showToast(result.error || 'Failed to submit incident', 'error');
           }
         }
       } catch (error) {
-        Alert.alert("Error", "An unexpected error occurred. Please try again.");
+        showToast('An unexpected error occurred. Please try again.', 'error');
         console.error("Submit incident error:", error);
       } finally {
         setIsSubmitting(false);
@@ -401,6 +399,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
       title,
       validateForm,
       incidentDate,
+      showToast,
     ],
   );
 
@@ -540,8 +539,39 @@ const ReportIncidentScreen = ({ navigation, route }) => {
 
         <IncidentPhotoUploader
           photos={photos}
-          onAddPhoto={showPhotoOptions}
+          onAddPhoto={() => setShowPhotoModal(true)}
           onRemovePhoto={removePhoto}
+        />
+
+        {/* Photo picker choice modal */}
+        <ConfirmModal
+          visible={showPhotoModal}
+          title="Add Photo"
+          message="Choose how to add a photo"
+          actions={[
+            {
+              text: 'Take Photo',
+              onPress: () => { setShowPhotoModal(false); takePhoto(); },
+            },
+            {
+              text: 'Choose from Gallery',
+              onPress: () => { setShowPhotoModal(false); pickImage(); },
+            },
+            { text: 'Cancel', style: 'cancel', onPress: () => setShowPhotoModal(false) },
+          ]}
+          onRequestClose={() => setShowPhotoModal(false)}
+        />
+
+        {/* Unsaved draft restore modal */}
+        <ConfirmModal
+          visible={!!pendingDraft}
+          title="Unsaved Draft"
+          message="You have an unsaved draft. Would you like to continue editing it?"
+          actions={[
+            { text: 'Discard', style: 'destructive', onPress: discardDraft },
+            { text: 'Continue', onPress: confirmDraft },
+          ]}
+          onRequestClose={discardDraft}
         />
 
         {/* Action Buttons */}

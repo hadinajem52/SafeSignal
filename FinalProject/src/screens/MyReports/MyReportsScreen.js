@@ -1,8 +1,8 @@
-import React from 'react';
-import { Alert, FlatList, View } from 'react-native';
+import React, { useState } from 'react';
+import { FlatList, View } from 'react-native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { LinearGradient } from 'expo-linear-gradient';
-import { AppText } from '../../components';
+import { AppText, ConfirmModal } from '../../components';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import useMyReports from '../../hooks/useMyReports';
@@ -25,15 +25,11 @@ const MyReportsScreen = ({ navigation }) => {
     handleRefresh,
   } = useMyReports({ user });
 
+  const [draftModalIncident, setDraftModalIncident] = useState(null);
+
   const handleIncidentPress = (incident) => {
     if (incident.isDraft) {
-      Alert.alert(incident.title, 'This is a draft report. Continue editing?', [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Continue Editing',
-          onPress: () => navigation.navigate('ReportIncident', { draft: incident.draftData }),
-        },
-      ]);
+      setDraftModalIncident(incident);
       return;
     }
 
@@ -90,6 +86,25 @@ const MyReportsScreen = ({ navigation }) => {
             onReportPress={() => navigation.navigate('ReportIncident')}
           />
         }
+      />
+
+      {/* Draft continue confirmation */}
+      <ConfirmModal
+        visible={!!draftModalIncident}
+        title={draftModalIncident?.title || 'Draft Report'}
+        message="This is a draft report. Continue editing?"
+        actions={[
+          { text: 'Cancel', style: 'cancel', onPress: () => setDraftModalIncident(null) },
+          {
+            text: 'Continue Editing',
+            onPress: () => {
+              const d = draftModalIncident;
+              setDraftModalIncident(null);
+              navigation.navigate('ReportIncident', { draft: d.draftData });
+            },
+          },
+        ]}
+        onRequestClose={() => setDraftModalIncident(null)}
       />
     </View>
   );

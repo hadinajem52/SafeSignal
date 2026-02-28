@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import logger from '../utils/logger';
+import { useToast } from '../context/ToastContext';
 
 const getDraftStorageKey = (userId) => `safesignal_incident_draft_${userId}`;
 
 const useDraftManager = ({ userId, onLoadDraft, getDraftPayload }) => {
+  const { showToast } = useToast();
   const [hasDraft, setHasDraft] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [draftId, setDraftId] = useState(null);
+  const [pendingDraft, setPendingDraft] = useState(null);
   const onLoadDraftRef = useRef(onLoadDraft);
 
   useEffect(() => {
@@ -29,6 +31,7 @@ const useDraftManager = ({ userId, onLoadDraft, getDraftPayload }) => {
         AsyncStorage.removeItem(draftKey),
       ]);
       setHasDraft(false);
+      setPendingDraft(null);
     } catch (error) {
       logger.error('Error clearing draft:', error);
     }
@@ -69,22 +72,26 @@ const useDraftManager = ({ userId, onLoadDraft, getDraftPayload }) => {
 
         setHasDraft(true);
 
-        Alert.alert('Draft Found', 'You have an unsaved draft. Would you like to continue editing it?', [
-          {
-            text: 'Discard',
-            style: 'destructive',
-            onPress: () => clearDraft(),
-          },
-          {
-            text: 'Continue',
-            onPress: () => onLoadDraftRef.current?.(draft),
-          },
-        ]);
+        // Surface the draft to the consuming component via state so it can
+        // render its own confirmation UI instead of an OS alert dialog.
+        setPendingDraft(draft);
       }
     } catch (error) {
       logger.error('Error loading draft:', error);
     }
-  }, [clearDraft, userId]);
+  }, [userId]);
+
+  const confirmDraft = useCallback(() => {
+    if (pendingDraft) {
+      onLoadDraftRef.current?.(pendingDraft);
+      setPendingDraft(null);
+    }
+  }, [pendingDraft]);
+
+  const discardDraft = useCallback(() => {
+    setPendingDraft(null);
+    clearDraft();
+  }, [clearDraft]);
 
   const saveDraft = useCallback(
     async (showAlert = true) => {
@@ -92,7 +99,7 @@ const useDraftManager = ({ userId, onLoadDraft, getDraftPayload }) => {
 
       try {
         if (!userId) {
-          Alert.alert('Error', 'User information not available. Please log in again.');
+          showToast('User information not available. Please log in again.', 'error');
           return;
         }
 
@@ -107,18 +114,18 @@ const useDraftManager = ({ userId, onLoadDraft, getDraftPayload }) => {
         setHasDraft(true);
 
         if (showAlert) {
-          Alert.alert('Draft Saved', 'Your report has been saved as a draft.');
+          showToast('Draft saved. You can continue editing anytime.', 'success');
         }
       } catch (error) {
         logger.error('Error saving draft:', error);
         if (showAlert) {
-          Alert.alert('Error', 'Failed to save draft. Please try again.');
+          showToast('Failed to save draft. Please try again.', 'error');
         }
       } finally {
         setIsSavingDraft(false);
       }
     },
-    [getDraftPayload, userId]
+    [getDraftPayload, showToast, userId]
   );
 
   return {
@@ -126,6 +133,9 @@ const useDraftManager = ({ userId, onLoadDraft, getDraftPayload }) => {
     isSavingDraft,
     draftId,
     setDraftId,
+    pendingDraft,
+    confirmDraft,
+    discardDraft,
     loadDraft,
     saveDraft,
     clearDraft,
