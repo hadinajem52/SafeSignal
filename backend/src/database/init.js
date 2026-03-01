@@ -1,6 +1,7 @@
 const db = require('../config/database');
 const seedDatabase = require('./seed');
 const pgp = require('pg-promise')({ capSQL: true });
+const { PUBLIC_INCIDENT_STATUSES } = require('../../../constants/incident');
 
 const initDatabase = async () => {
   try {
@@ -54,6 +55,8 @@ const initDatabase = async () => {
         severity VARCHAR(20) DEFAULT 'medium' CHECK (severity IN ('low', 'medium', 'high', 'critical')),
         is_anonymous BOOLEAN DEFAULT FALSE,
         is_draft BOOLEAN DEFAULT FALSE,
+        is_disclosed BOOLEAN DEFAULT FALSE,
+        is_location_fuzzed BOOLEAN DEFAULT FALSE,
         photo_urls TEXT[],
         status VARCHAR(50) DEFAULT 'submitted' CHECK (status IN (
           'submitted',
@@ -127,6 +130,22 @@ const initDatabase = async () => {
         )
       );
     `);
+
+    // Community feed disclosure columns
+    await db.none(`
+      ALTER TABLE incidents
+      ADD COLUMN IF NOT EXISTS is_disclosed BOOLEAN DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS is_location_fuzzed BOOLEAN DEFAULT FALSE;
+    `);
+
+    await db.none(
+      `UPDATE incidents
+       SET is_disclosed = TRUE,
+           is_location_fuzzed = TRUE
+       WHERE is_draft = FALSE
+         AND status = ANY($1::text[])`,
+      [PUBLIC_INCIDENT_STATUSES]
+    );
 
     await db.none(`
       UPDATE incidents

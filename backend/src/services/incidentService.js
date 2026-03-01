@@ -16,6 +16,7 @@ const {
   VALID_SEVERITIES,
   VALID_STATUSES,
   VALID_CLOSURE_OUTCOMES,
+  PUBLIC_INCIDENT_STATUSES,
 } = require('../../../constants/incident');
 const { LIMITS } = require('../../../constants/limits');
 const { emitToRoles } = require('../utils/socketService');
@@ -23,6 +24,7 @@ const settingsService = require('./settingsService');
 const notificationService = require('./notificationService');
 
 const LEI_STATUSES = ['verified', 'dispatched', 'on_scene', 'investigating', 'police_closed'];
+const PUBLIC_DISCLOSURE_STATUSES = new Set(PUBLIC_INCIDENT_STATUSES);
 const profanityFilter = new Filter();
 
 const CATEGORY_KEYWORDS = {
@@ -211,6 +213,8 @@ const getSharedKeywordSignals = (baseEntityTokens, candidateEntityTokens, max = 
   return shared;
 };
 
+const shouldExposeIncidentPublicly = (status) => PUBLIC_DISCLOSURE_STATUSES.has(status);
+
 const countKeywordMatches = (text, keywords) => {
   const lowered = (text || '').toLowerCase();
   return keywords.reduce((count, keyword) => {
@@ -390,6 +394,8 @@ async function applyAutoVerificationIfEligible(incident, context = {}) {
   const updated = await db.one(
     `UPDATE incidents
      SET status = 'verified',
+         is_disclosed = TRUE,
+         is_location_fuzzed = TRUE,
          updated_at = CURRENT_TIMESTAMP
      WHERE incident_id = $1
      RETURNING *`,
@@ -1492,6 +1498,14 @@ async function updateIncident(incidentId, updateData, requestingUser) {
          category = COALESCE($4, category),
          severity = COALESCE($5, severity),
          status = COALESCE($6, status),
+         is_disclosed = CASE
+           WHEN $6 IS NOT NULL THEN $11
+           ELSE is_disclosed
+         END,
+         is_location_fuzzed = CASE
+           WHEN $6 IS NOT NULL THEN $11
+           ELSE is_location_fuzzed
+         END,
          is_draft = COALESCE($7, is_draft),
          location_name = COALESCE($8, location_name),
          latitude = COALESCE($9, latitude),
@@ -1515,6 +1529,7 @@ async function updateIncident(incidentId, updateData, requestingUser) {
       locationName,
       latitude,
       longitude,
+      shouldExposeIncidentPublicly(newStatus),
     ]
   );
 
@@ -1571,10 +1586,18 @@ async function patchIncident(incidentId, updateData, requestingUser) {
          category = COALESCE($4, category),
          severity = COALESCE($5, severity),
          status = COALESCE($6, status),
+         is_disclosed = CASE
+           WHEN $6 IS NOT NULL THEN $7
+           ELSE is_disclosed
+         END,
+         is_location_fuzzed = CASE
+           WHEN $6 IS NOT NULL THEN $7
+           ELSE is_location_fuzzed
+         END,
          updated_at = CURRENT_TIMESTAMP
      WHERE incident_id = $1
      RETURNING *`,
-    [incidentId, title, description, category, severity, status]
+    [incidentId, title, description, category, severity, status, shouldExposeIncidentPublicly(status)]
   );
 
   emitToRoles(['moderator', 'admin'], 'incident:update', {
@@ -1767,6 +1790,8 @@ async function updateLEIStatus(incidentId, status, closureOutcome, closureDetail
   const updatedIncident = await db.one(
     `UPDATE incidents
      SET status = $2,
+         is_disclosed = $5,
+         is_location_fuzzed = $5,
          closure_outcome = $3,
          closure_details = $4,
          updated_at = CURRENT_TIMESTAMP
@@ -1777,6 +1802,7 @@ async function updateLEIStatus(incidentId, status, closureOutcome, closureDetail
       status,
       status === 'police_closed' ? closureOutcome : null,
       status === 'police_closed' ? safeClosureDetails : null,
+      shouldExposeIncidentPublicly(status),
     ]
   );
 
@@ -1825,7 +1851,10 @@ async function verifyIncident(incidentId, requestingUser) {
 
   const updated = await db.one(
     `UPDATE incidents 
-     SET status = 'verified', updated_at = CURRENT_TIMESTAMP 
+     SET status = 'verified',
+         is_disclosed = TRUE,
+         is_location_fuzzed = TRUE,
+         updated_at = CURRENT_TIMESTAMP 
      WHERE incident_id = $1 
      RETURNING *`,
     [incidentId]
@@ -1871,7 +1900,10 @@ async function rejectIncident(incidentId, requestingUser) {
 
   const updated = await db.one(
     `UPDATE incidents 
-     SET status = 'rejected', updated_at = CURRENT_TIMESTAMP 
+     SET status = 'rejected',
+         is_disclosed = FALSE,
+         is_location_fuzzed = FALSE,
+         updated_at = CURRENT_TIMESTAMP 
      WHERE incident_id = $1 
      RETURNING *`,
     [incidentId]

@@ -6,11 +6,23 @@
 
 const db = require('../config/database');
 const ServiceError = require('../utils/ServiceError');
+const { PUBLIC_INCIDENT_STATUSES } = require('../../../constants/incident');
 
 /**
  * Valid timeframe options
  */
 const VALID_TIMEFRAMES = ['24h', '7d', '30d', '90d'];
+const PUBLIC_COORDINATE_PRECISION = 3;
+const ACTIVE_PUBLIC_INCIDENT_STATUSES = PUBLIC_INCIDENT_STATUSES.filter((status) => status !== 'police_closed');
+
+const toPublicCoordinate = (value) => {
+  const parsed = parseFloat(value);
+  if (Number.isNaN(parsed)) {
+    return null;
+  }
+
+  return Number(parsed.toFixed(PUBLIC_COORDINATE_PRECISION));
+};
 
 /**
  * Calculate start date from timeframe
@@ -69,7 +81,7 @@ const getMapIncidents = async (filters) => {
 
   const startDate = calculateStartDate(timeframe);
 
-  // Build query - show verified and active LEI statuses for public awareness
+  // Build query - only return incidents explicitly cleared for public display.
   // Keep police_closed visible for 24 hours after closure.
   let query = `
     SELECT 
@@ -83,15 +95,17 @@ const getMapIncidents = async (filters) => {
       status
     FROM incidents
     WHERE (
-      status IN ('verified', 'published', 'dispatched', 'on_scene', 'investigating')
+      status = ANY($2::text[])
       OR (status = 'police_closed' AND updated_at >= NOW() - INTERVAL '24 hours')
     )
       AND incident_date >= $1
       AND is_draft = false
+      AND is_disclosed = true
+      AND is_location_fuzzed = true
   `;
 
-  const params = [startDate];
-  let paramIndex = 2;
+  const params = [startDate, ACTIVE_PUBLIC_INCIDENT_STATUSES];
+  let paramIndex = 3;
 
   // Add bounding box filter if provided
   if (ne_lat && ne_lng && sw_lat && sw_lng) {
@@ -120,8 +134,8 @@ const getMapIncidents = async (filters) => {
       category: incident.category,
       severity: incident.severity,
       location: {
-        latitude: parseFloat(incident.latitude),
-        longitude: parseFloat(incident.longitude),
+        latitude: toPublicCoordinate(incident.latitude),
+        longitude: toPublicCoordinate(incident.longitude),
       },
       timestamp: incident.incident_date,
       status: incident.status,
