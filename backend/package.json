@@ -8,7 +8,8 @@
     "dev": "nodemon src/index.js",
     "db:init": "node src/database/init.js",
     "db:reset": "node src/database/reset.js",
-    "db:seed": "node src/database/seed.js"
+    "db:seed": "node src/database/seed.js",
+    "db:migrate:incident-public-visibility": "node src/database/migrations/add_incident_public_visibility.js"
   },
   "dependencies": {
     "@sentry/node": "^10.38.0",

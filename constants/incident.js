@@ -147,6 +147,14 @@ const LEI_STATUS_FILTERS = [
 ];
 
 const VALID_CLOSURE_OUTCOMES = CLOSURE_OUTCOMES.map((outcome) => outcome.value);
+const PUBLIC_INCIDENT_STATUSES = [
+  'verified',
+  'published',
+  'dispatched',
+  'on_scene',
+  'investigating',
+  'police_closed',
+];
 
 module.exports = {
   INCIDENT_CATEGORIES,
@@ -163,6 +171,7 @@ module.exports = {
   LEI_STATUS_FILTERS,
   CLOSURE_OUTCOMES,
   VALID_CLOSURE_OUTCOMES,
+  PUBLIC_INCIDENT_STATUSES,
   SEVERITY_COLORS,
 };
 
