@@ -121,16 +121,26 @@ function IncidentQueuePanel({
 
                 <div onClick={(e) => e.stopPropagation()}>
                   {nextAction ? (
-                    <button
-                      className="lei-action-btn"
-                      disabled={
-                        statusMutationPending ||
-                        !canTransitionTo(incident, nextStatus)
-                      }
-                      onClick={() => onRequestAction(incident, nextStatus)}
-                    >
-                      {nextAction.label.split(" ")[0]}
-                    </button>
+                    nextStatus === "police_closed" ? (
+                      <button
+                        className="lei-action-btn"
+                        disabled={statusMutationPending}
+                        onClick={() => onSelectIncident(incident.id)}
+                      >
+                        Review
+                      </button>
+                    ) : (
+                      <button
+                        className="lei-action-btn"
+                        disabled={
+                          statusMutationPending ||
+                          !canTransitionTo(incident, nextStatus)
+                        }
+                        onClick={() => onRequestAction(incident, nextStatus)}
+                      >
+                        {nextAction.label.split(" ")[0]}
+                      </button>
+                    )
                   ) : incident.status === "police_closed" ? (
                     <span
                       style={{

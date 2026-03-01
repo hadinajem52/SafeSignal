@@ -93,12 +93,21 @@ function LawEnforcement() {
     confirmPendingTransition,
     handleAlertDispatch,
     pendingActionConfig,
+    isDisclosed,
+    setIsDisclosed,
+    isLocationFuzzed,
+    setIsLocationFuzzed,
+    resetDisclosureOptions,
   } = useLeiStatusTransitions({
     queryClient,
     pushToast,
     setLeiAlerts,
     filteredIncidents,
   });
+
+  useEffect(() => {
+    resetDisclosureOptions();
+  }, [resetDisclosureOptions, selectedIncidentId]);
 
   useLeiRealtime({
     user,
@@ -276,6 +285,10 @@ function LawEnforcement() {
                     actionLog={actionLog}
                     statusMutationPending={statusMutation.isPending}
                     onRequestAction={requestStatusUpdate}
+                    isDisclosed={isDisclosed}
+                    onDisclosedChange={setIsDisclosed}
+                    isLocationFuzzed={isLocationFuzzed}
+                    onLocationFuzzedChange={setIsLocationFuzzed}
                   />
                 </div>
               </div>
@@ -326,7 +339,10 @@ function LawEnforcement() {
           "bg-primary hover:bg-primary/90"
         }
         confirmDisabled={statusMutation.isPending}
-        onCancel={() => setPendingTransition(null)}
+        onCancel={() => {
+          setPendingTransition(null);
+          resetDisclosureOptions();
+        }}
         onConfirm={confirmPendingTransition}
       />
     </>

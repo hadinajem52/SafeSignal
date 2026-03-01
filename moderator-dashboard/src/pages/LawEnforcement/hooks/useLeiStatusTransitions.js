@@ -3,7 +3,7 @@ import { leiAPI } from "../../../services/api";
 import { formatStatusLabel } from "../../../utils/incidentUtils";
 import { STATUS_ACTION_CONFIG } from "../constants";
 import { canTransitionTo } from "../helpers";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 export default function useLeiStatusTransitions({
   queryClient,
@@ -12,6 +12,13 @@ export default function useLeiStatusTransitions({
   filteredIncidents,
 }) {
   const [pendingTransition, setPendingTransition] = useState(null);
+  const [isDisclosed, setIsDisclosed] = useState(false);
+  const [isLocationFuzzed, setIsLocationFuzzed] = useState(false);
+
+  const resetDisclosureOptions = useCallback(() => {
+    setIsDisclosed(false);
+    setIsLocationFuzzed(false);
+  }, []);
 
   const statusMutation = useMutation({
     mutationFn: ({ id, payload }) => leiAPI.updateStatus(id, payload),
@@ -39,6 +46,8 @@ export default function useLeiStatusTransitions({
               case_id: null,
               officer_notes: "Closed from LEI workflow",
             },
+            is_disclosed: isDisclosed,
+            is_location_fuzzed: isLocationFuzzed,
           }
         : { status };
 
@@ -50,6 +59,10 @@ export default function useLeiStatusTransitions({
     if (!result.success) {
       pushToast(result.error || `Failed to move to ${status}.`, "error");
       return;
+    }
+
+    if (status === "police_closed") {
+      resetDisclosureOptions();
     }
 
     queryClient.invalidateQueries({ queryKey: ["lei-incidents"] });
@@ -70,6 +83,9 @@ export default function useLeiStatusTransitions({
 
   const requestStatusUpdate = (incident, status) => {
     if (!validateTransition(incident, status)) return;
+    if (status !== "police_closed") {
+      resetDisclosureOptions();
+    }
     setPendingTransition({ incident, status });
   };
 
@@ -107,5 +123,10 @@ export default function useLeiStatusTransitions({
     confirmPendingTransition,
     handleAlertDispatch,
     pendingActionConfig,
+    isDisclosed,
+    setIsDisclosed,
+    isLocationFuzzed,
+    setIsLocationFuzzed,
+    resetDisclosureOptions,
   };
 }
