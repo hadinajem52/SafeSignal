@@ -11,6 +11,10 @@ function IncidentDetailPane({
   actionLog,
   statusMutationPending,
   onRequestAction,
+  isDisclosed,
+  onDisclosedChange,
+  isLocationFuzzed,
+  onLocationFuzzedChange,
 }) {
   if (!incident) {
     return (
@@ -123,6 +127,86 @@ function IncidentDetailPane({
                     {nextAction.label}
                   </button>
                 )}
+                <div
+                  style={{
+                    width: "100%",
+                    background: "rgba(59,158,255,0.06)",
+                    border: "1px solid rgba(59,158,255,0.18)",
+                    borderRadius: 6,
+                    padding: "10px 12px",
+                    marginBottom: 10,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 10,
+                      color: "var(--le-blue)",
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.08em",
+                      marginBottom: 2,
+                    }}
+                  >
+                    Close Case Options
+                  </div>
+
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isDisclosed}
+                      onChange={(e) => {
+                        onDisclosedChange(e.target.checked);
+                        if (!e.target.checked) onLocationFuzzedChange(false);
+                      }}
+                      style={{ accentColor: "var(--le-blue)", width: 14, height: 14 }}
+                    />
+                    <span style={{ fontSize: 11, color: "var(--le-text)" }}>
+                      Publish to Community Feed
+                    </span>
+                  </label>
+
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      cursor: isDisclosed ? "pointer" : "not-allowed",
+                      opacity: isDisclosed ? 1 : 0.4,
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isLocationFuzzed}
+                      disabled={!isDisclosed}
+                      onChange={(e) => onLocationFuzzedChange(e.target.checked)}
+                      style={{ accentColor: "var(--le-blue)", width: 14, height: 14 }}
+                    />
+                    <span style={{ fontSize: 11, color: "var(--le-text)" }}>
+                      Fuzz Location for Privacy
+                    </span>
+                  </label>
+
+                  <div
+                    style={{
+                      fontSize: 10,
+                      color: "var(--le-muted)",
+                      marginTop: 2,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    Once published, this report will appear in the mobile Community Feed visible to all citizens.
+                  </div>
+                </div>
                 <button
                   className="lei-btn-close"
                   disabled={statusMutationPending}
