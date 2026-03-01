@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -44,7 +44,13 @@ const EMPTY_MESSAGES = {
   report_filed: 'No filed reports yet. Check back later.',
 };
 
-const CommunityFeed = ({ navigation }) => {
+const CommunityFeed = ({
+  navigation,
+  ListHeaderComponent = null,
+  contentContainerStyle,
+  externalRefreshing = false,
+  onExternalRefresh,
+}) => {
   const { theme } = useTheme();
   const [activeFilter, setActiveFilter] = useState(null);
 
@@ -59,13 +65,23 @@ const CommunityFeed = ({ navigation }) => {
     loadMore,
   } = useFeed(filters);
   const emptyMessage = EMPTY_MESSAGES[activeFilter] || EMPTY_MESSAGES.default;
+  const isRefreshing = refreshing || externalRefreshing;
 
   const handleCardPress = (incident) => {
     navigation.navigate('IncidentDetail', { incident });
   };
 
+  const handleRefresh = useCallback(async () => {
+    await Promise.all([
+      refresh(),
+      Promise.resolve(onExternalRefresh?.()),
+    ]);
+  }, [onExternalRefresh, refresh]);
+
   const renderHeader = () => (
     <>
+      {ListHeaderComponent}
+
       <View style={styles.header}>
         <AppText variant="h3" style={{ color: theme.text }}>
           Community Feed
@@ -139,9 +155,9 @@ const CommunityFeed = ({ navigation }) => {
       ListFooterComponent={renderFooter}
       onEndReached={loadMore}
       onEndReachedThreshold={0.4}
-      onRefresh={refresh}
-      refreshing={refreshing}
-      contentContainerStyle={styles.wrapper}
+      onRefresh={handleRefresh}
+      refreshing={isRefreshing}
+      contentContainerStyle={[styles.wrapper, contentContainerStyle]}
       showsVerticalScrollIndicator={false}
     />
   );

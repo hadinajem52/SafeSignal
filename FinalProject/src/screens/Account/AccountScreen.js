@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Linking, PermissionsAndroid, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, Linking, PermissionsAndroid, Platform, ScrollView, TouchableOpacity } from 'react-native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -10,7 +10,9 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
 import useUserPreferences from '../../hooks/useUserPreferences';
+import useUserStats from '../../hooks/useUserStats';
 import { sendTestNotification } from '../../services/mobileNotifications';
+import ContributionsGrid from '../Home/ContributionsGrid';
 import AccessStatusSection from './AccessStatusSection';
 import DangerZone from './DangerZone';
 import EditNameModal from './EditNameModal';
@@ -25,6 +27,7 @@ const AccountScreen = () => {
   const { theme, isDark, mode, setThemeMode } = useTheme();
   const { showToast } = useToast();
   const { preferences, updatePreference } = useUserPreferences();
+  const { userStats, loading: userStatsLoading, error: userStatsError } = useUserStats();
   const tabBarHeight = useBottomTabBarHeight();
   const [isEditingName, setIsEditingName] = useState(false);
   const [showMore, setShowMore] = useState(false);
@@ -237,6 +240,16 @@ const AccountScreen = () => {
         onAvatarPress={handleAvatarPress}
         onEditNamePress={openEditName}
       />
+
+      {userStatsLoading ? (
+        <ActivityIndicator color={theme.primary} style={{ marginBottom: 16 }} />
+      ) : userStatsError ? (
+        <AppText variant="bodySmall" style={{ color: theme.error, marginBottom: 16 }}>
+          {userStatsError}
+        </AppText>
+      ) : (
+        <ContributionsGrid userStats={userStats} />
+      )}
 
       <ThemeSection
         isDark={isDark}
