@@ -1751,7 +1751,7 @@ async function getLEIIncidentById(incidentId) {
   return { incident, actions };
 }
 
-async function updateLEIStatus(incidentId, status, closureOutcome, closureDetails, requestingUser) {
+async function updateLEIStatus(incidentId, status, closureOutcome, closureDetails, requestingUser, { isDisclosed, isLocationFuzzed } = {}) {
   const incident = await db.oneOrNone(
     'SELECT * FROM incidents WHERE incident_id = $1',
     [incidentId]
@@ -1790,8 +1790,8 @@ async function updateLEIStatus(incidentId, status, closureOutcome, closureDetail
   const updatedIncident = await db.one(
     `UPDATE incidents
      SET status = $2,
-         is_disclosed = $5,
-         is_location_fuzzed = $5,
+         is_disclosed = COALESCE($5, is_disclosed),
+         is_location_fuzzed = COALESCE($6, is_location_fuzzed),
          closure_outcome = $3,
          closure_details = $4,
          updated_at = CURRENT_TIMESTAMP
@@ -1802,7 +1802,8 @@ async function updateLEIStatus(incidentId, status, closureOutcome, closureDetail
       status,
       status === 'police_closed' ? closureOutcome : null,
       status === 'police_closed' ? safeClosureDetails : null,
-      shouldExposeIncidentPublicly(status),
+      isDisclosed ?? null,
+      isLocationFuzzed ?? null,
     ]
   );
 
@@ -1979,6 +1980,70 @@ async function escalateIncident(incidentId, requestingUser, reason) {
   return updated;
 }
 
+/**
+ * Get publicly disclosed, LE-closed incidents for the community feed.
+ * If is_location_fuzzed = TRUE, apply ±150m jitter to lat/lng.
+ * The fuzz flag is never returned to the client.
+ */
+async function getPublicFeed({ category, closure_outcome, severity, lat, lng, radius, sort, limit = 20, offset = 0 } = {}) {
+  const parsedLimit = Number.parseInt(limit, 10);
+  const parsedOffset = Number.parseInt(offset, 10);
+  const safeLimit = Number.isInteger(parsedLimit) ? parsedLimit : 20;
+  const safeOffset = Number.isInteger(parsedOffset) ? parsedOffset : 0;
+
+  const conditions = [
+    `i.is_disclosed = TRUE`,
+    `i.status IN ('police_closed', 'resolved', 'published')`,
+    `i.closure_outcome IS NOT NULL`,
+    `i.is_draft = FALSE`,
+  ];
+  const params = [];
+  let p = 1;
+
+  if (category)        { conditions.push(`i.category = $${p++}`);         params.push(category); }
+  if (closure_outcome) { conditions.push(`i.closure_outcome = $${p++}`);  params.push(closure_outcome); }
+  if (severity)        { conditions.push(`i.severity = $${p++}`);         params.push(severity); }
+
+  let geoJoin = '';
+  if (lat && lng && radius) {
+    geoJoin = `AND ST_DWithin(i.location, ST_SetSRID(ST_MakePoint($${p++}::float, $${p++}::float), 4326)::geography, $${p++})`;
+    params.push(parseFloat(lng), parseFloat(lat), parseFloat(radius));
+  }
+
+  const orderBy = sort === 'severity'
+    ? `CASE i.severity WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END ASC, i.updated_at DESC`
+    : `i.updated_at DESC`;
+
+  const rows = await db.manyOrNone(
+    `SELECT
+       i.incident_id, i.title, i.category, i.severity, i.status,
+       i.closure_outcome, i.closure_details,
+       i.location_name, i.photo_urls,
+       i.incident_date, i.updated_at AS closed_at,
+       CASE WHEN i.is_location_fuzzed
+         THEN i.latitude  + (random() - 0.5) * 0.0027
+         ELSE i.latitude
+       END AS latitude,
+       CASE WHEN i.is_location_fuzzed
+         THEN i.longitude + (random() - 0.5) * 0.0027
+         ELSE i.longitude
+       END AS longitude
+     FROM incidents i
+     WHERE ${conditions.join(' AND ')} ${geoJoin}
+     ORDER BY ${orderBy}
+     LIMIT $${p++} OFFSET $${p++}`,
+    [...params, safeLimit, safeOffset]
+  );
+
+  const countResult = await db.one(
+    `SELECT COUNT(*) AS total FROM incidents i
+     WHERE ${conditions.join(' AND ')} ${geoJoin}`,
+    params
+  );
+
+  return { incidents: rows, total: parseInt(countResult.total, 10) };
+}
+
 module.exports = {
   // Constants
   VALID_CATEGORIES,
@@ -2005,4 +2070,5 @@ module.exports = {
   getLEIIncidents,
   getLEIIncidentById,
   updateLEIStatus,
+  getPublicFeed,
 };

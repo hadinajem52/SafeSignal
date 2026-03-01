@@ -5,7 +5,7 @@
  */
 
 const express = require('express');
-const { body, validationResult, param } = require('express-validator');
+const { body, validationResult, param, query } = require('express-validator');
 const authenticateToken = require('../middleware/auth');
 const requireRole = require('../middleware/roles');
 const incidentService = require('../services/incidentService');
@@ -236,6 +236,8 @@ router.patch(
     body('status').isString().trim().isIn(VALID_STATUSES),
     body('closure_outcome').optional().isString().trim().isIn(VALID_CLOSURE_OUTCOMES),
     body('closure_details').optional().isObject(),
+    body('is_disclosed').optional().isBoolean(),
+    body('is_location_fuzzed').optional().isBoolean(),
   ],
   async (req, res) => {
     if (handleValidationErrors(req, res)) return;
@@ -246,7 +248,11 @@ router.patch(
         req.body.status,
         req.body.closure_outcome,
         req.body.closure_details,
-        req.user
+        req.user,
+        {
+          isDisclosed: req.body.is_disclosed,
+          isLocationFuzzed: req.body.is_location_fuzzed,
+        }
       );
 
       res.json({
@@ -256,6 +262,60 @@ router.patch(
       });
     } catch (error) {
       handleServiceError(error, res, 'Failed to update LEI status');
+    }
+  }
+);
+
+router.get(
+  '/feed',
+  authenticateToken,
+  [
+    query('category').optional().isString().trim().isIn(VALID_CATEGORIES),
+    query('closure_outcome').optional().isString().trim().isIn(VALID_CLOSURE_OUTCOMES),
+    query('severity').optional().isString().trim().isIn(VALID_SEVERITIES),
+    query('sort').optional().isString().trim().isIn(['severity']),
+    query('lat').optional().isFloat({ min: LIMITS.COORDINATES.LAT.MIN, max: LIMITS.COORDINATES.LAT.MAX }),
+    query('lng').optional().isFloat({ min: LIMITS.COORDINATES.LNG.MIN, max: LIMITS.COORDINATES.LNG.MAX }),
+    query('radius').optional().isFloat({ gt: 0 }),
+    query('limit').optional().isInt({ min: 0, max: 100 }),
+    query('offset').optional().isInt({ min: 0 }),
+    query().custom((_, { req }) => {
+      const geoFields = ['lat', 'lng', 'radius'];
+      const providedCount = geoFields.filter((field) => req.query[field] !== undefined).length;
+
+      if (providedCount !== 0 && providedCount !== geoFields.length) {
+        throw new Error('lat, lng, and radius must be provided together');
+      }
+
+      return true;
+    }),
+  ],
+  async (req, res) => {
+    if (handleValidationErrors(req, res)) return;
+
+    try {
+      const { category, closure_outcome, severity, lat, lng, radius, sort, limit = 20, offset = 0 } = req.query;
+
+      const result = await incidentService.getPublicFeed({
+        category,
+        closure_outcome,
+        severity,
+        lat,
+        lng,
+        radius,
+        sort,
+        limit,
+        offset,
+      });
+
+      res.json({
+        status: 'OK',
+        data: result.incidents,
+        count: result.incidents.length,
+        total: result.total,
+      });
+    } catch (error) {
+      handleServiceError(error, res, 'Failed to fetch community feed');
     }
   }
 );
