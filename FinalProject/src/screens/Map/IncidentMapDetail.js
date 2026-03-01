@@ -7,7 +7,13 @@ import { formatTimeAgo } from '../../utils/dateUtils';
 import { getCategoryLabel, getMarkerColor } from '../../utils/mapCategory';
 import mapStyles from './mapStyles';
 
-const IncidentMapDetail = ({ selectedIncident, onClose, onCenterMap, categoryDisplay }) => {
+const IncidentMapDetail = ({
+  selectedIncident,
+  onClose,
+  onCenterMap,
+  categoryDisplay,
+  showResolvedDetails,
+}) => {
   const { theme } = useTheme();
   const translateY = useRef(new Animated.Value(280)).current;
   const opacity = useRef(new Animated.Value(0)).current;
@@ -34,7 +40,8 @@ const IncidentMapDetail = ({ selectedIncident, onClose, onCenterMap, categoryDis
 
   const markerColor = getMarkerColor(selectedIncident.category, categoryDisplay, theme.mapMarkerDefault);
   const categoryLabel = getCategoryLabel(selectedIncident.category, categoryDisplay);
-  const incidentTime = selectedIncident.createdAt || selectedIncident.timestamp;
+  const incidentTime =
+    selectedIncident.closedAt || selectedIncident.createdAt || selectedIncident.timestamp;
   const latitude = Number(selectedIncident?.location?.latitude);
   const longitude = Number(selectedIncident?.location?.longitude);
   const hasValidCoordinates = Number.isFinite(latitude) && Number.isFinite(longitude);
@@ -67,36 +74,67 @@ const IncidentMapDetail = ({ selectedIncident, onClose, onCenterMap, categoryDis
                   {categoryLabel}
                 </AppText>
               </View>
-              <AppText variant="caption" style={{ color: theme.textSecondary }}>
-                {incidentTime ? formatTimeAgo(incidentTime) : 'Just now'}
-              </AppText>
+              {showResolvedDetails ? (
+                <AppText variant="caption" style={{ color: theme.textSecondary }}>
+                  {incidentTime ? formatTimeAgo(incidentTime) : 'Just now'}
+                </AppText>
+              ) : null}
             </View>
 
-            <AppText variant="h4" style={[mapStyles.detailTitle, { color: theme.text }]}>
-              {selectedIncident.title}
-            </AppText>
+            {/* Resolved mode: full details including optional closure fields */}
+            {showResolvedDetails ? (
+              <>
+                <AppText variant="h4" style={[mapStyles.detailTitle, { color: theme.text }]}>
+                  {selectedIncident.title}
+                </AppText>
 
-            <View style={mapStyles.detailMetaRow}>
-              <Ionicons name="checkmark-circle-outline" size={17} color={theme.success} />
-              <AppText variant="caption" style={[mapStyles.detailMetaText, { color: theme.success }]}> 
-                {String(selectedIncident.status || '').replace(/_/g, ' ')}
-              </AppText>
-            </View>
+                <View style={mapStyles.detailMetaRow}>
+                  <Ionicons name="checkmark-circle-outline" size={17} color={theme.success} />
+                  <AppText variant="caption" style={[mapStyles.detailMetaText, { color: theme.success }]}> 
+                    {String(selectedIncident.status || '').replace(/_/g, ' ')}
+                  </AppText>
+                </View>
 
-            <View style={mapStyles.detailMetaRow}>
-              <Ionicons name="location-outline" size={17} color={theme.textSecondary} />
-              <AppText variant="caption" style={[mapStyles.detailMetaText, { color: theme.textSecondary }]}> 
-                {hasValidCoordinates ? `${latitude.toFixed(4)}, ${longitude.toFixed(4)}` : 'Location unavailable'}
-              </AppText>
-            </View>
+                {selectedIncident.closureOutcome ? (
+                  <View style={mapStyles.detailMetaRow}>
+                    <Ionicons name="shield-checkmark-outline" size={17} color={theme.primary} />
+                    <AppText variant="caption" style={[mapStyles.detailMetaText, { color: theme.primary }]}>
+                      {String(selectedIncident.closureOutcome).replace(/_/g, ' ')}
+                    </AppText>
+                  </View>
+                ) : null}
 
-            <View style={mapStyles.detailActions}>
-              <Button
-                title="Center on Map"
-                onPress={() => onCenterMap(selectedIncident)}
-                disabled={!hasValidCoordinates}
-              />
-            </View>
+                {selectedIncident.closureDetails ? (
+                  <AppText
+                    variant="caption"
+                    style={[mapStyles.detailMetaText, { color: theme.textSecondary, marginTop: 4 }]}
+                    numberOfLines={3}
+                  >
+                    {selectedIncident.closureDetails}
+                  </AppText>
+                ) : null}
+
+                <View style={mapStyles.detailMetaRow}>
+                  <Ionicons name="location-outline" size={17} color={theme.textSecondary} />
+                  <AppText variant="caption" style={[mapStyles.detailMetaText, { color: theme.textSecondary }]}> 
+                    {selectedIncident.locationName ||
+                      (hasValidCoordinates
+                        ? `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+                        : 'Location unavailable')}
+                  </AppText>
+                </View>
+              </>
+            ) : null}
+
+            {showResolvedDetails ? (
+              <View style={mapStyles.detailActions}>
+                <Button
+                  title="Center on Map"
+                  onPress={() => onCenterMap(selectedIncident)}
+                  disabled={!hasValidCoordinates}
+                />
+              </View>
+            ) : null}
           </>
       </Animated.View>
     </Animated.View>

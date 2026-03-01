@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, TouchableOpacity, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { incidentAPI } from "../../services/api";
+import { feedAPI } from "../../services/feedAPI";
 import { useTheme } from "../../context/ThemeContext";
 import useUserPreferences from "../../hooks/useUserPreferences";
 import incidentConstants from "../../../../constants/incident";
@@ -19,6 +20,9 @@ import TimeframeSelector from "./TimeframeSelector";
 
 const { CATEGORY_DISPLAY } = incidentConstants;
 const MAP_HINT_STORAGE_KEY = "map_first_visit_hint_seen";
+
+const MAP_MODES = { ACTIVE: 'active', RESOLVED: 'resolved' };
+const RESOLVED_PAGE_SIZE = 100;
 
 const DEFAULT_REGION = {
   latitude: 33.8938,
@@ -40,6 +44,7 @@ const MapScreen = () => {
   const [error, setError] = useState(null);
   const [showLegend, setShowLegend] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState(null);
+  const [mapMode, setMapMode] = useState(MAP_MODES.ACTIVE);
   const [showMapHint, setShowMapHint] = useState(true);
 
   const {
@@ -71,16 +76,48 @@ const MapScreen = () => {
           setRefreshing(true);
         } else {
           setLoading(true);
+          setIncidents([]);
         }
 
         setError(null);
-        const params = { timeframe: selectedTimeframe };
 
-        if (selectedCategory) {
-          params.category = selectedCategory;
+        let result;
+        if (mapMode === MAP_MODES.ACTIVE) {
+          const params = { timeframe: selectedTimeframe };
+          if (selectedCategory) params.category = selectedCategory;
+          result = await incidentAPI.getMapIncidents(params);
+        } else {
+          const resolvedIncidents = [];
+          let total = 0;
+          let offset = 0;
+
+          do {
+            const page = await feedAPI.getPublicFeed({
+              category: selectedCategory || undefined,
+              limit: RESOLVED_PAGE_SIZE,
+              offset,
+            });
+
+            if (activeRequestId.current !== requestId) {
+              return;
+            }
+
+            if (!page.success) {
+              result = page;
+              break;
+            }
+
+            resolvedIncidents.push(...page.incidents);
+            total = Number(page.total) || resolvedIncidents.length;
+            offset += page.incidents.length;
+            result = {
+              success: true,
+              incidents: resolvedIncidents,
+              total,
+            };
+          } while (offset > 0 && offset < total);
         }
 
-        const result = await incidentAPI.getMapIncidents(params);
         if (activeRequestId.current !== requestId) {
           return;
         }
@@ -90,8 +127,7 @@ const MapScreen = () => {
           return;
         }
 
-        // Status visibility is enforced by the backend map endpoint.
-        // Client-side filtering here only guards against invalid coordinates.
+        // Client-side guard against invalid coordinates.
         const filteredIncidents = result.incidents.filter((incident) => {
           const latitude = Number(incident?.location?.latitude);
           const longitude = Number(incident?.location?.longitude);
@@ -130,12 +166,16 @@ const MapScreen = () => {
         }
       }
     },
-    [preferences.locationServices, selectedCategory, selectedTimeframe],
+    [mapMode, preferences.locationServices, selectedCategory, selectedTimeframe],
   );
 
   useEffect(() => {
     fetchIncidents();
   }, [fetchIncidents]);
+
+  useEffect(() => {
+    setSelectedIncident(null);
+  }, [mapMode]);
 
   useEffect(() => {
     let hintTimer;
@@ -220,6 +260,7 @@ const MapScreen = () => {
         showsUserLocation={preferences.locationServices}
         incidents={incidents}
         categoryDisplay={CATEGORY_DISPLAY}
+        showActiveOverlays={mapMode === MAP_MODES.ACTIVE}
         onMarkerPress={(incident) => {
           setShowMapHint(false);
           AsyncStorage.setItem(MAP_HINT_STORAGE_KEY, "1").catch(() => {});
@@ -241,10 +282,30 @@ const MapScreen = () => {
           selectedCategory={selectedCategory}
           onSelectCategory={setSelectedCategory}
         />
-        <TimeframeSelector
-          selectedTimeframe={selectedTimeframe}
-          onSelectTimeframe={setSelectedTimeframe}
-        />
+
+        <View style={[mapStyles.modeToggle, { borderColor: theme.border }]}>
+          <TouchableOpacity
+            style={[mapStyles.modeButton, { backgroundColor: mapMode === MAP_MODES.ACTIVE ? theme.primary : 'transparent' }]}
+            onPress={() => setMapMode(MAP_MODES.ACTIVE)}
+          >
+            <Ionicons name="radio-button-on-outline" size={13} color={mapMode === MAP_MODES.ACTIVE ? '#fff' : theme.text} />
+            <AppText variant="caption" style={{ color: mapMode === MAP_MODES.ACTIVE ? '#fff' : theme.text, marginLeft: 4 }}>Active</AppText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[mapStyles.modeButton, { backgroundColor: mapMode === MAP_MODES.RESOLVED ? theme.primary : 'transparent' }]}
+            onPress={() => setMapMode(MAP_MODES.RESOLVED)}
+          >
+            <Ionicons name="shield-checkmark-outline" size={13} color={mapMode === MAP_MODES.RESOLVED ? '#fff' : theme.text} />
+            <AppText variant="caption" style={{ color: mapMode === MAP_MODES.RESOLVED ? '#fff' : theme.text, marginLeft: 4 }}>Resolved</AppText>
+          </TouchableOpacity>
+        </View>
+
+        {mapMode === MAP_MODES.ACTIVE ? (
+          <TimeframeSelector
+            selectedTimeframe={selectedTimeframe}
+            onSelectTimeframe={setSelectedTimeframe}
+          />
+        ) : null}
       </View>
 
       {showMapHint ? (
@@ -263,7 +324,9 @@ const MapScreen = () => {
             variant="caption"
             style={[mapStyles.mapHintText, { color: theme.textSecondary }]}
           >
-            Tap a marker to open incident details.
+            {mapMode === MAP_MODES.ACTIVE
+              ? "Tap a circle to view the report category."
+              : "Tap a marker to open incident details."}
           </AppText>
         </View>
       ) : null}
@@ -313,6 +376,7 @@ const MapScreen = () => {
         onClose={clearSelectedIncident}
         onCenterMap={handleCenterMap}
         categoryDisplay={CATEGORY_DISPLAY}
+        showResolvedDetails={mapMode === MAP_MODES.RESOLVED}
       />
     </View>
   );

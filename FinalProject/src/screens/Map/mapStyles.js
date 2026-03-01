@@ -236,6 +236,21 @@ const mapStyles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 10,
   },
+
+  modeToggle: {
+    flexDirection: 'row',
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    alignSelf: 'center',
+    marginBottom: 6,
+  },
+  modeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
 });
 
 export default mapStyles;
