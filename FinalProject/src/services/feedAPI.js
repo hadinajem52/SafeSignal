@@ -57,6 +57,27 @@ function normalizeIncident(i) {
     locationName: i.location_name || '',
     closedAt: i.closed_at,
     closureOutcome: i.closure_outcome,
-    closureDetails: i.closure_details,
+    closureDetails: normalizeClosureDetails(i.closure_details),
   };
+}
+
+function normalizeClosureDetails(closureDetails) {
+  if (!closureDetails) {
+    return '';
+  }
+
+  if (typeof closureDetails === 'string') {
+    return closureDetails;
+  }
+
+  if (typeof closureDetails !== 'object') {
+    return String(closureDetails);
+  }
+
+  const publicDetails = [
+    closureDetails.case_id ? `Case ID: ${closureDetails.case_id}` : '',
+    closureDetails.officer_notes ? String(closureDetails.officer_notes).trim() : '',
+  ].filter(Boolean);
+
+  return publicDetails.join(' • ');
 }
