@@ -1,7 +1,5 @@
 import React from 'react';
 import {
-  RefreshControl,
-  ScrollView,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -12,10 +10,8 @@ import { AppText, Card } from '../../components';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import useDashboardData from '../../hooks/useDashboardData';
-import ContributionsGrid from './ContributionsGrid';
-import QuickActions from './QuickActions';
+import CommunityFeed from './CommunityFeed';
 import QuickStatsRow from './QuickStatsRow';
-import RecentActivity from './RecentActivity';
 import SafetyScoreCard from './SafetyScoreCard';
 import styles from './homeStyles';
 import TrendingSection from './TrendingSection';
@@ -69,15 +65,8 @@ const HomeScreen = ({ navigation }) => {
     );
   }
 
-  return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: theme.background }]}
-      contentContainerStyle={[styles.contentContainer, { paddingBottom: tabBarHeight + 8 }]}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} />
-      }
-      showsVerticalScrollIndicator={false}
-    >
+  const homeHeader = (
+    <>
       <LinearGradient
         colors={[theme.primaryLight || 'rgba(29,78,216,0.14)', 'rgba(255,255,255,0)']}
         start={{ x: 0, y: 0 }}
@@ -121,19 +110,6 @@ const HomeScreen = ({ navigation }) => {
 
       <TrendingSection trendingCategories={dashboardData?.trendingCategories} />
 
-      <ContributionsGrid userStats={dashboardData?.userStats} />
-
-      <QuickActions
-        navigation={navigation}
-        quickStats={dashboardData?.quickStats}
-        userStats={dashboardData?.userStats}
-      />
-
-      <RecentActivity
-        recentActivity={dashboardData?.recentActivity}
-        onPress={() => navigation.navigate('Reports')}
-      />
-
       {error ? (
         <Card style={[styles.errorContainer, { backgroundColor: `${theme.error}15` }]}>
           <AppText variant="bodySmall" style={[styles.errorText, { color: theme.error }]}>{error}</AppText>
@@ -142,9 +118,19 @@ const HomeScreen = ({ navigation }) => {
           </TouchableOpacity>
         </Card>
       ) : null}
+    </>
+  );
 
-      <View style={styles.bottomSpacing} />
-    </ScrollView>
+  return (
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <CommunityFeed
+        navigation={navigation}
+        ListHeaderComponent={homeHeader}
+        externalRefreshing={refreshing}
+        onExternalRefresh={onRefresh}
+        contentContainerStyle={{ paddingBottom: tabBarHeight + 8 }}
+      />
+    </View>
   );
 };
 
