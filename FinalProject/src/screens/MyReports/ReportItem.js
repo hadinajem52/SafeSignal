@@ -55,7 +55,7 @@ const getProgressStage = (status) => {
   }
 };
 
-const ReportItem = ({ item, onPress }) => {
+const ReportItem = ({ item, onPress, onLongPress }) => {
   const { theme } = useTheme();
   const categoryConfig = CATEGORY_DISPLAY[item.category] || {
     label: 'Other',
@@ -75,7 +75,7 @@ const ReportItem = ({ item, onPress }) => {
   const progressColor = isRejected ? theme.error : theme.primary;
 
   return (
-    <Pressable onPress={() => onPress(item)} style={styles.incidentCard}>
+    <Pressable onPress={() => onPress(item)} onLongPress={() => onLongPress && onLongPress(item)} style={styles.incidentCard}>
       {({ pressed }) => (
         <Card
           style={[

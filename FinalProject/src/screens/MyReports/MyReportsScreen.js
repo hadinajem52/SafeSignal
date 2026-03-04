@@ -23,9 +23,11 @@ const MyReportsScreen = ({ navigation }) => {
     setSelectedFilter,
     pagination,
     handleRefresh,
+    deleteDraft,
   } = useMyReports({ user });
 
   const [draftModalIncident, setDraftModalIncident] = useState(null);
+  const [deleteModalIncident, setDeleteModalIncident] = useState(null);
 
   const handleIncidentPress = (incident) => {
     if (incident.isDraft) {
@@ -34,6 +36,12 @@ const MyReportsScreen = ({ navigation }) => {
     }
 
     navigation.navigate('IncidentDetail', { incident });
+  };
+
+  const handleIncidentLongPress = (incident) => {
+    if (incident.isDraft) {
+      setDeleteModalIncident(incident);
+    }
   };
 
   if (isLoading) {
@@ -72,7 +80,13 @@ const MyReportsScreen = ({ navigation }) => {
 
       <FlatList
         data={incidents}
-        renderItem={({ item }) => <ReportItem item={item} onPress={handleIncidentPress} />}
+        renderItem={({ item }) => (
+          <ReportItem
+            item={item}
+            onPress={handleIncidentPress}
+            onLongPress={handleIncidentLongPress}
+          />
+        )}
         keyExtractor={(item, index) =>
           item.id ? item.id.toString() : `${item.createdAt || 'report'}-${item.status || 'status'}-${index}`
         }
@@ -86,6 +100,26 @@ const MyReportsScreen = ({ navigation }) => {
             onReportPress={() => navigation.navigate('ReportIncident')}
           />
         }
+      />
+
+      {/* Long-press delete draft confirmation */}
+      <ConfirmModal
+        visible={!!deleteModalIncident}
+        title="Delete Draft"
+        message={`Delete "${deleteModalIncident?.title || 'this draft'}"? This cannot be undone.`}
+        actions={[
+          { text: 'Cancel', style: 'cancel', onPress: () => setDeleteModalIncident(null) },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: () => {
+              const d = deleteModalIncident;
+              setDeleteModalIncident(null);
+              deleteDraft(d);
+            },
+          },
+        ]}
+        onRequestClose={() => setDeleteModalIncident(null)}
       />
 
       {/* Draft continue confirmation */}

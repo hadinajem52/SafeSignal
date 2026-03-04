@@ -36,7 +36,6 @@ const ReportIncidentScreen = ({ navigation, route }) => {
   const { preferences, isLoading: isLoadingPreferences } = useUserPreferences();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccessMessage, setSubmitSuccessMessage] = useState("");
-  const [showPhotoModal, setShowPhotoModal] = useState(false);
   const isSubmittingRef = useRef(false);
   const successNavigationTimerRef = useRef(null);
   const hasAppliedDefaultAnonymous = useRef(false);
@@ -54,6 +53,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     selectedCategory,
     setSelectedCategory,
     incidentDate,
+    setIncidentDate,
     severity,
     setSeverity,
     isAnonymous,
@@ -518,6 +518,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
           incidentDate={incidentDate}
           formatDate={formatDate}
           onSetToNow={setDateToNow}
+          onDateChange={setIncidentDate}
         />
 
         <IncidentLocationPicker
@@ -539,27 +540,9 @@ const ReportIncidentScreen = ({ navigation, route }) => {
 
         <IncidentPhotoUploader
           photos={photos}
-          onAddPhoto={() => setShowPhotoModal(true)}
+          onTakePhoto={takePhoto}
+          onPickImage={pickImage}
           onRemovePhoto={removePhoto}
-        />
-
-        {/* Photo picker choice modal */}
-        <ConfirmModal
-          visible={showPhotoModal}
-          title="Add Photo"
-          message="Choose how to add a photo"
-          actions={[
-            {
-              text: 'Take Photo',
-              onPress: () => { setShowPhotoModal(false); takePhoto(); },
-            },
-            {
-              text: 'Choose from Gallery',
-              onPress: () => { setShowPhotoModal(false); pickImage(); },
-            },
-            { text: 'Cancel', style: 'cancel', onPress: () => setShowPhotoModal(false) },
-          ]}
-          onRequestClose={() => setShowPhotoModal(false)}
         />
 
         {/* Unsaved draft restore modal */}

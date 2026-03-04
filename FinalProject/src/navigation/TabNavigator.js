@@ -2,6 +2,7 @@ import React from 'react';
 import { View, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { CommonActions } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 
@@ -84,7 +85,36 @@ const TabNavigator = () => {
       })}
     >
       <Tab.Screen name="Dashboard" component={HomeScreen} />
-      <Tab.Screen name="Reports" component={ReportsStack} />
+      <Tab.Screen
+        name="Reports"
+        component={ReportsStack}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            navigation.dispatch((state) => {
+              const reportsRoute = state.routes.find((r) => r.name === 'Reports');
+              const innerRoutes = reportsRoute?.state?.routes;
+              const isDeep = innerRoutes && innerRoutes.length > 1;
+
+              // Already on MyReports root — just switch tabs without resetting
+              // so no skeleton/fade-in is triggered
+              if (!isDeep) {
+                const index = state.routes.findIndex((r) => r.name === 'Reports');
+                return CommonActions.navigate({ name: 'Reports' });
+              }
+
+              // Deep in the stack (e.g. IncidentDetail) — reset back to MyReports
+              const routes = state.routes.map((route) =>
+                route.name === 'Reports'
+                  ? { ...route, state: { index: 0, routes: [{ name: 'MyReports' }] } }
+                  : route
+              );
+              const index = routes.findIndex((r) => r.name === 'Reports');
+              return CommonActions.reset({ ...state, routes, index });
+            });
+          },
+        })}
+      />
       
       <Tab.Screen 
         name="SubmitReport" 

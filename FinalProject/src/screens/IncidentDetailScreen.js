@@ -1,6 +1,7 @@
 import React from 'react';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, TouchableOpacity, View } from 'react-native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import incidentConstants from '../../../constants/incident';
 import { formatDate } from '../utils/dateUtils';
@@ -10,14 +11,15 @@ import styles from './incidentDetailStyles';
 
 const { CATEGORY_DISPLAY, STATUS_LABELS } = incidentConstants;
 
-const IncidentDetailScreen = ({ route }) => {
+const IncidentDetailScreen = ({ route, navigation }) => {
   const { incident, source } = route.params || {};
   const { theme } = useTheme();
   const tabBarHeight = useBottomTabBarHeight();
+  const insets = useSafeAreaInsets();
 
   if (!incident) {
     return (
-      <View style={[styles.emptyContainer, { backgroundColor: theme.surface }]}> 
+      <View style={[styles.emptyContainer, { backgroundColor: theme.surface, paddingTop: insets.top }]}> 
         <AppText variant="body" style={{ color: theme.textSecondary }}>Incident details not available.</AppText>
       </View>
     );
@@ -48,11 +50,22 @@ const IncidentDetailScreen = ({ route }) => {
   const showTimeline = source !== 'community_feed';
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: theme.surface }]}
-      contentContainerStyle={[styles.contentContainer, { paddingBottom: tabBarHeight + 8 }]}
-      showsVerticalScrollIndicator={false}
-    >
+    <View style={[styles.screenWrapper, { backgroundColor: theme.surface, paddingTop: insets.top }]}>
+      <View style={[styles.backHeader, { borderBottomColor: theme.border }]}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="chevron-back" size={24} color={theme.text} />
+          <AppText variant="body" style={{ color: theme.text }}>Back</AppText>
+        </TouchableOpacity>
+      </View>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[styles.contentContainer, { paddingBottom: tabBarHeight + 8 }]}
+        showsVerticalScrollIndicator={false}
+      >
       <Card style={styles.headerCard}>
         <View style={styles.headerRow}>
           <View style={[styles.categoryBadge, { backgroundColor: theme.surface }]}> 
@@ -108,6 +121,7 @@ const IncidentDetailScreen = ({ route }) => {
         </Card>
       ) : null}
     </ScrollView>
+    </View>
   );
 };
 
