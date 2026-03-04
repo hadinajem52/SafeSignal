@@ -1,10 +1,11 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
   StyleSheet,
   TouchableOpacity,
   View,
+  Platform,
 } from 'react-native';
 import { AppText } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
@@ -58,6 +59,7 @@ const CommunityFeed = ({
   const {
     incidents,
     loading,
+    filtering,
     refreshing,
     loadingMore,
     error,
@@ -81,7 +83,12 @@ const CommunityFeed = ({
     ]);
   }, [onExternalRefresh, refresh]);
 
-  const renderHeader = () => (
+  // Use useMemo to produce a React element (not a callback function).
+  // Passing a function as ListHeaderComponent causes FlatList to treat each new
+  // function reference as a different component type → full unmount+remount of the
+  // header (and SafetyScoreCard) every time activeFilter or filtering changes.
+  // A React element is reconciled in-place so the dashboard cards are never remounted.
+  const headerElement = useMemo(() => (
     <>
       {ListHeaderComponent}
 
@@ -107,8 +114,14 @@ const CommunityFeed = ({
         )}
         style={styles.chipList}
       />
+
+      {filtering ? (
+        <View style={styles.filteringBar}>
+          <ActivityIndicator size="small" color={theme.primary} />
+        </View>
+      ) : null}
     </>
-  );
+  ), [ListHeaderComponent, theme, activeFilter, filtering]);
 
   const renderFooter = () => {
     if (!loadingMore) {
@@ -153,7 +166,7 @@ const CommunityFeed = ({
       data={incidents}
       keyExtractor={(item) => String(item.id)}
       renderItem={({ item }) => <FeedCard incident={item} onPress={handleCardPress} />}
-      ListHeaderComponent={renderHeader}
+      ListHeaderComponent={headerElement}
       ListEmptyComponent={renderEmpty}
       ListFooterComponent={renderFooter}
       onEndReached={loadMore}
@@ -169,6 +182,7 @@ const CommunityFeed = ({
 const styles = StyleSheet.create({
   wrapper: {
     marginTop: 20,
+    paddingHorizontal: 16,
   },
   header: {
     flexDirection: 'row',
@@ -178,6 +192,12 @@ const styles = StyleSheet.create({
   },
   chipList: {
     marginBottom: 12,
+  },
+  filteringBar: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    marginBottom: 4,
   },
   chips: {
     gap: 8,

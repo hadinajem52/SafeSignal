@@ -15,19 +15,30 @@ export default function useFeed(filters = {}) {
   } = filters;
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filtering, setFiltering] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
   const [total, setTotal] = useState(0);
   const activeRequest = useRef(0);
+  const isFirstLoad = useRef(true);
 
   const fetchPage = useCallback(
     async (offset = 0, isRefresh = false) => {
       const reqId = ++activeRequest.current;
       try {
-        if (isRefresh) setRefreshing(true);
-        else if (offset === 0) setLoading(true);
-        else setLoadingMore(true);
+        if (isRefresh) {
+          setRefreshing(true);
+        } else if (offset === 0) {
+          // First ever load → full loading state; subsequent filter changes → subtle inline indicator
+          if (isFirstLoad.current) {
+            setLoading(true);
+          } else {
+            setFiltering(true);
+          }
+        } else {
+          setLoadingMore(true);
+        }
         setError(null);
 
         const result = await feedAPI.getPublicFeed({
@@ -47,6 +58,7 @@ export default function useFeed(filters = {}) {
           setError(result.error);
           return;
         }
+        isFirstLoad.current = false;
         setIncidents(prev =>
           offset === 0 ? result.incidents : [...prev, ...result.incidents],
         );
@@ -56,6 +68,7 @@ export default function useFeed(filters = {}) {
       } finally {
         if (activeRequest.current === reqId) {
           setLoading(false);
+          setFiltering(false);
           setRefreshing(false);
           setLoadingMore(false);
         }
@@ -79,5 +92,5 @@ export default function useFeed(filters = {}) {
     fetchPage(incidents.length);
   }, [fetchPage, incidents.length, loading, loadingMore, refreshing, total]);
 
-  return { incidents, loading, refreshing, loadingMore, error, total, refresh, loadMore };
+  return { incidents, loading, filtering, refreshing, loadingMore, error, total, refresh, loadMore };
 }
