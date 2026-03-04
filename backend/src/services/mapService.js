@@ -6,14 +6,13 @@
 
 const db = require('../config/database');
 const ServiceError = require('../utils/ServiceError');
-const { PUBLIC_INCIDENT_STATUSES } = require('../../../constants/incident');
 
 /**
  * Valid timeframe options
  */
 const VALID_TIMEFRAMES = ['24h', '7d', '30d', '90d'];
 const PUBLIC_COORDINATE_PRECISION = 3;
-const ACTIVE_PUBLIC_INCIDENT_STATUSES = PUBLIC_INCIDENT_STATUSES.filter((status) => status !== 'police_closed');
+const ACTIVE_MAP_INCIDENT_STATUSES = ['verified', 'published', 'dispatched', 'on_scene', 'investigating'];
 
 const toPublicCoordinate = (value) => {
   const parsed = parseFloat(value);
@@ -81,8 +80,7 @@ const getMapIncidents = async (filters) => {
 
   const startDate = calculateStartDate(timeframe);
 
-  // Build query - only return incidents explicitly cleared for public display.
-  // Keep police_closed visible for 24 hours after closure.
+  // Build query for active-map display.
   let query = `
     SELECT 
       incident_id,
@@ -94,21 +92,21 @@ const getMapIncidents = async (filters) => {
       incident_date,
       status
     FROM incidents
-    WHERE (
-      status = ANY($2::text[])
-      OR (status = 'police_closed' AND updated_at >= NOW() - INTERVAL '24 hours')
-    )
+    WHERE status = ANY($2::text[])
       AND incident_date >= $1
       AND is_draft = false
-      AND is_disclosed = true
-      AND is_location_fuzzed = true
   `;
 
-  const params = [startDate, ACTIVE_PUBLIC_INCIDENT_STATUSES];
+  const params = [startDate, ACTIVE_MAP_INCIDENT_STATUSES];
   let paramIndex = 3;
 
   // Add bounding box filter if provided
-  if (ne_lat && ne_lng && sw_lat && sw_lng) {
+  if (
+    ne_lat !== undefined && ne_lat !== null &&
+    ne_lng !== undefined && ne_lng !== null &&
+    sw_lat !== undefined && sw_lat !== null &&
+    sw_lng !== undefined && sw_lng !== null
+  ) {
     query += ` AND latitude BETWEEN $${paramIndex} AND $${paramIndex + 1}`;
     query += ` AND longitude BETWEEN $${paramIndex + 2} AND $${paramIndex + 3}`;
     params.push(parseFloat(sw_lat), parseFloat(ne_lat), parseFloat(sw_lng), parseFloat(ne_lng));

@@ -11,7 +11,7 @@ import styles from './incidentDetailStyles';
 const { CATEGORY_DISPLAY, STATUS_LABELS } = incidentConstants;
 
 const IncidentDetailScreen = ({ route }) => {
-  const { incident } = route.params || {};
+  const { incident, source } = route.params || {};
   const { theme } = useTheme();
   const tabBarHeight = useBottomTabBarHeight();
 
@@ -29,18 +29,23 @@ const IncidentDetailScreen = ({ route }) => {
   const latitude = Number(incident?.location?.latitude);
   const longitude = Number(incident?.location?.longitude);
   const hasValidCoordinates = Number.isFinite(latitude) && Number.isFinite(longitude);
-  const reportedAtRaw = incident.createdAt || incident.incident_date;
+  const reportedAtRaw = incident.createdAt || incident.created_at || incident.incident_date || incident.closedAt;
   const reportedAtDate = reportedAtRaw ? new Date(reportedAtRaw) : null;
   const reportedAtLabel =
     reportedAtDate && !Number.isNaN(reportedAtDate.getTime())
       ? formatDate(reportedAtDate)
       : 'Date unavailable';
-  const closureOutcome = incident.closure_outcome
-    ? incident.closure_outcome.replace('_', ' ')
+  const closureOutcomeValue = incident.closure_outcome || incident.closureOutcome;
+  const closureOutcome = closureOutcomeValue
+    ? closureOutcomeValue.replace(/_/g, ' ')
     : null;
   const resolvedLabel = closureOutcome
     ? `${statusLabel} - ${closureOutcome.replace(/\b\w/g, (char) => char.toUpperCase())}`
     : statusLabel;
+  const description = incident.description || incident.closure_details || incident.closureDetails || 'No description available.';
+  const closureDetails = incident.closure_details || incident.closureDetails || '';
+  const locationLabel = incident.locationName || incident.location_name || 'Location not set';
+  const showTimeline = source !== 'community_feed';
 
   return (
     <ScrollView
@@ -68,15 +73,22 @@ const IncidentDetailScreen = ({ route }) => {
 
       <Card style={styles.sectionCard}>
         <AppText variant="label" style={[styles.sectionTitle, { color: theme.text }]}>Description</AppText>
-        <AppText variant="body" style={[styles.sectionText, { color: theme.textSecondary }]}>{incident.description}</AppText>
+        <AppText variant="body" style={[styles.sectionText, { color: theme.textSecondary }]}>{description}</AppText>
       </Card>
+
+      {closureDetails ? (
+        <Card style={styles.sectionCard}>
+          <AppText variant="label" style={[styles.sectionTitle, { color: theme.text }]}>Closure Details</AppText>
+          <AppText variant="body" style={[styles.sectionText, { color: theme.textSecondary }]}>{closureDetails}</AppText>
+        </Card>
+      ) : null}
 
       <Card style={styles.sectionCard}>
         <AppText variant="label" style={[styles.sectionTitle, { color: theme.text }]}>Location</AppText>
         <AppText variant="body" style={[styles.sectionText, { color: theme.textSecondary }]}> 
           {hasValidCoordinates
             ? `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
-            : incident.locationName || 'Location not set'}
+            : locationLabel}
         </AppText>
       </Card>
 
@@ -85,14 +97,16 @@ const IncidentDetailScreen = ({ route }) => {
         <AppText variant="body" style={[styles.sectionText, { color: theme.textSecondary }]}>{reportedAtLabel}</AppText>
       </Card>
       
-      <Card style={styles.timelineCard}>
-        <AppText variant="label" style={[styles.sectionTitle, { color: theme.text }]}>Updates & Messages</AppText>
-        <View style={styles.timelineContainer}>
-          <IncidentTimeline 
-            incidentId={incident.incident_id || incident.id}
-          />
-        </View>
-      </Card>
+      {showTimeline ? (
+        <Card style={styles.timelineCard}>
+          <AppText variant="label" style={[styles.sectionTitle, { color: theme.text }]}>Updates & Messages</AppText>
+          <View style={styles.timelineContainer}>
+            <IncidentTimeline 
+              incidentId={incident.incident_id || incident.id}
+            />
+          </View>
+        </Card>
+      ) : null}
     </ScrollView>
   );
 };

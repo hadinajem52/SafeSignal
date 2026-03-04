@@ -50,14 +50,21 @@ function normalizeIncident(i) {
   return {
     ...i,
     id: i.incident_id,
+    incident_id: i.incident_id,
     location:
       Number.isFinite(lat) && Number.isFinite(lng)
         ? { latitude: lat, longitude: lng }
         : null,
+    description: i.description || '',
     locationName: i.location_name || '',
+    location_name: i.location_name || '',
+    createdAt: i.created_at || i.incident_date,
+    created_at: i.created_at || i.incident_date,
     closedAt: i.closed_at,
     closureOutcome: i.closure_outcome,
+    closure_outcome: i.closure_outcome,
     closureDetails: normalizeClosureDetails(i.closure_details),
+    closure_details: normalizeClosureDetails(i.closure_details),
   };
 }
 

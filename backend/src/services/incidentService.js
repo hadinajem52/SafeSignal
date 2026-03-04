@@ -16,7 +16,6 @@ const {
   VALID_SEVERITIES,
   VALID_STATUSES,
   VALID_CLOSURE_OUTCOMES,
-  PUBLIC_INCIDENT_STATUSES,
 } = require('../../../constants/incident');
 const { LIMITS } = require('../../../constants/limits');
 const { emitToRoles } = require('../utils/socketService');
@@ -24,7 +23,6 @@ const settingsService = require('./settingsService');
 const notificationService = require('./notificationService');
 
 const LEI_STATUSES = ['verified', 'dispatched', 'on_scene', 'investigating', 'police_closed'];
-const PUBLIC_DISCLOSURE_STATUSES = new Set(PUBLIC_INCIDENT_STATUSES);
 const profanityFilter = new Filter();
 
 const CATEGORY_KEYWORDS = {
@@ -213,8 +211,6 @@ const getSharedKeywordSignals = (baseEntityTokens, candidateEntityTokens, max = 
   return shared;
 };
 
-const shouldExposeIncidentPublicly = (status) => PUBLIC_DISCLOSURE_STATUSES.has(status);
-
 const countKeywordMatches = (text, keywords) => {
   const lowered = (text || '').toLowerCase();
   return keywords.reduce((count, keyword) => {
@@ -394,8 +390,6 @@ async function applyAutoVerificationIfEligible(incident, context = {}) {
   const updated = await db.one(
     `UPDATE incidents
      SET status = 'verified',
-         is_disclosed = TRUE,
-         is_location_fuzzed = TRUE,
          updated_at = CURRENT_TIMESTAMP
      WHERE incident_id = $1
      RETURNING *`,
@@ -1498,14 +1492,6 @@ async function updateIncident(incidentId, updateData, requestingUser) {
          category = COALESCE($4, category),
          severity = COALESCE($5, severity),
          status = COALESCE($6, status),
-         is_disclosed = CASE
-           WHEN $6 IS NOT NULL THEN $11
-           ELSE is_disclosed
-         END,
-         is_location_fuzzed = CASE
-           WHEN $6 IS NOT NULL THEN $11
-           ELSE is_location_fuzzed
-         END,
          is_draft = COALESCE($7, is_draft),
          location_name = COALESCE($8, location_name),
          latitude = COALESCE($9, latitude),
@@ -1529,7 +1515,6 @@ async function updateIncident(incidentId, updateData, requestingUser) {
       locationName,
       latitude,
       longitude,
-      shouldExposeIncidentPublicly(newStatus),
     ]
   );
 
@@ -1586,18 +1571,10 @@ async function patchIncident(incidentId, updateData, requestingUser) {
          category = COALESCE($4, category),
          severity = COALESCE($5, severity),
          status = COALESCE($6, status),
-         is_disclosed = CASE
-           WHEN $6 IS NOT NULL THEN $7
-           ELSE is_disclosed
-         END,
-         is_location_fuzzed = CASE
-           WHEN $6 IS NOT NULL THEN $7
-           ELSE is_location_fuzzed
-         END,
          updated_at = CURRENT_TIMESTAMP
      WHERE incident_id = $1
      RETURNING *`,
-    [incidentId, title, description, category, severity, status, shouldExposeIncidentPublicly(status)]
+    [incidentId, title, description, category, severity, status]
   );
 
   emitToRoles(['moderator', 'admin'], 'incident:update', {
@@ -1853,8 +1830,6 @@ async function verifyIncident(incidentId, requestingUser) {
   const updated = await db.one(
     `UPDATE incidents 
      SET status = 'verified',
-         is_disclosed = TRUE,
-         is_location_fuzzed = TRUE,
          updated_at = CURRENT_TIMESTAMP 
      WHERE incident_id = $1 
      RETURNING *`,
@@ -2005,7 +1980,7 @@ async function getPublicFeed({ category, closure_outcome, severity, lat, lng, ra
   if (severity)        { conditions.push(`i.severity = $${p++}`);         params.push(severity); }
 
   let geoJoin = '';
-  if (lat && lng && radius) {
+  if (lat !== undefined && lat !== null && lng !== undefined && lng !== null && radius !== undefined && radius !== null) {
     geoJoin = `AND ST_DWithin(i.location, ST_SetSRID(ST_MakePoint($${p++}::float, $${p++}::float), 4326)::geography, $${p++})`;
     params.push(parseFloat(lng), parseFloat(lat), parseFloat(radius));
   }
@@ -2016,10 +1991,10 @@ async function getPublicFeed({ category, closure_outcome, severity, lat, lng, ra
 
   const rows = await db.manyOrNone(
     `SELECT
-       i.incident_id, i.title, i.category, i.severity, i.status,
+       i.incident_id, i.title, i.description, i.category, i.severity, i.status,
        i.closure_outcome, i.closure_details,
        i.location_name, i.photo_urls,
-       i.incident_date, i.updated_at AS closed_at,
+       i.incident_date, i.created_at, i.updated_at AS closed_at,
        CASE WHEN i.is_location_fuzzed
          THEN i.latitude  + (random() - 0.5) * 0.0027
          ELSE i.latitude

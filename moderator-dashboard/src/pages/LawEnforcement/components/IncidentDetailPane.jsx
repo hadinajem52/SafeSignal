@@ -1,5 +1,6 @@
 import React from "react";
 import { ArrowUpRight } from "lucide-react";
+import { CLOSURE_OUTCOMES } from "../../../constants/incident";
 import GoogleMapPanel from "../../../components/GoogleMapPanel";
 import { getTimeAgo } from "../../../utils/dateUtils";
 import { openMapsUrl } from "../../../utils/incidentUtils";
@@ -15,6 +16,12 @@ function IncidentDetailPane({
   onDisclosedChange,
   isLocationFuzzed,
   onLocationFuzzedChange,
+  closureOutcome,
+  onClosureOutcomeChange,
+  caseId,
+  onCaseIdChange,
+  officerNotes,
+  onOfficerNotesChange,
 }) {
   if (!incident) {
     return (
@@ -152,6 +159,88 @@ function IncidentDetailPane({
                   >
                     Close Case Options
                   </div>
+
+                  <label
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 4,
+                      fontSize: 11,
+                      color: "var(--le-text)",
+                    }}
+                  >
+                    <span>Closure Outcome</span>
+                    <select
+                      value={closureOutcome}
+                      onChange={(e) => onClosureOutcomeChange(e.target.value)}
+                      style={{
+                        background: "var(--le-surface)",
+                        border: "1px solid rgba(59,158,255,0.18)",
+                        color: "var(--le-text)",
+                        padding: "8px 10px",
+                        borderRadius: 6,
+                      }}
+                    >
+                      {CLOSURE_OUTCOMES.map((outcome) => (
+                        <option key={outcome.value} value={outcome.value}>
+                          {outcome.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  {closureOutcome === "report_filed" ? (
+                    <label
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 4,
+                        fontSize: 11,
+                        color: "var(--le-text)",
+                      }}
+                    >
+                      <span>Case ID</span>
+                      <input
+                        type="text"
+                        value={caseId}
+                        onChange={(e) => onCaseIdChange(e.target.value)}
+                        placeholder="Enter filed case ID"
+                        style={{
+                          background: "var(--le-surface)",
+                          border: "1px solid rgba(59,158,255,0.18)",
+                          color: "var(--le-text)",
+                          padding: "8px 10px",
+                          borderRadius: 6,
+                        }}
+                      />
+                    </label>
+                  ) : null}
+
+                  <label
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 4,
+                      fontSize: 11,
+                      color: "var(--le-text)",
+                    }}
+                  >
+                    <span>Closure Notes</span>
+                    <textarea
+                      value={officerNotes}
+                      onChange={(e) => onOfficerNotesChange(e.target.value)}
+                      placeholder="Optional notes for the closure record"
+                      rows={3}
+                      style={{
+                        background: "var(--le-surface)",
+                        border: "1px solid rgba(59,158,255,0.18)",
+                        color: "var(--le-text)",
+                        padding: "8px 10px",
+                        borderRadius: 6,
+                        resize: "vertical",
+                      }}
+                    />
+                  </label>
 
                   <label
                     style={{
