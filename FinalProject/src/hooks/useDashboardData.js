@@ -65,8 +65,11 @@ const useDashboardData = () => {
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
     // Always enabled — fires immediately with no coords for fast first paint,
-    // then re-fires once location resolves
+    // then re-fires once location resolves.
+    // placeholderData keeps the previous key's data visible while the new query
+    // is in-flight, preventing the skeleton from flashing when coords change.
     enabled: true,
+    placeholderData: (previousData) => previousData,
   });
 
   useEffect(() => {
