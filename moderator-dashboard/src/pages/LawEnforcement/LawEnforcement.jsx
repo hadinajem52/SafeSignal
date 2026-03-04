@@ -88,6 +88,7 @@ function LawEnforcement() {
   const {
     statusMutation,
     requestStatusUpdate,
+    requestDisclosureUpdate,
     pendingTransition,
     setPendingTransition,
     confirmPendingTransition,
@@ -103,7 +104,7 @@ function LawEnforcement() {
     setCaseId,
     officerNotes,
     setOfficerNotes,
-    resetDisclosureOptions,
+    syncDisclosureOptions,
   } = useLeiStatusTransitions({
     queryClient,
     pushToast,
@@ -112,8 +113,8 @@ function LawEnforcement() {
   });
 
   useEffect(() => {
-    resetDisclosureOptions();
-  }, [resetDisclosureOptions, selectedIncidentId]);
+    syncDisclosureOptions(selectedIncident);
+  }, [selectedIncident, syncDisclosureOptions]);
 
   useLeiRealtime({
     user,
@@ -301,6 +302,9 @@ function LawEnforcement() {
                     onCaseIdChange={setCaseId}
                     officerNotes={officerNotes}
                     onOfficerNotesChange={setOfficerNotes}
+                    onRequestDisclosureUpdate={(incident) =>
+                      requestDisclosureUpdate(incident)
+                    }
                   />
                 </div>
               </div>
@@ -353,7 +357,7 @@ function LawEnforcement() {
         confirmDisabled={statusMutation.isPending}
         onCancel={() => {
           setPendingTransition(null);
-          resetDisclosureOptions();
+          syncDisclosureOptions(selectedIncident);
         }}
         onConfirm={confirmPendingTransition}
       />
