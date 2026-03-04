@@ -4,18 +4,30 @@ import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 
+/**
+ * Props:
+ *   photos        - string[]
+ *   onTakePhoto   - () => void  (launch camera directly — no modal)
+ *   onPickImage   - () => void  (launch gallery directly — no modal)
+ *   onRemovePhoto - (index: number) => void
+ */
 const IncidentPhotoUploader = ({
   photos,
-  onAddPhoto,
+  onTakePhoto,
+  onPickImage,
   onRemovePhoto,
 }) => {
   const { theme } = useTheme();
+  const canAddMore = photos.length < 5;
 
   return (
     <View style={styles.inputGroup}>
       <AppText variant="label" style={[styles.label, { color: theme.text }]}>Photos (Optional)</AppText>
-      <AppText variant="small" style={[styles.helperText, { color: theme.textSecondary }]}>Add up to 5 photos to support your report</AppText>
-      
+      <AppText variant="small" style={[styles.subLabel, { color: theme.textSecondary }]}>
+        Add up to 5 photos to support your report
+      </AppText>
+
+      {/* Thumbnail row */}
       <View style={styles.photosContainer}>
         {photos.map((photo, index) => (
           <View key={index} style={styles.photoWrapper}>
@@ -28,23 +40,30 @@ const IncidentPhotoUploader = ({
             </TouchableOpacity>
           </View>
         ))}
-        
-        {photos.length < 5 && (
-          <TouchableOpacity
-            style={[
-              styles.addPhotoButton,
-              {
-                borderColor: theme.inputBorder,
-                backgroundColor: theme.surface,
-              },
-            ]}
-            onPress={onAddPhoto}
-          >
-            <Ionicons name="camera-outline" size={20} color={theme.textSecondary} style={styles.addPhotoIcon} />
-            <AppText variant="small" style={[styles.addPhotoText, { color: theme.textSecondary }]}>Add Photo</AppText>
-          </TouchableOpacity>
-        )}
       </View>
+
+      {/* Inline action buttons — rendered directly, no modal */}
+      {canAddMore && (
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={[styles.actionBtn, { borderColor: theme.inputBorder, backgroundColor: theme.surface }]}
+            onPress={onTakePhoto}
+            activeOpacity={0.75}
+          >
+            <Ionicons name="camera-outline" size={18} color={theme.primary} style={styles.actionIcon} />
+            <AppText variant="small" style={[styles.actionText, { color: theme.primary }]}>Take Photo</AppText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionBtn, { borderColor: theme.inputBorder, backgroundColor: theme.surface }]}
+            onPress={onPickImage}
+            activeOpacity={0.75}
+          >
+            <Ionicons name="image-outline" size={18} color={theme.primary} style={styles.actionIcon} />
+            <AppText variant="small" style={[styles.actionText, { color: theme.primary }]}>Choose from Gallery</AppText>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 };
@@ -54,16 +73,15 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   label: {
-    marginBottom: 8,
+    marginBottom: 4,
   },
-  helperText: {
-    marginTop: 6,
+  subLabel: {
+    marginBottom: 12,
     fontStyle: 'italic',
   },
   photosContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginTop: 8,
   },
   photoWrapper: {
     width: 80,
@@ -89,21 +107,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  addPhotoButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderStyle: 'dashed',
+  actionRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 4,
+  },
+  actionBtn: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
   },
-  addPhotoIcon: {
-    marginBottom: 4,
+  actionIcon: {
+    marginRight: 6,
   },
-  addPhotoText: {
-  },
+  actionText: {},
 });
 
 export default React.memo(IncidentPhotoUploader);
