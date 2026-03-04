@@ -1643,8 +1643,6 @@ async function logAction(incidentId, moderatorId, actionType, notes = null) {
 }
 
 function validateLEIStatusTransition(currentStatus, nextStatus) {
-  if (currentStatus === nextStatus) return true;
-
   const transitions = {
     verified: ['dispatched', 'investigating', 'police_closed'],
     dispatched: ['on_scene', 'investigating', 'police_closed'],
@@ -1807,6 +1805,57 @@ async function updateLEIStatus(incidentId, status, closureOutcome, closureDetail
     });
   } catch (error) {
     logger.warn(`Failed to notify staff for LEI status update on incident ${incidentId}: ${error.message}`);
+  }
+
+  return updatedIncident;
+}
+
+async function updateLEIDisclosureSettings(incidentId, requestingUser, { isDisclosed, isLocationFuzzed }) {
+  const incident = await db.oneOrNone(
+    'SELECT * FROM incidents WHERE incident_id = $1',
+    [incidentId]
+  );
+
+  if (!incident) {
+    throw ServiceError.notFound('Incident');
+  }
+
+  if (incident.status !== 'police_closed') {
+    throw ServiceError.badRequest('Disclosure settings can only be updated for closed cases');
+  }
+
+  const normalizedLocationFuzzed = isDisclosed ? isLocationFuzzed : false;
+
+  const updatedIncident = await db.one(
+    `UPDATE incidents
+     SET is_disclosed = $2,
+         is_location_fuzzed = $3
+     WHERE incident_id = $1
+     RETURNING *`,
+    [incidentId, isDisclosed, normalizedLocationFuzzed]
+  );
+
+  await logAction(
+    incidentId,
+    requestingUser.userId,
+    'status_changed',
+    `Updated community feed settings: disclosed=${updatedIncident.is_disclosed}, fuzzed=${updatedIncident.is_location_fuzzed}`
+  );
+
+  emitToRoles(['moderator', 'admin', 'law_enforcement'], 'incident:update', {
+    incidentId: updatedIncident.incident_id,
+    status: updatedIncident.status,
+    severity: updatedIncident.severity,
+  });
+
+  try {
+    await notificationService.notifyStaffIncidentEvent('incident:status_update', updatedIncident, {
+      previousStatus: incident.status,
+      nextStatus: updatedIncident.status,
+      actorRole: requestingUser.role,
+    });
+  } catch (error) {
+    logger.warn(`Failed to notify staff for LEI disclosure update on incident ${incidentId}: ${error.message}`);
   }
 
   return updatedIncident;
@@ -2045,5 +2094,6 @@ module.exports = {
   getLEIIncidents,
   getLEIIncidentById,
   updateLEIStatus,
+  updateLEIDisclosureSettings,
   getPublicFeed,
 };

@@ -266,6 +266,39 @@ router.patch(
   }
 );
 
+router.patch(
+  '/lei/:id/disclosure',
+  authenticateToken,
+  requireRole(['law_enforcement', 'admin']),
+  [
+    param('id').isInt(),
+    body('is_disclosed').isBoolean(),
+    body('is_location_fuzzed').isBoolean(),
+  ],
+  async (req, res) => {
+    if (handleValidationErrors(req, res)) return;
+
+    try {
+      const updatedIncident = await incidentService.updateLEIDisclosureSettings(
+        req.params.id,
+        req.user,
+        {
+          isDisclosed: req.body.is_disclosed,
+          isLocationFuzzed: req.body.is_location_fuzzed,
+        }
+      );
+
+      res.json({
+        status: 'OK',
+        message: 'Incident disclosure settings updated',
+        data: updatedIncident,
+      });
+    } catch (error) {
+      handleServiceError(error, res, 'Failed to update LEI disclosure settings');
+    }
+  }
+);
+
 router.get(
   '/feed',
   authenticateToken,

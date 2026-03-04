@@ -6,6 +6,19 @@ import { STATUS_ACTION_CONFIG } from "../constants";
 import { canTransitionTo } from "../helpers";
 import { useCallback, useMemo, useState } from "react";
 
+const DEFAULT_CLOSURE_OUTCOME = CLOSURE_OUTCOMES[0].value;
+
+function getClosureDetailsFields(closureDetails) {
+  if (!closureDetails || typeof closureDetails !== "object") {
+    return { caseId: "", officerNotes: "" };
+  }
+
+  return {
+    caseId: closureDetails.case_id || "",
+    officerNotes: closureDetails.officer_notes || "",
+  };
+}
+
 export default function useLeiStatusTransitions({
   queryClient,
   pushToast,
@@ -15,20 +28,24 @@ export default function useLeiStatusTransitions({
   const [pendingTransition, setPendingTransition] = useState(null);
   const [isDisclosed, setIsDisclosed] = useState(false);
   const [isLocationFuzzed, setIsLocationFuzzed] = useState(false);
-  const [closureOutcome, setClosureOutcome] = useState(CLOSURE_OUTCOMES[0].value);
+  const [closureOutcome, setClosureOutcome] = useState(DEFAULT_CLOSURE_OUTCOME);
   const [caseId, setCaseId] = useState("");
   const [officerNotes, setOfficerNotes] = useState("");
 
-  const resetDisclosureOptions = useCallback(() => {
-    setIsDisclosed(false);
-    setIsLocationFuzzed(false);
-    setClosureOutcome(CLOSURE_OUTCOMES[0].value);
-    setCaseId("");
-    setOfficerNotes("");
+  const syncDisclosureOptions = useCallback((incident = null) => {
+    const closureDetails = getClosureDetailsFields(incident?.closure_details);
+    setIsDisclosed(Boolean(incident?.is_disclosed));
+    setIsLocationFuzzed(Boolean(incident?.is_location_fuzzed));
+    setClosureOutcome(incident?.closure_outcome || DEFAULT_CLOSURE_OUTCOME);
+    setCaseId(closureDetails.caseId);
+    setOfficerNotes(closureDetails.officerNotes);
   }, []);
 
   const statusMutation = useMutation({
-    mutationFn: ({ id, payload }) => leiAPI.updateStatus(id, payload),
+    mutationFn: ({ action, id, payload }) =>
+      action === "disclosure"
+        ? leiAPI.updateDisclosureSettings(id, payload)
+        : leiAPI.updateStatus(id, payload),
   });
 
   const validateTransition = (incident, status) => {
@@ -64,6 +81,7 @@ export default function useLeiStatusTransitions({
         : { status };
 
     const result = await statusMutation.mutateAsync({
+      action: "status",
       id: incident.incident_id || incident.id,
       payload,
     });
@@ -71,10 +89,6 @@ export default function useLeiStatusTransitions({
     if (!result.success) {
       pushToast(result.error || `Failed to move to ${status}.`, "error");
       return;
-    }
-
-    if (status === "police_closed") {
-      resetDisclosureOptions();
     }
 
     queryClient.invalidateQueries({ queryKey: ["lei-incidents"] });
@@ -93,17 +107,61 @@ export default function useLeiStatusTransitions({
     pushToast(`Incident moved to ${formatStatusLabel(status)}.`);
   };
 
+  const requestDisclosureUpdate = (incident) => {
+    if (!incident || incident.status !== "police_closed") {
+      pushToast("Disclosure settings can only be updated for closed cases.", "warning");
+      return;
+    }
+
+    setPendingTransition({
+      incident,
+      actionKey: "police_closed_update",
+    });
+  };
+
+  const runDisclosureUpdate = async (incident) => {
+    const result = await statusMutation.mutateAsync({
+      action: "disclosure",
+      id: incident.incident_id || incident.id,
+      payload: {
+        is_disclosed: isDisclosed,
+        is_location_fuzzed: isLocationFuzzed,
+      },
+    });
+
+    if (!result.success) {
+      pushToast(result.error || "Failed to update community feed settings.", "error");
+      return;
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["lei-incidents"] });
+    queryClient.invalidateQueries({ queryKey: ["lei-incidents-snapshot"] });
+    queryClient.invalidateQueries({
+      queryKey: ["lei-incident", incident.incident_id || incident.id],
+    });
+
+    pushToast("Community feed settings updated.");
+  };
+
   const requestStatusUpdate = (incident, status) => {
     if (!validateTransition(incident, status)) return;
     if (status !== "police_closed") {
-      resetDisclosureOptions();
+      syncDisclosureOptions();
     }
-    setPendingTransition({ incident, status });
+    setPendingTransition({
+      incident,
+      status,
+      actionKey: status,
+    });
   };
 
   const confirmPendingTransition = async () => {
     if (!pendingTransition || statusMutation.isPending) return;
-    await runStatusUpdate(pendingTransition.incident, pendingTransition.status);
+    if (pendingTransition.actionKey === "police_closed_update") {
+      await runDisclosureUpdate(pendingTransition.incident);
+    } else {
+      await runStatusUpdate(pendingTransition.incident, pendingTransition.status);
+    }
     setPendingTransition(null);
   };
 
@@ -121,8 +179,8 @@ export default function useLeiStatusTransitions({
 
   const pendingActionConfig = useMemo(
     () =>
-      pendingTransition?.status
-        ? STATUS_ACTION_CONFIG[pendingTransition.status]
+      pendingTransition?.actionKey
+        ? STATUS_ACTION_CONFIG[pendingTransition.actionKey]
         : null,
     [pendingTransition],
   );
@@ -130,6 +188,7 @@ export default function useLeiStatusTransitions({
   return {
     statusMutation,
     requestStatusUpdate,
+    requestDisclosureUpdate,
     pendingTransition,
     setPendingTransition,
     confirmPendingTransition,
@@ -145,6 +204,6 @@ export default function useLeiStatusTransitions({
     setCaseId,
     officerNotes,
     setOfficerNotes,
-    resetDisclosureOptions,
+    syncDisclosureOptions,
   };
 }

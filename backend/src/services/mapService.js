@@ -52,7 +52,7 @@ const calculateStartDate = (timeframe) => {
 
 /**
  * Get incidents for map display
- * Only returns verified/published incidents for privacy
+ * Active map incidents expose category and coarse location only.
  * 
  * @param {Object} filters - Filter options
  * @param {string} filters.timeframe - Time range (24h, 7d, 30d, 90d)
@@ -84,13 +84,10 @@ const getMapIncidents = async (filters) => {
   let query = `
     SELECT 
       incident_id,
-      title,
       category,
-      severity,
       latitude,
       longitude,
-      incident_date,
-      status
+      incident_date
     FROM incidents
     WHERE status = ANY($2::text[])
       AND incident_date >= $1
@@ -128,15 +125,12 @@ const getMapIncidents = async (filters) => {
     // Format incidents for map display (privacy-safe)
     const incidents = result.map(incident => ({
       id: incident.incident_id,
-      title: incident.title,
       category: incident.category,
-      severity: incident.severity,
       location: {
         latitude: toPublicCoordinate(incident.latitude),
         longitude: toPublicCoordinate(incident.longitude),
       },
       timestamp: incident.incident_date,
-      status: incident.status,
     }));
 
     return {

@@ -46,6 +46,14 @@ export const STATUS_ACTION_CONFIG = {
     confirmClassName:
       "bg-success/20 hover:bg-success/30 text-success border border-success/40",
   },
+  police_closed_update: {
+    label: "Update Feed Settings",
+    confirmTitle: "Update community feed settings?",
+    confirmMessage:
+      "This updates publication and location-fuzzing settings for the closed case.",
+    confirmClassName:
+      "bg-primary/20 hover:bg-primary/30 text-primary border border-primary/40",
+  },
 };
 
 export const UNACTIONED_AGE_THRESHOLD_MINUTES = 30;

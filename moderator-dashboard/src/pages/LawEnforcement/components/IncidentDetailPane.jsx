@@ -22,6 +22,7 @@ function IncidentDetailPane({
   onCaseIdChange,
   officerNotes,
   onOfficerNotesChange,
+  onRequestDisclosureUpdate,
 }) {
   if (!incident) {
     return (
@@ -40,6 +41,7 @@ function IncidentDetailPane({
   const nextAction = nextStatus ? STATUS_ACTION_CONFIG[nextStatus] : null;
   const isComplete = incident.status === "police_closed";
   const statusKey = incident.status || "pending";
+  const showCloseCaseOptions = !isComplete || incident.status === "police_closed";
 
   return (
     <div className="lei-detail-panel">
@@ -122,18 +124,19 @@ function IncidentDetailPane({
               >
                 Case closed.
               </span>
-            ) : (
+            ) : null}
+            {!isComplete && nextAction ? (
+              <button
+                className="lei-btn-primary"
+                disabled={statusMutationPending}
+                onClick={() => onRequestAction(incident, nextStatus)}
+              >
+                <ArrowUpRight size={13} />
+                {nextAction.label}
+              </button>
+            ) : null}
+            {showCloseCaseOptions ? (
               <>
-                {nextAction && (
-                  <button
-                    className="lei-btn-primary"
-                    disabled={statusMutationPending}
-                    onClick={() => onRequestAction(incident, nextStatus)}
-                  >
-                    <ArrowUpRight size={13} />
-                    {nextAction.label}
-                  </button>
-                )}
                 <div
                   style={{
                     width: "100%",
@@ -157,7 +160,7 @@ function IncidentDetailPane({
                       marginBottom: 2,
                     }}
                   >
-                    Close Case Options
+                    {isComplete ? "Community Feed Settings" : "Close Case Options"}
                   </div>
 
                   <label
@@ -173,6 +176,7 @@ function IncidentDetailPane({
                     <select
                       value={closureOutcome}
                       onChange={(e) => onClosureOutcomeChange(e.target.value)}
+                      disabled={isComplete}
                       style={{
                         background: "var(--le-surface)",
                         border: "1px solid rgba(59,158,255,0.18)",
@@ -205,6 +209,7 @@ function IncidentDetailPane({
                         value={caseId}
                         onChange={(e) => onCaseIdChange(e.target.value)}
                         placeholder="Enter filed case ID"
+                        disabled={isComplete}
                         style={{
                           background: "var(--le-surface)",
                           border: "1px solid rgba(59,158,255,0.18)",
@@ -231,6 +236,7 @@ function IncidentDetailPane({
                       onChange={(e) => onOfficerNotesChange(e.target.value)}
                       placeholder="Optional notes for the closure record"
                       rows={3}
+                      disabled={isComplete}
                       style={{
                         background: "var(--le-surface)",
                         border: "1px solid rgba(59,158,255,0.18)",
@@ -294,17 +300,31 @@ function IncidentDetailPane({
                     }}
                   >
                     Once published, this report will appear in the mobile Community Feed visible to all citizens.
+                    {isComplete
+                      ? " You can still update feed visibility and location fuzzing after closure."
+                      : ""}
                   </div>
                 </div>
-                <button
-                  className="lei-btn-close"
-                  disabled={statusMutationPending}
-                  onClick={() => onRequestAction(incident, "police_closed")}
-                >
-                  Close Case
-                </button>
+                {isComplete ? (
+                  <button
+                    className="lei-btn-primary"
+                    disabled={statusMutationPending}
+                    onClick={() => onRequestDisclosureUpdate(incident)}
+                  >
+                    <ArrowUpRight size={13} />
+                    Update Feed Settings
+                  </button>
+                ) : (
+                  <button
+                    className="lei-btn-close"
+                    disabled={statusMutationPending}
+                    onClick={() => onRequestAction(incident, "police_closed")}
+                  >
+                    Close Case
+                  </button>
+                )}
               </>
-            )}
+            ) : null}
           </div>
         </div>
 

@@ -13,4 +13,10 @@ export const leiAPI = {
       () => api.patch(`/incidents/lei/${id}/status`, payload),
       "Failed to update LEI status",
     ),
+
+  updateDisclosureSettings: async (id, payload) =>
+    requestData(
+      () => api.patch(`/incidents/lei/${id}/disclosure`, payload),
+      "Failed to update LEI disclosure settings",
+    ),
 };
