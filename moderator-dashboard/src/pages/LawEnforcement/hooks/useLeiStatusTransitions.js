@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { leiAPI } from "../../../services/api";
+import { CLOSURE_OUTCOMES } from "../../../constants/incident";
 import { formatStatusLabel } from "../../../utils/incidentUtils";
 import { STATUS_ACTION_CONFIG } from "../constants";
 import { canTransitionTo } from "../helpers";
@@ -14,10 +15,16 @@ export default function useLeiStatusTransitions({
   const [pendingTransition, setPendingTransition] = useState(null);
   const [isDisclosed, setIsDisclosed] = useState(false);
   const [isLocationFuzzed, setIsLocationFuzzed] = useState(false);
+  const [closureOutcome, setClosureOutcome] = useState(CLOSURE_OUTCOMES[0].value);
+  const [caseId, setCaseId] = useState("");
+  const [officerNotes, setOfficerNotes] = useState("");
 
   const resetDisclosureOptions = useCallback(() => {
     setIsDisclosed(false);
     setIsLocationFuzzed(false);
+    setClosureOutcome(CLOSURE_OUTCOMES[0].value);
+    setCaseId("");
+    setOfficerNotes("");
   }, []);
 
   const statusMutation = useMutation({
@@ -37,14 +44,19 @@ export default function useLeiStatusTransitions({
   const runStatusUpdate = async (incident, status) => {
     if (!validateTransition(incident, status)) return;
 
+    if (status === "police_closed" && closureOutcome === "report_filed" && !caseId.trim()) {
+      pushToast("Case ID is required when outcome is Report Filed.", "warning");
+      return;
+    }
+
     const payload =
       status === "police_closed"
         ? {
             status,
-            closure_outcome: "resolved_handled",
+            closure_outcome: closureOutcome,
             closure_details: {
-              case_id: null,
-              officer_notes: "Closed from LEI workflow",
+              case_id: closureOutcome === "report_filed" ? caseId.trim() : null,
+              officer_notes: officerNotes.trim() || null,
             },
             is_disclosed: isDisclosed,
             is_location_fuzzed: isLocationFuzzed,
@@ -127,6 +139,12 @@ export default function useLeiStatusTransitions({
     setIsDisclosed,
     isLocationFuzzed,
     setIsLocationFuzzed,
+    closureOutcome,
+    setClosureOutcome,
+    caseId,
+    setCaseId,
+    officerNotes,
+    setOfficerNotes,
     resetDisclosureOptions,
   };
 }

@@ -9,9 +9,9 @@ export const WORKFLOW_STEPS = [
 ];
 
 export const STATUS_TRANSITIONS = {
-  verified: ["dispatched"],
-  dispatched: ["on_scene"],
-  on_scene: ["investigating"],
+  verified: ["dispatched", "police_closed"],
+  dispatched: ["on_scene", "police_closed"],
+  on_scene: ["investigating", "police_closed"],
   investigating: ["police_closed"],
   police_closed: [],
 };

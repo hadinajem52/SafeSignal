@@ -1,7 +1,6 @@
 const db = require('../config/database');
 const seedDatabase = require('./seed');
 const pgp = require('pg-promise')({ capSQL: true });
-const { PUBLIC_INCIDENT_STATUSES } = require('../../../constants/incident');
 
 const initDatabase = async () => {
   try {
@@ -137,15 +136,6 @@ const initDatabase = async () => {
       ADD COLUMN IF NOT EXISTS is_disclosed BOOLEAN DEFAULT FALSE,
       ADD COLUMN IF NOT EXISTS is_location_fuzzed BOOLEAN DEFAULT FALSE;
     `);
-
-    await db.none(
-      `UPDATE incidents
-       SET is_disclosed = TRUE,
-           is_location_fuzzed = TRUE
-       WHERE is_draft = FALSE
-         AND status = ANY($1::text[])`,
-      [PUBLIC_INCIDENT_STATUSES]
-    );
 
     await db.none(`
       UPDATE incidents
@@ -319,6 +309,7 @@ const initDatabase = async () => {
       CREATE INDEX IF NOT EXISTS idx_incidents_reporter ON incidents (reporter_id);
       CREATE INDEX IF NOT EXISTS idx_incidents_dashboard ON incidents (is_draft, status, created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_incidents_map ON incidents (status, incident_date DESC) WHERE is_draft = FALSE;
+      CREATE INDEX IF NOT EXISTS idx_incidents_feed ON incidents (is_disclosed, status, updated_at DESC) WHERE is_disclosed = TRUE;
       CREATE INDEX IF NOT EXISTS idx_incidents_user_reports ON incidents (reporter_id, is_draft, created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_incidents_category ON incidents (category);
       CREATE INDEX IF NOT EXISTS idx_reports_incident_id ON reports (incident_id);

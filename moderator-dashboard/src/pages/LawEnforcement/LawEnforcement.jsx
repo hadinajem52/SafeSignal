@@ -97,6 +97,12 @@ function LawEnforcement() {
     setIsDisclosed,
     isLocationFuzzed,
     setIsLocationFuzzed,
+    closureOutcome,
+    setClosureOutcome,
+    caseId,
+    setCaseId,
+    officerNotes,
+    setOfficerNotes,
     resetDisclosureOptions,
   } = useLeiStatusTransitions({
     queryClient,
@@ -289,6 +295,12 @@ function LawEnforcement() {
                     onDisclosedChange={setIsDisclosed}
                     isLocationFuzzed={isLocationFuzzed}
                     onLocationFuzzedChange={setIsLocationFuzzed}
+                    closureOutcome={closureOutcome}
+                    onClosureOutcomeChange={setClosureOutcome}
+                    caseId={caseId}
+                    onCaseIdChange={setCaseId}
+                    officerNotes={officerNotes}
+                    onOfficerNotesChange={setOfficerNotes}
                   />
                 </div>
               </div>

@@ -1,5 +1,4 @@
 const db = require('../../config/database');
-const { PUBLIC_INCIDENT_STATUSES } = require('../../../../constants/incident');
 
 const runMigration = async () => {
   await db.none(`
@@ -8,14 +7,11 @@ const runMigration = async () => {
     ADD COLUMN IF NOT EXISTS is_location_fuzzed BOOLEAN DEFAULT FALSE;
   `);
 
-  await db.none(
-    `UPDATE incidents
-     SET is_disclosed = TRUE,
-         is_location_fuzzed = TRUE
-     WHERE is_draft = FALSE
-       AND status = ANY($1::text[])`,
-    [PUBLIC_INCIDENT_STATUSES]
-  );
+  await db.none(`
+    CREATE INDEX IF NOT EXISTS idx_incidents_feed
+      ON incidents (is_disclosed, status, updated_at DESC)
+      WHERE is_disclosed = TRUE;
+  `);
 };
 
 if (require.main === module) {
