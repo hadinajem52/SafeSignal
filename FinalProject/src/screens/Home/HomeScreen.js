@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   TouchableOpacity,
   View,
@@ -48,24 +48,8 @@ const HomeScreen = ({ navigation }) => {
         ? 'Safety data for your current area is temporarily unavailable from the server.'
         : 'Location is temporarily unavailable, so nearby safety cannot be calculated right now.';
 
-  if (loading) {
-    return (
-      <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}> 
-        <View style={[styles.skeletonHeader, { backgroundColor: theme.surface2 }]} />
-        <View style={[styles.skeletonCardLarge, { backgroundColor: theme.surface }]} />
-        <View style={styles.skeletonRow}>
-          <View style={[styles.skeletonCardSmall, { backgroundColor: theme.surface }]} />
-          <View style={[styles.skeletonCardSmall, { backgroundColor: theme.surface }]} />
-        </View>
-        <View style={[styles.skeletonCardLarge, { backgroundColor: theme.surface }]} />
-        <AppText variant="bodySmall" style={[styles.loadingText, { color: theme.textSecondary }]}> 
-          Building your dashboard...
-        </AppText>
-      </View>
-    );
-  }
-
-  const homeHeader = (
+  // useMemo must be declared before any early returns (Rules of Hooks)
+  const homeHeader = useMemo(() => (
     <>
       <LinearGradient
         colors={[theme.primaryLight || 'rgba(29,78,216,0.14)', 'rgba(255,255,255,0)']}
@@ -119,7 +103,25 @@ const HomeScreen = ({ navigation }) => {
         </Card>
       ) : null}
     </>
-  );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ), [user, theme, activeNearbyCount, safetyScore, location, safetyScoreUnavailableReason, showEnableLocationCta, dashboardData, error, onRefresh, navigation, refreshing]);
+
+  if (loading) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
+        <View style={[styles.skeletonHeader, { backgroundColor: theme.surface2 }]} />
+        <View style={[styles.skeletonCardLarge, { backgroundColor: theme.surface }]} />
+        <View style={styles.skeletonRow}>
+          <View style={[styles.skeletonCardSmall, { backgroundColor: theme.surface }]} />
+          <View style={[styles.skeletonCardSmall, { backgroundColor: theme.surface }]} />
+        </View>
+        <View style={[styles.skeletonCardLarge, { backgroundColor: theme.surface }]} />
+        <AppText variant="bodySmall" style={[styles.loadingText, { color: theme.textSecondary }]}>
+          Building your dashboard...
+        </AppText>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
