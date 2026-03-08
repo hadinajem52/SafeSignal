@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { AppText, Button } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import { formatTimeAgo } from '../../utils/dateUtils';
+import { normalizeClosureDetails } from '../../utils/incidentUtils';
 import { getCategoryLabel, getMarkerColor } from '../../utils/mapCategory';
 import mapStyles from './mapStyles';
 
@@ -110,7 +111,7 @@ const IncidentMapDetail = ({
                     style={[mapStyles.detailMetaText, { color: theme.textSecondary, marginTop: 4 }]}
                     numberOfLines={3}
                   >
-                    {selectedIncident.closureDetails}
+                    {normalizeClosureDetails(selectedIncident.closureDetails)}
                   </AppText>
                 ) : null}
 
