@@ -32,6 +32,21 @@ const CustomTabBarButton = ({ children, onPress, theme }) => (
   </TouchableOpacity>
 );
 
+const DashboardStack = () => (
+  <Stack.Navigator>
+    <Stack.Screen
+      name="Home"
+      component={HomeScreen}
+      options={{ headerShown: false }}
+    />
+    <Stack.Screen
+      name="IncidentDetail"
+      component={IncidentDetailScreen}
+      options={{ headerShown: false }}
+    />
+  </Stack.Navigator>
+);
+
 const ReportsStack = () => {
   return (
     <Stack.Navigator>
@@ -84,7 +99,7 @@ const TabNavigator = () => {
         ),
       })}
     >
-      <Tab.Screen name="Dashboard" component={HomeScreen} />
+      <Tab.Screen name="Dashboard" component={DashboardStack} />
       <Tab.Screen
         name="Reports"
         component={ReportsStack}

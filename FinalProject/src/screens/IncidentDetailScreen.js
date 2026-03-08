@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import incidentConstants from '../../../constants/incident';
 import { formatDate } from '../utils/dateUtils';
 import { AppText, Card, SeverityBadge, StatusBadge, IncidentTimeline } from '../components';
+import { normalizeClosureDetails } from '../utils/incidentUtils';
 import { useTheme } from '../context/ThemeContext';
 import styles from './incidentDetailStyles';
 
@@ -44,8 +45,9 @@ const IncidentDetailScreen = ({ route, navigation }) => {
   const resolvedLabel = closureOutcome
     ? `${statusLabel} - ${closureOutcome.replace(/\b\w/g, (char) => char.toUpperCase())}`
     : statusLabel;
-  const description = incident.description || incident.closure_details || incident.closureDetails || 'No description available.';
-  const closureDetails = incident.closure_details || incident.closureDetails || '';
+  const rawClosureDetails = incident.closure_details || incident.closureDetails;
+  const closureDetails = normalizeClosureDetails(rawClosureDetails);
+  const description = incident.description || closureDetails || 'No description available.';
   const locationLabel = incident.locationName || incident.location_name || 'Location not set';
   const showTimeline = source !== 'community_feed';
 

@@ -70,10 +70,7 @@ const CommunityFeed = ({
   const isRefreshing = refreshing || externalRefreshing;
 
   const handleCardPress = (incident) => {
-    navigation.navigate('Reports', {
-      screen: 'IncidentDetail',
-      params: { incident, source: 'community_feed' },
-    });
+    navigation.navigate('IncidentDetail', { incident, source: 'community_feed' });
   };
 
   const handleRefresh = useCallback(async () => {
