@@ -88,7 +88,11 @@ function AppRoutes() {
                 <Route path={ROUTES.HOME} element={<Dashboard />} />
                 <Route
                   path={ROUTES.DATA_ANALYSIS}
-                  element={<DataAnalysisCenter />}
+                  element={
+                    <RoleProtectedRoute allowedRoles={["moderator", "admin"]}>
+                      <DataAnalysisCenter />
+                    </RoleProtectedRoute>
+                  }
                 />
                 <Route
                   path={ROUTES.REPORTS}

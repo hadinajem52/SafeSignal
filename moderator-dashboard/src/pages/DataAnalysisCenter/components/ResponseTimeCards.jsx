@@ -8,7 +8,10 @@ export default function ResponseTimeCards({
   trendLine,
   trendMax,
   trendTotal,
+  trendWeeklyAvg,
+  trendXLabels,
   peakLabel,
+  period,
   showTip,
   moveTip,
   hideTip,
@@ -18,7 +21,9 @@ export default function ResponseTimeCards({
       <div className="dac-section-row">
         <div className="dac-section-title">Response Time Distribution</div>
         <div className="dac-section-line" />
-        <div className="dac-section-meta">Cases by time-to-dispatch</div>
+        <div className="dac-section-meta">
+          Created → last-updated (estimate; no dedicated first-response field)
+        </div>
       </div>
       <div className="dac-grid-2">
         <div className="dac-card">
@@ -120,8 +125,10 @@ export default function ResponseTimeCards({
         </div>
         <div className="dac-card">
           <div className="dac-card-header">
-            <div className="dac-card-title">30-Day Incident Trend</div>
-            <div className="dac-card-meta">Daily total reports</div>
+            <div className="dac-card-title">{period} Incident Trend</div>
+            <div className="dac-card-meta">
+              {period === "7d" ? "Daily" : period === "1y" ? "Weekly" : period === "90d" ? "3-day" : "Daily"} totals
+            </div>
           </div>
           <TrendLine
             data={trendLine}
@@ -133,7 +140,7 @@ export default function ResponseTimeCards({
             hideTip={hideTip}
           />
           <div className="dac-trend-xlabels">
-            {["1", "5", "10", "15", "20", "25", "30"].map((d) => (
+            {trendXLabels.map((d) => (
               <span key={d} className="dac-trend-xlabel">
                 {d}
               </span>
@@ -149,11 +156,15 @@ export default function ResponseTimeCards({
             }}
           >
             {[
-              { label: "Peak Day", value: peakLabel, color: "var(--dac-amber)" },
+              {
+                label: period === "90d" ? "Peak 3-day" : period === "1y" ? "Peak Week" : "Peak Day",
+                value: peakLabel,
+                color: "var(--dac-amber)",
+              },
               { label: "Total", value: trendTotal, color: "var(--dac-blue)" },
               {
                 label: "Weekly Avg",
-                value: (trendTotal / 4).toFixed(1),
+                value: trendWeeklyAvg,
                 color: "var(--dac-green)",
               },
             ].map((s) => (

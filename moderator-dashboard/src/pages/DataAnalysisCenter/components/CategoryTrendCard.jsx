@@ -4,6 +4,7 @@ export default function CategoryTrendCard({
   activeCats,
   catTrend,
   catMax,
+  catBucketLabels,
   showTip,
   moveTip,
   hideTip,
@@ -12,14 +13,13 @@ export default function CategoryTrendCard({
     <div className="dac-card">
       <div className="dac-card-header">
         <div className="dac-card-title">Incidents by Category</div>
-        <div className="dac-card-meta">Last 4 weeks</div>
+        <div className="dac-card-meta">{catBucketLabels.length} rolling windows</div>
       </div>
       <div style={{ padding: "16px 16px 0" }}>
         <div className="dac-cat-bars">
-          {[0, 1, 2, 3].map((wk) => (
+          {catBucketLabels.map((wkLabel, wk) => (
             <div key={wk} className="dac-cat-group">
               {activeCats.map(([cat]) => {
-                const wkLabel = ["W4 ago", "W3 ago", "W2 ago", "This wk"][wk];
                 const count = catTrend[cat][wk];
                 const catColor = CAT_DISPLAY[cat]?.color || "var(--dac-muted)";
                 return (
@@ -51,7 +51,7 @@ export default function CategoryTrendCard({
         </div>
       </div>
       <div className="dac-cat-xlabels">
-        {["W4 ago", "W3 ago", "W2 ago", "This wk"].map((w) => (
+        {catBucketLabels.map((w) => (
           <div key={w} className="dac-cat-xlabel">
             {w}
           </div>

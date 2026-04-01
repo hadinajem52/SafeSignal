@@ -27,21 +27,27 @@ export default function DataAnalysisCenter() {
     setTip((t) => (t ? { ...t, x: e.clientX + 14, y: e.clientY - 10 } : t));
   const hideTip = () => setTip(null);
 
-  const { data: allIncidents = [], isLoading: incLoading } = useQuery({
+  const {
+    data: allIncidents = [],
+    isLoading: incLoading,
+    isError: incError,
+  } = useQuery({
     queryKey: ["dac-incidents"],
     queryFn: async () => {
       const r = await reportsAPI.getAll({ limit: 500 });
-      return r.success ? r.data || [] : [];
+      if (!r.success) throw new Error(r.error || "Failed to fetch incidents");
+      return r.data || [];
     },
     staleTime: 60000,
     refetchInterval: 30000,
   });
 
-  const { data: allUsers = [] } = useQuery({
+  const { data: allUsers = [], isError: usersError } = useQuery({
     queryKey: ["dac-users"],
     queryFn: async () => {
       const r = await usersAPI.getAll();
-      return r.success ? r.data || [] : [];
+      if (!r.success) throw new Error(r.error || "Failed to fetch users");
+      return r.data || [];
     },
     staleTime: 120000,
     enabled: user?.role !== "law_enforcement",
@@ -56,6 +62,8 @@ export default function DataAnalysisCenter() {
     trendLine,
     trendMax,
     trendTotal,
+    trendWeeklyAvg,
+    trendXLabels,
     peakLabel,
     heatmap,
     heatMax,
@@ -64,6 +72,7 @@ export default function DataAnalysisCenter() {
     catTrend,
     catMax,
     activeCats,
+    catBucketLabels,
     hotspots,
     reporterStats,
   } = useAnalyticsData({ allIncidents, allUsers, period });
@@ -96,6 +105,22 @@ export default function DataAnalysisCenter() {
           {loading && (
             <div className="dac-loading">Loading analytics data…</div>
           )}
+          {incError && (
+            <div className="dac-error-banner">
+              ⚠ Failed to load incident data — analytics may be incomplete.
+            </div>
+          )}
+          {usersError && (
+            <div className="dac-error-banner">
+              ⚠ Failed to load user data — reporter quality stats unavailable.
+            </div>
+          )}
+          {allIncidents.length >= 500 && (
+            <div className="dac-warn-banner">
+              ⚠ Showing first 500 incidents — metrics may not reflect the full
+              dataset.
+            </div>
+          )}
 
           <KpiRow
             kpis={kpis}
@@ -111,7 +136,10 @@ export default function DataAnalysisCenter() {
             trendLine={trendLine}
             trendMax={trendMax}
             trendTotal={trendTotal}
+            trendWeeklyAvg={trendWeeklyAvg}
+            trendXLabels={trendXLabels}
             peakLabel={peakLabel}
+            period={period}
             showTip={showTip}
             moveTip={moveTip}
             hideTip={hideTip}
@@ -143,6 +171,7 @@ export default function DataAnalysisCenter() {
               activeCats={activeCats}
               catTrend={catTrend}
               catMax={catMax}
+              catBucketLabels={catBucketLabels}
               showTip={showTip}
               moveTip={moveTip}
               hideTip={hideTip}

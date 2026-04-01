@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { filterByPeriod, diffMinutes } from "../components/helpers";
+import { filterByPeriod, diffMinutes, getPeriodMs } from "../components/helpers";
 import { HIST_BUCKETS, DAYS_LABELS } from "../components/constants";
 import {
   ACTIONED_STATUSES,
@@ -7,6 +7,21 @@ import {
   FUNNEL_STAGES,
 } from "../../../constants/incidentStatuses";
 import { CAT_DISPLAY } from "../../../constants/categoryConfig";
+
+const DAY_MS = 86400000;
+
+function getPeriodBucketConfig(period) {
+  switch (period) {
+    case "7d":
+      return { trendBuckets: 7, trendMs: DAY_MS, catBuckets: 7, catMs: DAY_MS, trendXLabels: ["1", "2", "3", "4", "5", "6", "7"] };
+    case "90d":
+      return { trendBuckets: 30, trendMs: 3 * DAY_MS, catBuckets: 4, catMs: 22.5 * DAY_MS, trendXLabels: ["3d", "15d", "30d", "45d", "60d", "75d", "90d"] };
+    case "1y":
+      return { trendBuckets: 52, trendMs: 7 * DAY_MS, catBuckets: 4, catMs: 91 * DAY_MS, trendXLabels: ["W1", "W10", "W20", "W30", "W40", "W52"] };
+    default: // 30d
+      return { trendBuckets: 30, trendMs: DAY_MS, catBuckets: 4, catMs: 7 * DAY_MS, trendXLabels: ["1", "5", "10", "15", "20", "25", "30"] };
+  }
+}
 
 export function useAnalyticsData({ allIncidents, allUsers, period }) {
   const incidents = useMemo(
@@ -21,9 +36,13 @@ export function useAnalyticsData({ allIncidents, allUsers, period }) {
   const kpis = useMemo(() => {
     const actioned = incidents.filter((i) => ACTIONED_STATUSES.has(i.status));
     const closed = incidents.filter((i) => CLOSED_STATUSES.has(i.status));
+    // Approximate first-response time via created_at→updated_at.
+    // Cap at the full period length so no genuine responses are dropped;
+    // values beyond it indicate a later edit, not an initial response.
+    const periodMinutes = getPeriodMs(period) / 60000;
     const responseTimes = actioned
       .map((i) => diffMinutes(i.created_at, i.updated_at))
-      .filter((m) => m > 0 && m < 10080)
+      .filter((m) => m > 0 && m < periodMinutes)
       .sort((a, b) => a - b);
     const avgResponse =
       responseTimes.length > 0
@@ -94,16 +113,16 @@ export function useAnalyticsData({ allIncidents, allUsers, period }) {
   }, [kpis.responseTimes]);
 
   const trendLine = useMemo(() => {
-    const days = 30;
+    const { trendBuckets, trendMs } = getPeriodBucketConfig(period);
     const now = Date.now();
-    return Array.from({ length: days }, (_, i) => {
-      const dayStart = now - (days - i) * 86400000;
+    return Array.from({ length: trendBuckets }, (_, i) => {
+      const bucketStart = now - (trendBuckets - i) * trendMs;
       return allIncidents.filter((inc) => {
         const t = new Date(inc.created_at).getTime();
-        return t >= dayStart && t < dayStart + 86400000 && !inc.is_draft;
+        return t >= bucketStart && t < bucketStart + trendMs && !inc.is_draft;
       }).length;
     });
-  }, [allIncidents]);
+  }, [allIncidents, period]);
 
   const trendMax = useMemo(() => Math.max(...trendLine, 1), [trendLine]);
 
@@ -112,14 +131,29 @@ export function useAnalyticsData({ allIncidents, allUsers, period }) {
     [trendLine],
   );
 
+  const trendWeeklyAvg = useMemo(() => {
+    const { trendBuckets, trendMs } = getPeriodBucketConfig(period);
+    const weeks = (trendBuckets * trendMs) / (7 * DAY_MS);
+    return weeks > 0 ? (trendTotal / weeks).toFixed(1) : "0.0";
+  }, [trendTotal, period]);
+
+  const trendXLabels = useMemo(
+    () => getPeriodBucketConfig(period).trendXLabels,
+    [period],
+  );
+
   const peakLabel = useMemo(() => {
-    const idx = trendLine.indexOf(Math.max(...trendLine));
-    const peakDate = new Date(Date.now() - (29 - idx) * 86400000);
-    return peakDate.toLocaleDateString("en-US", {
-      weekday: "short",
-      day: "numeric",
-    });
-  }, [trendLine]);
+    const maxVal = Math.max(...trendLine);
+    if (maxVal === 0) return "—";
+    const { trendBuckets, trendMs } = getPeriodBucketConfig(period);
+    const idx = trendLine.indexOf(maxVal);
+    const peakDate = new Date(Date.now() - (trendBuckets - 1 - idx) * trendMs);
+    // Daily buckets → "Tue 15"; multi-day buckets → "Mar 15" (no weekday, avoids false precision)
+    const fmt = trendMs <= DAY_MS
+      ? { weekday: "short", day: "numeric" }
+      : { month: "short", day: "numeric" };
+    return peakDate.toLocaleDateString("en-US", fmt);
+  }, [trendLine, period]);
 
   const heatmap = useMemo(() => {
     const grid = Array.from({ length: 7 }, () => Array(24).fill(0));
@@ -163,13 +197,14 @@ export function useAnalyticsData({ allIncidents, allUsers, period }) {
   );
 
   const catTrend = useMemo(() => {
+    const { catBuckets, catMs } = getPeriodBucketConfig(period);
     const cats = Object.keys(CAT_DISPLAY);
     const now = Date.now();
     const data = {};
     cats.forEach((cat) => {
-      data[cat] = [3, 2, 1, 0].map((w) => {
-        const end = now - w * 7 * 86400000;
-        const start = end - 7 * 86400000;
+      data[cat] = Array.from({ length: catBuckets }, (_, wk) => {
+        const end = now - (catBuckets - 1 - wk) * catMs;
+        const start = end - catMs;
         return allIncidents.filter((i) => {
           const t = new Date(i.created_at).getTime();
           return i.category === cat && t >= start && t < end && !i.is_draft;
@@ -177,7 +212,21 @@ export function useAnalyticsData({ allIncidents, allUsers, period }) {
       });
     });
     return data;
-  }, [allIncidents]);
+  }, [allIncidents, period]);
+
+  const catBucketLabels = useMemo(() => {
+    const { catBuckets, catMs } = getPeriodBucketConfig(period);
+    const now = Date.now();
+    // Label each bucket by its rolling-window start date so the UI is
+    // honest: no calendar-aligned names like "Today" or "This Q".
+    const fmt = catMs < 60 * DAY_MS
+      ? { month: "short", day: "numeric" }  // e.g. "Mar 15"
+      : { month: "short", year: "2-digit" }; // e.g. "Oct '25"
+    return Array.from({ length: catBuckets }, (_, wk) => {
+      const bucketStart = now - (catBuckets - wk) * catMs;
+      return new Date(bucketStart).toLocaleDateString("en-US", fmt);
+    });
+  }, [period]);
 
   const catMax = useMemo(
     () => Math.max(...Object.values(catTrend).flat(), 1),
@@ -255,6 +304,8 @@ export function useAnalyticsData({ allIncidents, allUsers, period }) {
     trendLine,
     trendMax,
     trendTotal,
+    trendWeeklyAvg,
+    trendXLabels,
     peakLabel,
     heatmap,
     heatMax,
@@ -263,6 +314,7 @@ export function useAnalyticsData({ allIncidents, allUsers, period }) {
     catTrend,
     catMax,
     activeCats,
+    catBucketLabels,
     hotspots,
     reporterStats,
   };
