@@ -162,3 +162,5 @@
   .dac-alert-footer { padding: 10px 16px; border-top: 1px solid var(--dac-border); background: rgba(229,72,77,0.04); display: flex; gap: 6px; align-items: flex-start; }
   .dac-info-footer { padding: 10px 16px; border-top: 1px solid var(--dac-border); font-size: 10px; font-weight: 600; color: var(--dac-dim); }
   .dac-loading { display: flex; align-items: center; justify-content: center; height: 200px; color: var(--dac-muted); font-size: 12px; font-weight: 600; letter-spacing: 0.04em; }
+  .dac-error-banner { margin: 0 0 12px; padding: 10px 16px; background: rgba(229,72,77,0.12); border: 1px solid rgba(229,72,77,0.35); border-radius: 6px; font-size: 11px; font-weight: 600; color: var(--dac-red); letter-spacing: 0.02em; }
+  .dac-warn-banner { margin: 0 0 12px; padding: 10px 16px; background: rgba(245,166,35,0.1); border: 1px solid rgba(245,166,35,0.3); border-radius: 6px; font-size: 11px; font-weight: 600; color: var(--dac-amber); letter-spacing: 0.02em; }
