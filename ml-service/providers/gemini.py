@@ -3,6 +3,7 @@ GeminiProvider — Google Generative AI inference backend.
 Handles classification, toxicity, risk, embeddings, and LLM-only features.
 Every API call has: a timeout, exponential backoff retries, and strict JSON validation.
 """
+
 import asyncio
 import json
 import logging
@@ -22,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 # ── JSON extraction ───────────────────────────────────────────────────────────
+
 
 def _extract_json(text: str) -> dict:
     """
@@ -51,106 +53,22 @@ def _extract_json(text: str) -> dict:
     raise ValueError(f"Could not extract valid JSON from response: {text[:300]!r}")
 
 
-def _extract_insight_text(text: str) -> str:
-    """
-    Normalize the insights response into a plain-text briefing.
-    Accepts JSON, fenced blocks, or direct prose and rejects empty lead-ins.
-    """
-    cleaned = (text or "").strip()
-    if not cleaned:
-        raise ValueError("Empty insight response")
+def _extract_insight_sections(text: str) -> Dict[str, str]:
+    """Parse and validate the structured insights response."""
+    data = _extract_json((text or "").strip())
+    if not isinstance(data, dict):
+        raise ValueError("Insights response must be a JSON object")
 
-    try:
-        data = _extract_json(cleaned)
-    except ValueError:
-        data = None
+    _require_keys(data, ["priority", "trend", "pattern", "funnel_health"], "insights")
 
-    if isinstance(data, dict) and "insight" in data:
-        insight = str(data["insight"]).strip()
-        if insight:
-            return _validate_insight_text(insight)
-        raise ValueError("Empty insight returned")
-    if isinstance(data, str):
-        return _validate_insight_text(data)
+    sections = {}
+    for key in ("priority", "trend", "pattern", "funnel_health"):
+        value = str(data[key]).strip()
+        if not value:
+            raise ValueError(f"Insights response field {key!r} must be non-empty")
+        sections[key] = value
 
-    fence_match = re.fullmatch(r"```(?:text|markdown)?\s*([\s\S]+?)```", cleaned, re.IGNORECASE)
-    if fence_match:
-        cleaned = fence_match.group(1).strip()
-
-    if "\n" in cleaned:
-        first_line, remainder = cleaned.split("\n", 1)
-        if first_line.strip().endswith(":") and remainder.strip():
-            cleaned = remainder.strip()
-
-    prefixes = (
-        "Here is the JSON requested:",
-        "Here is the requested JSON:",
-        "Here is the insight:",
-        "Insight:",
-        "Briefing:",
-    )
-    for prefix in prefixes:
-        if cleaned.lower().startswith(prefix.lower()):
-            cleaned = cleaned[len(prefix):].strip()
-            break
-
-    if re.fullmatch(
-        r"here is (?:the )?(?:json|insight|briefing)(?: requested)?[:.]?",
-        cleaned,
-        re.IGNORECASE,
-    ):
-        raise ValueError("Model returned a lead-in without an insight")
-
-    cleaned = cleaned.strip().strip("\"'")
-    if not cleaned:
-        raise ValueError("Empty insight returned")
-    return _validate_insight_text(cleaned)
-
-
-def _validate_insight_text(text: str) -> str:
-    """
-    Reject obviously incomplete briefings so the caller retries instead of
-    rendering partial model output.
-    """
-    cleaned = (text or "").strip()
-    if not cleaned:
-        raise ValueError("Empty insight returned")
-
-    incomplete_suffixes = (
-        " at",
-        " in",
-        " on",
-        " by",
-        " for",
-        " from",
-        " with",
-        " of",
-        " to",
-        " into",
-        " over",
-        " under",
-        " due to",
-        " because",
-        " and",
-        " or",
-        " but",
-        ",",
-        ":",
-        ";",
-        "(",
-        "[",
-        "{",
-        "\"",
-        "'",
-        "-",
-    )
-    if cleaned.lower().endswith(incomplete_suffixes):
-        raise ValueError(f"Incomplete insight returned: {cleaned!r}")
-
-    if cleaned.count("\"") % 2 != 0:
-        raise ValueError(f"Unbalanced quotes in insight: {cleaned!r}")
-
-    return cleaned
+    return sections
 
 
 def _get_finish_reason_name(response) -> Optional[str]:
@@ -173,7 +91,10 @@ def _require_keys(data: dict, keys: List[str], context: str) -> None:
 
 # ── Cosine similarity ─────────────────────────────────────────────────────────
 
-def _cosine_similarity_batch(query_vec: List[float], candidate_vecs: List[List[float]]) -> List[float]:
+
+def _cosine_similarity_batch(
+    query_vec: List[float], candidate_vecs: List[List[float]]
+) -> List[float]:
     """Return cosine similarity between query and each candidate."""
     q = np.array(query_vec, dtype=np.float32)
     q_norm = np.linalg.norm(q)
@@ -327,25 +248,32 @@ You are a data analyst assistant for SafeSignal, a public safety incident report
 You will receive aggregated analytics for a reporting period and must generate a concise,
 actionable briefing for moderators and law enforcement.
 
-Write 2-3 sentences of plain English. Focus on what is notable, unusual, or actionable.
-Reference specific numbers. Be direct and professional.
+Respond with ONLY a JSON object in this exact format — no extra text:
+{
+  "priority": "<the most urgent operational issue>",
+  "trend": "<the clearest period-over-period or within-period trend>",
+  "pattern": "<the most notable category, hotspot, or timing pattern>",
+  "funnel_health": "<brief read on funnel/resolution health>"
+}
+
+Each value must be one concise sentence in plain English. Focus on what is notable,
+unusual, or actionable. Reference specific numbers where available. Be direct and professional.
 
 Rules:
-- Mention the most critical issue or trend first
-- Always include at least one specific metric with a number
+- Mention the most critical issue or trend first in priority
+- Always include at least one specific metric with a number across the response
 - If SLA compliance is below 80%, call it out explicitly
 - If a single category dominates, name it
 - If there is a clear hotspot location, name it
-- Keep the insight under 70 words
-- Respond with ONLY the final briefing text
-- Do not use JSON, markdown, bullet points, or introductory phrases
+- Return all four keys exactly as shown
+- Do not use markdown, code fences, bullet points, or introductory phrases
 """
 
 
 # ── Provider ──────────────────────────────────────────────────────────────────
 
-class GeminiProvider(BaseProvider):
 
+class GeminiProvider(BaseProvider):
     def __init__(self):
         if not config.GEMINI_API_KEY:
             raise RuntimeError(
@@ -394,7 +322,7 @@ class GeminiProvider(BaseProvider):
                     e,
                 )
             if attempt < config.GEMINI_MAX_RETRIES:
-                await asyncio.sleep(2 ** attempt)  # 1 s → 2 s backoff
+                await asyncio.sleep(2**attempt)  # 1 s → 2 s backoff
 
         raise RuntimeError(
             f"Gemini failed after {config.GEMINI_MAX_RETRIES + 1} attempts: {last_error}"
@@ -412,7 +340,9 @@ class GeminiProvider(BaseProvider):
             f"Categories: {', '.join(categories)}\n\nText: {safe}",
         )
         result = await self._call(prompt)
-        _require_keys(result, ["predicted_category", "confidence", "all_scores"], "classify")
+        _require_keys(
+            result, ["predicted_category", "confidence", "all_scores"], "classify"
+        )
         if result["predicted_category"] not in categories:
             raise ValueError(
                 f"Gemini returned unknown category: {result['predicted_category']!r}. "
@@ -429,7 +359,9 @@ class GeminiProvider(BaseProvider):
     async def detect_toxicity(self, text: str) -> Dict:
         safe = redact(text)
         result = await self._call(self._build_prompt(_TOXICITY_SYSTEM, safe))
-        _require_keys(result, ["is_toxic", "toxicity_score", "is_severe", "details"], "toxicity")
+        _require_keys(
+            result, ["is_toxic", "toxicity_score", "is_severe", "details"], "toxicity"
+        )
         return {
             "is_toxic": bool(result["is_toxic"]),
             "toxicity_score": round(float(result["toxicity_score"]), 4),
@@ -454,12 +386,16 @@ class GeminiProvider(BaseProvider):
             f"Incident text: {safe}"
         )
         result = await self._call(self._build_prompt(_RISK_SYSTEM, context))
-        _require_keys(result, ["risk_score", "is_high_risk", "is_critical", "breakdown"], "risk")
+        _require_keys(
+            result, ["risk_score", "is_high_risk", "is_critical", "breakdown"], "risk"
+        )
         return {
             "risk_score": round(float(result["risk_score"]), 4),
             "is_high_risk": bool(result["is_high_risk"]),
             "is_critical": bool(result["is_critical"]),
-            "breakdown": {k: round(float(v), 4) for k, v in result["breakdown"].items()},
+            "breakdown": {
+                k: round(float(v), 4) for k, v in result["breakdown"].items()
+            },
         }
 
     async def embed(self, text: str) -> List[float]:
@@ -533,7 +469,11 @@ class GeminiProvider(BaseProvider):
         classification = None
         if "classification" in result and result["classification"]:
             c = result["classification"]
-            _require_keys(c, ["predicted_category", "confidence", "all_scores"], "analyze.classification")
+            _require_keys(
+                c,
+                ["predicted_category", "confidence", "all_scores"],
+                "analyze.classification",
+            )
             if c["predicted_category"] not in categories:
                 logger.warning(
                     "Gemini returned unknown classify category in analyze: %s",
@@ -543,13 +483,19 @@ class GeminiProvider(BaseProvider):
             classification = {
                 "predicted_category": c["predicted_category"],
                 "confidence": round(float(c["confidence"]), 4),
-                "all_scores": {k: round(float(v), 4) for k, v in c["all_scores"].items()},
+                "all_scores": {
+                    k: round(float(v), 4) for k, v in c["all_scores"].items()
+                },
             }
 
         toxicity = None
         if "toxicity" in result and result["toxicity"]:
             t = result["toxicity"]
-            _require_keys(t, ["is_toxic", "toxicity_score", "is_severe", "details"], "analyze.toxicity")
+            _require_keys(
+                t,
+                ["is_toxic", "toxicity_score", "is_severe", "details"],
+                "analyze.toxicity",
+            )
             toxicity = {
                 "is_toxic": bool(t["is_toxic"]),
                 "toxicity_score": round(float(t["toxicity_score"]), 4),
@@ -560,7 +506,11 @@ class GeminiProvider(BaseProvider):
         risk = None
         if "risk" in result and result["risk"]:
             r = result["risk"]
-            _require_keys(r, ["risk_score", "is_high_risk", "is_critical", "breakdown"], "analyze.risk")
+            _require_keys(
+                r,
+                ["risk_score", "is_high_risk", "is_critical", "breakdown"],
+                "analyze.risk",
+            )
             risk = {
                 "risk_score": round(float(r["risk_score"]), 4),
                 "is_high_risk": bool(r["is_high_risk"]),
@@ -578,15 +528,17 @@ class GeminiProvider(BaseProvider):
             "entities": result.get("entities"),
         }
 
-    async def generate_insights(self, stats: Dict) -> Optional[str]:
+    async def generate_insights(self, stats: Dict) -> Optional[Dict]:
         """
-        Generate a natural-language analytics briefing from aggregated dashboard stats.
-        Calls Gemini with the stats payload; returns the insight string or None on failure.
+        Generate structured analytics insights from aggregated dashboard stats.
+        Calls Gemini with the stats payload; returns the insights dict or None on failure.
         """
         import json as _json
 
         stats_text = _json.dumps(stats, separators=(",", ":"))
-        prompt = f"Analytics data:\n{stats_text}\n\nGenerate an insights briefing."
+        prompt = (
+            f"Analytics data:\n{stats_text}\n\nGenerate the structured insights JSON."
+        )
 
         for attempt in range(3):
             try:
@@ -612,9 +564,9 @@ class GeminiProvider(BaseProvider):
                     raise ValueError(
                         f"Insights generation ended with finish_reason={finish_reason}"
                     )
-                return _extract_insight_text(getattr(response, "text", ""))
+                return _extract_insight_sections(getattr(response, "text", ""))
             except Exception as e:
-                wait = 2 ** attempt
+                wait = 2**attempt
                 logger.warning(
                     "generate_insights attempt %d failed: %s - retrying in %ds",
                     attempt + 1,
@@ -653,14 +605,13 @@ class GeminiProvider(BaseProvider):
         """
         safe_base = redact(base_text)
         safe_candidate = redact(candidate_text)
-        user_content = (
-            f"Report A:\n{safe_base}\n\n"
-            f"Report B:\n{safe_candidate}"
-        )
+        user_content = f"Report A:\n{safe_base}\n\nReport B:\n{safe_candidate}"
         result = await self._call(
             self._build_prompt(_DEDUP_COMPARE_SYSTEM, user_content)
         )
-        _require_keys(result, ["is_duplicate", "confidence", "reasoning"], "pairwise_compare")
+        _require_keys(
+            result, ["is_duplicate", "confidence", "reasoning"], "pairwise_compare"
+        )
         return {
             "is_duplicate": bool(result["is_duplicate"]),
             "confidence": round(float(result["confidence"]), 4),

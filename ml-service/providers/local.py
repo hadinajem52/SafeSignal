@@ -3,6 +3,7 @@ LocalProvider — wraps the existing HuggingFace model instances.
 No model logic lives here; this is a thin async delegate.
 All blocking inference is offloaded to threads to keep the event loop free.
 """
+
 import asyncio
 import logging
 from typing import Dict, List, Optional
@@ -14,7 +15,6 @@ logger = logging.getLogger(__name__)
 
 
 class LocalProvider(BaseProvider):
-
     def __init__(self, classifier, embedding_model, toxicity_model, risk_scorer):
         self._classifier = classifier
         self._embedding = embedding_model
@@ -150,14 +150,16 @@ class LocalProvider(BaseProvider):
 
         return result
 
-    async def generate_insights(self, stats: Dict) -> Optional[str]:
+    async def generate_insights(self, stats: Dict) -> Optional[Dict]:
         """Local provider has no LLM — insights are not available."""
         return None
 
     async def is_ready(self) -> bool:
-        return all([
-            self._classifier is not None,
-            self._embedding is not None,
-            self._toxicity is not None,
-            self._risk is not None,
-        ])
+        return all(
+            [
+                self._classifier is not None,
+                self._embedding is not None,
+                self._toxicity is not None,
+                self._risk is not None,
+            ]
+        )

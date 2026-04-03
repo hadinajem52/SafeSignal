@@ -248,6 +248,24 @@
     font-weight: 400;
   }
 
+  .dac-insights-sections {
+    display: grid;
+    gap: 10px;
+  }
+
+  .dac-insights-section {
+    display: grid;
+    gap: 3px;
+  }
+
+  .dac-insights-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--dac-muted);
+  }
+
   .dac-insights-error,
   .dac-insights-empty {
     font-size: 12px;
