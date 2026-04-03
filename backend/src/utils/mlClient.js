@@ -176,8 +176,19 @@ async function dedupCompare(baseText, candidateText) {
 
 /**
  * Generate a structured analytics briefing from aggregated stats.
- * @param {Object} stats - { period, total_incidents, kpis, top_categories, top_hotspots, peak_activity, funnel }
- * @returns {Promise<{sections: Object|null, supported: boolean}|null>}
+ * @param {Object} stats
+ * @param {string} stats.period
+ * @param {number} stats.total_incidents
+ * @param {Object} stats.kpis
+ * @param {Array} [stats.top_categories]
+ * @param {Array} [stats.top_hotspots]
+ * @param {Object} [stats.peak_activity]
+ * @param {Array} [stats.funnel]
+ * @param {Object} [stats.prev_period]
+ * @param {"rising"|"falling"|"stable"} [stats.trend_direction]
+ * @param {number} [stats.p75_response_min]
+ * @param {Object} [stats.category_delta]
+ * @returns {Promise<{sections: {priority: string, trend: string, pattern: string, funnel_health: string}|null, supported: boolean}|null>}
  */
 async function generateInsights(stats) {
   try {
