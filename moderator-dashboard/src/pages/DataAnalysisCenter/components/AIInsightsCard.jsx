@@ -1,3 +1,5 @@
+import { RefreshCw } from "lucide-react";
+
 const SPARKLE_ICON = (
   <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
     <path
@@ -5,24 +7,6 @@ const SPARKLE_ICON = (
       fill="var(--dac-blue)"
       stroke="var(--dac-blue)"
       strokeWidth="0.5"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
-const REFRESH_ICON = (
-  <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true">
-    <path
-      d="M9.5 2A5 5 0 1 0 10 5.5"
-      stroke="currentColor"
-      strokeWidth="1.4"
-      strokeLinecap="round"
-    />
-    <path
-      d="M10 1V4H7"
-      stroke="currentColor"
-      strokeWidth="1.4"
-      strokeLinecap="round"
       strokeLinejoin="round"
     />
   </svg>
@@ -44,8 +28,22 @@ function timeAgo(date) {
   return `${diffDays}d ago`;
 }
 
+const SECTION_LABELS = {
+  priority: "Priority",
+  trend: "Trend",
+  pattern: "Pattern",
+  funnel_health: "Funnel Health",
+};
+
+const TREND_INDICATOR = {
+  rising: { symbol: "▲", className: "dac-insights-trend-up" },
+  falling: { symbol: "▼", className: "dac-insights-trend-down" },
+  stable: { symbol: "—", className: "dac-insights-trend-stable" },
+};
+
 export default function AIInsightsCard({
   sections,
+  trendDirection = "stable",
   supported = true,
   isLoading,
   isError,
@@ -54,13 +52,10 @@ export default function AIInsightsCard({
   isRefreshing,
 }) {
   const isBusy = isLoading || isRefreshing;
+  const trendIndicator =
+    TREND_INDICATOR[trendDirection] || TREND_INDICATOR.stable;
   const sectionEntries = sections
-    ? [
-        ["Priority", sections.priority],
-        ["Trend", sections.trend],
-        ["Pattern", sections.pattern],
-        ["Funnel", sections.funnel_health],
-      ].filter(([, value]) => Boolean(value))
+    ? Object.entries(SECTION_LABELS).filter(([key]) => Boolean(sections[key]))
     : [];
 
   return (
@@ -82,7 +77,9 @@ export default function AIInsightsCard({
             title="Regenerate insights"
             aria-label="Regenerate insights"
           >
-            <span className={isBusy ? "dac-insights-spin" : undefined}>{REFRESH_ICON}</span>
+            <span className={isBusy ? "dac-insights-spin" : undefined}>
+              <RefreshCw size={12} strokeWidth={1.8} aria-hidden="true" />
+            </span>
           </button>
         </div>
       </div>
@@ -104,10 +101,20 @@ export default function AIInsightsCard({
 
         {!isLoading && !isError && sectionEntries.length > 0 ? (
           <div className="dac-insights-sections">
-            {sectionEntries.map(([label, value]) => (
-              <div key={label} className="dac-insights-section">
-                <span className="dac-insights-label">{label}</span>
-                <p className="dac-insights-text">{value}</p>
+            {sectionEntries.map(([key, label]) => (
+              <div key={key} className="dac-insights-row">
+                <div className="dac-insights-row-label">
+                  {key === "trend" ? (
+                    <span
+                      className={`dac-insights-trend-indicator ${trendIndicator.className}`}
+                      aria-hidden="true"
+                    >
+                      {trendIndicator.symbol}
+                    </span>
+                  ) : null}
+                  <span>{label}</span>
+                </div>
+                <p className="dac-insights-row-value">{sections[key]}</p>
               </div>
             ))}
           </div>

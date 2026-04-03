@@ -161,8 +161,8 @@ function LawEnforcement() {
         style={{
           display: "flex",
           flexDirection: "column",
-          margin: "-32px",
-          height: "100dvh",
+          height: "100%",
+          minHeight: 0,
           overflow: "hidden",
         }}
       >

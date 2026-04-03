@@ -13,7 +13,7 @@ export const USERS_CSS = `
   .u-kpi-value { font-size: 22px; font-weight: 800; color: var(--color-text); line-height: 1; font-variant-numeric: tabular-nums; }
 
   /* TOPBAR */
-  .u-topbar { border-bottom: 1px solid var(--color-border); padding: 0 24px; display: flex; align-items: center; background: var(--color-card); flex-shrink: 0; height: 52px; gap: 14px; }
+  .u-topbar { border-bottom: 1px solid var(--color-border); padding: 0 24px; display: flex; align-items: center; background: var(--color-card); flex-shrink: 0; height: 52px; gap: 14px; position: sticky; top: 0; z-index: 20; }
   .u-topbar-title { font-weight: 800; font-size: 17px; letter-spacing: 0.02em; text-transform: uppercase; color: var(--color-text); flex: 1; }
   .u-invite-btn { display: flex; align-items: center; gap: 6px; padding: 6px 14px; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid var(--color-primary); background: rgba(0,240,255,0.06); color: var(--color-primary); cursor: pointer; }
   .u-invite-btn:hover { background: rgba(0,240,255,0.12); }

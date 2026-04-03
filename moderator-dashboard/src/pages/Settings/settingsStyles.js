@@ -5,6 +5,7 @@ export const SETTINGS_CSS = `
     border-bottom:1px solid var(--color-border);
     padding:0 24px; display:flex; align-items:center; height:52px;
     background:var(--color-card); flex-shrink:0; gap:16px;
+    position:sticky; top:0; z-index:20;
   }
   .st-topbar-title {
     font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:17px;

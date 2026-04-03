@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { reportsAPI, statsAPI, usersAPI } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
+import { ACTIONED_STATUSES } from "../../constants/incidentStatuses";
 import {
   AIInsightsCard,
   CategoryTrendCard,
@@ -14,6 +15,7 @@ import {
   SLACard,
   Tooltip,
 } from "./components";
+import { diffMinutes, getPeriodMs } from "./components/helpers";
 import { useAnalyticsData } from "./hooks/useAnalyticsData";
 import "./dac.css";
 
@@ -79,6 +81,100 @@ export default function DataAnalysisCenter() {
   } = useAnalyticsData({ allIncidents, allUsers, period });
 
   const loading = incLoading && incidents.length === 0;
+  const periodMs = getPeriodMs(period);
+  const periodMinutes = periodMs / 60000;
+  const now = Date.now();
+  const prevIncidents = allIncidents.filter((incident) => {
+    if (incident.is_draft) return false;
+    const createdAt = new Date(incident.created_at).getTime();
+    return createdAt >= now - 2 * periodMs && createdAt < now - periodMs;
+  });
+
+  const prevResponseTimes = prevIncidents
+    .filter((incident) => ACTIONED_STATUSES.has(incident.status))
+    .map((incident) => diffMinutes(incident.created_at, incident.updated_at))
+    .filter((minutes) => minutes > 0 && minutes < periodMinutes);
+  const prevSlaCompliant = prevResponseTimes.filter(
+    (minutes) => minutes <= 30,
+  ).length;
+  const prevSlaRate =
+    prevResponseTimes.length > 0
+      ? Math.round((prevSlaCompliant / prevResponseTimes.length) * 100)
+      : 0;
+
+  const buildCategoryCounts = (items) => {
+    const counts = {};
+    items.forEach((incident) => {
+      const category = incident.category || "unknown";
+      counts[category] = (counts[category] || 0) + 1;
+    });
+    return Object.entries(counts).sort(([, a], [, b]) => b - a);
+  };
+
+  const currentCategoryCounts = buildCategoryCounts(incidents);
+  const prevCategoryCounts = buildCategoryCounts(prevIncidents);
+  const [topCategoryName, topCategoryCount] = currentCategoryCounts[0] || [null, 0];
+  const prevTopCategoryName = prevCategoryCounts[0]?.[0] || null;
+  const prevMatchingCategoryCount = topCategoryName
+    ? prevCategoryCounts.find(([category]) => category === topCategoryName)?.[1] || 0
+    : 0;
+  const categoryDelta = topCategoryName
+    ? {
+        category: topCategoryName,
+        current_count: topCategoryCount,
+        prev_count: prevMatchingCategoryCount,
+        pct_change:
+          prevMatchingCategoryCount > 0
+            ? Number.parseFloat(
+                (
+                  ((topCategoryCount - prevMatchingCategoryCount) /
+                    prevMatchingCategoryCount) *
+                  100
+                ).toFixed(1),
+              )
+            : topCategoryCount > 0
+              ? 100
+              : 0,
+      }
+    : null;
+
+  const topHotspotPayload = Object.entries(
+    incidents.reduce((counts, incident) => {
+      const locationName = incident.location_name || "Unknown";
+      counts[locationName] = (counts[locationName] || 0) + 1;
+      return counts;
+    }, {}),
+  )
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 5)
+    .map(([name, count]) => ({ name, count }));
+
+  const midpoint = Math.ceil(trendLine.length / 2);
+  const firstHalfTotal = trendLine
+    .slice(0, midpoint)
+    .reduce((sum, value) => sum + value, 0);
+  const secondHalfTotal = trendLine
+    .slice(midpoint)
+    .reduce((sum, value) => sum + value, 0);
+  const trendDirection =
+    secondHalfTotal > firstHalfTotal
+      ? "rising"
+      : secondHalfTotal < firstHalfTotal
+        ? "falling"
+        : "stable";
+
+  const p75Metric = percentiles[2];
+  const p75ResponseMinutes = p75Metric
+    ? Number.parseFloat(p75Metric.val) * (p75Metric.unit === "hr" ? 60 : 1)
+    : null;
+  const prevPeriod =
+    prevIncidents.length > 0
+      ? {
+          total_incidents: prevIncidents.length,
+          sla_rate: prevSlaRate,
+          top_category: prevTopCategoryName,
+        }
+      : null;
 
   const insightsPayload = {
     period,
@@ -91,17 +187,18 @@ export default function DataAnalysisCenter() {
       resolution_rate: kpis.resolutionRate,
       avg_time_to_close_days: Number.parseFloat(kpis.avgTimeToClose),
     },
-    top_categories: activeCats.map(([cat, vals]) => [
-      cat,
-      vals.reduce((sum, value) => sum + value, 0),
-    ]),
-    top_hotspots: hotspots.map((h) => ({ name: h.name, count: h.count })),
+    top_categories: currentCategoryCounts.slice(0, 6),
+    top_hotspots: topHotspotPayload,
     peak_activity: {
       day: heatPeak.peakDayLabel,
       hour: heatPeak.peakHour,
       count: heatPeak.peakCount,
     },
     funnel: funnelData.map((f) => ({ label: f.label, count: f.count })),
+    prev_period: prevPeriod,
+    trend_direction: trendDirection,
+    p75_response_min: p75ResponseMinutes,
+    category_delta: categoryDelta,
   };
 
   const {
@@ -128,7 +225,7 @@ export default function DataAnalysisCenter() {
   return (
     <>
       <Tooltip tip={tip} />
-      <div className="dac" style={{ margin: "-2rem", minHeight: "100vh" }}>
+      <div className="dac" style={{ height: "100%", minHeight: 0 }}>
         <div className="dac-topbar">
           <div className="dac-topbar-title">Data Analysis Center</div>
           <div className="dac-topbar-sub">
@@ -170,6 +267,7 @@ export default function DataAnalysisCenter() {
 
           <AIInsightsCard
             sections={insightsData?.sections ?? null}
+            trendDirection={trendDirection}
             supported={insightsData?.supported ?? true}
             isLoading={insightsLoading}
             isError={insightsError}

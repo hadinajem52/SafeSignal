@@ -29,6 +29,9 @@
     background: var(--dac-surface);
     height: 52px;
     gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 20;
   }
   .dac-topbar-title {
     font-weight: 800;
@@ -240,7 +243,43 @@
     padding: 12px 16px 14px;
   }
 
-  .dac-insights-text {
+  .dac-insights-sections {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .dac-insights-row {
+    display: grid;
+    gap: 5px;
+    padding: 10px 0;
+    border-top: 1px solid var(--dac-border);
+  }
+
+  .dac-insights-row:first-child {
+    padding-top: 0;
+    border-top: none;
+  }
+
+  .dac-insights-row:last-child {
+    padding-bottom: 0;
+  }
+
+  .dac-insights-row-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--dac-muted);
+  }
+
+  .dac-insights-row-label span:last-child {
+    white-space: nowrap;
+  }
+
+  .dac-insights-row-value {
     margin: 0;
     font-size: 13px;
     line-height: 1.6;
@@ -248,22 +287,29 @@
     font-weight: 400;
   }
 
-  .dac-insights-sections {
-    display: grid;
-    gap: 10px;
+  .dac-insights-trend-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 12px;
+    font-size: 11px;
+    line-height: 1;
   }
 
-  .dac-insights-section {
-    display: grid;
-    gap: 3px;
+  .dac-insights-trend-up {
+    color: var(--dac-red);
   }
 
-  .dac-insights-label {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--dac-muted);
+  .dac-insights-trend-down {
+    color: var(--dac-green);
+  }
+
+  .dac-insights-trend-stable {
+    color: var(--dac-dim);
+  }
+
+  .dac-insights-row:first-child .dac-insights-row-label {
+    color: var(--dac-amber);
   }
 
   .dac-insights-error,
