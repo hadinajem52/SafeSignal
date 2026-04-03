@@ -29,6 +29,9 @@ const leStyles = `
     background: var(--le-surface);
     flex-shrink: 0;
     height: 52px;
+    position: sticky;
+    top: 0;
+    z-index: 20;
   }
   .lei-topbar-title {
     font-weight: 800;
