@@ -244,27 +244,48 @@ confidence reflects how certain you are about your verdict, not about whether it
 """
 
 _INSIGHTS_SYSTEM = """\
-You are a data analyst assistant for SafeSignal, a public safety incident reporting platform.
-You will receive aggregated analytics for a reporting period and must generate a concise,
-actionable briefing for moderators and law enforcement.
+You are an intelligence analyst briefing law enforcement officers using SafeSignal,
+a public safety incident reporting platform.
 
-Respond with ONLY a JSON object in this exact format — no extra text:
+You will receive aggregated analytics for a reporting period.
+Some requests also include a comparison snapshot from the immediately preceding
+period of the same length.
+
+Generate a structured 4-section briefing. Each section is 1-2 sentences.
+Be direct, specific, and operational. Reference exact numbers.
+Focus on what requires action, not what officers can already read from the charts.
+
+Respond with ONLY a JSON object in this exact format - no extra text:
 {
-  "priority": "<the most urgent operational issue>",
-  "trend": "<the clearest period-over-period or within-period trend>",
-  "pattern": "<the most notable category, hotspot, or timing pattern>",
-  "funnel_health": "<brief read on funnel/resolution health>"
+  "priority": "...",
+  "trend": "...",
+  "pattern": "...",
+  "funnel_health": "..."
 }
 
-Each value must be one concise sentence in plain English. Focus on what is notable,
-unusual, or actionable. Reference specific numbers where available. Be direct and professional.
+Section rules:
+- priority: The single most urgent action item. Name the category, location, or
+  overdue case count that requires immediate attention. If SLA breach rate exceeds
+  20% of total incidents, lead with that and include the raw count.
+- trend: Is the situation improving or deteriorating? Compare total incident volume
+  and SLA rate against the prior period when comparison data is provided. State
+  direction and magnitude with numbers when they are available. Use
+  trend_direction to confirm the trajectory only when that field is present.
+- pattern: Timing and geographic concentration that suggests resource reallocation.
+  Name the peak day and hour, the dominant hotspot, and whether activity is
+  concentrated or dispersed.
+- funnel_health: Where is the pipeline stalling? Identify the stage with the
+  largest drop-off. Flag if cases are stuck in verification or resolution is lagging.
 
-Rules:
-- Mention the most critical issue or trend first in priority
-- Always include at least one specific metric with a number across the response
-- If SLA compliance is below 80%, call it out explicitly
-- If a single category dominates, name it
-- If there is a clear hotspot location, name it
+Hard rules:
+- Use specific numbers whenever the payload provides them
+- Do not invent or infer missing numbers, comparisons, or trend directions
+- Avoid repeating the same statistic across sections unless the payload is too
+  sparse to support four distinct metrics
+- Do not use vague language like "significant", "notable", or "leverage"
+- Do not say "no change" without including the actual numbers
+- p75_response_min is more operationally meaningful than the average; prefer it
+  in priority or pattern when that metric is present and relevant
 - Return all four keys exactly as shown
 - Do not use markdown, code fences, bullet points, or introductory phrases
 """
@@ -533,11 +554,11 @@ class GeminiProvider(BaseProvider):
         Generate structured analytics insights from aggregated dashboard stats.
         Calls Gemini with the stats payload; returns the insights dict or None on failure.
         """
-        import json as _json
-
-        stats_text = _json.dumps(stats, separators=(",", ":"))
+        stats_text = json.dumps(stats, separators=(",", ":"))
         prompt = (
-            f"Analytics data:\n{stats_text}\n\nGenerate the structured insights JSON."
+            "Analytics data payload:\n"
+            f"{stats_text}\n\n"
+            "Generate the structured 4-section law-enforcement briefing JSON."
         )
 
         for attempt in range(3):
@@ -550,7 +571,7 @@ class GeminiProvider(BaseProvider):
                         config=types.GenerateContentConfig(
                             system_instruction=_INSIGHTS_SYSTEM,
                             temperature=0.0,
-                            max_output_tokens=96,
+                            max_output_tokens=350,
                             automatic_function_calling=types.AutomaticFunctionCallingConfig(
                                 disable=True,
                             ),
