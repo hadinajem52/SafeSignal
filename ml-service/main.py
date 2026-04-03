@@ -210,6 +210,21 @@ class DedupCompareResponse(BaseModel):
     provider_supported: bool = True
 
 
+class InsightsRequest(BaseModel):
+    period: str = Field(..., pattern=r"^(7d|30d|90d|1y)$")
+    total_incidents: int = Field(..., ge=0)
+    kpis: Dict[str, object]
+    top_categories: List[List[object]] = Field(default_factory=list)
+    top_hotspots: List[Dict[str, object]] = Field(default_factory=list)
+    peak_activity: Dict[str, object] = Field(default_factory=dict)
+    funnel: List[Dict[str, object]] = Field(default_factory=list)
+
+
+class InsightsResponse(BaseModel):
+    insight: Optional[str]
+    supported: bool
+
+
 class EmbeddingResponse(BaseModel):
     embedding: List[float]
     dimensions: int
@@ -460,6 +475,32 @@ async def dedup_compare(request: DedupCompareRequest):
         )
 
     return DedupCompareResponse(**result)
+
+
+@app.post("/insights", response_model=InsightsResponse)
+async def generate_insights(request: InsightsRequest):
+    """
+    Generate a natural-language analytics briefing for the Data Analysis Center.
+    Only meaningful when ML_PROVIDER=gemini; returns supported=False for local.
+    """
+    if active_provider is None:
+        raise HTTPException(status_code=503, detail="ML provider not initialised")
+
+    if not isinstance(active_provider, GeminiProvider):
+        return InsightsResponse(insight=None, supported=False)
+
+    started_at = time.perf_counter()
+    stats = request.model_dump()
+
+    async with _get_semaphore():
+        insight = await active_provider.generate_insights(stats)
+
+    log_inference_event("/insights", "insights", started_at)
+
+    if insight is None:
+        raise HTTPException(status_code=503, detail="Failed to generate insights")
+
+    return InsightsResponse(insight=insight, supported=True)
 
 
 @app.post("/classify", response_model=ClassificationResponse)

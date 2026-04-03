@@ -175,6 +175,24 @@ async function dedupCompare(baseText, candidateText) {
 }
 
 /**
+ * Generate a natural-language analytics briefing from aggregated stats.
+ * @param {Object} stats - { period, total_incidents, kpis, top_categories, top_hotspots, peak_activity, funnel }
+ * @returns {Promise<{insight: string|null, supported: boolean}|null>}
+ */
+async function generateInsights(stats) {
+  try {
+    const response = await mlClient.post('/insights', stats);
+    return {
+      insight: response.data?.insight ?? null,
+      supported: response.data?.supported ?? false,
+    };
+  } catch (error) {
+    logger.warn(`ML generateInsights failed: ${error.message}`);
+    return null;
+  }
+}
+
+/**
  * Full ML analysis (classification + toxicity + risk + similarity)
  * @param {Object} params
  * @returns {Promise<Object|null>}
@@ -242,5 +260,6 @@ module.exports = {
   classifyText,
   detectToxicity,
   computeRisk,
+  generateInsights,
   analyzeIncident,
 };

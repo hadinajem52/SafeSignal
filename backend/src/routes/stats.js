@@ -8,6 +8,7 @@ const express = require('express');
 const authenticateToken = require('../middleware/auth');
 const requireRole = require('../middleware/roles');
 const statsService = require('../services/statsService');
+const mlClient = require('../utils/mlClient');
 const ServiceError = require('../utils/ServiceError');
 
 const router = express.Router();
@@ -47,6 +48,56 @@ router.get('/moderator/dashboard', authenticateToken, requireRole(['moderator', 
     });
   } catch (error) {
     handleServiceError(error, res, 'Failed to fetch moderator dashboard statistics');
+  }
+});
+
+/**
+ * @route   POST /api/stats/ai-insights
+ * @desc    Generate AI analytics briefing from pre-computed stats payload
+ * @access  Private (Moderator/Admin/Law Enforcement)
+ */
+router.post('/ai-insights', authenticateToken, requireRole(['moderator', 'admin', 'law_enforcement']), async (req, res) => {
+  try {
+    const {
+      period,
+      total_incidents,
+      kpis,
+      top_categories,
+      top_hotspots,
+      peak_activity,
+      funnel,
+    } = req.body;
+
+    if (!period || total_incidents === undefined || !kpis) {
+      return res.status(400).json({
+        status: 'ERROR',
+        message: 'Missing required fields: period, total_incidents, kpis',
+      });
+    }
+
+    const result = await mlClient.generateInsights({
+      period,
+      total_incidents,
+      kpis,
+      top_categories: top_categories || [],
+      top_hotspots: top_hotspots || [],
+      peak_activity: peak_activity || {},
+      funnel: funnel || [],
+    });
+
+    if (!result) {
+      return res.status(503).json({
+        status: 'ERROR',
+        message: 'AI insights service unavailable',
+      });
+    }
+
+    res.json({
+      status: 'OK',
+      data: result,
+    });
+  } catch (error) {
+    handleServiceError(error, res, 'Failed to generate AI insights');
   }
 });
 

@@ -164,3 +164,127 @@
   .dac-loading { display: flex; align-items: center; justify-content: center; height: 200px; color: var(--dac-muted); font-size: 12px; font-weight: 600; letter-spacing: 0.04em; }
   .dac-error-banner { margin: 0 0 12px; padding: 10px 16px; background: rgba(229,72,77,0.12); border: 1px solid rgba(229,72,77,0.35); border-radius: 6px; font-size: 11px; font-weight: 600; color: var(--dac-red); letter-spacing: 0.02em; }
   .dac-warn-banner { margin: 0 0 12px; padding: 10px 16px; background: rgba(245,166,35,0.1); border: 1px solid rgba(245,166,35,0.3); border-radius: 6px; font-size: 11px; font-weight: 600; color: var(--dac-amber); letter-spacing: 0.02em; }
+
+  /* AI Insights Card */
+  .dac-insights-card {
+    background: var(--dac-surface);
+    border: 1px solid var(--dac-border);
+    border-left: 3px solid var(--dac-blue);
+    margin-bottom: 16px;
+  }
+
+  .dac-insights-header {
+    margin-bottom: 0;
+  }
+
+  .dac-insights-title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--dac-muted);
+  }
+
+  .dac-insights-badge {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--dac-blue);
+    background: rgba(59, 158, 255, 0.1);
+    border: 1px solid rgba(59, 158, 255, 0.2);
+    padding: 1px 5px;
+  }
+
+  .dac-insights-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dac-insights-age {
+    font-size: 10px;
+    color: var(--dac-dim);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .dac-insights-refresh {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border: 1px solid var(--dac-border2);
+    background: none;
+    color: var(--dac-dim);
+    cursor: pointer;
+    transition: color 0.1s, border-color 0.1s, opacity 0.1s;
+    font-family: inherit;
+  }
+
+  .dac-insights-refresh:hover:not(:disabled) {
+    color: var(--dac-text);
+    border-color: var(--dac-muted);
+  }
+
+  .dac-insights-refresh:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .dac-insights-body {
+    min-height: 36px;
+    padding: 12px 16px 14px;
+  }
+
+  .dac-insights-text {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--dac-text);
+    font-weight: 400;
+  }
+
+  .dac-insights-error,
+  .dac-insights-empty {
+    font-size: 12px;
+    color: var(--dac-dim);
+    line-height: 1.5;
+  }
+
+  .dac-insights-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 2px 0;
+  }
+
+  .dac-insights-skel-line {
+    height: 12px;
+    background: linear-gradient(
+      90deg,
+      var(--dac-border) 0%,
+      var(--dac-border2) 50%,
+      var(--dac-border) 100%
+    );
+    background-size: 200% 100%;
+    animation: dac-shimmer 1.4s infinite linear;
+  }
+
+  @keyframes dac-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  @keyframes dac-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .dac-insights-spin {
+    display: inline-flex;
+    animation: dac-spin 0.8s linear infinite;
+  }

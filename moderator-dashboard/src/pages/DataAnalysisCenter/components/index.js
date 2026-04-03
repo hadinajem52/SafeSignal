@@ -1,3 +1,4 @@
+export { default as AIInsightsCard } from "./AIInsightsCard";
 export { default as CategoryTrendCard } from "./CategoryTrendCard";
 export { default as FunnelCard } from "./FunnelCard";
 export { default as HeatmapCard } from "./HeatmapCard";
