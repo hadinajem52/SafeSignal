@@ -66,6 +66,10 @@ router.post('/ai-insights', authenticateToken, requireRole(['moderator', 'admin'
       top_hotspots,
       peak_activity,
       funnel,
+      prev_period,
+      trend_direction,
+      p75_response_min,
+      category_delta,
     } = req.body;
 
     if (!period || total_incidents === undefined || !kpis) {
@@ -83,6 +87,10 @@ router.post('/ai-insights', authenticateToken, requireRole(['moderator', 'admin'
       top_hotspots: top_hotspots || [],
       peak_activity: peak_activity || {},
       funnel: funnel || [],
+      prev_period,
+      trend_direction,
+      p75_response_min,
+      category_delta,
     });
 
     if (!result) {
