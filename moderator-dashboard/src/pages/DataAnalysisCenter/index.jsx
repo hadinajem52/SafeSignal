@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { reportsAPI, usersAPI } from "../../services/api";
+import { reportsAPI, statsAPI, usersAPI } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import {
+  AIInsightsCard,
   CategoryTrendCard,
   FunnelCard,
   HeatmapCard,
@@ -79,6 +80,51 @@ export default function DataAnalysisCenter() {
 
   const loading = incLoading && incidents.length === 0;
 
+  const insightsPayload = {
+    period,
+    total_incidents: incidents.length,
+    kpis: {
+      avg_response_min: kpis.avgResponse,
+      sla_rate: kpis.slaRate,
+      sla_compliant: kpis.slaCompliant,
+      sla_breached: kpis.slaBreached,
+      resolution_rate: kpis.resolutionRate,
+      avg_time_to_close_days: Number.parseFloat(kpis.avgTimeToClose),
+    },
+    top_categories: activeCats.map(([cat, vals]) => [
+      cat,
+      vals.reduce((sum, value) => sum + value, 0),
+    ]),
+    top_hotspots: hotspots.map((h) => ({ name: h.name, count: h.count })),
+    peak_activity: {
+      day: heatPeak.peakDayLabel,
+      hour: heatPeak.peakHour,
+      count: heatPeak.peakCount,
+    },
+    funnel: funnelData.map((f) => ({ label: f.label, count: f.count })),
+  };
+
+  const {
+    data: insightsData,
+    isLoading: insightsLoading,
+    isError: insightsError,
+    dataUpdatedAt: insightsUpdatedAt,
+    refetch: refetchInsights,
+    isFetching: insightsFetching,
+  } = useQuery({
+    queryKey: ["dac-insights", period],
+    queryFn: async () => {
+      const result = await statsAPI.getAIInsights(insightsPayload);
+      if (!result.success) {
+        throw new Error(result.error || "Failed to generate insights");
+      }
+      return result.data;
+    },
+    staleTime: 300000,
+    enabled: !loading && incidents.length > 0,
+    retry: 1,
+  });
+
   return (
     <>
       <Tooltip tip={tip} />
@@ -121,6 +167,16 @@ export default function DataAnalysisCenter() {
               dataset.
             </div>
           )}
+
+          <AIInsightsCard
+            insight={insightsData?.insight ?? null}
+            supported={insightsData?.supported ?? true}
+            isLoading={insightsLoading}
+            isError={insightsError}
+            generatedAt={insightsUpdatedAt ? new Date(insightsUpdatedAt) : null}
+            onRefresh={refetchInsights}
+            isRefreshing={insightsFetching && !insightsLoading}
+          />
 
           <KpiRow
             kpis={kpis}

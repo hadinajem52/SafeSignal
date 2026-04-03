@@ -150,6 +150,10 @@ class LocalProvider(BaseProvider):
 
         return result
 
+    async def generate_insights(self, stats: Dict) -> Optional[str]:
+        """Local provider has no LLM — insights are not available."""
+        return None
+
     async def is_ready(self) -> bool:
         return all([
             self._classifier is not None,

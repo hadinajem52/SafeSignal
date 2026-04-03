@@ -98,6 +98,19 @@ class BaseProvider(ABC):
         """
 
     @abstractmethod
+    async def generate_insights(self, stats: Dict) -> Optional[str]:
+        """
+        Generate a natural-language analytics briefing from aggregated stats.
+
+        Args:
+            stats: dict with keys: period, total_incidents, kpis, top_categories,
+                   top_hotspots, peak_activity, funnel
+
+        Returns:
+            A 2–3 sentence insight string, or None if the provider has no LLM.
+        """
+
+    @abstractmethod
     async def is_ready(self) -> bool:
         """
         Lightweight readiness probe called by /health.

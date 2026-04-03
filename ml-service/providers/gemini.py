@@ -40,7 +40,128 @@ def _extract_json(text: str) -> dict:
             return json.loads(match.group(1).strip())
         except json.JSONDecodeError:
             pass
+    # 3. Extract the first balanced-looking JSON object from surrounding prose.
+    start = text.find("{")
+    end = text.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        try:
+            return json.loads(text[start : end + 1].strip())
+        except json.JSONDecodeError:
+            pass
     raise ValueError(f"Could not extract valid JSON from response: {text[:300]!r}")
+
+
+def _extract_insight_text(text: str) -> str:
+    """
+    Normalize the insights response into a plain-text briefing.
+    Accepts JSON, fenced blocks, or direct prose and rejects empty lead-ins.
+    """
+    cleaned = (text or "").strip()
+    if not cleaned:
+        raise ValueError("Empty insight response")
+
+    try:
+        data = _extract_json(cleaned)
+    except ValueError:
+        data = None
+
+    if isinstance(data, dict) and "insight" in data:
+        insight = str(data["insight"]).strip()
+        if insight:
+            return _validate_insight_text(insight)
+        raise ValueError("Empty insight returned")
+    if isinstance(data, str):
+        return _validate_insight_text(data)
+
+    fence_match = re.fullmatch(r"```(?:text|markdown)?\s*([\s\S]+?)```", cleaned, re.IGNORECASE)
+    if fence_match:
+        cleaned = fence_match.group(1).strip()
+
+    if "\n" in cleaned:
+        first_line, remainder = cleaned.split("\n", 1)
+        if first_line.strip().endswith(":") and remainder.strip():
+            cleaned = remainder.strip()
+
+    prefixes = (
+        "Here is the JSON requested:",
+        "Here is the requested JSON:",
+        "Here is the insight:",
+        "Insight:",
+        "Briefing:",
+    )
+    for prefix in prefixes:
+        if cleaned.lower().startswith(prefix.lower()):
+            cleaned = cleaned[len(prefix):].strip()
+            break
+
+    if re.fullmatch(
+        r"here is (?:the )?(?:json|insight|briefing)(?: requested)?[:.]?",
+        cleaned,
+        re.IGNORECASE,
+    ):
+        raise ValueError("Model returned a lead-in without an insight")
+
+    cleaned = cleaned.strip().strip("\"'")
+    if not cleaned:
+        raise ValueError("Empty insight returned")
+    return _validate_insight_text(cleaned)
+
+
+def _validate_insight_text(text: str) -> str:
+    """
+    Reject obviously incomplete briefings so the caller retries instead of
+    rendering partial model output.
+    """
+    cleaned = (text or "").strip()
+    if not cleaned:
+        raise ValueError("Empty insight returned")
+
+    incomplete_suffixes = (
+        " at",
+        " in",
+        " on",
+        " by",
+        " for",
+        " from",
+        " with",
+        " of",
+        " to",
+        " into",
+        " over",
+        " under",
+        " due to",
+        " because",
+        " and",
+        " or",
+        " but",
+        ",",
+        ":",
+        ";",
+        "(",
+        "[",
+        "{",
+        "\"",
+        "'",
+        "-",
+    )
+    if cleaned.lower().endswith(incomplete_suffixes):
+        raise ValueError(f"Incomplete insight returned: {cleaned!r}")
+
+    if cleaned.count("\"") % 2 != 0:
+        raise ValueError(f"Unbalanced quotes in insight: {cleaned!r}")
+
+    return cleaned
+
+
+def _get_finish_reason_name(response) -> Optional[str]:
+    candidates = getattr(response, "candidates", None) or []
+    if not candidates:
+        return None
+
+    finish_reason = getattr(candidates[0], "finish_reason", None)
+    if finish_reason is None:
+        return None
+    return getattr(finish_reason, "name", str(finish_reason))
 
 
 def _require_keys(data: dict, keys: List[str], context: str) -> None:
@@ -199,6 +320,25 @@ Respond with ONLY a JSON object in this exact format — no extra text:
 }
 
 confidence reflects how certain you are about your verdict, not about whether it is a duplicate.
+"""
+
+_INSIGHTS_SYSTEM = """\
+You are a data analyst assistant for SafeSignal, a public safety incident reporting platform.
+You will receive aggregated analytics for a reporting period and must generate a concise,
+actionable briefing for moderators and law enforcement.
+
+Write 2-3 sentences of plain English. Focus on what is notable, unusual, or actionable.
+Reference specific numbers. Be direct and professional.
+
+Rules:
+- Mention the most critical issue or trend first
+- Always include at least one specific metric with a number
+- If SLA compliance is below 80%, call it out explicitly
+- If a single category dominates, name it
+- If there is a clear hotspot location, name it
+- Keep the insight under 70 words
+- Respond with ONLY the final briefing text
+- Do not use JSON, markdown, bullet points, or introductory phrases
 """
 
 
@@ -437,6 +577,55 @@ class GeminiProvider(BaseProvider):
             "dispatch_suggestion": result.get("dispatch_suggestion"),
             "entities": result.get("entities"),
         }
+
+    async def generate_insights(self, stats: Dict) -> Optional[str]:
+        """
+        Generate a natural-language analytics briefing from aggregated dashboard stats.
+        Calls Gemini with the stats payload; returns the insight string or None on failure.
+        """
+        import json as _json
+
+        stats_text = _json.dumps(stats, separators=(",", ":"))
+        prompt = f"Analytics data:\n{stats_text}\n\nGenerate an insights briefing."
+
+        for attempt in range(3):
+            try:
+                response = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        self._client.models.generate_content,
+                        model=config.GEMINI_CHAT_MODEL,
+                        contents=prompt,
+                        config=types.GenerateContentConfig(
+                            system_instruction=_INSIGHTS_SYSTEM,
+                            temperature=0.0,
+                            max_output_tokens=96,
+                            automatic_function_calling=types.AutomaticFunctionCallingConfig(
+                                disable=True,
+                            ),
+                            thinking_config=types.ThinkingConfig(thinking_budget=0),
+                        ),
+                    ),
+                    timeout=30.0,
+                )
+                finish_reason = _get_finish_reason_name(response)
+                if finish_reason and finish_reason.upper() != "STOP":
+                    raise ValueError(
+                        f"Insights generation ended with finish_reason={finish_reason}"
+                    )
+                return _extract_insight_text(getattr(response, "text", ""))
+            except Exception as e:
+                wait = 2 ** attempt
+                logger.warning(
+                    "generate_insights attempt %d failed: %s - retrying in %ds",
+                    attempt + 1,
+                    e,
+                    wait,
+                )
+                if attempt < 2:
+                    await asyncio.sleep(wait)
+
+        logger.error("generate_insights failed after 3 attempts")
+        return None
 
     async def is_ready(self) -> bool:
         """

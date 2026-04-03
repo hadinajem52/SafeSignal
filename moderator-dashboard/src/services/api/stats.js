@@ -7,4 +7,10 @@ export const statsAPI = {
       () => api.get("/stats/moderator/dashboard"),
       "Failed to fetch stats",
     ),
+
+  getAIInsights: async (payload) =>
+    requestData(
+      () => api.post("/stats/ai-insights", payload),
+      "Failed to generate AI insights",
+    ),
 };
