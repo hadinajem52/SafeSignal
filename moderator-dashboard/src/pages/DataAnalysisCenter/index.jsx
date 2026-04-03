@@ -169,7 +169,7 @@ export default function DataAnalysisCenter() {
           )}
 
           <AIInsightsCard
-            insight={insightsData?.insight ?? null}
+            sections={insightsData?.sections ?? null}
             supported={insightsData?.supported ?? true}
             isLoading={insightsLoading}
             isError={insightsError}

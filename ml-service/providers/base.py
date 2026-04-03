@@ -3,12 +3,12 @@ BaseProvider — abstract interface for ML inference providers.
 All methods mirror the existing endpoint contract exactly.
 Adding a new provider = subclass this and implement all methods.
 """
+
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional
 
 
 class BaseProvider(ABC):
-
     @abstractmethod
     async def classify(self, text: str, categories: List[str]) -> Dict:
         """
@@ -98,16 +98,17 @@ class BaseProvider(ABC):
         """
 
     @abstractmethod
-    async def generate_insights(self, stats: Dict) -> Optional[str]:
+    async def generate_insights(self, stats: Dict) -> Optional[Dict]:
         """
-        Generate a natural-language analytics briefing from aggregated stats.
+        Generate a structured analytics briefing from aggregated stats.
 
         Args:
             stats: dict with keys: period, total_incidents, kpis, top_categories,
-                   top_hotspots, peak_activity, funnel
+                   top_hotspots, peak_activity, funnel, and optional comparison fields
 
         Returns:
-            A 2–3 sentence insight string, or None if the provider has no LLM.
+            A dict with keys: priority, trend, pattern, funnel_health,
+            or None if the provider has no LLM.
         """
 
     @abstractmethod

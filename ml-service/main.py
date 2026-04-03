@@ -12,7 +12,7 @@ from typing import Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 import config
 from cache_manager import RedisCacheManager, InMemoryLRUCache
@@ -36,11 +36,11 @@ logger = logging.getLogger(__name__)
 # Initialize cache manager (Redis with in-memory fallback)
 redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 ttl_config = {
-    "classify": int(os.getenv("CACHE_TTL_CLASSIFY", 3600)),      # 1 hour
-    "toxicity": int(os.getenv("CACHE_TTL_TOXICITY", 1800)),      # 30 min
-    "risk": int(os.getenv("CACHE_TTL_RISK", 1800)),              # 30 min
-    "embedding": int(os.getenv("CACHE_TTL_EMBEDDING", 7200)),    # 2 hours
-    "similarity": int(os.getenv("CACHE_TTL_SIMILARITY", 600)),   # 10 min
+    "classify": int(os.getenv("CACHE_TTL_CLASSIFY", 3600)),  # 1 hour
+    "toxicity": int(os.getenv("CACHE_TTL_TOXICITY", 1800)),  # 30 min
+    "risk": int(os.getenv("CACHE_TTL_RISK", 1800)),  # 30 min
+    "embedding": int(os.getenv("CACHE_TTL_EMBEDDING", 7200)),  # 2 hours
+    "similarity": int(os.getenv("CACHE_TTL_SIMILARITY", 600)),  # 10 min
 }
 
 # Fallback in-memory cache for Redis outages
@@ -113,7 +113,12 @@ def log_inference_event(endpoint: str, component: str, started_at: float):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialise the active provider on startup."""
-    global embedding_model, classifier_model, toxicity_model, risk_scorer, active_provider
+    global \
+        embedding_model, \
+        classifier_model, \
+        toxicity_model, \
+        risk_scorer, \
+        active_provider
 
     logger.info(f"Starting ML service — provider: {config.ML_PROVIDER}")
     logger.info(f"Cache backend: {cache.stats.get('backend', 'unknown')}")
@@ -218,10 +223,24 @@ class InsightsRequest(BaseModel):
     top_hotspots: List[Dict[str, object]] = Field(default_factory=list)
     peak_activity: Dict[str, object] = Field(default_factory=dict)
     funnel: List[Dict[str, object]] = Field(default_factory=list)
+    prev_period: Optional[Dict[str, object]] = None
+    trend_direction: Optional[str] = Field(
+        default=None,
+        pattern=r"^(rising|falling|stable)$",
+    )
+    p75_response_min: Optional[float] = Field(default=None, ge=0)
+    category_delta: Optional[Dict[str, object]] = None
+
+
+class InsightsSections(BaseModel):
+    priority: str
+    trend: str
+    pattern: str
+    funnel_health: str
 
 
 class InsightsResponse(BaseModel):
-    insight: Optional[str]
+    sections: Optional[InsightsSections]
     supported: bool
 
 
@@ -281,9 +300,7 @@ async def health_check():
     )
     # Keep classifier_runtime for backwards-compat with anything that reads it.
     classifier_runtime = (
-        classifier_model.optimization_status
-        if classifier_model is not None
-        else None
+        classifier_model.optimization_status if classifier_model is not None else None
     )
     return {
         "status": "healthy" if provider_ready else "degraded",
@@ -349,7 +366,7 @@ async def cache_stats():
 async def invalidate_cache(model_name: str):
     """
     Invalidate cache for a specific model when it's been retrained.
-    
+
     Models: classifier, toxicity, risk, embedding
     """
     valid_models = {"classifier", "toxicity", "risk", "embedding"}
@@ -487,20 +504,26 @@ async def generate_insights(request: InsightsRequest):
         raise HTTPException(status_code=503, detail="ML provider not initialised")
 
     if not isinstance(active_provider, GeminiProvider):
-        return InsightsResponse(insight=None, supported=False)
+        return InsightsResponse(sections=None, supported=False)
 
     started_at = time.perf_counter()
     stats = request.model_dump()
 
     async with _get_semaphore():
-        insight = await active_provider.generate_insights(stats)
+        result = await active_provider.generate_insights(stats)
 
     log_inference_event("/insights", "insights", started_at)
 
-    if insight is None:
+    if result is None:
         raise HTTPException(status_code=503, detail="Failed to generate insights")
 
-    return InsightsResponse(insight=insight, supported=True)
+    try:
+        sections = InsightsSections(**result)
+    except (TypeError, ValidationError) as exc:
+        logger.warning("Invalid insights payload returned by provider: %s", exc)
+        raise HTTPException(status_code=503, detail="Failed to generate insights")
+
+    return InsightsResponse(sections=sections, supported=True)
 
 
 @app.post("/classify", response_model=ClassificationResponse)
@@ -543,9 +566,12 @@ async def classify_text(request: ClassifyRequest):
                     "local_cat=%s local_conf=%.3f "
                     "gemini_cat=%s gemini_conf=%.3f "
                     "agreement=%s",
-                    local_result["predicted_category"], local_result["confidence"],
-                    shadow_result["predicted_category"], shadow_result["confidence"],
-                    local_result["predicted_category"] == shadow_result["predicted_category"],
+                    local_result["predicted_category"],
+                    local_result["confidence"],
+                    shadow_result["predicted_category"],
+                    shadow_result["confidence"],
+                    local_result["predicted_category"]
+                    == shadow_result["predicted_category"],
                 )
             result = local_result if not isinstance(local_result, Exception) else None
         except Exception as e:
@@ -688,7 +714,9 @@ async def full_analysis(request: FullAnalysisRequest):
                     for idx, score in enumerate(similarities)
                 ]
                 response.similarity = SimilarityResponse(
-                    similarities=sorted(sim_results, key=lambda x: x["score"], reverse=True),
+                    similarities=sorted(
+                        sim_results, key=lambda x: x["score"], reverse=True
+                    ),
                     threshold=config.SIMILARITY_THRESHOLD,
                 )
             except Exception as e:
@@ -740,7 +768,9 @@ async def full_analysis(request: FullAnalysisRequest):
                 for idx, score in enumerate(similarities)
             ]
             response.similarity = SimilarityResponse(
-                similarities=sorted(sim_results, key=lambda x: x["score"], reverse=True),
+                similarities=sorted(
+                    sim_results, key=lambda x: x["score"], reverse=True
+                ),
                 threshold=config.SIMILARITY_THRESHOLD,
             )
         except Exception as e:

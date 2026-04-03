@@ -175,15 +175,15 @@ async function dedupCompare(baseText, candidateText) {
 }
 
 /**
- * Generate a natural-language analytics briefing from aggregated stats.
+ * Generate a structured analytics briefing from aggregated stats.
  * @param {Object} stats - { period, total_incidents, kpis, top_categories, top_hotspots, peak_activity, funnel }
- * @returns {Promise<{insight: string|null, supported: boolean}|null>}
+ * @returns {Promise<{sections: Object|null, supported: boolean}|null>}
  */
 async function generateInsights(stats) {
   try {
     const response = await mlClient.post('/insights', stats);
     return {
-      insight: response.data?.insight ?? null,
+      sections: response.data?.sections ?? null,
       supported: response.data?.supported ?? false,
     };
   } catch (error) {

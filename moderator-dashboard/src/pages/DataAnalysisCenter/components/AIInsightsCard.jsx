@@ -45,7 +45,7 @@ function timeAgo(date) {
 }
 
 export default function AIInsightsCard({
-  insight,
+  sections,
   supported = true,
   isLoading,
   isError,
@@ -54,6 +54,14 @@ export default function AIInsightsCard({
   isRefreshing,
 }) {
   const isBusy = isLoading || isRefreshing;
+  const sectionEntries = sections
+    ? [
+        ["Priority", sections.priority],
+        ["Trend", sections.trend],
+        ["Pattern", sections.pattern],
+        ["Funnel", sections.funnel_health],
+      ].filter(([, value]) => Boolean(value))
+    : [];
 
   return (
     <div className="dac-card dac-insights-card" aria-busy={isBusy ? "true" : "false"}>
@@ -94,17 +102,24 @@ export default function AIInsightsCard({
           </span>
         ) : null}
 
-        {!isLoading && !isError && insight ? (
-          <p className="dac-insights-text">{insight}</p>
+        {!isLoading && !isError && sectionEntries.length > 0 ? (
+          <div className="dac-insights-sections">
+            {sectionEntries.map(([label, value]) => (
+              <div key={label} className="dac-insights-section">
+                <span className="dac-insights-label">{label}</span>
+                <p className="dac-insights-text">{value}</p>
+              </div>
+            ))}
+          </div>
         ) : null}
 
-        {!isLoading && !isError && !insight && !supported ? (
+        {!isLoading && !isError && sectionEntries.length === 0 && !supported ? (
           <span className="dac-insights-empty">
             AI insights are unavailable for this provider.
           </span>
         ) : null}
 
-        {!isLoading && !isError && !insight && supported ? (
+        {!isLoading && !isError && sectionEntries.length === 0 && supported ? (
           <span className="dac-insights-empty">
             No data available for the selected period.
           </span>
