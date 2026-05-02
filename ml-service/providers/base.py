@@ -112,6 +112,15 @@ class BaseProvider(ABC):
         """
 
     @abstractmethod
+    async def synthesize_constellation(self, prompt: str) -> Optional[Dict]:
+        """
+        LLM-only witness constellation synthesis.
+
+        Returns a raw provider dict for service-layer validation, or None when
+        the provider does not support LLM synthesis.
+        """
+
+    @abstractmethod
     async def is_ready(self) -> bool:
         """
         Lightweight readiness probe called by /health.

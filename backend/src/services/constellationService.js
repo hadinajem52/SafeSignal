@@ -2,6 +2,7 @@ const db = require('../config/database');
 const ServiceError = require('../utils/ServiceError');
 const logger = require('../utils/logger');
 const mlClient = require('../utils/mlClient');
+const constellationSynthesis = require('./constellationSynthesis');
 const { containsPii } = require('../utils/piiScanner');
 const { LIMITS } = require('../../../constants/limits');
 
@@ -383,6 +384,10 @@ async function submitCorroboration(constellationId, userId, payload) {
        WHERE constellation_id = $1`,
       [constellationId]
     );
+
+    constellationSynthesis.triggerSynthesis(constellationId).catch((error) => {
+      logger.error(`Constellation synthesis failed for ${constellationId}: ${error.message}`);
+    });
 
     return { corroboration_id: created.corroboration_id };
   } catch (error) {

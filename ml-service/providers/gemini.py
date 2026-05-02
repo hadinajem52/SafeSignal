@@ -600,6 +600,9 @@ class GeminiProvider(BaseProvider):
         logger.error("generate_insights failed after 3 attempts")
         return None
 
+    async def synthesize_constellation(self, prompt: str) -> Optional[Dict]:
+        return await self._call(prompt)
+
     async def is_ready(self) -> bool:
         """
         Probe: attempt to list models from the API.

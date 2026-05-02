@@ -14,8 +14,13 @@ jest.mock('../src/utils/logger', () => ({
   error: jest.fn(),
 }));
 
+jest.mock('../src/services/constellationSynthesis', () => ({
+  triggerSynthesis: jest.fn().mockResolvedValue(),
+}));
+
 const db = require('../src/config/database');
 const mlClient = require('../src/utils/mlClient');
+const constellationSynthesis = require('../src/services/constellationSynthesis');
 const constellationService = require('../src/services/constellationService');
 
 const freshIncident = () => ({
@@ -207,6 +212,18 @@ describe('constellationService corroboration', () => {
     expect(result).toEqual({ corroboration_id: 22 });
     expect(db.one.mock.calls[1][1][4]).toBe(true);
     expect(result).not.toHaveProperty('note');
+  });
+
+  it('schedules async synthesis after successful persistence', async () => {
+    db.oneOrNone.mockResolvedValue(activeConstellation());
+    db.one.mockResolvedValueOnce({ count: 0 }).mockResolvedValueOnce({ corroboration_id: 24 });
+    db.none.mockResolvedValue();
+
+    await constellationService.submitCorroboration(3, 8, {
+      signalType: 'heard_something',
+    });
+
+    expect(constellationSynthesis.triggerSynthesis).toHaveBeenCalledWith(3);
   });
 
   it('flags notes when toxicity checks fail but still stores the signal', async () => {
