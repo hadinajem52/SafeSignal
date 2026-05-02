@@ -10,7 +10,8 @@
     "db:init": "node src/database/init.js",
     "db:reset": "node src/database/reset.js",
     "db:seed": "node src/database/seed.js",
-    "db:migrate:incident-public-visibility": "node src/database/migrations/add_incident_public_visibility.js"
+    "db:migrate:incident-public-visibility": "node src/database/migrations/add_incident_public_visibility.js",
+    "db:migrate:witness-constellation": "node src/database/migrations/add_witness_constellation.js"
   },
   "jest": {
     "testEnvironment": "node",
