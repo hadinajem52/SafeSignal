@@ -1,0 +1,226 @@
+jest.mock('../src/config/database', () => ({
+  one: jest.fn(),
+  oneOrNone: jest.fn(),
+  none: jest.fn(),
+}));
+
+jest.mock('../src/utils/mlClient', () => ({
+  detectToxicity: jest.fn(),
+}));
+
+jest.mock('../src/utils/logger', () => ({
+  info: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn(),
+}));
+
+const db = require('../src/config/database');
+const mlClient = require('../src/utils/mlClient');
+const constellationService = require('../src/services/constellationService');
+
+const freshIncident = () => ({
+  incident_id: 10,
+  reporter_id: 7,
+  is_draft: false,
+  latitude: 12.345678,
+  longitude: -98.765432,
+  incident_date: new Date().toISOString(),
+  status: 'submitted',
+});
+
+const activeConstellation = (overrides = {}) => ({
+  constellation_id: 3,
+  incident_id: 10,
+  reporter_id: 7,
+  status: 'active',
+  center_latitude: 12.345678,
+  center_longitude: -98.765432,
+  radius_meters: 500,
+  opens_at: new Date(),
+  expires_at: new Date(Date.now() + 60 * 60 * 1000),
+  confidence_state: 'single_report',
+  confidence_score: 0,
+  summary: 'safe summary',
+  supporting_signals: 0,
+  contradicting_signals: 0,
+  ongoing_assessment: 'unknown',
+  has_unprocessed_changes: false,
+  ...overrides,
+});
+
+describe('constellationService eligibility', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('accepts a fresh safe incident', async () => {
+    db.oneOrNone.mockResolvedValueOnce(null).mockResolvedValueOnce(null);
+    db.one.mockResolvedValue({ count: 0 });
+
+    await expect(constellationService.evaluateEligibility(freshIncident(), 7)).resolves.toEqual({
+      eligible: true,
+      reason: null,
+    });
+  });
+
+  it('rejects drafts', async () => {
+    await expect(
+      constellationService.evaluateEligibility({ ...freshIncident(), is_draft: true }, 7)
+    ).resolves.toMatchObject({ eligible: false, reason: 'draft_incident' });
+    expect(db.oneOrNone).not.toHaveBeenCalled();
+  });
+
+  it('rejects stale incidents', async () => {
+    const staleDate = new Date(Date.now() - 31 * 60 * 1000).toISOString();
+
+    await expect(
+      constellationService.evaluateEligibility({ ...freshIncident(), incident_date: staleDate }, 7)
+    ).resolves.toMatchObject({ eligible: false, reason: 'stale_incident' });
+  });
+
+  it('rejects duplicate active constellations', async () => {
+    db.oneOrNone.mockResolvedValueOnce(null).mockResolvedValueOnce({ constellation_id: 3 });
+
+    await expect(constellationService.evaluateEligibility(freshIncident(), 7)).resolves.toMatchObject({
+      eligible: false,
+      reason: 'active_constellation_exists',
+    });
+  });
+
+  it('rejects creation rate limits', async () => {
+    db.oneOrNone.mockResolvedValueOnce(null).mockResolvedValueOnce(null);
+    db.one.mockResolvedValue({ count: 2 });
+
+    await expect(constellationService.evaluateEligibility(freshIncident(), 7)).resolves.toMatchObject({
+      eligible: false,
+      reason: 'creation_rate_limited',
+    });
+  });
+});
+
+describe('constellationService reads', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('lets the reporter read a privacy-limited constellation', async () => {
+    db.oneOrNone.mockResolvedValue(activeConstellation());
+
+    const result = await constellationService.getConstellationForUser(3, 7, 'citizen');
+
+    expect(result).toMatchObject({
+      constellationId: 3,
+      centerLatitude: 12.35,
+      centerLongitude: -98.77,
+    });
+    expect(result).not.toHaveProperty('summary');
+    expect(result).not.toHaveProperty('confidenceState');
+  });
+
+  it('lets an in-radius citizen read a privacy-limited constellation', async () => {
+    db.oneOrNone.mockResolvedValueOnce(activeConstellation()).mockResolvedValueOnce({ exists: 1 });
+
+    const result = await constellationService.getConstellationForUser(3, 8, 'citizen');
+
+    expect(result).toMatchObject({ constellationId: 3, centerLatitude: 12.35 });
+  });
+
+  it('returns null for unauthorized citizens', async () => {
+    db.oneOrNone.mockResolvedValueOnce(activeConstellation()).mockResolvedValueOnce(null);
+
+    await expect(constellationService.getConstellationForUser(3, 8, 'citizen')).resolves.toBeNull();
+  });
+
+  it('returns stripped flagged payloads to authorized non-staff users', async () => {
+    db.oneOrNone.mockResolvedValue(activeConstellation({ status: 'flagged' }));
+
+    const result = await constellationService.getConstellationForUser(3, 7, 'citizen');
+
+    expect(result).toEqual({
+      constellationId: 3,
+      incidentId: 10,
+      status: 'flagged',
+      expiresAt: expect.any(Date),
+    });
+  });
+});
+
+describe('constellationService corroboration', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mlClient.detectToxicity.mockResolvedValue({ isToxic: false, isSevere: false });
+  });
+
+  it('returns null for missing corroboration targets', async () => {
+    db.oneOrNone.mockResolvedValue(null);
+
+    await expect(
+      constellationService.submitCorroboration(999, 8, { signalType: 'heard_something' })
+    ).resolves.toBeNull();
+  });
+
+  it('rejects reporter corroborations', async () => {
+    db.oneOrNone.mockResolvedValue(activeConstellation());
+
+    await expect(
+      constellationService.submitCorroboration(3, 7, { signalType: 'heard_something' })
+    ).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  it('rejects flagged corroborations', async () => {
+    db.oneOrNone.mockResolvedValue(activeConstellation({ status: 'flagged' }));
+
+    await expect(
+      constellationService.submitCorroboration(3, 8, { signalType: 'heard_something' })
+    ).rejects.toMatchObject({ statusCode: 409 });
+  });
+
+  it('rejects expired corroborations', async () => {
+    db.oneOrNone.mockResolvedValue(activeConstellation({ expires_at: new Date(Date.now() - 1000) }));
+
+    await expect(
+      constellationService.submitCorroboration(3, 8, { signalType: 'heard_something' })
+    ).rejects.toMatchObject({ statusCode: 409 });
+  });
+
+  it('maps duplicate corroborations to conflict', async () => {
+    db.oneOrNone.mockResolvedValue(activeConstellation());
+    db.one.mockResolvedValueOnce({ count: 0 }).mockRejectedValueOnce({ code: '23505' });
+
+    await expect(
+      constellationService.submitCorroboration(3, 8, { signalType: 'heard_something' })
+    ).rejects.toMatchObject({ statusCode: 409 });
+  });
+
+  it('stores PII notes as flagged and returns only the corroboration id', async () => {
+    db.oneOrNone.mockResolvedValue(activeConstellation());
+    db.one.mockResolvedValueOnce({ count: 0 }).mockResolvedValueOnce({ corroboration_id: 22 });
+    db.none.mockResolvedValue();
+
+    const result = await constellationService.submitCorroboration(3, 8, {
+      signalType: 'heard_something',
+      note: 'email me at witness@example.com',
+      deviceLatitude: 12.34,
+      deviceLongitude: -98.76,
+    });
+
+    expect(result).toEqual({ corroboration_id: 22 });
+    expect(db.one.mock.calls[1][1][4]).toBe(true);
+    expect(result).not.toHaveProperty('note');
+  });
+
+  it('flags notes when toxicity checks fail but still stores the signal', async () => {
+    mlClient.detectToxicity.mockResolvedValue(null);
+    db.oneOrNone.mockResolvedValue(activeConstellation());
+    db.one.mockResolvedValueOnce({ count: 0 }).mockResolvedValueOnce({ corroboration_id: 23 });
+    db.none.mockResolvedValue();
+
+    const result = await constellationService.submitCorroboration(3, 8, {
+      signalType: 'saw_something',
+      note: 'unusual activity near the store',
+    });
+
+    expect(result).toEqual({ corroboration_id: 23 });
+    expect(db.one.mock.calls[1][1][4]).toBe(true);
+  });
+});

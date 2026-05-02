@@ -7,6 +7,7 @@
 const express = require('express');
 const { body, validationResult, param, query } = require('express-validator');
 const authenticateToken = require('../middleware/auth');
+const optionalAuth = require('../middleware/optionalAuth');
 const requireRole = require('../middleware/roles');
 const incidentService = require('../services/incidentService');
 const commentService = require('../services/commentService');
@@ -383,7 +384,7 @@ router.get('/list', authenticateToken, async (req, res) => {
  * @desc    Get incident by ID
  * @access  Public
  */
-router.get('/:id', [param('id').isInt()], async (req, res) => {
+router.get('/:id', optionalAuth, [param('id').isInt()], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({
@@ -393,7 +394,7 @@ router.get('/:id', [param('id').isInt()], async (req, res) => {
   }
 
   try {
-    const incident = await incidentService.getIncidentById(req.params.id);
+    const incident = await incidentService.getIncidentForRequest(req.params.id, req.user);
 
     if (!incident) {
       return res.status(404).json({

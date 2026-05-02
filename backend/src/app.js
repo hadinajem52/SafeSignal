@@ -19,6 +19,7 @@ const errorHandler = require('./middleware/errorHandler');
 
 const authRoutes = require('./routes/auth');
 const incidentsRoutes = require('./routes/incidents');
+const constellationsRoutes = require('./routes/constellations');
 const statsRoutes = require('./routes/stats');
 const usersRoutes = require('./routes/users');
 const mapRoutes = require('./routes/map');
@@ -89,6 +90,7 @@ app.get('/api/debug-sentry', function mainHandler(req, res) {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/incidents', incidentsRoutes);
+app.use('/api/constellations', constellationsRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/map', mapRoutes);
