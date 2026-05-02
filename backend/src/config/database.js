@@ -17,14 +17,15 @@ const db = pgp({
   connectionTimeoutMillis: 5000,
 });
 
-// Test the connection
-db.connect()
-  .then((obj) => {
-    console.log('✓ Database connection successful');
-    obj.done();
-  })
-  .catch((error) => {
-    console.log('✗ Database connection failed:', error.message);
-  });
+if (process.env.NODE_ENV !== 'test') {
+  db.connect()
+    .then((obj) => {
+      console.log('✓ Database connection successful');
+      obj.done();
+    })
+    .catch((error) => {
+      console.log('✗ Database connection failed:', error.message);
+    });
+}
 
 module.exports = db;

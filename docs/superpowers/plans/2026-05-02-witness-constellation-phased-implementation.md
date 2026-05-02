@@ -147,18 +147,28 @@ Purpose: make route and service work testable before adding feature routes.
 
 ### Steps
 
-- [ ] Install backend test dependencies if absent: `jest` and `supertest`.
-- [ ] Extract Express app composition from `backend/src/index.js` into `backend/src/app.js`.
-- [ ] Export the configured `app` from `backend/src/app.js` without calling `listen()`.
-- [ ] Keep only startup concerns in `backend/src/index.js`: database readiness, server listen, socket/bootstrap jobs.
-- [ ] Add a Jest config only if the repo does not already have one.
-- [ ] Add one global teardown that closes the shared pg-promise pool after all Jest tests.
-- [ ] Add a smoke test that imports `app` and verifies an existing public route still responds.
+- [x] Install backend test dependencies if absent: `jest` and `supertest`.
+- [x] Extract Express app composition from `backend/src/index.js` into `backend/src/app.js`.
+- [x] Export the configured `app` from `backend/src/app.js` without calling `listen()`.
+- [x] Keep only startup concerns in `backend/src/index.js`: database readiness, server listen, socket/bootstrap jobs.
+- [x] Add a Jest config only if the repo does not already have one.
+- [x] Add one global teardown that closes the shared pg-promise pool after all Jest tests.
+- [x] Add a smoke test that imports `app` and verifies an existing public route still responds.
 
 ### Validation Gate
 
-- [ ] `cd backend && npx jest --runInBand` passes for existing and smoke tests.
-- [ ] `cd backend && npm start` still starts the server.
+- [x] `cd backend && npx jest --runInBand` passes for existing and smoke tests.
+- [x] `cd backend && npm start` still starts the server.
+
+### Phase 1 Notes - 2026-05-02
+
+- Added `backend/src/app.js` as the importable Express app entrypoint. It owns middleware, route registration, Sentry HTTP middleware, health/debug routes, 404 handling, and the shared error handler, but does not create an HTTP listener.
+- Reduced `backend/src/index.js` to startup concerns: create HTTP/Socket.IO server, attach socket auth/rooms, start the weekly digest scheduler, and call `server.listen()`.
+- Added backend Jest config in `backend/package.json`, `backend/tests/jest.teardown.js`, and a Supertest smoke test for `GET /api/health`.
+- Adjusted `backend/src/config/database.js` so the import-time connection probe is skipped under `NODE_ENV=test`; this prevents Jest from keeping an async connection/logging handle open while preserving normal runtime startup behavior.
+- Installed `jest` and `supertest` as backend dev dependencies. `npm install` reported existing audit findings: 10 vulnerabilities total (`1 low`, `2 moderate`, `7 high`); no audit fix was applied in this phase.
+- Validation passed with `cd backend && npx jest --runInBand`.
+- Startup validation passed with a controlled `cd backend && npm start` run; the process tree was stopped after startup logs confirmed the server was listening.
 
 ---
 
