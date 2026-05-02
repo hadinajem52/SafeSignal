@@ -275,42 +275,52 @@ Purpose: add consent, coarse location, and push token storage without exposing s
 
 ### Service Steps
 
-- [ ] Add `updatePushToken(userId, token)`.
-- [ ] Validate token is non-empty.
-- [ ] Reject token storage with `403` when `location_consent = FALSE`.
-- [ ] Save token, `push_token_updated_at = NOW()`, and `updated_at = NOW()`.
-- [ ] Add `setLocationConsent(userId, consent)`.
-- [ ] When granting consent, set `location_consent = TRUE`, `location_consent_at = NOW()`, and `updated_at = NOW()`.
-- [ ] When revoking consent, set consent false and immediately null `last_known_latitude`, `last_known_longitude`, and `location_updated_at`.
-- [ ] Add `updateUserLocation(userId, latitude, longitude)`.
-- [ ] Reject invalid coordinates.
-- [ ] Reject updates when the user has not granted consent.
-- [ ] Round latitude and longitude to 2 decimals server-side even if mobile already rounded them.
-- [ ] Save rounded values and `location_updated_at = NOW()`.
+- [x] Add `updatePushToken(userId, token)`.
+- [x] Validate token is non-empty.
+- [x] Reject token storage with `403` when `location_consent = FALSE`.
+- [x] Save token, `push_token_updated_at = NOW()`, and `updated_at = NOW()`.
+- [x] Add `setLocationConsent(userId, consent)`.
+- [x] When granting consent, set `location_consent = TRUE`, `location_consent_at = NOW()`, and `updated_at = NOW()`.
+- [x] When revoking consent, set consent false and immediately null `last_known_latitude`, `last_known_longitude`, and `location_updated_at`.
+- [x] Add `updateUserLocation(userId, latitude, longitude)`.
+- [x] Reject invalid coordinates.
+- [x] Reject updates when the user has not granted consent.
+- [x] Round latitude and longitude to 2 decimals server-side even if mobile already rounded them.
+- [x] Save rounded values and `location_updated_at = NOW()`.
 
 ### Route Steps
 
-- [ ] Add `PATCH /api/users/me/push-token` before dynamic `/:id` routes.
-- [ ] Add `PATCH /api/users/me/location-consent` before dynamic `/:id` routes.
-- [ ] Add `PATCH /api/users/me/location` before dynamic `/:id` routes.
-- [ ] Require authentication for all three routes.
-- [ ] Return only `{ status: 'OK' }` on success.
-- [ ] Do not return token or location values.
+- [x] Add `PATCH /api/users/me/push-token` before dynamic `/:id` routes.
+- [x] Add `PATCH /api/users/me/location-consent` before dynamic `/:id` routes.
+- [x] Add `PATCH /api/users/me/location` before dynamic `/:id` routes.
+- [x] Require authentication for all three routes.
+- [x] Return only `{ status: 'OK' }` on success.
+- [x] Do not return token or location values.
 
 ### Test Steps
 
-- [ ] Authenticated, consented token update succeeds.
-- [ ] Push-token update without app-level location consent returns `403`.
-- [ ] Empty token returns `400`.
-- [ ] Location update without consent returns `403`.
-- [ ] Location update with consent stores 2-decimal coordinates.
-- [ ] Consent revocation clears stored coordinates.
-- [ ] Existing user fetch/list endpoints do not return push token or location columns.
+- [x] Authenticated, consented token update succeeds.
+- [x] Push-token update without app-level location consent returns `403`.
+- [x] Empty token returns `400`.
+- [x] Location update without consent returns `403`.
+- [x] Location update with consent stores 2-decimal coordinates.
+- [x] Consent revocation clears stored coordinates.
+- [x] Existing user fetch/list endpoints do not return push token or location columns.
 
 ### Validation Gate
 
-- [ ] User API tests pass.
-- [ ] Manual API checks confirm sensitive columns are never returned.
+- [x] User API tests pass.
+- [x] Manual API checks confirm sensitive columns are never returned.
+
+### Phase 3 Notes - 2026-05-02
+
+- Added `updatePushToken`, `setLocationConsent`, and `updateUserLocation` to `backend/src/services/userService.js` with boundary validation and consent checks.
+- Added authenticated `PATCH /api/users/me/push-token`, `PATCH /api/users/me/location-consent`, and `PATCH /api/users/me/location` before dynamic `/:id` routes in `backend/src/routes/users.js`.
+- Successful privacy route responses return only `{ status: 'OK' }`; token and location values are never returned from these routes.
+- Existing `getAllUsers` and `getUserById` still select and format only non-sensitive fields, so new token/location columns are not exposed by list/detail endpoints.
+- Added focused Jest coverage in `backend/tests/userService.privacy.test.js` and `backend/tests/users.routes.privacy.test.js` for consent-gated token/location storage, coordinate rounding, revocation clearing coordinates, route ordering, and sensitive response filtering.
+- Validation passed with `cd backend && npx jest --runInBand`.
+- Manual API privacy check passed using temporary local DB users and Supertest against the real app: granted consent, updated location, stored a push token, fetched user detail/list as admin, confirmed sensitive keys were absent, and deleted the temporary users afterward.
 
 ---
 

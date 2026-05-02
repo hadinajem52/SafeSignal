@@ -6,6 +6,30 @@
 
 const db = require('../config/database');
 const ServiceError = require('../utils/ServiceError');
+const { LIMITS } = require('../../../constants/limits');
+
+const roundCoordinate = (value) => Number(Number(value).toFixed(2));
+
+const validateCoordinates = (latitude, longitude) => {
+  const parsedLatitude = Number(latitude);
+  const parsedLongitude = Number(longitude);
+
+  if (
+    !Number.isFinite(parsedLatitude) ||
+    !Number.isFinite(parsedLongitude) ||
+    parsedLatitude < LIMITS.COORDINATES.LAT.MIN ||
+    parsedLatitude > LIMITS.COORDINATES.LAT.MAX ||
+    parsedLongitude < LIMITS.COORDINATES.LNG.MIN ||
+    parsedLongitude > LIMITS.COORDINATES.LNG.MAX
+  ) {
+    throw ServiceError.badRequest('Invalid coordinates');
+  }
+
+  return {
+    latitude: roundCoordinate(parsedLatitude),
+    longitude: roundCoordinate(parsedLongitude),
+  };
+};
 
 /**
  * SQL fragment for user report statistics.
@@ -160,9 +184,98 @@ async function updateUserRole(userId, role) {
   };
 }
 
+async function updatePushToken(userId, token) {
+  const normalizedToken = typeof token === 'string' ? token.trim() : '';
+
+  if (!normalizedToken) {
+    throw ServiceError.badRequest('Push token is required');
+  }
+
+  const user = await db.oneOrNone(
+    'SELECT location_consent FROM users WHERE user_id = $1',
+    [userId]
+  );
+
+  if (!user) {
+    throw ServiceError.notFound('User');
+  }
+
+  if (!user.location_consent) {
+    throw ServiceError.forbidden('Location consent is required before storing a push token');
+  }
+
+  await db.none(
+    `UPDATE users
+     SET push_token = $2,
+         push_token_updated_at = NOW(),
+         updated_at = NOW()
+     WHERE user_id = $1`,
+    [userId, normalizedToken]
+  );
+}
+
+async function setLocationConsent(userId, consent) {
+  if (typeof consent !== 'boolean') {
+    throw ServiceError.badRequest('Consent must be a boolean');
+  }
+
+  const result = consent
+    ? await db.result(
+        `UPDATE users
+         SET location_consent = TRUE,
+             location_consent_at = NOW(),
+             updated_at = NOW()
+         WHERE user_id = $1`,
+        [userId]
+      )
+    : await db.result(
+        `UPDATE users
+         SET location_consent = FALSE,
+             last_known_latitude = NULL,
+             last_known_longitude = NULL,
+             location_updated_at = NULL,
+             updated_at = NOW()
+         WHERE user_id = $1`,
+        [userId]
+      );
+
+  if (result.rowCount === 0) {
+    throw ServiceError.notFound('User');
+  }
+}
+
+async function updateUserLocation(userId, latitude, longitude) {
+  const rounded = validateCoordinates(latitude, longitude);
+  const user = await db.oneOrNone(
+    'SELECT location_consent FROM users WHERE user_id = $1',
+    [userId]
+  );
+
+  if (!user) {
+    throw ServiceError.notFound('User');
+  }
+
+  if (!user.location_consent) {
+    throw ServiceError.forbidden('Location consent is required before storing location');
+  }
+
+  await db.none(
+    `UPDATE users
+     SET last_known_latitude = $2,
+         last_known_longitude = $3,
+         location_updated_at = NOW(),
+         updated_at = NOW()
+     WHERE user_id = $1`,
+    [userId, rounded.latitude, rounded.longitude]
+  );
+}
+
 module.exports = {
   getAllUsers,
   getUserById,
   updateUserSuspension,
   updateUserRole,
+  updatePushToken,
+  setLocationConsent,
+  updateUserLocation,
 };
