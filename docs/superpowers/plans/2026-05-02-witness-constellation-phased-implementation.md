@@ -340,117 +340,131 @@ Purpose: implement constellation lifecycle and route contracts without ML or rem
 
 ### PII Scanner Steps
 
-- [ ] Add a minimal email regex.
-- [ ] Add a minimal phone regex.
-- [ ] Export `containsPii(text)`.
-- [ ] Add unit tests for email, phone, and safe text.
+- [x] Add a minimal email regex.
+- [x] Add a minimal phone regex.
+- [x] Export `containsPii(text)`.
+- [x] Add unit tests for email, phone, and safe text.
 
 ### Optional Auth Steps
 
-- [ ] Add middleware that attaches `req.user` when a valid bearer token is present.
-- [ ] Continue anonymously when token is absent or invalid.
-- [ ] Never throw from invalid optional auth.
+- [x] Add middleware that attaches `req.user` when a valid bearer token is present.
+- [x] Continue anonymously when token is absent or invalid.
+- [x] Never throw from invalid optional auth.
 
 ### Public Incident Privacy Steps
 
-- [ ] Keep `GET /api/incidents/:id` public.
-- [ ] Use optional auth on the route.
-- [ ] Add explicit service methods for public and staff incident reads.
-- [ ] Public and non-staff reads return `username = null` and `email = null`.
-- [ ] Staff reads may include reporter username and email.
-- [ ] Add active and flagged constellation fields to incident detail reads.
-- [ ] For flagged constellation detail, non-staff receives status but not confidence state or summary.
+- [x] Keep `GET /api/incidents/:id` public.
+- [x] Use optional auth on the route.
+- [x] Add explicit service methods for public and staff incident reads.
+- [x] Public and non-staff reads return `username = null` and `email = null`.
+- [x] Staff reads may include reporter username and email.
+- [x] Add active and flagged constellation fields to incident detail reads.
+- [x] For flagged constellation detail, non-staff receives status but not confidence state or summary.
 
 ### Constellation Service Steps
 
-- [ ] Add constants for staff roles, expiry hours, radius, creation rate limit, and corroboration rate limit.
-- [ ] Implement `evaluateEligibility(incident, reporterId)`.
-- [ ] Reject drafts.
-- [ ] Reject missing coordinates.
-- [ ] Reject incidents older than 30 minutes.
-- [ ] Reject toxic or abusive incidents.
-- [ ] Reject if an active constellation already exists for the incident.
-- [ ] Reject if reporter has opened 2 constellations in the last 60 minutes.
-- [ ] Implement `createConstellation(incident)`.
-- [ ] Implement `openConstellationForIncident(incident, reporterId)` as the only incident-service entrypoint.
-- [ ] Implement `isUserInRadius(userId, constellationId)` for read auth only.
-- [ ] Implement `getConstellationForUser(constellationId, userId, userRole)`.
-- [ ] Staff can read full state.
-- [ ] Reporter can read own constellation.
-- [ ] Citizen can read only when in radius.
-- [ ] Unauthorized or missing objects return `null` so route emits `404`.
-- [ ] Flagged citizen/reporter reads return stripped payload only.
-- [ ] Non-flagged citizen/reporter reads may include only 2-decimal coarse center coordinates for the witness prompt map anchor, never full-precision constellation coordinates.
-- [ ] Implement `submitCorroboration(constellationId, userId, payload)`.
-- [ ] Return a not-found result for missing or invalid constellation IDs so the route can emit `404` without leaking object existence.
-- [ ] Require active, unexpired constellation.
-- [ ] Reject flagged constellations with `409`.
-- [ ] Reject expired constellations with `409`.
-- [ ] Reject reporter submissions with `403`.
-- [ ] Enforce max 10 corroborations per user per hour.
-- [ ] Enforce duplicate prevention through DB unique constraint and return `409`.
-- [ ] Trim and truncate note to 280 chars.
-- [ ] Run PII scanner and toxicity check before persistence.
-- [ ] Store raw note with `note_flagged_pii = TRUE` when PII or toxicity is detected.
-- [ ] If the toxicity check fails, times out, or returns an invalid shape, persist the corroboration and store the note with `note_flagged_pii = TRUE`.
-- [ ] Log toxicity-check failures with corroboration context, but do not include note text in logs.
-- [ ] Never expose raw notes from route responses.
-- [ ] Round optional device coordinates to 2 decimals.
-- [ ] Compute optional distance from rounded device coordinates to constellation center.
-- [ ] Mark `has_unprocessed_changes = TRUE` after successful submission.
+- [x] Add constants for staff roles, expiry hours, radius, creation rate limit, and corroboration rate limit.
+- [x] Implement `evaluateEligibility(incident, reporterId)`.
+- [x] Reject drafts.
+- [x] Reject missing coordinates.
+- [x] Reject incidents older than 30 minutes.
+- [x] Reject toxic or abusive incidents.
+- [x] Reject if an active constellation already exists for the incident.
+- [x] Reject if reporter has opened 2 constellations in the last 60 minutes.
+- [x] Implement `createConstellation(incident)`.
+- [x] Implement `openConstellationForIncident(incident, reporterId)` as the only incident-service entrypoint.
+- [x] Implement `isUserInRadius(userId, constellationId)` for read auth only.
+- [x] Implement `getConstellationForUser(constellationId, userId, userRole)`.
+- [x] Staff can read full state.
+- [x] Reporter can read own constellation.
+- [x] Citizen can read only when in radius.
+- [x] Unauthorized or missing objects return `null` so route emits `404`.
+- [x] Flagged citizen/reporter reads return stripped payload only.
+- [x] Non-flagged citizen/reporter reads may include only 2-decimal coarse center coordinates for the witness prompt map anchor, never full-precision constellation coordinates.
+- [x] Implement `submitCorroboration(constellationId, userId, payload)`.
+- [x] Return a not-found result for missing or invalid constellation IDs so the route can emit `404` without leaking object existence.
+- [x] Require active, unexpired constellation.
+- [x] Reject flagged constellations with `409`.
+- [x] Reject expired constellations with `409`.
+- [x] Reject reporter submissions with `403`.
+- [x] Enforce max 10 corroborations per user per hour.
+- [x] Enforce duplicate prevention through DB unique constraint and return `409`.
+- [x] Trim and truncate note to 280 chars.
+- [x] Run PII scanner and toxicity check before persistence.
+- [x] Store raw note with `note_flagged_pii = TRUE` when PII or toxicity is detected.
+- [x] If the toxicity check fails, times out, or returns an invalid shape, persist the corroboration and store the note with `note_flagged_pii = TRUE`.
+- [x] Log toxicity-check failures with corroboration context, but do not include note text in logs.
+- [x] Never expose raw notes from route responses.
+- [x] Round optional device coordinates to 2 decimals.
+- [x] Compute optional distance from rounded device coordinates to constellation center.
+- [x] Mark `has_unprocessed_changes = TRUE` after successful submission.
 
 ### Route Steps
 
-- [ ] Add `GET /api/constellations/:id` with required auth.
-- [ ] Apply read rate limit of 30 requests per user per minute.
-- [ ] Return `401` when unauthenticated.
-- [ ] Return `404` for missing or unauthorized object.
-- [ ] Return stripped flagged payload for authorized citizen/reporter.
-- [ ] Add `POST /api/constellations/:id/corroborate` with required auth.
-- [ ] Return `401` when unauthenticated.
-- [ ] Return `404` for missing or ineligible constellation IDs.
-- [ ] Return `409` for flagged, expired, or duplicate corroboration attempts.
-- [ ] Validate `signalType` against the approved enum.
-- [ ] Validate optional note length.
-- [ ] Validate optional device coordinates.
-- [ ] Return created `corroboration_id` only.
+- [x] Add `GET /api/constellations/:id` with required auth.
+- [x] Apply read rate limit of 30 requests per user per minute.
+- [x] Return `401` when unauthenticated.
+- [x] Return `404` for missing or unauthorized object.
+- [x] Return stripped flagged payload for authorized citizen/reporter.
+- [x] Add `POST /api/constellations/:id/corroborate` with required auth.
+- [x] Return `401` when unauthenticated.
+- [x] Return `404` for missing or ineligible constellation IDs.
+- [x] Return `409` for flagged, expired, or duplicate corroboration attempts.
+- [x] Validate `signalType` against the approved enum.
+- [x] Validate optional note length.
+- [x] Validate optional device coordinates.
+- [x] Return created `corroboration_id` only.
 
 ### Incident Trigger Steps
 
-- [ ] Import `constellationService` into `incidentService.js`.
-- [ ] After successful non-draft incident creation and existing ML analysis, call `openConstellationForIncident` asynchronously.
-- [ ] Log skipped reasons at info level.
-- [ ] Log failures at error level.
-- [ ] Do not block incident creation on constellation failure.
+- [x] Import `constellationService` into `incidentService.js`.
+- [x] After successful non-draft incident creation and existing ML analysis, call `openConstellationForIncident` asynchronously.
+- [x] Log skipped reasons at info level.
+- [x] Log failures at error level.
+- [x] Do not block incident creation on constellation failure.
 
 ### Test Steps
 
-- [ ] Eligibility accepts a fresh safe incident.
-- [ ] Eligibility rejects drafts.
-- [ ] Eligibility rejects stale incidents.
-- [ ] Eligibility rejects duplicate active constellation.
-- [ ] Eligibility rejects creation rate limit.
-- [ ] Public incident read strips username and email.
-- [ ] Staff incident read includes username and email.
-- [ ] Unauthenticated constellation read returns `401`.
-- [ ] Unauthorized constellation read returns `404`.
-- [ ] Reporter read succeeds.
-- [ ] In-radius citizen read succeeds.
-- [ ] Flagged authorized citizen read returns stripped payload.
-- [ ] Citizen/reporter read never returns full-precision constellation coordinates.
-- [ ] Unauthenticated corroboration returns `401`.
-- [ ] Missing or ineligible corroboration target returns `404`.
-- [ ] Reporter corroboration returns `403`.
-- [ ] Flagged corroboration returns `409`.
-- [ ] Expired corroboration returns `409`.
-- [ ] Duplicate corroboration returns `409`.
-- [ ] PII note is stored flagged and not returned.
-- [ ] Toxicity-check failure stores the note flagged, excludes it from synthesis, and still accepts the witness signal.
+- [x] Eligibility accepts a fresh safe incident.
+- [x] Eligibility rejects drafts.
+- [x] Eligibility rejects stale incidents.
+- [x] Eligibility rejects duplicate active constellation.
+- [x] Eligibility rejects creation rate limit.
+- [x] Public incident read strips username and email.
+- [x] Staff incident read includes username and email.
+- [x] Unauthenticated constellation read returns `401`.
+- [x] Unauthorized constellation read returns `404`.
+- [x] Reporter read succeeds.
+- [x] In-radius citizen read succeeds.
+- [x] Flagged authorized citizen read returns stripped payload.
+- [x] Citizen/reporter read never returns full-precision constellation coordinates.
+- [x] Unauthenticated corroboration returns `401`.
+- [x] Missing or ineligible corroboration target returns `404`.
+- [x] Reporter corroboration returns `403`.
+- [x] Flagged corroboration returns `409`.
+- [x] Expired corroboration returns `409`.
+- [x] Duplicate corroboration returns `409`.
+- [x] PII note is stored flagged and not returned.
+- [x] Toxicity-check failure stores the note flagged, excludes it from synthesis, and still accepts the witness signal.
 
 ### Validation Gate
 
-- [ ] Backend constellation route tests pass.
-- [ ] Manual incident creation still returns the incident even if constellation creation fails.
+- [x] Backend constellation route tests pass.
+- [x] Manual incident creation still returns the incident even if constellation creation fails.
+
+### Phase 4 Notes - 2026-05-02
+
+- Added `backend/src/utils/piiScanner.js` with minimal email and phone detection plus unit coverage.
+- Added `backend/src/middleware/optionalAuth.js` and applied it to public incident detail reads so staff tokens can unlock staff detail while absent or invalid tokens stay anonymous.
+- Added `backend/src/services/constellationService.js` for eligibility, creation, read authorization, and corroboration writes without ML synthesis or remote push dispatch.
+- Added `backend/src/routes/constellations.js` and mounted it under `/api/constellations` with authenticated read/write routes and per-user read rate limiting.
+- Incident detail reads now use explicit public/staff service methods. Public and non-staff reads null reporter username/email; staff reads can include them.
+- Active or flagged constellation metadata is joined into incident detail reads. Non-staff flagged details are stripped to status-level data only.
+- Corroboration writes store raw notes, flag PII/toxic/unknown-toxicity notes with `note_flagged_pii = TRUE`, return only `corroboration_id`, and never expose notes in route responses.
+- Incident creation now schedules constellation opening asynchronously after existing incident processing; skipped reasons are logged at info level and failures at error level without blocking the incident response.
+- Validation passed with `cd backend && npx jest --runInBand`.
+- Manual Supertest check passed against the local app/database by forcing constellation opening to fail and confirming `POST /api/incidents` still returned `201` with an incident payload.
+- Synthesis itself remains Phase 5 work; Phase 4 stores `note_flagged_pii` so Phase 5 can exclude flagged notes from synthesis inputs.
 
 ---
 

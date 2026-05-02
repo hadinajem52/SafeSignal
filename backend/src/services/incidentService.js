@@ -21,8 +21,10 @@ const { LIMITS } = require('../../../constants/limits');
 const { emitToRoles } = require('../utils/socketService');
 const settingsService = require('./settingsService');
 const notificationService = require('./notificationService');
+const constellationService = require('./constellationService');
 
 const LEI_STATUSES = ['verified', 'dispatched', 'on_scene', 'investigating', 'police_closed'];
+const STAFF_ROLES = new Set(['admin', 'moderator', 'law_enforcement']);
 const profanityFilter = new Filter();
 
 const CATEGORY_KEYWORDS = {
@@ -1027,6 +1029,21 @@ async function createIncident(incidentData, reporterId) {
     } catch (error) {
       logger.warn(`Staff notification failed for incident ${incident.incident_id}: ${error.message}`);
     }
+
+    Promise.resolve()
+      .then(() => constellationService.openConstellationForIncident(incident, reporterId))
+      .then((result) => {
+        if (result.created) {
+          logger.info(
+            `Constellation ${result.constellation.constellation_id} opened for incident ${incident.incident_id}`
+          );
+          return;
+        }
+        logger.info(`Constellation skipped for incident ${incident.incident_id}: ${result.reason}`);
+      })
+      .catch((error) => {
+        logger.error(`Constellation creation failed for incident ${incident.incident_id}: ${error.message}`);
+      });
   }
 
   return incident;
@@ -1150,15 +1167,128 @@ async function getUserIncidents(userId, filters = {}) {
  * @param {number} incidentId - The incident ID
  * @returns {Promise<Object|null>} The incident or null if not found
  */
-async function getIncidentById(incidentId) {
-  const incident = await db.oneOrNone(
-    `SELECT i.*, u.username, u.email FROM incidents i
+const formatIncidentConstellation = (row, includeStaffDetails) => {
+  if (!row.constellation_constellation_id) {
+    return null;
+  }
+
+  const constellation = {
+    constellationId: row.constellation_constellation_id,
+    status: row.constellation_status,
+    expiresAt: row.constellation_expires_at,
+  };
+
+  if (includeStaffDetails) {
+    return {
+      ...constellation,
+      centerLatitude: row.constellation_center_latitude === null ? null : Number(row.constellation_center_latitude),
+      centerLongitude: row.constellation_center_longitude === null ? null : Number(row.constellation_center_longitude),
+      radiusMeters: row.constellation_radius_meters,
+      confidenceState: row.constellation_confidence_state,
+      confidenceScore: row.constellation_confidence_score === null ? null : Number(row.constellation_confidence_score),
+      summary: row.constellation_summary,
+    };
+  }
+
+  if (row.constellation_status !== 'flagged') {
+    constellation.centerLatitude = Number(Number(row.constellation_center_latitude).toFixed(2));
+    constellation.centerLongitude = Number(Number(row.constellation_center_longitude).toFixed(2));
+    constellation.radiusMeters = row.constellation_radius_meters;
+    constellation.confidenceState = row.constellation_confidence_state;
+    constellation.confidenceScore = row.constellation_confidence_score === null ? null : Number(row.constellation_confidence_score);
+    constellation.summary = row.constellation_summary;
+  }
+
+  return constellation;
+};
+
+const formatIncidentDetail = (row, includeStaffDetails) => {
+  const {
+    constellation_constellation_id,
+    constellation_status,
+    constellation_center_latitude,
+    constellation_center_longitude,
+    constellation_radius_meters,
+    constellation_expires_at,
+    constellation_confidence_state,
+    constellation_confidence_score,
+    constellation_summary,
+    ...incident
+  } = row;
+
+  if (!includeStaffDetails) {
+    incident.username = null;
+    incident.email = null;
+  }
+
+  incident.constellation = formatIncidentConstellation({
+    constellation_constellation_id,
+    constellation_status,
+    constellation_center_latitude,
+    constellation_center_longitude,
+    constellation_radius_meters,
+    constellation_expires_at,
+    constellation_confidence_state,
+    constellation_confidence_score,
+    constellation_summary,
+  }, includeStaffDetails);
+
+  return incident;
+};
+
+async function getIncidentDetailRow(incidentId) {
+  return db.oneOrNone(
+    `SELECT
+       i.*,
+       u.username,
+       u.email,
+       c.constellation_id AS constellation_constellation_id,
+       c.status AS constellation_status,
+       c.center_latitude AS constellation_center_latitude,
+       c.center_longitude AS constellation_center_longitude,
+       c.radius_meters AS constellation_radius_meters,
+       c.expires_at AS constellation_expires_at,
+       c.confidence_state AS constellation_confidence_state,
+       c.confidence_score AS constellation_confidence_score,
+       c.summary AS constellation_summary
+     FROM incidents i
      JOIN users u ON i.reporter_id = u.user_id
+     LEFT JOIN LATERAL (
+       SELECT *
+       FROM incident_constellations c
+       WHERE c.incident_id = i.incident_id
+         AND (
+           (c.status = 'active' AND c.expires_at > NOW())
+           OR c.status = 'flagged'
+         )
+       ORDER BY c.created_at DESC
+       LIMIT 1
+     ) c ON TRUE
      WHERE i.incident_id = $1`,
     [incidentId]
   );
+}
 
-  return incident;
+async function getPublicIncidentById(incidentId) {
+  const row = await getIncidentDetailRow(incidentId);
+  return row ? formatIncidentDetail(row, false) : null;
+}
+
+async function getStaffIncidentById(incidentId) {
+  const row = await getIncidentDetailRow(incidentId);
+  return row ? formatIncidentDetail(row, true) : null;
+}
+
+async function getIncidentForRequest(incidentId, user) {
+  if (user && STAFF_ROLES.has(user.role)) {
+    return getStaffIncidentById(incidentId);
+  }
+
+  return getPublicIncidentById(incidentId);
+}
+
+async function getIncidentById(incidentId) {
+  return getPublicIncidentById(incidentId);
 }
 
 /**
@@ -2078,6 +2208,9 @@ module.exports = {
   createIncident,
   getAllIncidents,
   getUserIncidents,
+  getPublicIncidentById,
+  getStaffIncidentById,
+  getIncidentForRequest,
   getIncidentById,
   getIncidentDedupCandidates,
   getIncidentMlSummary,
