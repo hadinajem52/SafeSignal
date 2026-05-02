@@ -33,6 +33,37 @@ function handleServiceError(error, res, defaultMessage) {
   });
 }
 
+router.patch('/me/push-token', authenticateToken, async (req, res) => {
+  try {
+    await userService.updatePushToken(req.user.userId, req.body.token);
+    res.json({ status: 'OK' });
+  } catch (error) {
+    handleServiceError(error, res, 'Failed to update push token');
+  }
+});
+
+router.patch('/me/location-consent', authenticateToken, async (req, res) => {
+  try {
+    await userService.setLocationConsent(req.user.userId, req.body.consent);
+    res.json({ status: 'OK' });
+  } catch (error) {
+    handleServiceError(error, res, 'Failed to update location consent');
+  }
+});
+
+router.patch('/me/location', authenticateToken, async (req, res) => {
+  try {
+    await userService.updateUserLocation(
+      req.user.userId,
+      req.body.latitude,
+      req.body.longitude
+    );
+    res.json({ status: 'OK' });
+  } catch (error) {
+    handleServiceError(error, res, 'Failed to update location');
+  }
+});
+
 /**
  * @route   GET /api/users
  * @desc    Get all users with optional filtering
