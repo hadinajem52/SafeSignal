@@ -185,74 +185,82 @@ Purpose: add the durable source of truth with idempotent migration behavior.
 
 #### `users` additions
 
-- [ ] `push_token TEXT`
-- [ ] `push_token_updated_at TIMESTAMPTZ`
-- [ ] `last_known_latitude DECIMAL(6, 2)`
-- [ ] `last_known_longitude DECIMAL(7, 2)`
-- [ ] `location_updated_at TIMESTAMPTZ`
-- [ ] `location_consent BOOLEAN DEFAULT FALSE`
-- [ ] `location_consent_at TIMESTAMPTZ`
-- [ ] Pair constraint requiring both latitude and longitude to be null or both non-null.
+- [x] `push_token TEXT`
+- [x] `push_token_updated_at TIMESTAMPTZ`
+- [x] `last_known_latitude DECIMAL(6, 2)`
+- [x] `last_known_longitude DECIMAL(7, 2)`
+- [x] `location_updated_at TIMESTAMPTZ`
+- [x] `location_consent BOOLEAN DEFAULT FALSE`
+- [x] `location_consent_at TIMESTAMPTZ`
+- [x] Pair constraint requiring both latitude and longitude to be null or both non-null.
 
 #### `incident_constellations`
 
-- [ ] `constellation_id SERIAL PRIMARY KEY`
-- [ ] `incident_id INTEGER NOT NULL REFERENCES incidents(incident_id) ON DELETE CASCADE`
-- [ ] `status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'expired', 'flagged'))`
-- [ ] `center_latitude DECIMAL(10, 8) NOT NULL`
-- [ ] `center_longitude DECIMAL(11, 8) NOT NULL`
-- [ ] `radius_meters INTEGER NOT NULL DEFAULT 500 CHECK (radius_meters > 0)`
-- [ ] `opens_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`
-- [ ] `expires_at TIMESTAMPTZ NOT NULL`
-- [ ] `confidence_state VARCHAR(30) DEFAULT 'single_report'` with approved enum check.
-- [ ] `confidence_score DECIMAL(4, 3) DEFAULT 0.0 CHECK (confidence_score >= 0.0 AND confidence_score <= 1.0)`
-- [ ] `summary TEXT`
-- [ ] `supporting_signals INTEGER DEFAULT 0 CHECK (supporting_signals >= 0)`
-- [ ] `contradicting_signals INTEGER DEFAULT 0 CHECK (contradicting_signals >= 0)`
-- [ ] `has_unprocessed_changes BOOLEAN DEFAULT FALSE`
-- [ ] `ongoing_assessment VARCHAR(20) DEFAULT 'unknown'` with approved enum check.
-- [ ] `last_synthesized_at TIMESTAMPTZ`
-- [ ] `created_at TIMESTAMPTZ DEFAULT NOW()`
-- [ ] `updated_at TIMESTAMPTZ DEFAULT NOW()`
+- [x] `constellation_id SERIAL PRIMARY KEY`
+- [x] `incident_id INTEGER NOT NULL REFERENCES incidents(incident_id) ON DELETE CASCADE`
+- [x] `status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'expired', 'flagged'))`
+- [x] `center_latitude DECIMAL(10, 8) NOT NULL`
+- [x] `center_longitude DECIMAL(11, 8) NOT NULL`
+- [x] `radius_meters INTEGER NOT NULL DEFAULT 500 CHECK (radius_meters > 0)`
+- [x] `opens_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`
+- [x] `expires_at TIMESTAMPTZ NOT NULL`
+- [x] `confidence_state VARCHAR(30) DEFAULT 'single_report'` with approved enum check.
+- [x] `confidence_score DECIMAL(4, 3) DEFAULT 0.0 CHECK (confidence_score >= 0.0 AND confidence_score <= 1.0)`
+- [x] `summary TEXT`
+- [x] `supporting_signals INTEGER DEFAULT 0 CHECK (supporting_signals >= 0)`
+- [x] `contradicting_signals INTEGER DEFAULT 0 CHECK (contradicting_signals >= 0)`
+- [x] `has_unprocessed_changes BOOLEAN DEFAULT FALSE`
+- [x] `ongoing_assessment VARCHAR(20) DEFAULT 'unknown'` with approved enum check.
+- [x] `last_synthesized_at TIMESTAMPTZ`
+- [x] `created_at TIMESTAMPTZ DEFAULT NOW()`
+- [x] `updated_at TIMESTAMPTZ DEFAULT NOW()`
 
 #### `incident_corroborations`
 
-- [ ] `corroboration_id SERIAL PRIMARY KEY`
-- [ ] `constellation_id INTEGER NOT NULL REFERENCES incident_constellations(constellation_id) ON DELETE CASCADE`
-- [ ] `user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE`
-- [ ] `signal_type VARCHAR(30) NOT NULL` with approved signal enum.
-- [ ] `note TEXT`
-- [ ] `note_flagged_pii BOOLEAN DEFAULT FALSE`
-- [ ] `distance_meters INTEGER CHECK (distance_meters IS NULL OR distance_meters >= 0)`
-- [ ] `submitted_at TIMESTAMPTZ DEFAULT NOW()`
-- [ ] `device_latitude_rounded DECIMAL(6, 2)`
-- [ ] `device_longitude_rounded DECIMAL(7, 2)`
-- [ ] `UNIQUE (constellation_id, user_id)`
+- [x] `corroboration_id SERIAL PRIMARY KEY`
+- [x] `constellation_id INTEGER NOT NULL REFERENCES incident_constellations(constellation_id) ON DELETE CASCADE`
+- [x] `user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE`
+- [x] `signal_type VARCHAR(30) NOT NULL` with approved signal enum.
+- [x] `note TEXT`
+- [x] `note_flagged_pii BOOLEAN DEFAULT FALSE`
+- [x] `distance_meters INTEGER CHECK (distance_meters IS NULL OR distance_meters >= 0)`
+- [x] `submitted_at TIMESTAMPTZ DEFAULT NOW()`
+- [x] `device_latitude_rounded DECIMAL(6, 2)`
+- [x] `device_longitude_rounded DECIMAL(7, 2)`
+- [x] `UNIQUE (constellation_id, user_id)`
 
 #### `constellation_cluster_links`
 
-- [ ] `id SERIAL PRIMARY KEY`
-- [ ] `constellation_id INTEGER NOT NULL REFERENCES incident_constellations(constellation_id) ON DELETE CASCADE`
-- [ ] `linked_constellation_id INTEGER NOT NULL REFERENCES incident_constellations(constellation_id) ON DELETE CASCADE`
-- [ ] `detected_at TIMESTAMPTZ DEFAULT NOW()`
-- [ ] `UNIQUE (constellation_id, linked_constellation_id)`
-- [ ] `CHECK (constellation_id < linked_constellation_id)`
+- [x] `id SERIAL PRIMARY KEY`
+- [x] `constellation_id INTEGER NOT NULL REFERENCES incident_constellations(constellation_id) ON DELETE CASCADE`
+- [x] `linked_constellation_id INTEGER NOT NULL REFERENCES incident_constellations(constellation_id) ON DELETE CASCADE`
+- [x] `detected_at TIMESTAMPTZ DEFAULT NOW()`
+- [x] `UNIQUE (constellation_id, linked_constellation_id)`
+- [x] `CHECK (constellation_id < linked_constellation_id)`
 
 ### Indexes
 
-- [ ] Unique active constellation index on `incident_constellations(incident_id) WHERE status = 'active'`.
-- [ ] Location GiST index for constellation geography point.
-- [ ] Expiry index on `incident_constellations(expires_at)`.
-- [ ] Corroboration index on `incident_corroborations(constellation_id)`.
-- [ ] Cluster-link indexes on both constellation ID columns.
+- [x] Unique active constellation index on `incident_constellations(incident_id) WHERE status = 'active'`.
+- [x] Location GiST index for constellation geography point.
+- [x] Expiry index on `incident_constellations(expires_at)`.
+- [x] Corroboration index on `incident_corroborations(constellation_id)`.
+- [x] Cluster-link indexes on both constellation ID columns.
 
 ### Validation Gate
 
-- [ ] Run the migration once successfully.
-- [ ] Run the migration a second time successfully to prove idempotency.
-- [ ] Query `information_schema.columns` for all new columns.
-- [ ] Query `pg_constraint` for enum, pair, and cluster-order constraints.
-- [ ] Query `pg_indexes` for all required indexes.
+- [x] Run the migration once successfully.
+- [x] Run the migration a second time successfully to prove idempotency.
+- [x] Query `information_schema.columns` for all new columns.
+- [x] Query `pg_constraint` for enum, pair, and cluster-order constraints.
+- [x] Query `pg_indexes` for all required indexes.
+
+### Phase 2 Notes - 2026-05-02
+
+- Added `backend/src/database/migrations/add_witness_constellation.js` as a standalone idempotent migration and `db:migrate:witness-constellation` in `backend/package.json`.
+- Did not modify `backend/src/database/init.js` because the current backend does not have a startup migration runner; migrations are run explicitly through npm scripts.
+- The migration adds user consent/location/token columns, creates `incident_constellations`, `incident_corroborations`, and `constellation_cluster_links`, and creates all required checks and indexes.
+- Approved enum values came from `docs/superpowers/specs/2026-04-04-witness-constellation-design.md`: confidence states `single_report`, `corroborated`, `mixed_signals`, `activity_not_confirmed`, `likely_ended`; ongoing assessments `ongoing`, `likely_ended`, `unknown`, `unclear`; signal types `saw_something`, `heard_something`, `nothing_unusual`, `not_sure`, `already_left`.
+- Validation passed: the migration ran successfully twice, schema queries found no missing required columns, constraints, or indexes, and `cd backend && npx jest --runInBand` still passed.
 
 ---
 
