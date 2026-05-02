@@ -263,6 +263,27 @@ async function analyzeIncident({
   }
 }
 
+async function synthesizeConstellation(params) {
+  try {
+    const response = await mlClient.post('/constellations/synthesize', params);
+    const data = response.data || {};
+
+    return {
+      confidenceState: data.confidence_state,
+      confidenceScore: data.confidence_score,
+      summary: data.summary || null,
+      supportingSignals: data.supporting_signals,
+      contradictingSignals: data.contradicting_signals,
+      ongoingAssessment: data.ongoing_assessment,
+      anomalyFlagged: data.anomaly_flagged,
+      clusterMatchIncidentIds: data.cluster_match_incident_ids || [],
+    };
+  } catch (error) {
+    logger.warn(`ML constellation synthesis failed: ${error.message}`);
+    return null;
+  }
+}
+
 module.exports = {
   isHealthy,
   getEmbedding,
@@ -273,4 +294,5 @@ module.exports = {
   computeRisk,
   generateInsights,
   analyzeIncident,
+  synthesizeConstellation,
 };

@@ -154,6 +154,10 @@ class LocalProvider(BaseProvider):
         """Local provider has no LLM — insights are not available."""
         return None
 
+    async def synthesize_constellation(self, prompt: str) -> Optional[Dict]:
+        """Local provider has no LLM — constellation synthesis is not available."""
+        return None
+
     async def is_ready(self) -> bool:
         return all(
             [

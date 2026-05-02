@@ -22,6 +22,7 @@ from models.toxicity import ToxicityDetector
 from models.risk import RiskScorer
 from providers import get_provider, BaseProvider
 from providers.gemini import GeminiProvider
+from services.constellation_synthesis import synthesize_constellation as run_constellation_synthesis
 
 # Configure logging
 logging.basicConfig(
@@ -242,6 +243,39 @@ class InsightsSections(BaseModel):
 class InsightsResponse(BaseModel):
     sections: Optional[InsightsSections]
     supported: bool
+
+
+class ConstellationIncidentMetadata(BaseModel):
+    category: Optional[str] = None
+    severity: Optional[str] = None
+    incident_date: str
+
+
+class ConstellationCorroboration(BaseModel):
+    signal_type: str
+    note: Optional[str] = None
+    note_flagged_pii: bool = False
+    distance_meters: Optional[int] = None
+    submitted_at: str
+
+
+class ConstellationSynthesisRequest(BaseModel):
+    constellation_id: int
+    incident_metadata: ConstellationIncidentMetadata
+    corroborations: List[ConstellationCorroboration] = Field(default_factory=list)
+    opens_at: str
+    current_time: str
+
+
+class ConstellationSynthesisResponse(BaseModel):
+    confidence_state: str
+    confidence_score: float
+    summary: Optional[str] = None
+    supporting_signals: int
+    contradicting_signals: int
+    ongoing_assessment: str
+    anomaly_flagged: bool
+    cluster_match_incident_ids: List[int]
 
 
 class EmbeddingResponse(BaseModel):
@@ -524,6 +558,26 @@ async def generate_insights(request: InsightsRequest):
         raise HTTPException(status_code=503, detail="Failed to generate insights")
 
     return InsightsResponse(sections=sections, supported=True)
+
+
+@app.post("/constellations/synthesize", response_model=ConstellationSynthesisResponse)
+async def synthesize_constellation(request: ConstellationSynthesisRequest):
+    if active_provider is None:
+        raise HTTPException(status_code=503, detail="ML provider not initialised")
+
+    started_at = time.perf_counter()
+    try:
+        async with _get_semaphore():
+            result = await run_constellation_synthesis(
+                active_provider,
+                request.model_dump(),
+            )
+    except Exception as exc:
+        logger.warning("Constellation synthesis unavailable: %s", exc)
+        raise HTTPException(status_code=503, detail="Constellation synthesis unavailable")
+
+    log_inference_event("/constellations/synthesize", "constellation_synthesis", started_at)
+    return ConstellationSynthesisResponse(**result)
 
 
 @app.post("/classify", response_model=ClassificationResponse)

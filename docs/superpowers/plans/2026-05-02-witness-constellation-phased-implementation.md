@@ -482,81 +482,94 @@ Purpose: make confidence-state computation reliable before adding Gemini depende
 
 ### Backend Fallback Steps
 
-- [ ] Implement `computeFallbackState(corroborations, constellation)` as a pure function.
-- [ ] Count supporting signals: `saw_something`, `heard_something`.
-- [ ] Count contradicting signals: `nothing_unusual`, `already_left`.
-- [ ] Count neutral signals: `not_sure`.
-- [ ] Return `single_report` for 0 corroborations.
-- [ ] Compute score as `supporting / (supporting + contradicting + 0.5 * neutral)`.
-- [ ] Check `likely_ended` before generic `mixed_signals` when the majority signal type is `already_left`, or when the majority signal type is `nothing_unusual` and the constellation is more than 60 minutes old.
-- [ ] Check `activity_not_confirmed` before generic `mixed_signals` when the majority signal type is `nothing_unusual` and the constellation is not more than 60 minutes old.
-- [ ] Check `corroborated` when supporting >= 3, supporting > contradicting, and score >= 0.65.
-- [ ] Check `mixed_signals` when contradicting / total >= 0.4.
-- [ ] Return score clamped to `[0, 1]` with 3-decimal precision.
+- [x] Implement `computeFallbackState(corroborations, constellation)` as a pure function.
+- [x] Count supporting signals: `saw_something`, `heard_something`.
+- [x] Count contradicting signals: `nothing_unusual`, `already_left`.
+- [x] Count neutral signals: `not_sure`.
+- [x] Return `single_report` for 0 corroborations.
+- [x] Compute score as `supporting / (supporting + contradicting + 0.5 * neutral)`.
+- [x] Check `likely_ended` before generic `mixed_signals` when the majority signal type is `already_left`, or when the majority signal type is `nothing_unusual` and the constellation is more than 60 minutes old.
+- [x] Check `activity_not_confirmed` before generic `mixed_signals` when the majority signal type is `nothing_unusual` and the constellation is not more than 60 minutes old.
+- [x] Check `corroborated` when supporting >= 3, supporting > contradicting, and score >= 0.65.
+- [x] Check `mixed_signals` when contradicting / total >= 0.4.
+- [x] Return score clamped to `[0, 1]` with 3-decimal precision.
 
 ### Backend Synthesis Steps
 
-- [ ] Implement `triggerSynthesis(constellationId)`.
-- [ ] Load constellation, incident metadata, and corroborations.
-- [ ] Replace flagged note text with `null` before ML call.
-- [ ] Call `mlClient.synthesizeConstellation(payload)`.
-- [ ] Validate ML result enums and numeric score.
-- [ ] Fall back to deterministic state when ML fails or returns invalid data.
-- [ ] Preserve previous persisted state only if both ML and fallback fail unexpectedly.
-- [ ] Evaluate velocity cap from stored rounded device coordinates: 5+ corroborations from the same non-null 2-decimal grid cell within any 60-second window flags the constellation.
-- [ ] Before persisting the final state, if ML or backend velocity-cap detection flags an anomaly, set constellation `status = 'flagged'` and do not increase score beyond pre-flag value.
-- [ ] Persist confidence state, score, summary, supporting count, contradicting count, ongoing assessment, `last_synthesized_at`, `has_unprocessed_changes = FALSE`, and `updated_at`.
-- [ ] Wire successful corroboration submission to call `triggerSynthesis(constellationId)` asynchronously after persistence.
-- [ ] Log synthesis failures from the async submission trigger without failing the already-created corroboration.
-- [ ] Derive cluster candidates by active constellations within 300 meters and incident times within 30 minutes.
-- [ ] Treat backend-derived cluster candidates as the MVP source of truth for persisted cluster links.
-- [ ] Log ML-returned `cluster_match_incident_ids` for comparison only; do not persist links directly from those IDs in MVP.
-- [ ] Insert cluster links using canonical lower-ID ordering.
-- [ ] Never expose cluster links to citizen endpoints.
-- [ ] Log whether ML, fallback, or previous state was used.
+- [x] Implement `triggerSynthesis(constellationId)`.
+- [x] Load constellation, incident metadata, and corroborations.
+- [x] Replace flagged note text with `null` before ML call.
+- [x] Call `mlClient.synthesizeConstellation(payload)`.
+- [x] Validate ML result enums and numeric score.
+- [x] Fall back to deterministic state when ML fails or returns invalid data.
+- [x] Preserve previous persisted state only if both ML and fallback fail unexpectedly.
+- [x] Evaluate velocity cap from stored rounded device coordinates: 5+ corroborations from the same non-null 2-decimal grid cell within any 60-second window flags the constellation.
+- [x] Before persisting the final state, if ML or backend velocity-cap detection flags an anomaly, set constellation `status = 'flagged'` and do not increase score beyond pre-flag value.
+- [x] Persist confidence state, score, summary, supporting count, contradicting count, ongoing assessment, `last_synthesized_at`, `has_unprocessed_changes = FALSE`, and `updated_at`.
+- [x] Wire successful corroboration submission to call `triggerSynthesis(constellationId)` asynchronously after persistence.
+- [x] Log synthesis failures from the async submission trigger without failing the already-created corroboration.
+- [x] Derive cluster candidates by active constellations within 300 meters and incident times within 30 minutes.
+- [x] Treat backend-derived cluster candidates as the MVP source of truth for persisted cluster links.
+- [x] Log ML-returned `cluster_match_incident_ids` for comparison only; do not persist links directly from those IDs in MVP.
+- [x] Insert cluster links using canonical lower-ID ordering.
+- [x] Never expose cluster links to citizen endpoints.
+- [x] Log whether ML, fallback, or previous state was used.
 
 ### ML Client Steps
 
-- [ ] Add `synthesizeConstellation(params)` to `backend/src/utils/mlClient.js`.
-- [ ] Return normalized fields from `/constellations/synthesize`.
-- [ ] Return `null` on timeout or error.
-- [ ] Use the existing ML client timeout conventions.
+- [x] Add `synthesizeConstellation(params)` to `backend/src/utils/mlClient.js`.
+- [x] Return normalized fields from `/constellations/synthesize`.
+- [x] Return `null` on timeout or error.
+- [x] Use the existing ML client timeout conventions.
 
 ### ML Service Steps
 
-- [ ] Add Pydantic models for request and response.
-- [ ] Add `POST /constellations/synthesize`.
-- [ ] Keep `main.py` thin.
-- [ ] Put prompt construction, provider call, response normalization, and validation in `ml-service/services/constellation_synthesis.py`.
-- [ ] Confirm the Gemini provider method name before calling it.
-- [ ] If no safe provider method exists, or the provider fails, return a clear ML-service error so the backend uses its deterministic fallback.
-- [ ] Do not implement a second deterministic fallback in the ML service.
-- [ ] Instruct the model to check whether non-flagged notes are consistent with their selected `signal_type`.
-- [ ] Downweight signals whose non-flagged notes clearly contradict their selected `signal_type`.
-- [ ] Instruct the model never to include verbatim note content.
-- [ ] Validate output enums before returning.
-- [ ] On successful ML responses, include `cluster_match_incident_ids` as an array, even when empty.
+- [x] Add Pydantic models for request and response.
+- [x] Add `POST /constellations/synthesize`.
+- [x] Keep `main.py` thin.
+- [x] Put prompt construction, provider call, response normalization, and validation in `ml-service/services/constellation_synthesis.py`.
+- [x] Confirm the Gemini provider method name before calling it.
+- [x] If no safe provider method exists, or the provider fails, return a clear ML-service error so the backend uses its deterministic fallback.
+- [x] Do not implement a second deterministic fallback in the ML service.
+- [x] Instruct the model to check whether non-flagged notes are consistent with their selected `signal_type`.
+- [x] Downweight signals whose non-flagged notes clearly contradict their selected `signal_type`.
+- [x] Instruct the model never to include verbatim note content.
+- [x] Validate output enums before returning.
+- [x] On successful ML responses, include `cluster_match_incident_ids` as an array, even when empty.
 
 ### Test Steps
 
-- [ ] Pure fallback returns all expected states.
-- [ ] Fallback tests cover `likely_ended` and `activity_not_confirmed` reachability with cases that would otherwise satisfy generic `mixed_signals`.
-- [ ] Synthesis excludes flagged note content from ML payload.
-- [ ] Invalid ML output falls back deterministically.
-- [ ] Successful ML output persists state.
-- [ ] ML synthesis prompt covers note/signal consistency and contradictory-note downweighting.
-- [ ] Successful corroboration schedules async synthesis after persistence.
-- [ ] Backend velocity cap sets constellation status to `flagged`.
-- [ ] Anomaly flag freezes the persisted confidence score at or below the pre-flag value.
-- [ ] ML-service failure or unavailable provider causes backend deterministic fallback.
-- [ ] Cluster links are inserted in canonical order.
-- [ ] ML-returned cluster IDs are not persisted directly in MVP.
+- [x] Pure fallback returns all expected states.
+- [x] Fallback tests cover `likely_ended` and `activity_not_confirmed` reachability with cases that would otherwise satisfy generic `mixed_signals`.
+- [x] Synthesis excludes flagged note content from ML payload.
+- [x] Invalid ML output falls back deterministically.
+- [x] Successful ML output persists state.
+- [x] ML synthesis prompt covers note/signal consistency and contradictory-note downweighting.
+- [x] Successful corroboration schedules async synthesis after persistence.
+- [x] Backend velocity cap sets constellation status to `flagged`.
+- [x] Anomaly flag freezes the persisted confidence score at or below the pre-flag value.
+- [x] ML-service failure or unavailable provider causes backend deterministic fallback.
+- [x] Cluster links are inserted in canonical order.
+- [x] ML-returned cluster IDs are not persisted directly in MVP.
 
 ### Validation Gate
 
-- [ ] Backend synthesis unit tests pass.
-- [ ] ML endpoint returns valid JSON for a sample request.
-- [ ] Backend works when the ML service is down.
+- [x] Backend synthesis unit tests pass.
+- [x] ML endpoint returns valid JSON for a sample request.
+- [x] Backend works when the ML service is down.
+
+### Phase 5 Notes - 2026-05-02
+
+- Added `backend/src/services/constellationSynthesis.js` with pure fallback state computation, ML-result validation, fallback/previous-state source selection, velocity-cap anomaly detection, state persistence, and backend-derived cluster-link persistence.
+- Wired successful corroboration persistence in `backend/src/services/constellationService.js` to schedule `triggerSynthesis(constellationId)` asynchronously and log failures without failing the already-created corroboration.
+- Added `mlClient.synthesizeConstellation(params)` in `backend/src/utils/mlClient.js`; it follows existing timeout/error conventions and returns `null` on failures.
+- Added `ml-service/services/constellation_synthesis.py` and `POST /constellations/synthesize` in `ml-service/main.py` with Pydantic request/response models and thin endpoint delegation.
+- Added a safe Gemini provider method named `synthesize_constellation`; local/no-LLM providers return unavailable so the backend deterministic fallback remains the source of fallback behavior.
+- Added tests in `backend/tests/constellationSynthesis.test.js`, updated `backend/tests/constellationService.test.js`, and added `ml-service/tests/test_constellation_synthesis.py`.
+- Validation passed with `cd backend && npx jest --runInBand`.
+- Validation passed for the new ML-service synthesis tests with `cd ml-service && python -m unittest discover -s tests -p test_constellation_synthesis.py`.
+- ML synthesis endpoint sample returned valid response JSON by invoking `main.synthesize_constellation(...)` with a stubbed provider in the local environment.
+- Full ML-service test discovery was not clean because existing unrelated tests fail in this environment: `test_cache.py` prints characters unsupported by the Windows `cp1252` console, and `test_insights.py` hits an existing `google.protobuf` import issue after its Google module stub.
 
 ---
 
