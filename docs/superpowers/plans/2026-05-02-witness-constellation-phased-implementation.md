@@ -95,23 +95,42 @@ Purpose: remove ambiguity before editing production behavior.
 
 ### Steps
 
-- [ ] Confirm the backend database migration style and naming convention.
-- [ ] Confirm the current `users` table has `updated_at`, `is_suspended`, and expected role values.
-- [ ] Confirm whether `backend/src/index.js` currently combines app setup and `listen()`.
-- [ ] Confirm the current incident creation service returns the inserted incident with coordinates and toxicity fields available.
-- [ ] Confirm the existing ML toxicity client method name and response shape.
-- [ ] Confirm whether the mobile app is Expo managed, bare/custom dev client, or another workflow.
-- [ ] Confirm whether `expo-notifications` is already installed.
-- [ ] Confirm whether app config contains Android push-notification credentials and the Android application ID needed for device testing.
-- [ ] Confirm the MVP Home prompt radius remains `CONSTELLATION_RADIUS_METERS`, defaulting to 500 m.
-- [ ] Confirm remote push remains post-MVP and gated by Phase 8 Android device verification.
-- [ ] Document the fallback precedence correction against the spec's table ordering so implementers do not reintroduce unreachable states.
-- [ ] Confirm the Home-flow consent prompt and Account settings revocation placement against the current mobile navigation structure.
+- [x] Confirm the backend database migration style and naming convention.
+- [x] Confirm the current `users` table has `updated_at`, `is_suspended`, and expected role values.
+- [x] Confirm whether `backend/src/index.js` currently combines app setup and `listen()`.
+- [x] Confirm the current incident creation service returns the inserted incident with coordinates and toxicity fields available.
+- [x] Confirm the existing ML toxicity client method name and response shape.
+- [x] Confirm whether the mobile app is Expo managed, bare/custom dev client, or another workflow.
+- [x] Confirm whether `expo-notifications` is already installed.
+- [x] Confirm whether app config contains Android push-notification credentials and the Android application ID needed for device testing.
+- [x] Confirm the MVP Home prompt radius remains `CONSTELLATION_RADIUS_METERS`, defaulting to 500 m.
+- [x] Confirm remote push remains post-MVP and gated by Phase 8 Android device verification.
+- [x] Document the fallback precedence correction against the spec's table ordering so implementers do not reintroduce unreachable states.
+- [x] Confirm the Home-flow consent prompt and Account settings revocation placement against the current mobile navigation structure.
 
 ### Validation Gate
 
-- [ ] Document the answers above in the implementation PR or a short note below this checklist.
-- [ ] Do not implement Firebase push dispatch until real-token behavior is verified.
+- [x] Document the answers above in the implementation PR or a short note below this checklist.
+- [x] Do not implement Firebase push dispatch until real-token behavior is verified.
+
+### Phase 0 Notes - 2026-05-02
+
+- Backend migration style: one-off scripts live under `backend/src/database/migrations` and are named `add_*.js`. The newer pattern exports a `runMigration` function, wraps execution in `if (require.main === module)`, uses idempotent SQL such as `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` and `CREATE INDEX IF NOT EXISTS`, and exits non-zero on failure. `backend/src/database/init.js` also owns base schema creation and repeats some additive/idempotent schema updates during `db:init`.
+- Current live `users` table check passed against the local database. It has `updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`, `is_suspended BOOLEAN DEFAULT false`, and `role VARCHAR DEFAULT 'citizen'` with allowed values `citizen`, `moderator`, `admin`, and `law_enforcement`.
+- `backend/src/index.js` currently combines Express app composition, Socket.IO setup, middleware, routes, error handling, and `server.listen()`. Phase 1 should split app composition into `backend/src/app.js` before route tests are added.
+- `incidentService.createIncident()` inserts the incident with `latitude`, `longitude`, `location`, `status`, and other incident fields via `RETURNING *`, then may mutate `category`, `severity`, and `status` during ML/dedup/auto-flag processing before returning the same object. Toxicity is available inside the creation flow and persisted to `report_ml.is_toxic` / `report_ml.toxicity_score`, but toxicity fields are not returned on the incident object.
+- Existing backend ML toxicity client method: `mlClient.detectToxicity(text)`, which calls `POST /toxicity` and normalizes to `{ isToxic, toxicityScore, isSevere, details }` or `null` on error. `mlClient.analyzeIncident(...)` can also return nested `toxicity` with the same normalized field names.
+- ML service toxicity endpoint shape: `POST /toxicity` returns `is_toxic`, `toxicity_score`, `is_severe`, `details`, and optional `inference_metadata`. Gemini provider method names available today include `detect_toxicity`, `full_analyze`, `pairwise_compare`, and `generate_insights`; there is no constellation synthesis provider method yet.
+- Mobile app location: the plan's `FinalProject/src/...` paths correspond to this repo's actual `Mobile-part/src/...` paths. Future mobile phase file paths should use `Mobile-part` unless the app is moved.
+- Mobile workflow: Expo SDK 54 with checked-in native Android project and scripts using `expo run:android`, so treat it as Expo prebuild/custom dev client rather than pure managed Expo. There is an Android native project under `Mobile-part/android`.
+- `expo-notifications` is not installed. Existing notification code uses `@notifee/react-native` for local notifications only, with no remote token registration path found.
+- Android app ID is present as `com.hhhhjjj.FinalProject` in both `Mobile-part/app.json` and `Mobile-part/android/app/build.gradle`. No `google-services.json`, Firebase Gradle plugin, EAS project ID, or push credential config was found, so Android remote push credentials are not configured in-repo.
+- MVP Home prompt radius remains the plan decision: implement `CONSTELLATION_RADIUS_METERS` with default `500` for MVP prompt count and tappable selection. No such constant exists yet in `constants/limits.js`, so Phase 4/7 should introduce it rather than reuse the existing dedup radius.
+- Remote push remains post-MVP and gated by Phase 8. Do not implement Firebase Admin dispatch, token registration, or notification tap routing until `expo-notifications` raw Android device token behavior is verified on a real Android device.
+- Deterministic fallback precedence correction: backend fallback must check `likely_ended` and `activity_not_confirmed` before generic `mixed_signals`; otherwise majority `already_left` / `nothing_unusual` cases can be swallowed by the contradicting-signal ratio rule and become unreachable.
+- Home-flow consent placement: `Mobile-part/src/navigation/AppNavigator.js` switches authenticated users into `TabNavigator`; `DashboardStack` currently hosts `HomeScreen`, so the Home-flow consent prompt should be introduced from the authenticated Home/Dashboard path before stored location or push targeting runs.
+- Account revocation placement: `Mobile-part/src/screens/Account/AccountScreen.js` already renders `PreferencesSection` with a Location Services toggle. Reuse or replace that toggle as the app-level location consent grant/revoke control, and make revocation call the backend consent endpoint plus clear local consent state.
+- Current local preferences default `locationServices: true` and `pushNotifications: true` in `constants/preferences.js`. Phase 7 should revisit these defaults so app-level location consent is not silently granted before explicit user consent.
 
 ---
 
