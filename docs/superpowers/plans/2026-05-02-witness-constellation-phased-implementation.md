@@ -958,15 +958,15 @@ Purpose: make the feature operationally safe.
 
 ## Definition Of Done
 
-- [ ] A fresh eligible incident opens one active constellation.
-- [ ] Nearby opted-in users can submit one response.
-- [ ] Reporter cannot submit to their own constellation.
-- [ ] Duplicate responses are rejected.
-- [ ] Confidence state updates through ML when available and fallback when unavailable.
-- [ ] My Reports, Incident Detail, Home, and Map render only allowed aggregate state.
-- [ ] Flagged constellations follow the visibility matrix.
-- [ ] Reporter identity is stripped from public incident reads.
-- [ ] Push tokens and user locations never appear in API responses.
-- [ ] Push-token registration requires app-level location consent.
-- [ ] Expired constellations stop accepting writes and disappear from public surfaces.
-- [ ] Automated tests cover the security and privacy behaviors listed above.
+- [x] A fresh eligible incident opens one active constellation.
+- [x] Nearby opted-in users can submit one response.
+- [x] Reporter cannot submit to their own constellation.
+- [x] Duplicate responses are rejected.
+- [x] Confidence state updates through ML when available and fallback when unavailable.
+- [x] My Reports, Incident Detail, Home, and Map render only allowed aggregate state.
+- [x] Flagged constellations follow the visibility matrix.
+- [x] Reporter identity is stripped from public incident reads.
+- [x] Push tokens and user locations never appear in API responses.
+- [x] Push-token registration requires app-level location consent.
+- [x] Expired constellations stop accepting writes and disappear from public surfaces.
+- [x] Automated tests cover the security and privacy behaviors listed above.
