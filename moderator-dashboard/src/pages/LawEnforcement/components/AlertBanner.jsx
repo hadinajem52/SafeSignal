@@ -73,6 +73,11 @@ function AlertBanner({
                 >
                   {alert.title || `Incident #${alert.incidentId}`}
                 </span>
+                {alert.hasCorroboratedSignal ? (
+                  <span className="lei-signal-pill corroborated">
+                    Corroborated
+                  </span>
+                ) : null}
               </div>
               <div
                 className="lei-alert-row-actions"

@@ -6,6 +6,10 @@ import GoogleMapPanel from "../../components/GoogleMapPanel";
 import LoadingState from "../../components/LoadingState";
 import { getStatusCfg } from "../../constants/incidentStatuses";
 import { CAT_COLORS } from "../../constants/categoryConfig";
+import {
+  getConstellationMarkerStyle,
+  getConstellationMeta,
+} from "../../utils/constellationUtils";
 import "./dashboard.css";
 
 /* ─── SVG icons ──────────────────────────────────────────────────────────── */
@@ -176,7 +180,10 @@ function Dashboard() {
   const { data: allIncidents = [] } = useQuery({
     queryKey: ["dashboard-all-incidents"],
     queryFn: async () => {
-      const result = await reportsAPI.getAll({ limit: 200 });
+      const result = await reportsAPI.getAll({
+        limit: 200,
+        include_constellation: true,
+      });
       return result.success ? result.data || [] : [];
     },
   });
@@ -201,20 +208,49 @@ function Dashboard() {
           Number.isFinite(Number(i.latitude)) &&
           Number.isFinite(Number(i.longitude)),
       )
-      .map((i) => ({
-        id: i.incident_id,
-        lat: i.latitude,
-        lng: i.longitude,
-        title: i.title || `Incident #${i.incident_id}`,
-        weight:
-          i.severity === "critical"
-            ? 4
-            : i.severity === "high"
-              ? 3
-              : i.severity === "medium"
-                ? 2
-                : 1,
-      }));
+      .map((i) => {
+        const constellationStyle = getConstellationMarkerStyle(i.constellation);
+        return {
+          id: i.incident_id,
+          lat: i.latitude,
+          lng: i.longitude,
+          title: i.title || `Incident #${i.incident_id}`,
+          weight:
+            i.severity === "critical"
+              ? 4
+              : i.severity === "high"
+                ? 3
+                : i.severity === "medium"
+                  ? 2
+                  : 1,
+          constellation: constellationStyle
+            ? {
+                ...constellationStyle,
+                radiusMeters: i.constellation?.radiusMeters,
+              }
+            : null,
+        };
+      });
+  }, [allIncidents]);
+
+  const constellationStats = useMemo(() => {
+    return allIncidents.reduce(
+      (acc, incident) => {
+        const constellation = incident.constellation;
+        if (!constellation) return acc;
+        if (constellation.status === "flagged") acc.flagged += 1;
+        if (constellation.confidenceState === "corroborated") acc.corroborated += 1;
+        if (
+          ["mixed_signals", "activity_not_confirmed"].includes(
+            constellation.confidenceState,
+          )
+        ) {
+          acc.mixed += 1;
+        }
+        return acc;
+      },
+      { corroborated: 0, mixed: 0, flagged: 0 },
+    );
   }, [allIncidents]);
 
   const criticalCount = useMemo(
@@ -359,6 +395,34 @@ function Dashboard() {
             </div>
             <div className="dash-stat-value">{c.value}</div>
             <div className={`dash-stat-delta ${c.deltaClass}`}>{c.delta}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="dash-signal-grid">
+        {[
+          {
+            label: "Corroborated",
+            value: constellationStats.corroborated,
+            meta: getConstellationMeta({ confidenceState: "corroborated" }),
+          },
+          {
+            label: "Mixed / Contradicted",
+            value: constellationStats.mixed,
+            meta: getConstellationMeta({ confidenceState: "mixed_signals" }),
+          },
+          {
+            label: "Signal Review",
+            value: constellationStats.flagged,
+            meta: getConstellationMeta({ status: "flagged" }),
+          },
+        ].map((item) => (
+          <div key={item.label} className="dash-signal-card">
+            <div className="dash-signal-dot" style={{ background: item.meta.color }} />
+            <div>
+              <div className="dash-signal-value">{item.value}</div>
+              <div className="dash-signal-label">{item.label}</div>
+            </div>
           </div>
         ))}
       </div>

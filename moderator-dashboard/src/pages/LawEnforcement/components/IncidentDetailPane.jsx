@@ -2,6 +2,11 @@ import React from "react";
 import { ArrowUpRight } from "lucide-react";
 import { CLOSURE_OUTCOMES } from "../../../constants/incident";
 import GoogleMapPanel from "../../../components/GoogleMapPanel";
+import {
+  formatConstellationScore,
+  getConstellationMarkerStyle,
+  getConstellationMeta,
+} from "../../../utils/constellationUtils";
 import { getTimeAgo } from "../../../utils/dateUtils";
 import { openMapsUrl } from "../../../utils/incidentUtils";
 import { STATUS_ACTION_CONFIG, WORKFLOW_STEPS } from "../constants";
@@ -42,6 +47,8 @@ function IncidentDetailPane({
   const isComplete = incident.status === "police_closed";
   const statusKey = incident.status || "pending";
   const showCloseCaseOptions = !isComplete || incident.status === "police_closed";
+  const constellationMeta = getConstellationMeta(incident.constellation);
+  const constellationMarker = getConstellationMarkerStyle(incident.constellation);
 
   return (
     <div className="lei-detail-panel">
@@ -328,6 +335,33 @@ function IncidentDetailPane({
           </div>
         </div>
 
+        {constellationMeta ? (
+          <div style={{ marginBottom: 24 }}>
+            <div className="lei-section-label">Community Signal</div>
+            <div
+              className="lei-signal-card"
+              style={{ borderColor: constellationMeta.color }}
+            >
+              <div className="lei-signal-card-head">
+                <span style={{ color: constellationMeta.color }}>
+                  {constellationMeta.label}
+                </span>
+                <span>
+                  {formatConstellationScore(incident.constellation.confidenceScore)}
+                </span>
+              </div>
+              <p>{incident.constellation.summary || constellationMeta.description}</p>
+              <div className="lei-signal-metrics">
+                <span>{incident.constellation.supportingSignals || 0} supporting</span>
+                <span>{incident.constellation.contradictingSignals || 0} contradicting</span>
+                <span>
+                  {(incident.constellation.ongoingAssessment || "unknown").replace(/_/g, " ")}
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         <div className="lei-section-label">Incident Location</div>
         <div className="lei-map-container">
           <GoogleMapPanel
@@ -337,6 +371,12 @@ function IncidentDetailPane({
                 lat: incident.latitude,
                 lng: incident.longitude,
                 title: incident.title,
+                constellation: constellationMarker
+                  ? {
+                      ...constellationMarker,
+                      radiusMeters: incident.constellation?.radiusMeters,
+                    }
+                  : null,
               },
             ]}
             center={{ lat: incident.latitude, lng: incident.longitude }}

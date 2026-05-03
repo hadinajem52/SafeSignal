@@ -267,6 +267,8 @@ const leStyles = `
   .lei-incident-row.aged { background: rgba(229,72,77,0.06); }
   .lei-incident-title { font-size: 13px; font-weight: 600; color: var(--le-text); margin-bottom: 2px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .lei-incident-preview { font-size: 10px; color: var(--le-text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lei-signal-pill { display:inline-flex; align-items:center; width:max-content; margin-top:5px; padding:2px 5px; border:1px solid; font-size:8px; font-weight:800; text-transform:uppercase; color:var(--le-text-dim); letter-spacing:0.04em; background:rgba(255,255,255,0.02); }
+  .lei-signal-pill.corroborated { border-color:var(--le-green); color:var(--le-green); margin-top:0; flex-shrink:0; }
   .lei-sev-badge { display: flex; flex-direction: column; align-items: center; gap: 3px; }
   .lei-sev-label { font-size: 9px; letter-spacing: 0.05em; font-weight: 700; }
   .lei-sev-dots { display: flex; gap: 2px; }
@@ -336,6 +338,14 @@ const leStyles = `
   .lei-btn-close { font-size:11px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; padding:10px 16px; border:1px solid var(--le-border2); color:var(--le-text-dim); background:none; cursor:pointer; transition:all 0.1s; font-family:'Plus Jakarta Sans',sans-serif; margin-left:auto; display:flex; align-items:center; gap:6px; }
   .lei-btn-close:hover:not(:disabled) { border-color:var(--le-red); color:var(--le-red); }
   .lei-btn-close:disabled { opacity:0.4; cursor:not-allowed; }
+
+  /* COMMUNITY SIGNAL */
+  .lei-signal-card { border:1px solid var(--le-border); background:var(--le-surface); padding:12px 14px; }
+  .lei-signal-card-head { display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; }
+  .lei-signal-card-head span:last-child { color:var(--le-text); font-variant-numeric:tabular-nums; }
+  .lei-signal-card p { margin-top:7px; font-size:12px; line-height:1.6; color:var(--le-text-dim); }
+  .lei-signal-metrics { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; padding-top:10px; border-top:1px solid var(--le-border); }
+  .lei-signal-metrics span { font-size:10px; color:var(--le-text-dim); text-transform:uppercase; letter-spacing:0.04em; font-variant-numeric:tabular-nums; }
 
   /* MAP */
   .lei-map-container { background:#090D12; border:1px solid var(--le-border); position:relative; overflow:hidden; margin-top:8px; }

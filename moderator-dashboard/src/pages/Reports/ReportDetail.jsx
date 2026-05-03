@@ -5,6 +5,10 @@ import DedupCandidatesPanel from "../../components/DedupCandidatesPanel";
 import GoogleMapPanel from "../../components/GoogleMapPanel";
 import SeverityBadge from "../../components/SeverityBadge";
 import StatusBadge from "../../components/StatusBadge";
+import {
+  formatConstellationScore,
+  getConstellationMeta,
+} from "../../utils/constellationUtils";
 import { formatCategoryLabel, openMapsUrl } from "../../utils/incidentUtils";
 
 // Bordered kbd chip — used in header action buttons and empty state
@@ -16,6 +20,73 @@ function KbdChip({ label, style }) {
     >
       {label}
     </kbd>
+  );
+}
+
+function CommunitySignalCard({ constellation }) {
+  const meta = getConstellationMeta(constellation);
+
+  if (!meta) return null;
+
+  const expiresAt = constellation.expiresAt
+    ? new Date(constellation.expiresAt).toLocaleString()
+    : "N/A";
+
+  return (
+    <DetailSection title="Community Signal">
+      <div className="space-y-3 text-sm">
+        <div
+          className="border p-3"
+          style={{
+            borderColor: meta.color,
+            background: `${meta.color}10`,
+          }}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <span
+              className="text-[10px] font-bold uppercase text-balance"
+              style={{ color: meta.color }}
+            >
+              {meta.label}
+            </span>
+            <span className="text-[11px] font-semibold tabular-nums text-text">
+              {formatConstellationScore(constellation.confidenceScore)}
+            </span>
+          </div>
+          <p className="mt-1.5 text-xs leading-relaxed text-muted text-pretty">
+            {constellation.summary || meta.description}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-3 border border-border">
+          {[
+            ["Supporting", constellation.supportingSignals || 0],
+            ["Contradicting", constellation.contradictingSignals || 0],
+            [
+              "Assessment",
+              constellation.ongoingAssessment?.replace(/_/g, " ") || "unknown",
+            ],
+          ].map(([label, value], index) => (
+            <div
+              key={label}
+              className={`p-2.5 ${index < 2 ? "border-r border-border" : ""}`}
+            >
+              <p className="text-[9px] font-bold uppercase text-muted">
+                {label}
+              </p>
+              <p className="mt-1 text-xs font-semibold text-text tabular-nums capitalize">
+                {value}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-between text-[11px] text-muted">
+          <span>Expires</span>
+          <span className="font-semibold text-text tabular-nums">{expiresAt}</span>
+        </div>
+      </div>
+    </DetailSection>
   );
 }
 
@@ -177,6 +248,8 @@ function ReportDetail({
             emptyMessage="No coordinates available."
           />
         </DetailSection>
+
+        <CommunitySignalCard constellation={report.constellation} />
 
         {/* ML Insights */}
         <DetailSection

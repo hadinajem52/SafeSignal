@@ -25,6 +25,8 @@ const constellationService = require('./constellationService');
 
 const LEI_STATUSES = ['verified', 'dispatched', 'on_scene', 'investigating', 'police_closed'];
 const STAFF_ROLES = new Set(['admin', 'moderator', 'law_enforcement']);
+const shouldIncludeStaffConstellation = (includeConstellation, userRole) =>
+  Boolean(includeConstellation && STAFF_ROLES.has(userRole));
 const profanityFilter = new Filter();
 
 const CATEGORY_KEYWORDS = {
@@ -1060,12 +1062,26 @@ async function createIncident(incidentData, reporterId) {
  * @returns {Promise<Array>} Array of incidents
  */
 async function getAllIncidents(filters = {}) {
-  const { category, status, severity, limit = 50, offset = 0 } = filters;
+  const {
+    category,
+    status,
+    severity,
+    limit = 50,
+    offset = 0,
+    includeConstellation = false,
+    userRole = null,
+  } = filters;
+  const includeStaffConstellation = shouldIncludeStaffConstellation(
+    includeConstellation,
+    userRole
+  );
 
   let query = `
-    SELECT i.*, u.username, u.email 
+    SELECT i.*, u.username, u.email
+      ${includeStaffConstellation ? staffConstellationSelect('c') : ''}
     FROM incidents i
     JOIN users u ON i.reporter_id = u.user_id
+    ${includeStaffConstellation ? staffConstellationJoin('i') : ''}
     WHERE i.is_draft = FALSE
   `;
   const params = [];
@@ -1102,7 +1118,9 @@ async function getAllIncidents(filters = {}) {
   params.push(limit, offset);
 
   const incidents = await db.manyOrNone(query, params);
-  return incidents;
+  return includeStaffConstellation
+    ? incidents.map(formatIncidentWithStaffConstellation)
+    : incidents;
 }
 
 /**
@@ -1218,15 +1236,7 @@ const formatIncidentConstellation = (row, includeStaffDetails) => {
   };
 
   if (includeStaffDetails) {
-    return {
-      ...constellation,
-      centerLatitude: row.constellation_center_latitude === null ? null : Number(row.constellation_center_latitude),
-      centerLongitude: row.constellation_center_longitude === null ? null : Number(row.constellation_center_longitude),
-      radiusMeters: row.constellation_radius_meters,
-      confidenceState: row.constellation_confidence_state,
-      confidenceScore: row.constellation_confidence_score === null ? null : Number(row.constellation_confidence_score),
-      summary: row.constellation_summary,
-    };
+    return formatStaffConstellation(row);
   }
 
   if (row.constellation_status !== 'flagged') {
@@ -1241,6 +1251,96 @@ const formatIncidentConstellation = (row, includeStaffDetails) => {
   return constellation;
 };
 
+const staffConstellationSelect = (alias) => `,
+      ${alias}.constellation_id AS constellation_constellation_id,
+      ${alias}.status AS constellation_status,
+      ${alias}.center_latitude AS constellation_center_latitude,
+      ${alias}.center_longitude AS constellation_center_longitude,
+      ${alias}.radius_meters AS constellation_radius_meters,
+      ${alias}.opens_at AS constellation_opens_at,
+      ${alias}.expires_at AS constellation_expires_at,
+      ${alias}.confidence_state AS constellation_confidence_state,
+      ${alias}.confidence_score AS constellation_confidence_score,
+      ${alias}.summary AS constellation_summary,
+      ${alias}.supporting_signals AS constellation_supporting_signals,
+      ${alias}.contradicting_signals AS constellation_contradicting_signals,
+      ${alias}.ongoing_assessment AS constellation_ongoing_assessment`;
+
+const staffConstellationJoin = (incidentAlias) => `
+    LEFT JOIN LATERAL (
+      SELECT *
+      FROM incident_constellations c
+      WHERE c.incident_id = ${incidentAlias}.incident_id
+        AND (
+          (c.status = 'active' AND c.expires_at > NOW())
+          OR c.status = 'flagged'
+        )
+      ORDER BY c.created_at DESC
+      LIMIT 1
+    ) c ON TRUE`;
+
+const formatStaffConstellation = (row) => {
+  if (!row.constellation_constellation_id) {
+    return null;
+  }
+
+  const toNullableNumber = (value) =>
+    value === null || value === undefined ? null : Number(value);
+
+  return {
+    constellationId: row.constellation_constellation_id,
+    status: row.constellation_status,
+    confidenceState: row.constellation_confidence_state,
+    confidenceScore: toNullableNumber(row.constellation_confidence_score),
+    supportingSignals: row.constellation_supporting_signals || 0,
+    contradictingSignals: row.constellation_contradicting_signals || 0,
+    ongoingAssessment: row.constellation_ongoing_assessment || null,
+    summary: row.constellation_summary || null,
+    opensAt: row.constellation_opens_at,
+    expiresAt: row.constellation_expires_at,
+    radiusMeters: row.constellation_radius_meters,
+    centerLatitude: toNullableNumber(row.constellation_center_latitude),
+    centerLongitude: toNullableNumber(row.constellation_center_longitude),
+  };
+};
+
+const formatIncidentWithStaffConstellation = (row) => {
+  const {
+    constellation_constellation_id,
+    constellation_status,
+    constellation_center_latitude,
+    constellation_center_longitude,
+    constellation_radius_meters,
+    constellation_opens_at,
+    constellation_expires_at,
+    constellation_confidence_state,
+    constellation_confidence_score,
+    constellation_summary,
+    constellation_supporting_signals,
+    constellation_contradicting_signals,
+    constellation_ongoing_assessment,
+    ...incident
+  } = row;
+
+  incident.constellation = formatStaffConstellation({
+    constellation_constellation_id,
+    constellation_status,
+    constellation_center_latitude,
+    constellation_center_longitude,
+    constellation_radius_meters,
+    constellation_opens_at,
+    constellation_expires_at,
+    constellation_confidence_state,
+    constellation_confidence_score,
+    constellation_summary,
+    constellation_supporting_signals,
+    constellation_contradicting_signals,
+    constellation_ongoing_assessment,
+  });
+
+  return incident;
+};
+
 const formatIncidentDetail = (row, includeStaffDetails) => {
   const {
     constellation_constellation_id,
@@ -1248,10 +1348,14 @@ const formatIncidentDetail = (row, includeStaffDetails) => {
     constellation_center_latitude,
     constellation_center_longitude,
     constellation_radius_meters,
+    constellation_opens_at,
     constellation_expires_at,
     constellation_confidence_state,
     constellation_confidence_score,
     constellation_summary,
+    constellation_supporting_signals,
+    constellation_contradicting_signals,
+    constellation_ongoing_assessment,
     ...incident
   } = row;
 
@@ -1266,10 +1370,14 @@ const formatIncidentDetail = (row, includeStaffDetails) => {
     constellation_center_latitude,
     constellation_center_longitude,
     constellation_radius_meters,
+    constellation_opens_at,
     constellation_expires_at,
     constellation_confidence_state,
     constellation_confidence_score,
     constellation_summary,
+    constellation_supporting_signals,
+    constellation_contradicting_signals,
+    constellation_ongoing_assessment,
   }, includeStaffDetails);
 
   return incident;
@@ -1286,10 +1394,14 @@ async function getIncidentDetailRow(incidentId) {
        c.center_latitude AS constellation_center_latitude,
        c.center_longitude AS constellation_center_longitude,
        c.radius_meters AS constellation_radius_meters,
+       c.opens_at AS constellation_opens_at,
        c.expires_at AS constellation_expires_at,
        c.confidence_state AS constellation_confidence_state,
        c.confidence_score AS constellation_confidence_score,
-       c.summary AS constellation_summary
+       c.summary AS constellation_summary,
+       c.supporting_signals AS constellation_supporting_signals,
+       c.contradicting_signals AS constellation_contradicting_signals,
+       c.ongoing_assessment AS constellation_ongoing_assessment
      FROM incidents i
      JOIN users u ON i.reporter_id = u.user_id
      LEFT JOIN LATERAL (
@@ -1836,8 +1948,10 @@ async function getLEIIncidents(filters = {}) {
 
   let query = `
     SELECT i.*, u.username, u.email
+      ${staffConstellationSelect('c')}
     FROM incidents i
     JOIN users u ON i.reporter_id = u.user_id
+    ${staffConstellationJoin('i')}
     WHERE i.is_draft = FALSE
       AND i.status = ANY($${paramCount}::text[])
   `;
@@ -1858,14 +1972,17 @@ async function getLEIIncidents(filters = {}) {
       i.incident_date DESC
   `;
 
-  return db.manyOrNone(query, params);
+  const incidents = await db.manyOrNone(query, params);
+  return incidents.map(formatIncidentWithStaffConstellation);
 }
 
 async function getLEIIncidentById(incidentId) {
   const incidentQuery = db.oneOrNone(
     `SELECT i.*, u.username, u.email
+       ${staffConstellationSelect('c')}
      FROM incidents i
      JOIN users u ON i.reporter_id = u.user_id
+     ${staffConstellationJoin('i')}
      WHERE i.incident_id = $1`,
     [incidentId]
   );
@@ -1892,7 +2009,10 @@ async function getLEIIncidentById(incidentId) {
     throw ServiceError.notFound('Incident');
   }
 
-  return { incident, actions };
+  return {
+    incident: formatIncidentWithStaffConstellation(incident),
+    actions,
+  };
 }
 
 async function updateLEIStatus(incidentId, status, closureOutcome, closureDetails, requestingUser, { isDisclosed, isLocationFuzzed } = {}) {

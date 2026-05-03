@@ -2,6 +2,7 @@ import React from "react";
 import { Clock, Zap } from "lucide-react";
 import { LEI_STATUS_FILTERS } from "../../../constants/incident";
 import { getTimeAgo } from "../../../utils/dateUtils";
+import { getConstellationMeta } from "../../../utils/constellationUtils";
 import {
   STATUS_ACTION_CONFIG,
   UNACTIONED_AGE_THRESHOLD_MINUTES,
@@ -90,6 +91,7 @@ function IncidentQueuePanel({
           incidents.map((incident) => {
             const aged = isUnactionedAged(incident);
             const isSelected = selectedIncidentId === incident.id;
+            const constellationMeta = getConstellationMeta(incident.constellation);
             const nextStatus = getNextWorkflowStatus(incident.status);
             const nextAction = nextStatus
               ? STATUS_ACTION_CONFIG[nextStatus]
@@ -106,6 +108,17 @@ function IncidentQueuePanel({
                   <div className="lei-incident-preview">
                     {incident.description}
                   </div>
+                  {constellationMeta ? (
+                    <div
+                      className="lei-signal-pill"
+                      style={{
+                        borderColor: constellationMeta.color,
+                        color: constellationMeta.color,
+                      }}
+                    >
+                      {constellationMeta.label}
+                    </div>
+                  ) : null}
                 </div>
 
                 <SeverityDots severity={incident.severity} />
