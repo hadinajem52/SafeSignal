@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import useRealtimeNotifications from '../hooks/useRealtimeNotifications';
+import useWitnessPromptNotifications from '../hooks/useWitnessPromptNotifications';
 
 import LoginScreen from '../screens/Auth/LoginScreen';
 import RegisterScreen from '../screens/Auth/RegisterScreen';
@@ -60,7 +61,10 @@ const LoadingScreen = ({ theme }) => (
 const AppNavigator = () => {
   const { isAuthenticated, isLoading } = useAuth();
   const { theme, isDark } = useTheme();
+  const navigationRef = useRef(null);
+  const [isNavigationReady, setIsNavigationReady] = useState(false);
   useRealtimeNotifications();
+  useWitnessPromptNotifications({ navigationRef, isNavigationReady });
 
   const navigationTheme = {
     ...(isDark ? DarkTheme : DefaultTheme),
@@ -79,7 +83,11 @@ const AppNavigator = () => {
   }
 
   return (
-    <NavigationContainer theme={navigationTheme}>
+    <NavigationContainer
+      ref={navigationRef}
+      theme={navigationTheme}
+      onReady={() => setIsNavigationReady(true)}
+    >
       {isAuthenticated ? <AppStack /> : <AuthStack />}
     </NavigationContainer>
   );

@@ -3,6 +3,7 @@ const ServiceError = require('../utils/ServiceError');
 const logger = require('../utils/logger');
 const mlClient = require('../utils/mlClient');
 const constellationSynthesis = require('./constellationSynthesis');
+const fcmClient = require('../utils/fcmClient');
 const { containsPii } = require('../utils/piiScanner');
 const { LIMITS } = require('../../../constants/limits');
 
@@ -207,6 +208,9 @@ async function openConstellationForIncident(incident, reporterId) {
 
   try {
     const constellation = await createConstellation(incident);
+    notifyNearbyUsers(constellation).catch((error) => {
+      logger.error(`Witness prompt notification failed for constellation ${constellation.constellation_id}: ${error.message}`);
+    });
     return { created: true, reason: null, constellation };
   } catch (error) {
     if (error.code === '23505') {
@@ -214,6 +218,53 @@ async function openConstellationForIncident(incident, reporterId) {
     }
     throw error;
   }
+}
+
+async function notifyNearbyUsers(constellation) {
+  const targets = await db.manyOrNone(
+    `SELECT u.user_id, u.push_token
+     FROM users u
+     JOIN incidents i ON i.incident_id = $1
+     WHERE u.push_token IS NOT NULL
+       AND u.push_token_updated_at > NOW() - INTERVAL '7 days'
+       AND u.location_consent = TRUE
+       AND u.location_updated_at > NOW() - INTERVAL '24 hours'
+       AND u.is_suspended = FALSE
+       AND u.user_id <> i.reporter_id
+       AND ST_DWithin(
+         ST_SetSRID(ST_MakePoint(u.last_known_longitude::float, u.last_known_latitude::float), 4326)::geography,
+         ST_SetSRID(ST_MakePoint($2::float, $3::float), 4326)::geography,
+         $4
+       )
+     LIMIT 200`,
+    [
+      constellation.incident_id,
+      Number(constellation.center_longitude),
+      Number(constellation.center_latitude),
+      constellation.radius_meters,
+    ]
+  );
+
+  let sent = 0;
+  let skipped = 0;
+
+  await Promise.all(targets.map(async (target) => {
+    const result = await fcmClient.sendWitnessPromptNotification(target.push_token, {
+      constellationId: constellation.constellation_id,
+      coarseLatitude: roundCoordinate(constellation.center_latitude),
+      coarseLongitude: roundCoordinate(constellation.center_longitude),
+    });
+
+    if (result.sent) {
+      sent += 1;
+    } else {
+      skipped += 1;
+    }
+  }));
+
+  logger.info(`Witness prompt notifications for constellation ${constellation.constellation_id}: sent=${sent}, skipped=${skipped}`);
+
+  return { sent, skipped, targetCount: targets.length };
 }
 
 async function isUserInRadius(userId, constellationId) {
@@ -404,6 +455,7 @@ module.exports = {
   evaluateEligibility,
   createConstellation,
   openConstellationForIncident,
+  notifyNearbyUsers,
   isUserInRadius,
   getConstellationForUser,
   submitCorroboration,
