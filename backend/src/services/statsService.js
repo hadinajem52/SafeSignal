@@ -9,6 +9,7 @@ const ServiceError = require('../utils/ServiceError');
 
 const DEFAULT_SAFETY_RADIUS_KM = 1;
 const MAX_SAFETY_RADIUS_KM = 1;
+const CONSTELLATION_RADIUS_METERS = 500;
 
 /**
  * Severity weightings for safety score calculation
@@ -211,6 +212,8 @@ async function getUserDashboardStats(userId, { latitude, longitude, radius = DEF
     LIMIT 5
   `, [userId]);
 
+    const nearbyConstellationsPromise = getNearbyConstellationsForUser(userId);
+
     const [
         nearbyIncidents,
         activeNearbyRow,
@@ -218,6 +221,7 @@ async function getUserDashboardStats(userId, { latitude, longitude, radius = DEF
         trendingWithChange,
         userStats,
         recentActivity,
+        nearbyConstellations,
     ] = await Promise.all([
         nearbyIncidentsPromise,
         activeNearbyPromise,
@@ -225,6 +229,7 @@ async function getUserDashboardStats(userId, { latitude, longitude, radius = DEF
         trendingWithChangePromise,
         userStatsPromise,
         recentActivityPromise,
+        nearbyConstellationsPromise,
     ]);
 
     const safetyScore = hasCoords ? calculateSafetyScore(nearbyIncidents) : null;
@@ -251,7 +256,59 @@ async function getUserDashboardStats(userId, { latitude, longitude, radius = DEF
             pendingReports: parseInt(userStats.pendingReports || 0),
         },
         recentActivity: recentActivity || [],
+        witnessPrompts: {
+            count: nearbyConstellations.length,
+            firstNearbyConstellationId: nearbyConstellations[0]?.constellation_id || null,
+            coarseLatitude: nearbyConstellations[0]?.center_latitude === undefined
+                ? null
+                : Number(Number(nearbyConstellations[0].center_latitude).toFixed(2)),
+            coarseLongitude: nearbyConstellations[0]?.center_longitude === undefined
+                ? null
+                : Number(Number(nearbyConstellations[0].center_longitude).toFixed(2)),
+        },
     };
+}
+
+async function getNearbyConstellationsForUser(userId) {
+    const user = await db.oneOrNone(`
+      SELECT last_known_latitude, last_known_longitude
+      FROM users
+      WHERE user_id = $1
+        AND location_consent = TRUE
+        AND last_known_latitude IS NOT NULL
+        AND last_known_longitude IS NOT NULL
+    `, [userId]);
+
+    if (!user) {
+        return [];
+    }
+
+    return db.manyOrNone(`
+      SELECT c.constellation_id, c.center_latitude, c.center_longitude
+      FROM incident_constellations c
+      JOIN incidents i ON i.incident_id = c.incident_id
+      WHERE c.status = 'active'
+        AND c.expires_at > NOW()
+        AND i.reporter_id <> $1
+        AND NOT EXISTS (
+          SELECT 1
+          FROM incident_corroborations ic
+          WHERE ic.constellation_id = c.constellation_id
+            AND ic.user_id = $1
+        )
+        AND ST_DWithin(
+          ST_SetSRID(ST_MakePoint(c.center_longitude::float, c.center_latitude::float), 4326)::geography,
+          ST_SetSRID(ST_MakePoint($2::float, $3::float), 4326)::geography,
+          $4
+        )
+      ORDER BY c.opens_at DESC
+      LIMIT 5
+    `, [
+        userId,
+        Number(user.last_known_longitude),
+        Number(user.last_known_latitude),
+        CONSTELLATION_RADIUS_METERS,
+    ]);
 }
 
 /**
@@ -308,6 +365,7 @@ async function getAreaSafetyStats(latitude, longitude, radius = DEFAULT_SAFETY_R
 module.exports = {
     getModeratorStats,
     getUserDashboardStats,
+    getNearbyConstellationsForUser,
     getAreaSafetyStats,
     calculateSafetyScore, // Exposed for testing
 };

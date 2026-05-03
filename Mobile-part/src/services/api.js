@@ -7,5 +7,6 @@ export { statsAPI } from './statsAPI';
 export { timelineAPI } from './timelineAPI';
 export { feedAPI } from './feedAPI';
 export { constellationAPI } from './constellationAPI';
+export { userAPI } from './userAPI';
 
 export default api;

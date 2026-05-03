@@ -1,7 +1,10 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useState, useEffect } from 'react';
+import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
-import { authAPI, tokenStorage } from '../services/api';
+import * as Location from 'expo-location';
+import preferenceConstants from '../../../constants/preferences';
+import { authAPI, tokenStorage, userAPI } from '../services/api';
 
 // Create Auth Context
 const AuthContext = createContext(null);
@@ -10,6 +13,22 @@ const AuthContext = createContext(null);
  * Get user-specific draft storage key
  */
 const getDraftStorageKey = (userId) => `safesignal_incident_draft_${userId}`;
+const { DEFAULT_PREFERENCES, PREFERENCE_KEYS } = preferenceConstants;
+
+const normalizeStorageSegment = (value) => String(value || 'guest')
+  .trim()
+  .toLowerCase()
+  .replace(/[^a-z0-9._@-]/g, '_');
+
+const getPreferenceStorageKey = (user) => {
+  const userIdentity = user?.user_id || user?.userId || user?.email || 'guest';
+  return `${PREFERENCE_KEYS.STORAGE_KEY}_${normalizeStorageSegment(userIdentity)}`;
+};
+
+const loadPreferences = async (user) => {
+  const stored = await AsyncStorage.getItem(getPreferenceStorageKey(user));
+  return stored ? { ...DEFAULT_PREFERENCES, ...JSON.parse(stored) } : DEFAULT_PREFERENCES;
+};
 
 /**
  * Auth Provider Component
@@ -24,6 +43,47 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     checkAuthStatus();
   }, []);
+
+  const syncConsentedLocation = useCallback(async () => {
+    if (!user || !isAuthenticated) {
+      return;
+    }
+
+    try {
+      const preferences = await loadPreferences(user);
+      if (!preferences.locationServices) {
+        return;
+      }
+
+      const { status } = await Location.getForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        return;
+      }
+
+      const position = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+
+      await userAPI.updateLocation({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      });
+    } catch (error) {
+      console.log('Location sync skipped:', error?.message || error);
+    }
+  }, [isAuthenticated, user]);
+
+  useEffect(() => {
+    syncConsentedLocation();
+
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        syncConsentedLocation();
+      }
+    });
+
+    return () => subscription.remove();
+  }, [syncConsentedLocation]);
 
   /**
    * Check if user is already authenticated

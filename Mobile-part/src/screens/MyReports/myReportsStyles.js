@@ -130,6 +130,19 @@ const myReportsStyles = StyleSheet.create({
   incidentDescription: {
     marginBottom: 12,
   },
+  constellationBadge: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginBottom: 12,
+  },
+  constellationText: {
+    marginLeft: 6,
+  },
 
   progressSection: {
     marginBottom: 12,

@@ -659,47 +659,47 @@ Purpose: surface value to reporters and eligible users before public map changes
 
 ### Mobile Location Consent Steps
 
-- [ ] Add or reuse mobile API methods for `PATCH /api/users/me/location-consent` and `PATCH /api/users/me/location`.
-- [ ] Prompt for app-level location consent at the chosen feature moment before any background targeting behavior depends on stored location.
-- [ ] Request/read OS foreground location only after app-level consent is granted.
-- [ ] On authenticated startup and foreground resume, when app consent is true and OS permission is available, read the current position.
-- [ ] Round latitude and longitude to 2 decimals before sending them to the backend.
-- [ ] Do not send location when app consent is false, OS permission is missing, or the user is unauthenticated.
-- [ ] Add Account settings revocation that calls the backend consent endpoint and clears any local consent state.
-- [ ] Do not block app startup, dashboard loading, or navigation when location update fails.
+- [x] Add or reuse mobile API methods for `PATCH /api/users/me/location-consent` and `PATCH /api/users/me/location`.
+- [x] Prompt for app-level location consent at the chosen feature moment before any background targeting behavior depends on stored location.
+- [x] Request/read OS foreground location only after app-level consent is granted.
+- [x] On authenticated startup and foreground resume, when app consent is true and OS permission is available, read the current position.
+- [x] Round latitude and longitude to 2 decimals before sending them to the backend.
+- [x] Do not send location when app consent is false, OS permission is missing, or the user is unauthenticated.
+- [x] Add Account settings revocation that calls the backend consent endpoint and clears any local consent state.
+- [x] Do not block app startup, dashboard loading, or navigation when location update fails.
 
 ### My Reports Steps
 
-- [ ] Add constellation fields to the user's incident list query.
-- [ ] Join active, non-expired constellation rows.
-- [ ] Do not render flagged constellations as badges.
-- [ ] Render `Awaiting corroboration`, `Corroborated by N nearby signals`, or `Mixed nearby responses` from structured fields.
-- [ ] Do not show raw notes or witness count beyond aggregate supporting signals.
+- [x] Add constellation fields to the user's incident list query.
+- [x] Join active, non-expired constellation rows.
+- [x] Do not render flagged constellations as badges.
+- [x] Render `Awaiting corroboration`, `Corroborated by N nearby signals`, or `Mixed nearby responses` from structured fields.
+- [x] Do not show raw notes or witness count beyond aggregate supporting signals.
 
 ### Incident Detail Steps
 
-- [ ] Refetch incident detail by ID when opening the detail view, or pass one hydrated source of truth.
-- [ ] Do not keep competing `incident` and `fullIncident` state in the modal.
-- [ ] Show active constellation summary.
-- [ ] Show `Under review` for flagged constellation.
-- [ ] Show no badge for expired constellation.
-- [ ] Do not show raw witness notes.
+- [x] Refetch incident detail by ID when opening the detail view, or pass one hydrated source of truth.
+- [x] Do not keep competing `incident` and `fullIncident` state in the modal.
+- [x] Show active constellation summary.
+- [x] Show `Under review` for flagged constellation.
+- [x] Show no badge for expired constellation.
+- [x] Do not show raw witness notes.
 
 ### Home Steps
 
-- [ ] Add `getNearbyConstellationsForUser(userId)` to `statsService`.
-- [ ] Use consented stored coarse location only.
-- [ ] Exclude reporter's own constellations.
-- [ ] Exclude already-responded constellations.
-- [ ] Exclude flagged and expired constellations.
-- [ ] Query only within `CONSTELLATION_RADIUS_METERS`, defaulting to 500 m, for MVP Home prompt count and tappable prompt selection.
-- [ ] Do not implement the older spec's 2 km awareness count in MVP.
-- [ ] For MVP, return a `firstNearbyConstellationId` only when the user should be able to open the prompt.
-- [ ] Add count, first ID, and optional 2-decimal coarse coordinates for the first prompt to dashboard response.
-- [ ] Render one Home prompt card when count > 0.
-- [ ] Navigate to `WitnessPromptScreen` only when `firstNearbyConstellationId` is present.
-- [ ] Pass coarse prompt coordinates to `WitnessPromptScreen` when available.
-- [ ] Otherwise render no tappable prompt.
+- [x] Add `getNearbyConstellationsForUser(userId)` to `statsService`.
+- [x] Use consented stored coarse location only.
+- [x] Exclude reporter's own constellations.
+- [x] Exclude already-responded constellations.
+- [x] Exclude flagged and expired constellations.
+- [x] Query only within `CONSTELLATION_RADIUS_METERS`, defaulting to 500 m, for MVP Home prompt count and tappable prompt selection.
+- [x] Do not implement the older spec's 2 km awareness count in MVP.
+- [x] For MVP, return a `firstNearbyConstellationId` only when the user should be able to open the prompt.
+- [x] Add count, first ID, and optional 2-decimal coarse coordinates for the first prompt to dashboard response.
+- [x] Render one Home prompt card when count > 0.
+- [x] Navigate to `WitnessPromptScreen` only when `firstNearbyConstellationId` is present.
+- [x] Pass coarse prompt coordinates to `WitnessPromptScreen` when available.
+- [x] Otherwise render no tappable prompt.
 
 ### Validation Gate
 
@@ -709,6 +709,21 @@ Purpose: surface value to reporters and eligible users before public map changes
 - [ ] Account settings revocation clears stored location through the backend endpoint.
 - [ ] Startup and foreground resume do not send location when consent is false.
 - [ ] No sensitive user location or push token appears in any response.
+
+### Phase 7 Notes - 2026-05-02
+
+- Added `Mobile-part/src/services/userAPI.js` with `setLocationConsent` and `updateLocation` methods for the Phase 3 user privacy endpoints.
+- Changed mobile default `locationServices` preference to `false` so app-level witness-location consent is opt-in.
+- Updated Account location toggle to act as the consent moment: enabling requests OS foreground permission, grants backend app-level consent, and sends rounded current location when available; disabling revokes backend consent and clears local app consent.
+- Added authenticated startup and foreground-resume location sync in `Mobile-part/src/context/AuthContext.js`; it only sends location when the user is authenticated, local app consent is true, and OS foreground permission already exists.
+- Added active/non-expired constellation metadata to the current user's incident list response in `backend/src/services/incidentService.js`.
+- Added `getNearbyConstellationsForUser(userId)` and dashboard witness-prompt data in `backend/src/services/statsService.js`; it uses stored consented coarse user location, excludes reporter-owned/already-responded/flagged/expired constellations, and returns count plus a first prompt ID and coarse anchor.
+- Added My Reports constellation badges from aggregate structured fields only; raw notes and exact witness/user location are not rendered.
+- Updated Incident Detail to refetch the incident by ID, use one hydrated detail object, and show active/flagged constellation states without raw witness notes.
+- Added a Home witness prompt card that only navigates when `firstNearbyConstellationId` exists and passes optional coarse coordinates to `WitnessPromptScreen`.
+- Validation passed with `cd backend && npx jest --runInBand`.
+- Syntax validation passed for touched mobile files with Babel parser.
+- Manual app validation remains pending because no emulator/device session was run in this step.
 
 ---
 

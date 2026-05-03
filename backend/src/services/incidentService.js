@@ -1124,10 +1124,27 @@ async function getUserIncidents(userId, filters = {}) {
       i.latitude, i.longitude, i.location_name, i.status, i.is_draft,
       i.created_at, i.incident_date, i.photo_urls, i.is_anonymous,
       i.closure_outcome, i.closure_details,
+      c.constellation_id,
+      c.status AS constellation_status,
+      c.confidence_state AS constellation_confidence_state,
+      c.supporting_signals AS constellation_supporting_signals,
+      c.contradicting_signals AS constellation_contradicting_signals,
+      c.summary AS constellation_summary,
+      c.expires_at AS constellation_expires_at,
       u.username, u.email,
       COUNT(*) OVER() as total_count
     FROM incidents i
     JOIN users u ON i.reporter_id = u.user_id
+    LEFT JOIN LATERAL (
+      SELECT constellation_id, status, confidence_state, supporting_signals,
+             contradicting_signals, summary, expires_at
+      FROM incident_constellations c
+      WHERE c.incident_id = i.incident_id
+        AND c.status = 'active'
+        AND c.expires_at > NOW()
+      ORDER BY c.created_at DESC
+      LIMIT 1
+    ) c ON TRUE
     WHERE i.reporter_id = $1
   `;
   const params = [userId];
@@ -1150,7 +1167,29 @@ async function getUserIncidents(userId, filters = {}) {
 
   const incidents = await db.manyOrNone(query, params);
   const total = incidents.length > 0 ? parseInt(incidents[0].total_count || 0) : 0;
-  const normalizedIncidents = incidents.map(({ total_count, ...incident }) => incident);
+  const normalizedIncidents = incidents.map(({ total_count, ...incident }) => {
+    const constellation = incident.constellation_id
+      ? {
+          constellationId: incident.constellation_id,
+          status: incident.constellation_status,
+          confidenceState: incident.constellation_confidence_state,
+          supportingSignals: incident.constellation_supporting_signals || 0,
+          contradictingSignals: incident.constellation_contradicting_signals || 0,
+          summary: incident.constellation_summary || null,
+          expiresAt: incident.constellation_expires_at,
+        }
+      : null;
+
+    delete incident.constellation_id;
+    delete incident.constellation_status;
+    delete incident.constellation_confidence_state;
+    delete incident.constellation_supporting_signals;
+    delete incident.constellation_contradicting_signals;
+    delete incident.constellation_summary;
+    delete incident.constellation_expires_at;
+
+    return { ...incident, constellation };
+  });
 
   return {
     incidents: normalizedIncidents || [],

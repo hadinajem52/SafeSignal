@@ -32,6 +32,9 @@ const HomeScreen = ({ navigation }) => {
   } = useDashboardData();
   const safetyScore = dashboardData?.safetyScore;
   const activeNearbyCount = dashboardData?.quickStats?.activeNearby || 0;
+  const witnessPrompts = dashboardData?.witnessPrompts || {};
+  const witnessPromptCount = witnessPrompts.count || 0;
+  const firstNearbyConstellationId = witnessPrompts.firstNearbyConstellationId;
   const locationIssueLower = (locationIssue || '').toLowerCase();
   const showEnableLocationCta =
     !location &&
@@ -87,6 +90,32 @@ const HomeScreen = ({ navigation }) => {
         onCtaPress={showEnableLocationCta ? () => navigation.navigate('Account') : undefined}
       />
 
+      {witnessPromptCount > 0 && firstNearbyConstellationId ? (
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => navigation.navigate('WitnessPrompt', {
+            constellationId: firstNearbyConstellationId,
+            coarseLatitude: witnessPrompts.coarseLatitude,
+            coarseLongitude: witnessPrompts.coarseLongitude,
+          })}
+        >
+          <Card style={[styles.witnessPromptCard, { backgroundColor: `${theme.primary}12`, borderColor: `${theme.primary}33` }]}> 
+            <View style={[styles.witnessPromptIcon, { backgroundColor: `${theme.primary}18` }]}> 
+              <Ionicons name="radio-outline" size={20} color={theme.primary} />
+            </View>
+            <View style={styles.witnessPromptContent}>
+              <AppText variant="label" style={{ color: theme.text }}>
+                Help clarify nearby activity
+              </AppText>
+              <AppText variant="bodySmall" style={[styles.witnessPromptText, { color: theme.textSecondary }]}> 
+                {witnessPromptCount} private witness prompt{witnessPromptCount > 1 ? 's' : ''} nearby. Share whether you noticed anything.
+              </AppText>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={theme.primary} />
+          </Card>
+        </TouchableOpacity>
+      ) : null}
+
       <QuickStatsRow
         quickStats={dashboardData?.quickStats}
         onMapPress={() => navigation.navigate('Map')}
@@ -104,7 +133,7 @@ const HomeScreen = ({ navigation }) => {
       ) : null}
     </>
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  ), [user, theme, activeNearbyCount, safetyScore, location, safetyScoreUnavailableReason, showEnableLocationCta, dashboardData, error, onRefresh, navigation, refreshing]);
+  ), [user, theme, activeNearbyCount, safetyScore, location, safetyScoreUnavailableReason, showEnableLocationCta, dashboardData, error, onRefresh, navigation, refreshing, witnessPromptCount, firstNearbyConstellationId, witnessPrompts]);
 
   if (loading) {
     return (
