@@ -4,6 +4,7 @@ import EmptyState from '../../components/EmptyState'
 import LoadingState from '../../components/LoadingState'
 import SeverityBadge from '../../components/SeverityBadge'
 import StatusBadge from '../../components/StatusBadge'
+import { getConstellationMeta } from '../../utils/constellationUtils'
 import { getTimeAgo } from '../../utils/dateUtils'
 
 function ReportList({
@@ -46,6 +47,7 @@ function ReportList({
         {reports.map((report) => {
           const isSelected = report.id === selectedReportId
           const isChecked = selectedReportIds.includes(report.id)
+          const constellationMeta = getConstellationMeta(report.constellation)
 
           return (
             <div
@@ -72,6 +74,18 @@ function ReportList({
                 <p className="text-sm font-semibold text-text leading-snug truncate">{report.title}</p>
                 <div className="mt-1.5">
                   <StatusBadge status={report.status} size="xs" />
+                  {constellationMeta ? (
+                    <span
+                      className="ml-1.5 inline-flex items-center border px-1.5 py-0.5 text-[9px] font-bold uppercase text-pretty"
+                      style={{
+                        borderColor: constellationMeta.color,
+                        color: constellationMeta.color,
+                        background: `${constellationMeta.color}12`,
+                      }}
+                    >
+                      {constellationMeta.label}
+                    </span>
+                  ) : null}
                 </div>
               </div>
 

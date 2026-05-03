@@ -65,9 +65,14 @@ export default function useLeiData({
       }));
   }, [incidents, searchTerm, sortMode]);
 
-  const selectedIncident =
-    incidentDetail?.incident ||
-    filteredIncidents.find((inc) => inc.id === selectedIncidentId);
+  const selectedIncident = incidentDetail?.incident
+    ? {
+        ...incidentDetail.incident,
+        id: incidentDetail.incident.incident_id,
+        reportedAt:
+          incidentDetail.incident.incident_date || incidentDetail.incident.created_at,
+      }
+    : filteredIncidents.find((inc) => inc.id === selectedIncidentId);
   const actionLog = incidentDetail?.actions || [];
 
   const displayAlerts = useMemo(() => {
@@ -84,6 +89,8 @@ export default function useLeiData({
         status: inc.status,
         latitude: inc.latitude,
         longitude: inc.longitude,
+        hasCorroboratedSignal:
+          inc.constellation?.confidenceState === "corroborated",
       }));
     const combined = [...leiAlerts, ...derived];
     const seen = new Set();
@@ -94,6 +101,7 @@ export default function useLeiData({
         seen.add(k);
         return true;
       })
+      .sort((a, b) => Number(b.hasCorroboratedSignal) - Number(a.hasCorroboratedSignal))
       .slice(0, 8);
   }, [allLeiIncidents, leiAlerts]);
 

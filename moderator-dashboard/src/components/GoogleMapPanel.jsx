@@ -164,6 +164,7 @@ function GoogleMapPanelContent({
         color: marker.color || null,
         label: marker.label || null,
         meta: marker.meta || null,
+        constellation: marker.constellation || null,
       }))
       .filter((marker) => marker.lat !== null && marker.lng !== null);
   }, [markers]);
@@ -345,6 +346,23 @@ function GoogleMapPanelContent({
         options={mapOptions}
         onClick={() => setActiveMarkerId(null)}
       >
+        {validMarkers
+          .filter((marker) => marker.constellation?.radiusMeters)
+          .map((marker) => (
+            <CircleF
+              key={`constellation-${marker.id}`}
+              center={{ lat: marker.lat, lng: marker.lng }}
+              radius={Number(marker.constellation.radiusMeters)}
+              options={{
+                fillColor: marker.constellation.color,
+                fillOpacity: 0.06,
+                strokeColor: marker.constellation.color,
+                strokeOpacity: marker.constellation.opacity,
+                strokeWeight: 2,
+              }}
+            />
+          ))}
+
         {showHeatmap && canRenderHeatmap && heatmapData.length > 0 && (
           <HeatmapLayerF
             data={heatmapData}
@@ -488,6 +506,14 @@ function GoogleMapPanelContent({
                     month: "short", day: "numeric", year: "numeric",
                     hour: "2-digit", minute: "2-digit",
                   })}
+                </span>
+              </div>
+            )}
+            {activeMarker.constellation && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11 }}>
+                <span style={{ color: "#5c7390", minWidth: 52 }}>Signal</span>
+                <span style={{ color: activeMarker.constellation.color, fontWeight: 700 }}>
+                  {activeMarker.constellation.label}
                 </span>
               </div>
             )}

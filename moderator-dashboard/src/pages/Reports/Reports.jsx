@@ -4,6 +4,7 @@ import { FileText } from "lucide-react";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import IncidentTimeline from "../../components/IncidentTimeline";
 import { reportsAPI } from "../../services/api";
+import { getConstellationPriorityBoost } from "../../utils/constellationUtils";
 import ReportDetail from "./ReportDetail";
 import ReportFilters from "./ReportFilters";
 import ReportList from "./ReportList";
@@ -20,7 +21,11 @@ function getPriorityScore(report) {
   const ageHours =
     (Date.now() - new Date(report.createdAt).getTime()) / 3_600_000;
   // Multiply rank by 1000 so no age difference can push a lower tier above a higher one
-  return rank * 1000 + Math.log(Math.max(ageHours, 0.01) + 1);
+  return (
+    rank * 1000 +
+    getConstellationPriorityBoost(report.constellation) +
+    Math.log(Math.max(ageHours, 0.01) + 1)
+  );
 }
 
 function normalizeReport(incident) {
@@ -58,7 +63,10 @@ function Reports() {
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ["reports", statusFilter],
     queryFn: async () => {
-      const params = statusFilter !== "all" ? { status: statusFilter } : {};
+      const params =
+        statusFilter !== "all"
+          ? { status: statusFilter, include_constellation: true }
+          : { include_constellation: true };
       const result = await reportsAPI.getAll(params);
       return result.success ? result.data : [];
     },

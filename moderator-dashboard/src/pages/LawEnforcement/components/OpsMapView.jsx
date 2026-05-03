@@ -1,5 +1,6 @@
 import React from "react";
 import GoogleMapPanel from "../../../components/GoogleMapPanel";
+import { getConstellationMarkerStyle } from "../../../utils/constellationUtils";
 
 const SEVERITY_COLOR = {
   critical: "#A855F7",
@@ -74,6 +75,7 @@ function OpsMapView({ incidents }) {
 
       const severityLabel = inc.severity ? inc.severity.charAt(0).toUpperCase() + inc.severity.slice(1) : "";
       const categoryName = CATEGORY_DISPLAY_NAME[inc.category] || inc.category || "";
+      const constellationStyle = getConstellationMarkerStyle(inc.constellation);
       return {
         id: `ops-${inc.incident_id || inc.id}`,
         lat: coordinates.latitude,
@@ -88,6 +90,12 @@ function OpsMapView({ incidents }) {
         label: CATEGORY_LABEL[inc.category] || "?",
         severity: inc.severity,
         category: inc.category,
+        constellation: constellationStyle
+          ? {
+              ...constellationStyle,
+              radiusMeters: inc.constellation?.radiusMeters,
+            }
+          : null,
         meta: {
           incidentId: inc.incident_id || inc.id,
           title: inc.title || `Incident #${inc.incident_id || inc.id}`,

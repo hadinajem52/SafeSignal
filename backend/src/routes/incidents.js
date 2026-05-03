@@ -141,9 +141,16 @@ router.post(
  * @desc    Get all incidents with optional filtering
  * @access  Public
  */
-router.get('/', async (req, res) => {
+router.get('/', optionalAuth, async (req, res) => {
   try {
-    const { category, status, severity, limit = 50, offset = 0 } = req.query;
+    const {
+      category,
+      status,
+      severity,
+      limit = 50,
+      offset = 0,
+      include_constellation: includeConstellation,
+    } = req.query;
 
     const incidents = await incidentService.getAllIncidents({
       category,
@@ -151,6 +158,8 @@ router.get('/', async (req, res) => {
       severity,
       limit,
       offset,
+      includeConstellation: includeConstellation === 'true',
+      userRole: req.user?.role,
     });
 
     res.json({
