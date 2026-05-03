@@ -124,6 +124,31 @@ const runMigration = async () => {
   `);
 
   await db.none(`
+    CREATE TABLE IF NOT EXISTS witness_prompt_deliveries (
+      delivery_id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+      constellation_id INTEGER NOT NULL REFERENCES incident_constellations(constellation_id) ON DELETE CASCADE,
+      status VARCHAR(20) NOT NULL DEFAULT 'pending',
+      suppression_reason VARCHAR(50),
+      error_message TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      sent_at TIMESTAMPTZ,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT witness_prompt_deliveries_unique UNIQUE (user_id, constellation_id)
+    );
+  `);
+
+  await db.none(`
+    ALTER TABLE witness_prompt_deliveries
+    DROP CONSTRAINT IF EXISTS witness_prompt_deliveries_unique,
+    DROP CONSTRAINT IF EXISTS witness_prompt_deliveries_status_check,
+    ADD CONSTRAINT witness_prompt_deliveries_unique
+      UNIQUE (user_id, constellation_id),
+    ADD CONSTRAINT witness_prompt_deliveries_status_check
+      CHECK (status IN ('pending', 'sent', 'suppressed', 'failed'));
+  `);
+
+  await db.none(`
     ALTER TABLE constellation_cluster_links
     DROP CONSTRAINT IF EXISTS constellation_cluster_links_unique,
     DROP CONSTRAINT IF EXISTS constellation_cluster_links_order_check,
@@ -151,6 +176,13 @@ const runMigration = async () => {
 
     CREATE INDEX IF NOT EXISTS idx_constellation_cluster_links_linked_constellation
       ON constellation_cluster_links (linked_constellation_id);
+
+    CREATE INDEX IF NOT EXISTS idx_witness_prompt_deliveries_user_sent
+      ON witness_prompt_deliveries (user_id, sent_at)
+      WHERE status = 'sent';
+
+    CREATE INDEX IF NOT EXISTS idx_witness_prompt_deliveries_constellation
+      ON witness_prompt_deliveries (constellation_id);
   `);
 };
 

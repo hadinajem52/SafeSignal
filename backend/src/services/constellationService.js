@@ -220,6 +220,100 @@ async function openConstellationForIncident(incident, reporterId) {
   }
 }
 
+async function createPromptDelivery(userId, constellationId) {
+  return db.oneOrNone(
+    `INSERT INTO witness_prompt_deliveries (user_id, constellation_id)
+     VALUES ($1, $2)
+     ON CONFLICT (user_id, constellation_id) DO NOTHING
+     RETURNING delivery_id`,
+    [userId, constellationId]
+  );
+}
+
+async function getPushThrottleCounts(userId) {
+  const counts = await db.one(
+    `SELECT
+       COUNT(*) FILTER (
+         WHERE sent_at > NOW() - ($2::text)::interval
+       )::int AS cooldown_count,
+       COUNT(*) FILTER (
+         WHERE sent_at > NOW() - ($3::text)::interval
+       )::int AS hourly_count
+     FROM witness_prompt_deliveries
+     WHERE user_id = $1
+       AND status = 'sent'`,
+    [
+      userId,
+      `${LIMITS.CONSTELLATION.PUSH_COOLDOWN_MINUTES} minutes`,
+      '60 minutes',
+    ]
+  );
+
+  return {
+    cooldownCount: Number(counts.cooldown_count || 0),
+    hourlyCount: Number(counts.hourly_count || 0),
+  };
+}
+
+function getSuppressionReason({ cooldownCount, hourlyCount }) {
+  if (hourlyCount >= LIMITS.CONSTELLATION.PUSH_HOURLY_LIMIT) {
+    return 'hourly_rate_limited';
+  }
+
+  if (cooldownCount > 0) {
+    return 'cooldown_rate_limited';
+  }
+
+  return null;
+}
+
+async function markPromptDelivery(deliveryId, status, fields = {}) {
+  await db.none(
+    `UPDATE witness_prompt_deliveries
+     SET status = $2,
+         suppression_reason = $3,
+         error_message = $4,
+         sent_at = CASE WHEN $2 = 'sent' THEN NOW() ELSE sent_at END,
+         updated_at = NOW()
+     WHERE delivery_id = $1`,
+    [
+      deliveryId,
+      status,
+      fields.suppressionReason || null,
+      fields.errorMessage || null,
+    ]
+  );
+}
+
+async function sendWitnessPrompt(target, constellation) {
+  const delivery = await createPromptDelivery(target.user_id, constellation.constellation_id);
+  if (!delivery) {
+    return 'skipped';
+  }
+
+  const suppressionReason = getSuppressionReason(await getPushThrottleCounts(target.user_id));
+  if (suppressionReason) {
+    await markPromptDelivery(delivery.delivery_id, 'suppressed', { suppressionReason });
+    return 'suppressed';
+  }
+
+  const result = await fcmClient.sendWitnessPromptNotification(target.push_token, {
+    constellationId: constellation.constellation_id,
+    coarseLatitude: roundCoordinate(constellation.center_latitude),
+    coarseLongitude: roundCoordinate(constellation.center_longitude),
+  });
+
+  if (result.sent) {
+    await markPromptDelivery(delivery.delivery_id, 'sent');
+    return 'sent';
+  }
+
+  await markPromptDelivery(delivery.delivery_id, 'failed', {
+    errorMessage: result.error || 'Notification was not sent',
+  });
+  return 'skipped';
+}
+
 async function notifyNearbyUsers(constellation) {
   const targets = await db.manyOrNone(
     `SELECT u.user_id, u.push_token
@@ -247,24 +341,23 @@ async function notifyNearbyUsers(constellation) {
 
   let sent = 0;
   let skipped = 0;
+  let suppressed = 0;
 
   await Promise.all(targets.map(async (target) => {
-    const result = await fcmClient.sendWitnessPromptNotification(target.push_token, {
-      constellationId: constellation.constellation_id,
-      coarseLatitude: roundCoordinate(constellation.center_latitude),
-      coarseLongitude: roundCoordinate(constellation.center_longitude),
-    });
+    const status = await sendWitnessPrompt(target, constellation);
 
-    if (result.sent) {
+    if (status === 'sent') {
       sent += 1;
+    } else if (status === 'suppressed') {
+      suppressed += 1;
     } else {
       skipped += 1;
     }
   }));
 
-  logger.info(`Witness prompt notifications for constellation ${constellation.constellation_id}: sent=${sent}, skipped=${skipped}`);
+  logger.info(`Witness prompt notifications for constellation ${constellation.constellation_id}: sent=${sent}, suppressed=${suppressed}, skipped=${skipped}`);
 
-  return { sent, skipped, targetCount: targets.length };
+  return { sent, suppressed, skipped, targetCount: targets.length };
 }
 
 async function isUserInRadius(userId, constellationId) {

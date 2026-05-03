@@ -166,14 +166,21 @@ describe('constellationService notifications', () => {
       { user_id: 8, push_token: 'token_abc123456' },
       { user_id: 9, push_token: 'token_def123456' },
     ]);
+    db.oneOrNone
+      .mockResolvedValueOnce({ delivery_id: 41 })
+      .mockResolvedValueOnce({ delivery_id: 42 });
+    db.one.mockResolvedValue({ cooldown_count: 0, hourly_count: 0 });
+    db.none.mockResolvedValue();
 
     const result = await constellationService.notifyNearbyUsers(activeConstellation());
 
-    expect(result).toEqual({ sent: 2, skipped: 0, targetCount: 2 });
+    expect(result).toEqual({ sent: 2, suppressed: 0, skipped: 0, targetCount: 2 });
     expect(db.manyOrNone.mock.calls[0][0]).toContain('push_token IS NOT NULL');
     expect(db.manyOrNone.mock.calls[0][0]).toContain("push_token_updated_at > NOW() - INTERVAL '7 days'");
     expect(db.manyOrNone.mock.calls[0][0]).toContain('location_consent = TRUE');
     expect(db.manyOrNone.mock.calls[0][0]).toContain('u.is_suspended = FALSE');
+    expect(db.oneOrNone.mock.calls[0][0]).toContain('ON CONFLICT (user_id, constellation_id) DO NOTHING');
+    expect(db.one.mock.calls[0][0]).toContain('witness_prompt_deliveries');
     expect(fcmClient.sendWitnessPromptNotification).toHaveBeenCalledWith('token_abc123456', {
       constellationId: 3,
       coarseLatitude: 12.35,
@@ -183,12 +190,52 @@ describe('constellationService notifications', () => {
 
   it('logs skipped notification sends without throwing', async () => {
     db.manyOrNone.mockResolvedValue([{ user_id: 8, push_token: 'token_abc123456' }]);
+    db.oneOrNone.mockResolvedValue({ delivery_id: 41 });
+    db.one.mockResolvedValue({ cooldown_count: 0, hourly_count: 0 });
+    db.none.mockResolvedValue();
     fcmClient.sendWitnessPromptNotification.mockResolvedValueOnce({ sent: false, skipped: true });
 
     await expect(constellationService.notifyNearbyUsers(activeConstellation())).resolves.toMatchObject({
       sent: 0,
       skipped: 1,
     });
+  });
+
+  it('suppresses witness pushes during the per-user cooldown', async () => {
+    db.manyOrNone.mockResolvedValue([{ user_id: 8, push_token: 'token_abc123456' }]);
+    db.oneOrNone.mockResolvedValue({ delivery_id: 41 });
+    db.one.mockResolvedValue({ cooldown_count: 1, hourly_count: 1 });
+    db.none.mockResolvedValue();
+
+    await expect(constellationService.notifyNearbyUsers(activeConstellation())).resolves.toEqual({
+      sent: 0,
+      suppressed: 1,
+      skipped: 0,
+      targetCount: 1,
+    });
+
+    expect(fcmClient.sendWitnessPromptNotification).not.toHaveBeenCalled();
+    expect(db.none).toHaveBeenCalledWith(expect.stringContaining('UPDATE witness_prompt_deliveries'), [
+      41,
+      'suppressed',
+      'cooldown_rate_limited',
+      null,
+    ]);
+  });
+
+  it('does not resend the same constellation prompt to the same user', async () => {
+    db.manyOrNone.mockResolvedValue([{ user_id: 8, push_token: 'token_abc123456' }]);
+    db.oneOrNone.mockResolvedValue(null);
+
+    await expect(constellationService.notifyNearbyUsers(activeConstellation())).resolves.toEqual({
+      sent: 0,
+      suppressed: 0,
+      skipped: 1,
+      targetCount: 1,
+    });
+
+    expect(db.one).not.toHaveBeenCalled();
+    expect(fcmClient.sendWitnessPromptNotification).not.toHaveBeenCalled();
   });
 });
 
