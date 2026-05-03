@@ -35,6 +35,8 @@ yarn-error.*
 # macOS
 .DS_Store
 *.pem
+google-services.json
+firebase-service-account*.json
 
 Artifacts
 

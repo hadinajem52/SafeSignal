@@ -1,14 +1,36 @@
+const fs = require('fs');
+const path = require('path');
 const admin = require('firebase-admin');
 const logger = require('./logger');
 
 let appInitialized = false;
+
+const readServiceAccountFile = () => {
+  const configuredFile = process.env.FIREBASE_SERVICE_ACCOUNT_FILE;
+  if (!configuredFile && process.env.NODE_ENV === 'test') {
+    return null;
+  }
+
+  const serviceAccountFile = configuredFile || path.resolve(__dirname, '../../firebase-service-account.json');
+
+  if (!fs.existsSync(serviceAccountFile)) {
+    return null;
+  }
+
+  try {
+    return fs.readFileSync(serviceAccountFile, 'utf8');
+  } catch (error) {
+    logger.warn(`Firebase service account file could not be read: ${error.message}`);
+    return null;
+  }
+};
 
 const getAdminApp = () => {
   if (appInitialized) {
     return admin.app();
   }
 
-  const rawCredentials = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  const rawCredentials = process.env.FIREBASE_SERVICE_ACCOUNT_JSON || readServiceAccountFile();
   if (!rawCredentials) {
     return null;
   }

@@ -751,7 +751,7 @@ Purpose: add remote notification delivery only after token behavior is proven.
 ### Backend FCM Steps
 
 - [x] Add `firebase-admin` dependency.
-- [x] Initialize admin SDK from `FIREBASE_SERVICE_ACCOUNT_JSON`.
+- [x] Initialize admin SDK from `FIREBASE_SERVICE_ACCOUNT_JSON` or an ignored local service-account file.
 - [x] No-op safely when credentials are absent in dev/test.
 - [x] Send neutral title/body only.
 - [x] Include only `type`, `constellation_id`, and 2-decimal coarse coordinates in data.
@@ -808,6 +808,17 @@ Purpose: add remote notification delivery only after token behavior is proven.
 - Validation passed with `cd backend && npx jest --runInBand`.
 - Syntax validation passed for the new/modified mobile notification files with Babel parser.
 - Android device token verification and end-to-end FCM receipt/open validation remain pending because no Android device/Firebase credential test was run in this step.
+
+### Phase 8 Firebase Console Notes - 2026-05-03
+
+- Created Firebase project `SafeSignal FinalProject` with project ID `safesignal-finalproject`; Google Analytics was left disabled.
+- Registered Android app `SafeSignal Android` with package `com.hhhhjjj.FinalProject`.
+- Downloaded `google-services.json` and placed it at `Mobile-part/google-services.json`; the file is ignored locally.
+- Generated Firebase Admin SDK service-account key and placed it at `backend/firebase-service-account.json`; the file is ignored locally.
+- Updated `Mobile-part/app.config.js` to include `android.googleServicesFile` only when the local Google services file exists.
+- Updated `backend/src/utils/fcmClient.js` to keep inline `FIREBASE_SERVICE_ACCOUNT_JSON` support and auto-load the ignored local service-account file outside tests.
+- Validation passed with `cd backend && npx jest --runInBand` and mobile app config syntax/config checks.
+- Android device token verification and end-to-end FCM receipt/open validation remain pending.
 
 ---
 
