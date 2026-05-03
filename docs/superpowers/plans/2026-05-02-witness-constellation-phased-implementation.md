@@ -743,57 +743,71 @@ Purpose: add remote notification delivery only after token behavior is proven.
 
 ### Token Verification Steps
 
-- [ ] Install `expo-notifications` if absent.
+- [x] Install `expo-notifications` if absent.
 - [ ] On an Android device, call `Notifications.getDevicePushTokenAsync()` and confirm token type/value.
 - [ ] Send a test notification through the intended backend path to Android.
-- [ ] Do not add iOS token verification or APNs-specific behavior; iOS is out of scope for this project.
+- [x] Do not add iOS token verification or APNs-specific behavior; iOS is out of scope for this project.
 
 ### Backend FCM Steps
 
-- [ ] Add `firebase-admin` dependency.
-- [ ] Initialize admin SDK from `FIREBASE_SERVICE_ACCOUNT_JSON`.
-- [ ] No-op safely when credentials are absent in dev/test.
-- [ ] Send neutral title/body only.
-- [ ] Include only `type`, `constellation_id`, and 2-decimal coarse coordinates in data.
-- [ ] Log token prefix only, never full token.
+- [x] Add `firebase-admin` dependency.
+- [x] Initialize admin SDK from `FIREBASE_SERVICE_ACCOUNT_JSON`.
+- [x] No-op safely when credentials are absent in dev/test.
+- [x] Send neutral title/body only.
+- [x] Include only `type`, `constellation_id`, and 2-decimal coarse coordinates in data.
+- [x] Log token prefix only, never full token.
 
 ### Mobile Registration Steps
 
-- [ ] Request notification permission at the appropriate app moment.
-- [ ] Register push token only after authentication and app-level location consent are both confirmed.
-- [ ] Do not request notification permission or read a device push token while app-level location consent is false.
-- [ ] Use `Notifications.getDevicePushTokenAsync()`; do not use `Notifications.getExpoPushTokenAsync()`.
-- [ ] Send `{ token }` to backend.
-- [ ] Listen for push token refresh and update backend.
-- [ ] Ignore token refresh events while app-level location consent is false.
-- [ ] Do not block app startup if registration fails.
+- [x] Request notification permission at the appropriate app moment.
+- [x] Register push token only after authentication and app-level location consent are both confirmed.
+- [x] Do not request notification permission or read a device push token while app-level location consent is false.
+- [x] Use `Notifications.getDevicePushTokenAsync()`; do not use `Notifications.getExpoPushTokenAsync()`.
+- [x] Send `{ token }` to backend.
+- [x] Listen for push token refresh and update backend.
+- [x] Ignore token refresh events while app-level location consent is false.
+- [x] Do not block app startup if registration fails.
 
 ### Targeting Steps
 
-- [ ] Implement `notifyNearbyUsers(constellation)`.
-- [ ] Query users with `push_token IS NOT NULL`.
-- [ ] Require `push_token_updated_at > NOW() - INTERVAL '7 days'`.
-- [ ] Require `location_consent = TRUE`.
-- [ ] Require `location_updated_at > NOW() - INTERVAL '24 hours'`.
-- [ ] Require users to be in constellation radius, not the reporter, and not suspended.
-- [ ] Limit targets to 200.
-- [ ] Send notifications asynchronously after constellation creation.
-- [ ] Log sent/skipped count.
-- [ ] Do not fail incident creation when push dispatch fails.
+- [x] Implement `notifyNearbyUsers(constellation)`.
+- [x] Query users with `push_token IS NOT NULL`.
+- [x] Require `push_token_updated_at > NOW() - INTERVAL '7 days'`.
+- [x] Require `location_consent = TRUE`.
+- [x] Require `location_updated_at > NOW() - INTERVAL '24 hours'`.
+- [x] Require users to be in constellation radius, not the reporter, and not suspended.
+- [x] Limit targets to 200.
+- [x] Send notifications asynchronously after constellation creation.
+- [x] Log sent/skipped count.
+- [x] Do not fail incident creation when push dispatch fails.
 
 ### Notification Navigation Steps
 
-- [ ] Add `useWitnessPromptNotifications`.
-- [ ] Parse only `type = witness_prompt` and valid integer `constellation_id`.
-- [ ] Parse optional 2-decimal `coarse_latitude` and `coarse_longitude` values from notification data.
-- [ ] Queue cold-start notification response until navigation is ready and user is authenticated.
-- [ ] Avoid processing the same last notification response repeatedly.
-- [ ] Navigate to `WitnessPromptScreen` only with a valid constellation ID and pass validated coarse coordinates when present.
+- [x] Add `useWitnessPromptNotifications`.
+- [x] Parse only `type = witness_prompt` and valid integer `constellation_id`.
+- [x] Parse optional 2-decimal `coarse_latitude` and `coarse_longitude` values from notification data.
+- [x] Queue cold-start notification response until navigation is ready and user is authenticated.
+- [x] Avoid processing the same last notification response repeatedly.
+- [x] Navigate to `WitnessPromptScreen` only with a valid constellation ID and pass validated coarse coordinates when present.
 
 ### Validation Gate
 
 - [ ] Android receives and opens witness prompt.
 - [ ] Notification payload contains no incident category, address, reporter, or exact coordinates.
+
+### Phase 8 Notes - 2026-05-02
+
+- Installed `firebase-admin` in `backend` and `expo-notifications` in `Mobile-part`; package locks were updated.
+- Added `backend/src/utils/fcmClient.js`, initialized from `FIREBASE_SERVICE_ACCOUNT_JSON`, and no-ops safely when credentials are absent.
+- Backend witness notifications use neutral copy only and data fields limited to `type`, `constellation_id`, `coarse_latitude`, and `coarse_longitude`; logs only token prefixes.
+- Added `notifyNearbyUsers(constellation)` to `backend/src/services/constellationService.js` with targeting rules for recent tokens, app-level location consent, recent stored location, radius, non-reporter users, non-suspended users, and a 200-user cap.
+- Constellation creation now schedules nearby-user notification dispatch asynchronously and logs sent/skipped counts without failing incident creation.
+- Added `Mobile-part/src/services/pushTokenService.js`; it registers Android device push tokens only after authentication plus app-level location consent, uses `Notifications.getDevicePushTokenAsync()`, and sends `{ token }` to the backend.
+- Added `Mobile-part/src/hooks/useWitnessPromptNotifications.js`; it handles token registration/refresh and notification response navigation to `WitnessPrompt` with validated constellation ID and optional coarse coordinates.
+- Wired `useWitnessPromptNotifications` into `Mobile-part/src/navigation/AppNavigator.js` with a navigation ref and readiness queue for cold-start notification responses.
+- Validation passed with `cd backend && npx jest --runInBand`.
+- Syntax validation passed for the new/modified mobile notification files with Babel parser.
+- Android device token verification and end-to-end FCM receipt/open validation remain pending because no Android device/Firebase credential test was run in this step.
 
 ---
 

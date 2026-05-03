@@ -1,4 +1,5 @@
 jest.mock('../src/config/database', () => ({
+  manyOrNone: jest.fn(),
   one: jest.fn(),
   oneOrNone: jest.fn(),
   none: jest.fn(),
@@ -18,9 +19,14 @@ jest.mock('../src/services/constellationSynthesis', () => ({
   triggerSynthesis: jest.fn().mockResolvedValue(),
 }));
 
+jest.mock('../src/utils/fcmClient', () => ({
+  sendWitnessPromptNotification: jest.fn().mockResolvedValue({ sent: true, skipped: false }),
+}));
+
 const db = require('../src/config/database');
 const mlClient = require('../src/utils/mlClient');
 const constellationSynthesis = require('../src/services/constellationSynthesis');
+const fcmClient = require('../src/utils/fcmClient');
 const constellationService = require('../src/services/constellationService');
 
 const freshIncident = () => ({
@@ -146,6 +152,42 @@ describe('constellationService reads', () => {
       incidentId: 10,
       status: 'flagged',
       expiresAt: expect.any(Date),
+    });
+  });
+});
+
+describe('constellationService notifications', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('targets nearby consented users with coarse notification payload data', async () => {
+    db.manyOrNone.mockResolvedValue([
+      { user_id: 8, push_token: 'token_abc123456' },
+      { user_id: 9, push_token: 'token_def123456' },
+    ]);
+
+    const result = await constellationService.notifyNearbyUsers(activeConstellation());
+
+    expect(result).toEqual({ sent: 2, skipped: 0, targetCount: 2 });
+    expect(db.manyOrNone.mock.calls[0][0]).toContain('push_token IS NOT NULL');
+    expect(db.manyOrNone.mock.calls[0][0]).toContain("push_token_updated_at > NOW() - INTERVAL '7 days'");
+    expect(db.manyOrNone.mock.calls[0][0]).toContain('location_consent = TRUE');
+    expect(db.manyOrNone.mock.calls[0][0]).toContain('u.is_suspended = FALSE');
+    expect(fcmClient.sendWitnessPromptNotification).toHaveBeenCalledWith('token_abc123456', {
+      constellationId: 3,
+      coarseLatitude: 12.35,
+      coarseLongitude: -98.77,
+    });
+  });
+
+  it('logs skipped notification sends without throwing', async () => {
+    db.manyOrNone.mockResolvedValue([{ user_id: 8, push_token: 'token_abc123456' }]);
+    fcmClient.sendWitnessPromptNotification.mockResolvedValueOnce({ sent: false, skipped: true });
+
+    await expect(constellationService.notifyNearbyUsers(activeConstellation())).resolves.toMatchObject({
+      sent: 0,
+      skipped: 1,
     });
   });
 });
