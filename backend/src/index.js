@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const app = require('./app');
 const db = require('./config/database');
 const logger = require('./utils/logger');
+const { startConstellationMaintenance } = require('./jobs/constellationMaintenance');
 const { startWeeklyDigestScheduler } = require('./services/notificationService');
 const { setSocketServer } = require('./utils/socketService');
 
@@ -122,6 +123,7 @@ io.on('connection', (socket) => {
 
 server.listen(PORT, () => {
   startWeeklyDigestScheduler();
+  startConstellationMaintenance();
   logger.info(`SafeSignal Backend running on http://localhost:${PORT}`);
   logger.info(`API Docs: http://localhost:${PORT}/api/docs`);
   logger.info(`Health Check: http://localhost:${PORT}/api/health`);
