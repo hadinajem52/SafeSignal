@@ -10,6 +10,7 @@ import LoginScreen from '../screens/Auth/LoginScreen';
 import RegisterScreen from '../screens/Auth/RegisterScreen';
 import VerificationScreen from '../screens/Auth/VerificationScreen';
 import TabNavigator from './TabNavigator';
+import WitnessPromptScreen from '../screens/WitnessPromptScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -39,6 +40,7 @@ const AppStack = () => (
     }}
   >
     <Stack.Screen name="MainTabs" component={TabNavigator} />
+    <Stack.Screen name="WitnessPrompt" component={WitnessPromptScreen} />
   </Stack.Navigator>
 );
 

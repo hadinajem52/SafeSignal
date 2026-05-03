@@ -586,40 +586,40 @@ Purpose: build and verify user response flow before remote push delivery.
 
 ### API Client Steps
 
-- [ ] Add `submitCorroboration({ constellationId, signalType, note, deviceLatitude, deviceLongitude })`.
-- [ ] Trim and truncate note to 280 chars before sending.
-- [ ] Return backend response data using existing API-client conventions.
-- [ ] Add `getConstellationStatus(constellationId)`.
-- [ ] Accept optional 2-decimal coarse coordinates from route params or status payload for the prompt's map anchor.
-- [ ] Do not create a feature-specific response wrapper if existing mobile services do not use one.
+- [x] Add `submitCorroboration({ constellationId, signalType, note, deviceLatitude, deviceLongitude })`.
+- [x] Trim and truncate note to 280 chars before sending.
+- [x] Return backend response data using existing API-client conventions.
+- [x] Add `getConstellationStatus(constellationId)`.
+- [x] Accept optional 2-decimal coarse coordinates from route params or status payload for the prompt's map anchor.
+- [x] Do not create a feature-specific response wrapper if existing mobile services do not use one.
 
 ### Submission Hook Steps
 
-- [ ] Track local `submitting` state.
-- [ ] Read optional foreground location permission.
-- [ ] If permission exists, get current balanced-accuracy position.
-- [ ] Do not request location permission during submit.
-- [ ] Submit signal, optional note, and optional device coordinates.
-- [ ] Surface backend errors to the screen.
+- [x] Track local `submitting` state.
+- [x] Read optional foreground location permission.
+- [x] If permission exists, get current balanced-accuracy position.
+- [x] Do not request location permission during submit.
+- [x] Submit signal, optional note, and optional device coordinates.
+- [x] Surface backend errors to the screen.
 
 ### Screen Steps
 
-- [ ] Add neutral heading.
-- [ ] Add a coarse map anchor when 2-decimal coordinates are available.
-- [ ] Add approximate-area copy without address or incident details.
-- [ ] Add five signal buttons.
-- [ ] Add optional single-line note input with max length 280.
-- [ ] Add Skip button.
-- [ ] Disable submit until a signal is selected.
-- [ ] Show loading state while submitting.
-- [ ] Navigate back on success.
+- [x] Add neutral heading.
+- [x] Add a coarse map anchor when 2-decimal coordinates are available.
+- [x] Add approximate-area copy without address or incident details.
+- [x] Add five signal buttons.
+- [x] Add optional single-line note input with max length 280.
+- [x] Add Skip button.
+- [x] Disable submit until a signal is selected.
+- [x] Show loading state while submitting.
+- [x] Navigate back on success.
 
 ### Navigation Steps
 
-- [ ] Register `WitnessPromptScreen` in the authenticated app stack.
+- [x] Register `WitnessPromptScreen` in the authenticated app stack.
 - [ ] Verify direct manual navigation works with a real `constellationId`.
-- [ ] Validate optional coarse coordinate params before rendering the map anchor.
-- [ ] Do not wire notification taps yet.
+- [x] Validate optional coarse coordinate params before rendering the map anchor.
+- [x] Do not wire notification taps yet.
 
 ### Validation Gate
 
@@ -627,6 +627,16 @@ Purpose: build and verify user response flow before remote push delivery.
 - [ ] Successful submission creates one corroboration.
 - [ ] Duplicate submission shows a friendly error.
 - [ ] Reporter submission shows a friendly forbidden error.
+
+### Phase 6 Notes - 2026-05-02
+
+- Added `Mobile-part/src/services/constellationAPI.js` with `submitCorroboration` and `getConstellationStatus`, using the existing `{ success, data/error }` mobile API convention.
+- Added `Mobile-part/src/hooks/useWitnessPromptSubmission.js` with local `submitting` state, optional foreground-permission-only location read, balanced-accuracy coordinates when permission already exists, and backend error surfacing.
+- Added `Mobile-part/src/screens/WitnessPromptScreen.js` with neutral prompt copy, optional coarse map anchor, five signal buttons, optional max-280 note input, skip action, disabled submit until signal selection, loading states, and success navigation back.
+- Registered `WitnessPromptScreen` in the authenticated app stack in `Mobile-part/src/navigation/AppNavigator.js`.
+- Notification tap wiring remains intentionally deferred.
+- Syntax validation passed for the new/modified mobile files with Babel parser.
+- Manual in-app validation is still pending because no emulator/device session was run in this step.
 
 ---
 
