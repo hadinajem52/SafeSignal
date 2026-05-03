@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { incidentAPI } from '../services/api';
@@ -13,6 +14,8 @@ const useMyReports = ({ user }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [pagination, setPagination] = useState(null);
+  const hasFocusedAfterInitialLoadRef = useRef(false);
+  const fetchIncidentsRef = useRef(null);
 
   const fetchIncidents = useCallback(async (showLoader = true) => {
     if (showLoader) {
@@ -105,11 +108,27 @@ const useMyReports = ({ user }) => {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [selectedFilter, user]);
+  }, [selectedFilter, showToast, user]);
+
+  useEffect(() => {
+    fetchIncidentsRef.current = fetchIncidents;
+  }, [fetchIncidents]);
 
   useEffect(() => {
     fetchIncidents();
   }, [fetchIncidents]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!hasFocusedAfterInitialLoadRef.current) {
+        hasFocusedAfterInitialLoadRef.current = true;
+        return undefined;
+      }
+
+      fetchIncidentsRef.current?.(false);
+      return undefined;
+    }, [])
+  );
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
