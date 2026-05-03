@@ -882,17 +882,17 @@ Purpose: make the feature operationally safe.
 
 ### Maintenance Steps
 
-- [ ] Add `markExpiredConstellations()`.
-- [ ] Mark active rows with `expires_at <= NOW()` as `expired`.
-- [ ] Add `runPendingConstellationSynthesis()`.
-- [ ] Find active, unexpired rows with `has_unprocessed_changes = TRUE`.
-- [ ] Synthesize at most 100 rows per sweep.
-- [ ] Add `clearStaleUserLocations()`.
-- [ ] Clear user coordinates when `location_updated_at < NOW() - INTERVAL '30 days'`.
-- [ ] Add `runConstellationMaintenance()`.
-- [ ] Add `startConstellationMaintenance()` with 5-minute synthesis/expiry interval and 24-hour location cleanup interval.
-- [ ] Register startup once in `backend/src/index.js` after database readiness.
-- [ ] Document that the interval assumes a single backend instance. Add locking before horizontal scale.
+- [x] Add `markExpiredConstellations()`.
+- [x] Mark active rows with `expires_at <= NOW()` as `expired`.
+- [x] Add `runPendingConstellationSynthesis()`.
+- [x] Find active, unexpired rows with `has_unprocessed_changes = TRUE`.
+- [x] Synthesize at most 100 rows per sweep.
+- [x] Add `clearStaleUserLocations()`.
+- [x] Clear user coordinates when `location_updated_at < NOW() - INTERVAL '30 days'`.
+- [x] Add `runConstellationMaintenance()`.
+- [x] Add `startConstellationMaintenance()` with 5-minute synthesis/expiry interval and 24-hour location cleanup interval.
+- [x] Register startup once in `backend/src/index.js` after database readiness.
+- [x] Document that the interval assumes a single backend instance. Add locking before horizontal scale.
 
 ### Test Coverage Checklist
 
@@ -918,9 +918,9 @@ Purpose: make the feature operationally safe.
 - [ ] ML failure fallback.
 - [ ] Anomaly flagging.
 - [ ] Cluster-link canonical insert.
-- [ ] Maintenance expiry.
-- [ ] Maintenance synthesis sweep.
-- [ ] Location retention cleanup.
+- [x] Maintenance expiry.
+- [x] Maintenance synthesis sweep.
+- [x] Location retention cleanup.
 
 ### Manual Privacy Checklist
 
@@ -936,29 +936,25 @@ Purpose: make the feature operationally safe.
 
 ### Validation Gate
 
-- [ ] Backend tests pass.
-- [ ] ML service endpoint smoke test passes.
+- [x] Backend tests pass.
+- [x] ML service endpoint smoke test passes.
 - [ ] Mobile app starts without navigation errors.
 - [ ] Manual witness submission works end-to-end.
 - [ ] Manual privacy checklist passes.
 
+### Phase 10 Notes - 2026-05-03
+
+- Added `backend/src/jobs/constellationMaintenance.js` with expiry, pending synthesis, stale location cleanup, and interval startup helpers.
+- Registered constellation maintenance startup from `backend/src/index.js` alongside the existing weekly digest scheduler.
+- Pending synthesis sweeps active, unexpired rows with `has_unprocessed_changes = TRUE`, limited to 100 rows per sweep, and continues if one row fails.
+- Stale location cleanup clears stored coordinates older than 30 days without revoking user consent.
+- Scheduler runs synthesis/expiry every 5 minutes and location cleanup every 24 hours. Current implementation assumes a single backend instance; add database locking before horizontal scale.
+- Validation passed with `cd backend && npx jest --runInBand` and `cd ml-service && python -m unittest discover -s tests -p test_constellation_synthesis.py`.
+- Manual mobile startup, witness submission, and privacy checklist validation remain pending.
+
 ---
 
-## Suggested Commit Order
 
-- [ ] `test: extract backend app for route testing`
-- [ ] `feat: add witness constellation database schema`
-- [ ] `feat: add user push token and location consent APIs`
-- [ ] `fix: strip reporter identity from public incident detail`
-- [ ] `feat: add constellation lifecycle routes and service`
-- [ ] `feat: add deterministic constellation synthesis`
-- [ ] `feat: add ML constellation synthesis endpoint`
-- [ ] `feat: add mobile witness prompt flow`
-- [ ] `feat: show constellation status on private mobile surfaces`
-- [ ] `feat: add witness push notification delivery`
-- [ ] `feat: render corroborated constellation state on map`
-- [ ] `feat: add constellation maintenance jobs`
-- [ ] `test: cover constellation privacy authz and synthesis behavior`
 
 ## Definition Of Done
 
