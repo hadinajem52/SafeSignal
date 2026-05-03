@@ -6,5 +6,6 @@ export { incidentAPI } from './incidentAPI';
 export { statsAPI } from './statsAPI';
 export { timelineAPI } from './timelineAPI';
 export { feedAPI } from './feedAPI';
+export { constellationAPI } from './constellationAPI';
 
 export default api;
