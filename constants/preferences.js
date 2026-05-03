@@ -3,7 +3,7 @@ const PREFERENCE_KEYS = {
 };
 
 const DEFAULT_PREFERENCES = {
-  locationServices: true,
+  locationServices: false,
   pushNotifications: true,
   defaultAnonymous: false,
   displayName: '',

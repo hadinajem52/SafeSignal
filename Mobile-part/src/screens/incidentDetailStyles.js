@@ -52,6 +52,10 @@ const styles = StyleSheet.create({
   outcomeText: {
     marginTop: 4,
   },
+  detailLoader: {
+    alignSelf: 'flex-start',
+    marginTop: 8,
+  },
   sectionCard: {
     marginBottom: 12,
   },
@@ -60,6 +64,18 @@ const styles = StyleSheet.create({
   },
   sectionText: {
     lineHeight: 20,
+  },
+  constellationCard: {
+    marginBottom: 12,
+    borderWidth: 1,
+  },
+  constellationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  constellationTitle: {
+    marginLeft: 8,
   },
   emptyContainer: {
     flex: 1,

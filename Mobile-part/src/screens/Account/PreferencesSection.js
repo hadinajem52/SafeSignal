@@ -21,9 +21,9 @@ const PreferencesSection = ({
 
       <View style={[styles.settingRow, { borderBottomColor: theme.divider }]}> 
         <View style={styles.settingInfo}>
-          <AppText variant="label" style={[styles.settingLabel, { color: theme.text }]}>Location Services</AppText>
+          <AppText variant="label" style={[styles.settingLabel, { color: theme.text }]}>Witness Location Sharing</AppText>
           <AppText variant="caption" style={[styles.settingHint, { color: theme.textSecondary }]}> 
-            Status: {preferences.locationServices ? 'Enabled' : 'Disabled'}
+            {preferences.locationServices ? 'Enabled for nearby witness prompts' : 'Disabled'}
           </AppText>
         </View>
         <Switch

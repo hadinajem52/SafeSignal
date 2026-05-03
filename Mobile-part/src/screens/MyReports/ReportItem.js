@@ -55,6 +55,23 @@ const getProgressStage = (status) => {
   }
 };
 
+const getConstellationLabel = (constellation) => {
+  if (!constellation || constellation.status === 'flagged') {
+    return null;
+  }
+
+  const supportingSignals = Number(constellation.supportingSignals || 0);
+  if (constellation.confidenceState === 'corroborated' && supportingSignals > 0) {
+    return `Corroborated by ${supportingSignals} nearby signal${supportingSignals === 1 ? '' : 's'}`;
+  }
+
+  if (constellation.confidenceState === 'mixed_signals') {
+    return 'Mixed nearby responses';
+  }
+
+  return 'Awaiting corroboration';
+};
+
 const ReportItem = ({ item, onPress, onLongPress }) => {
   const { theme } = useTheme();
   const categoryConfig = CATEGORY_DISPLAY[item.category] || {
@@ -73,6 +90,7 @@ const ReportItem = ({ item, onPress, onLongPress }) => {
   const stage = getProgressStage(item.status);
   const isRejected = item.status === 'rejected';
   const progressColor = isRejected ? theme.error : theme.primary;
+  const constellationLabel = getConstellationLabel(item.constellation);
 
   return (
     <Pressable onPress={() => onPress(item)} onLongPress={() => onLongPress && onLongPress(item)} style={styles.incidentCard}>
@@ -109,6 +127,15 @@ const ReportItem = ({ item, onPress, onLongPress }) => {
           <AppText variant="body" style={[styles.incidentDescription, { color: theme.textSecondary }]} numberOfLines={2}>
             {item.description || 'No additional details provided.'}
           </AppText>
+
+          {constellationLabel ? (
+            <View style={[styles.constellationBadge, { backgroundColor: `${theme.primary}12`, borderColor: `${theme.primary}33` }]}> 
+              <Ionicons name="radio-outline" size={14} color={theme.primary} />
+              <AppText variant="caption" style={[styles.constellationText, { color: theme.primary }]}>
+                {constellationLabel}
+              </AppText>
+            </View>
+          ) : null}
 
           <View style={styles.progressSection}>
             <View style={styles.progressTrack}>

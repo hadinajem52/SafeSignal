@@ -12,6 +12,7 @@ import { useToast } from '../../context/ToastContext';
 import useUserPreferences from '../../hooks/useUserPreferences';
 import useUserStats from '../../hooks/useUserStats';
 import { sendTestNotification } from '../../services/mobileNotifications';
+import { userAPI } from '../../services/userAPI';
 import ContributionsGrid from '../Home/ContributionsGrid';
 import AccessStatusSection from './AccessStatusSection';
 import DangerZone from './DangerZone';
@@ -131,10 +132,42 @@ const AccountScreen = () => {
     setIsEditingName(false);
   };
 
-  const handleLocationToggle = (value) => {
-    updatePreference('locationServices', value);
-    setInlinePreferenceFeedback(value ? 'Location sharing enabled' : 'Location sharing disabled');
+  const handleLocationToggle = async (value) => {
+    if (!value) {
+      updatePreference('locationServices', false);
+      await userAPI.setLocationConsent(false);
+      setInlinePreferenceFeedback('Witness location sharing disabled');
+      setTimeout(() => setInlinePreferenceFeedback(''), 1800);
+      return;
+    }
+
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      updatePreference('locationServices', false);
+      await userAPI.setLocationConsent(false);
+      showToast('Location permission is needed before enabling witness prompts.', 'warning');
+      return;
+    }
+
+    const consentResult = await userAPI.setLocationConsent(true);
+    if (!consentResult.success) {
+      showToast(consentResult.error, 'error');
+      return;
+    }
+
+    updatePreference('locationServices', true);
+    setInlinePreferenceFeedback('Witness location sharing enabled');
     setTimeout(() => setInlinePreferenceFeedback(''), 1800);
+
+    try {
+      const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      await userAPI.updateLocation({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      });
+    } catch (_error) {
+      // Consent is enabled; location will sync on next app foreground if permission remains available.
+    }
   };
 
   const handleNotificationsToggle = (value) => {

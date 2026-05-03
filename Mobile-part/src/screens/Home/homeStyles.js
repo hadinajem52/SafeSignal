@@ -122,6 +122,29 @@ const homeStyles = StyleSheet.create({
     marginTop: 12,
     alignSelf: 'flex-start',
   },
+  witnessPromptCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 14,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  witnessPromptIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  witnessPromptContent: {
+    flex: 1,
+  },
+  witnessPromptText: {
+    marginTop: 3,
+    lineHeight: 18,
+  },
 
   quickStatsRow: {
     flexDirection: 'row',
