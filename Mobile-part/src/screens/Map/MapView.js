@@ -8,6 +8,16 @@ import { formatTimeAgo } from '../../utils/dateUtils';
 import { getCategoryLabel, getMarkerColor } from '../../utils/mapCategory';
 import styles from './mapStyles';
 
+const getConfidenceOpacity = (score) => {
+  const parsedScore = Number(score);
+  if (!Number.isFinite(parsedScore)) {
+    return '55';
+  }
+
+  const opacity = Math.max(0.35, Math.min(parsedScore, 0.85));
+  return Math.round(opacity * 255).toString(16).padStart(2, '0');
+};
+
 const MapCanvas = ({
   mapRef,
   region,
@@ -52,8 +62,20 @@ const MapCanvas = ({
 
         // Active mode: decorative radius circle + transparent tap-target marker
         if (showActiveOverlays) {
+          const isCorroborated = incident.constellation?.confidenceState === 'corroborated';
+          const confidenceOpacity = getConfidenceOpacity(incident.constellation?.confidenceScore);
+
           return (
             <React.Fragment key={incident.id}>
+              {isCorroborated ? (
+                <Circle
+                  center={coordinate}
+                  radius={230}
+                  strokeColor={`${markerColor}${confidenceOpacity}`}
+                  fillColor="transparent"
+                  strokeWidth={3}
+                />
+              ) : null}
               <Circle
                 center={coordinate}
                 radius={150}

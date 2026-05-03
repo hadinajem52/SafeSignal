@@ -17,6 +17,7 @@ router.get('/incidents', async (req, res) => {
       sw_lng: req.query.sw_lng,
       category: req.query.category,
       timeframe: req.query.timeframe || '30d',
+      include_constellation: req.query.include_constellation === 'true',
     };
 
     const data = await mapService.getMapIncidents(filters);

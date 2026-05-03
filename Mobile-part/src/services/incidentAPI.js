@@ -181,7 +181,15 @@ export const incidentAPI = {
 
   async getMapIncidents(params = {}) {
     try {
-      const { ne_lat, ne_lng, sw_lat, sw_lng, category, timeframe = '30d' } = params;
+      const {
+        ne_lat,
+        ne_lng,
+        sw_lat,
+        sw_lng,
+        category,
+        timeframe = '30d',
+        includeConstellation = false,
+      } = params;
       const queryParams = new URLSearchParams({ timeframe });
 
       if (ne_lat && ne_lng && sw_lat && sw_lng) {
@@ -193,6 +201,10 @@ export const incidentAPI = {
 
       if (category) {
         queryParams.append('category', category);
+      }
+
+      if (includeConstellation) {
+        queryParams.append('include_constellation', 'true');
       }
 
       const response = await api.get(`/map/incidents?${queryParams.toString()}`);

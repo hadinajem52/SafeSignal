@@ -46,6 +46,10 @@ const IncidentMapDetail = ({
   const latitude = Number(selectedIncident?.location?.latitude);
   const longitude = Number(selectedIncident?.location?.longitude);
   const hasValidCoordinates = Number.isFinite(latitude) && Number.isFinite(longitude);
+  const corroboratedSignals =
+    selectedIncident.constellation?.confidenceState === 'corroborated'
+      ? Number(selectedIncident.constellation?.supportingSignals) || 0
+      : 0;
 
   return (
     <Animated.View style={[mapStyles.sheetBackdrop, { opacity }]}> 
@@ -134,6 +138,15 @@ const IncidentMapDetail = ({
                   onPress={() => onCenterMap(selectedIncident)}
                   disabled={!hasValidCoordinates}
                 />
+              </View>
+            ) : null}
+
+            {!showResolvedDetails && corroboratedSignals > 0 ? (
+              <View style={mapStyles.detailMetaRow}>
+                <Ionicons name="people-circle-outline" size={17} color={theme.primary} />
+                <AppText variant="caption" style={[mapStyles.detailMetaText, { color: theme.textSecondary }]}> 
+                  Community signals corroborate this report ({corroboratedSignals})
+                </AppText>
               </View>
             ) : null}
           </>
