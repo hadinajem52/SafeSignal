@@ -836,27 +836,37 @@ Purpose: add public-facing confidence rendering only after private flows and mod
 
 ### Backend Steps
 
-- [ ] Add optional `include_constellation=true` query handling.
-- [ ] Join only `status = 'active'` and `expires_at > NOW()` constellations.
-- [ ] Do not join flagged constellations.
-- [ ] Return only confidence state, score, and supporting signal count.
-- [ ] Do not return constellation notes, witness IDs, reporter IDs, or cluster links.
-- [ ] Preserve existing map status filters unless a product decision explicitly broadens them.
+- [x] Add optional `include_constellation=true` query handling.
+- [x] Join only `status = 'active'` and `expires_at > NOW()` constellations.
+- [x] Do not join flagged constellations.
+- [x] Return only confidence state, score, and supporting signal count.
+- [x] Do not return constellation notes, witness IDs, reporter IDs, or cluster links.
+- [x] Preserve existing map status filters unless a product decision explicitly broadens them.
 
 ### Mobile Steps
 
-- [ ] Pass `include_constellation=true` from map fetch.
-- [ ] Render ring only for `confidence_state = 'corroborated'`.
-- [ ] Use opacity based on confidence score.
-- [ ] Render no ring for `single_report`, `mixed_signals`, flagged, or expired rows.
-- [ ] Keep incident detail copy aggregate-only.
+- [x] Pass `include_constellation=true` from map fetch.
+- [x] Render ring only for `confidence_state = 'corroborated'`.
+- [x] Use opacity based on confidence score.
+- [x] Render no ring for `single_report`, `mixed_signals`, flagged, or expired rows.
+- [x] Keep incident detail copy aggregate-only.
 
 ### Validation Gate
 
 - [ ] Map loads with and without constellation data.
 - [ ] Corroborated incident displays a subtle ring.
 - [ ] Flagged constellation does not render on map.
-- [ ] Public map response contains no sensitive fields.
+- [x] Public map response contains no sensitive fields.
+
+### Phase 9 Notes - 2026-05-03
+
+- Added opt-in `include_constellation=true` support to `/api/map/incidents`.
+- Map constellation joins include only active, unexpired, non-flagged rows and expose only `confidenceState`, `confidenceScore`, and `supportingSignals`.
+- Existing active map incident status filters were preserved.
+- Mobile active-map fetch now requests constellation aggregates and draws a subtle outer ring only for corroborated incidents, with opacity derived from confidence score.
+- Active incident detail copy remains aggregate-only and shows only corroborated signal count when present.
+- Validation passed with `cd backend && npx jest --runInBand` and Babel parsing for touched mobile map/API files.
+- Visual/device validation remains pending for actual map load, corroborated ring appearance, and flagged-row absence on a running app.
 
 ---
 

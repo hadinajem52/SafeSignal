@@ -61,6 +61,7 @@ const calculateStartDate = (timeframe) => {
  * @param {number} filters.ne_lng - Northeast longitude (bounding box)
  * @param {number} filters.sw_lat - Southwest latitude (bounding box)
  * @param {number} filters.sw_lng - Southwest longitude (bounding box)
+ * @param {boolean} filters.include_constellation - Include public constellation confidence aggregates
  * @returns {Promise<Object>} Incident data for map
  */
 const getMapIncidents = async (filters) => {
@@ -71,6 +72,7 @@ const getMapIncidents = async (filters) => {
     sw_lng,
     category,
     timeframe = '30d',
+    include_constellation = false,
   } = filters;
 
   // Validate timeframe
@@ -80,18 +82,40 @@ const getMapIncidents = async (filters) => {
 
   const startDate = calculateStartDate(timeframe);
 
+  const constellationSelect = include_constellation
+    ? `,
+      c.confidence_state AS constellation_confidence_state,
+      c.confidence_score AS constellation_confidence_score,
+      c.supporting_signals AS constellation_supporting_signals`
+    : '';
+  const constellationJoin = include_constellation
+    ? `
+    LEFT JOIN LATERAL (
+      SELECT confidence_state, confidence_score, supporting_signals
+      FROM incident_constellations c
+      WHERE c.incident_id = incidents.incident_id
+        AND c.status = 'active'
+        AND c.status != 'flagged'
+        AND c.expires_at > NOW()
+      ORDER BY c.created_at DESC
+      LIMIT 1
+    ) c ON TRUE`
+    : '';
+
   // Build query for active-map display.
   let query = `
     SELECT 
-      incident_id,
-      category,
-      latitude,
-      longitude,
-      incident_date
+      incidents.incident_id,
+      incidents.category,
+      incidents.latitude,
+      incidents.longitude,
+      incidents.incident_date
+      ${constellationSelect}
     FROM incidents
-    WHERE status = ANY($2::text[])
-      AND incident_date >= $1
-      AND is_draft = false
+    ${constellationJoin}
+    WHERE incidents.status = ANY($2::text[])
+      AND incidents.incident_date >= $1
+      AND incidents.is_draft = false
   `;
 
   const params = [startDate, ACTIVE_MAP_INCIDENT_STATUSES];
@@ -104,34 +128,48 @@ const getMapIncidents = async (filters) => {
     sw_lat !== undefined && sw_lat !== null &&
     sw_lng !== undefined && sw_lng !== null
   ) {
-    query += ` AND latitude BETWEEN $${paramIndex} AND $${paramIndex + 1}`;
-    query += ` AND longitude BETWEEN $${paramIndex + 2} AND $${paramIndex + 3}`;
+    query += ` AND incidents.latitude BETWEEN $${paramIndex} AND $${paramIndex + 1}`;
+    query += ` AND incidents.longitude BETWEEN $${paramIndex + 2} AND $${paramIndex + 3}`;
     params.push(parseFloat(sw_lat), parseFloat(ne_lat), parseFloat(sw_lng), parseFloat(ne_lng));
     paramIndex += 4;
   }
 
   // Add category filter if provided
   if (category && category !== 'all') {
-    query += ` AND category = $${paramIndex}`;
+    query += ` AND incidents.category = $${paramIndex}`;
     params.push(category);
     paramIndex++;
   }
 
-  query += ` ORDER BY incident_date DESC LIMIT 500`;
+  query += ` ORDER BY incidents.incident_date DESC LIMIT 500`;
 
   try {
     const result = await db.any(query, params);
 
     // Format incidents for map display (privacy-safe)
-    const incidents = result.map(incident => ({
-      id: incident.incident_id,
-      category: incident.category,
-      location: {
-        latitude: toPublicCoordinate(incident.latitude),
-        longitude: toPublicCoordinate(incident.longitude),
-      },
-      timestamp: incident.incident_date,
-    }));
+    const incidents = result.map((incident) => {
+      const publicIncident = {
+        id: incident.incident_id,
+        category: incident.category,
+        location: {
+          latitude: toPublicCoordinate(incident.latitude),
+          longitude: toPublicCoordinate(incident.longitude),
+        },
+        timestamp: incident.incident_date,
+      };
+
+      if (include_constellation && incident.constellation_confidence_state) {
+        publicIncident.constellation = {
+          confidenceState: incident.constellation_confidence_state,
+          confidenceScore: incident.constellation_confidence_score === null
+            ? null
+            : Number(incident.constellation_confidence_score),
+          supportingSignals: incident.constellation_supporting_signals || 0,
+        };
+      }
+
+      return publicIncident;
+    });
 
     return {
       incidents,

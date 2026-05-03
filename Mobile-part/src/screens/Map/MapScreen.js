@@ -83,7 +83,7 @@ const MapScreen = () => {
 
         let result;
         if (mapMode === MAP_MODES.ACTIVE) {
-          const params = { timeframe: selectedTimeframe };
+          const params = { timeframe: selectedTimeframe, includeConstellation: true };
           if (selectedCategory) params.category = selectedCategory;
           result = await incidentAPI.getMapIncidents(params);
         } else {
