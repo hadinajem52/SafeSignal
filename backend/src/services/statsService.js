@@ -257,14 +257,14 @@ async function getUserDashboardStats(userId, { latitude, longitude, radius = DEF
         },
         recentActivity: recentActivity || [],
         witnessPrompts: {
-            count: nearbyConstellations.length,
-            firstNearbyConstellationId: nearbyConstellations[0]?.constellation_id || null,
-            coarseLatitude: nearbyConstellations[0]?.center_latitude === undefined
+            count: nearbyConstellations.count,
+            firstNearbyConstellationId: nearbyConstellations.constellation_id || null,
+            coarseLatitude: nearbyConstellations.center_latitude === undefined || nearbyConstellations.center_latitude === null
                 ? null
-                : Number(Number(nearbyConstellations[0].center_latitude).toFixed(2)),
-            coarseLongitude: nearbyConstellations[0]?.center_longitude === undefined
+                : Number(Number(nearbyConstellations.center_latitude).toFixed(2)),
+            coarseLongitude: nearbyConstellations.center_longitude === undefined || nearbyConstellations.center_longitude === null
                 ? null
-                : Number(Number(nearbyConstellations[0].center_longitude).toFixed(2)),
+                : Number(Number(nearbyConstellations.center_longitude).toFixed(2)),
         },
     };
 }
@@ -280,29 +280,44 @@ async function getNearbyConstellationsForUser(userId) {
     `, [userId]);
 
     if (!user) {
-        return [];
+        return { count: 0, constellation_id: null, center_latitude: null, center_longitude: null };
     }
 
-    return db.manyOrNone(`
-      SELECT c.constellation_id, c.center_latitude, c.center_longitude
-      FROM incident_constellations c
-      JOIN incidents i ON i.incident_id = c.incident_id
-      WHERE c.status = 'active'
-        AND c.expires_at > NOW()
-        AND i.reporter_id <> $1
-        AND NOT EXISTS (
-          SELECT 1
-          FROM incident_corroborations ic
-          WHERE ic.constellation_id = c.constellation_id
-            AND ic.user_id = $1
-        )
-        AND ST_DWithin(
-          ST_SetSRID(ST_MakePoint(c.center_longitude::float, c.center_latitude::float), 4326)::geography,
-          ST_SetSRID(ST_MakePoint($2::float, $3::float), 4326)::geography,
-          $4
-        )
-      ORDER BY c.opens_at DESC
-      LIMIT 5
+    return db.one(`
+      WITH eligible AS (
+        SELECT c.constellation_id, c.center_latitude, c.center_longitude, c.opens_at
+        FROM incident_constellations c
+        JOIN incidents i ON i.incident_id = c.incident_id
+        WHERE c.status = 'active'
+          AND c.expires_at > NOW()
+          AND i.reporter_id <> $1
+          AND NOT EXISTS (
+            SELECT 1
+            FROM incident_corroborations ic
+            WHERE ic.constellation_id = c.constellation_id
+              AND ic.user_id = $1
+          )
+          AND ST_DWithin(
+            ST_SetSRID(ST_MakePoint(c.center_longitude::float, c.center_latitude::float), 4326)::geography,
+            ST_SetSRID(ST_MakePoint($2::float, $3::float), 4326)::geography,
+            $4
+          )
+      ),
+      first_prompt AS (
+        SELECT constellation_id, center_latitude, center_longitude
+        FROM eligible
+        ORDER BY opens_at DESC
+        LIMIT 1
+      )
+      SELECT
+        (SELECT COUNT(*) FROM eligible)::int AS count,
+        first_prompt.constellation_id,
+        first_prompt.center_latitude,
+        first_prompt.center_longitude
+      FROM first_prompt
+      UNION ALL
+      SELECT 0, NULL, NULL, NULL
+      WHERE NOT EXISTS (SELECT 1 FROM first_prompt)
     `, [
         userId,
         Number(user.last_known_longitude),

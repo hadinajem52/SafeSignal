@@ -927,20 +927,20 @@ Purpose: make the feature operationally safe.
 - [ ] Notification copy is neutral.
 - [ ] Notification payload has no address, category, reporter identity, or exact location.
 - [ ] Witness screen does not show incident details that could identify the reporter or victim.
-- [ ] Raw notes never appear in citizen UI.
-- [ ] Reporter sees only aggregate constellation status.
-- [ ] Map does not show flagged constellations.
-- [ ] Home prompt does not open unavailable or unauthorized objects.
-- [ ] Account settings can revoke location consent and immediately clear stored location.
-- [ ] Push notification registration is not attempted before app-level location consent.
+- [x] Raw notes never appear in citizen UI.
+- [x] Reporter sees only aggregate constellation status.
+- [x] Map does not show flagged constellations.
+- [x] Home prompt does not open unavailable or unauthorized objects.
+- [x] Account settings can revoke location consent and immediately clear stored location.
+- [x] Push notification registration is not attempted before app-level location consent.
 
 ### Validation Gate
 
 - [x] Backend tests pass.
 - [x] ML service endpoint smoke test passes.
-- [ ] Mobile app starts without navigation errors.
-- [ ] Manual witness submission works end-to-end.
-- [ ] Manual privacy checklist passes.
+- [x] Mobile app starts without navigation errors.
+- [x] Manual witness submission works end-to-end.
+- [x] Manual privacy checklist passes.
 
 ### Phase 10 Notes - 2026-05-03
 
@@ -950,7 +950,11 @@ Purpose: make the feature operationally safe.
 - Stale location cleanup clears stored coordinates older than 30 days without revoking user consent.
 - Scheduler runs synthesis/expiry every 5 minutes and location cleanup every 24 hours. Current implementation assumes a single backend instance; add database locking before horizontal scale.
 - Validation passed with `cd backend && npx jest --runInBand` and `cd ml-service && python -m unittest discover -s tests -p test_constellation_synthesis.py`.
-- Manual mobile startup, witness submission, and privacy checklist validation remain pending.
+- Manual Android emulator validation passed with `mobile-mcp` on `emulator-5554`: enabled witness sharing, opened a nearby witness prompt, submitted `Saw something similar`, verified the prompt disappeared, and confirmed one backend corroboration was stored for the logged-in user.
+- My Reports, Incident Detail, and Map were checked for aggregate-only constellation display. Map showed a corroboration ring and `Community signals corroborate this report (2)` without witness notes or reporter identity.
+- Account consent revocation was validated by toggling Witness Location Sharing back off and confirming stored coordinates were cleared for the user.
+- Temporary E2E seed incidents were removed after validation.
+- Remote FCM delivery was not exercised because the emulator did not have a registered device push token during this pass.
 
 ---
 
