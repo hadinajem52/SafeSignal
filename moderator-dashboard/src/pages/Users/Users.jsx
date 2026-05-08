@@ -20,6 +20,8 @@ function Users() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedId, setSelectedId] = useState(null);
   const [promoteRole, setPromoteRole] = useState("moderator");
+  const [inviteDialog, setInviteDialog] = useState(false);
+  const [inviteCopyStatus, setInviteCopyStatus] = useState("");
   const [suspendDialog, setSuspendDialog] = useState(false);
   const [promoteDialog, setPromoteDialog] = useState(false);
   const [actionError, setActionError] = useState("");
@@ -84,6 +86,32 @@ function Users() {
   });
 
   const selected = users.find((u) => u.id === selectedId) ?? null;
+  const inviteUrl =
+    typeof window === "undefined" ? "/login" : `${window.location.origin}/login`;
+
+  const openInviteDialog = () => {
+    setInviteCopyStatus("");
+    setInviteDialog(true);
+  };
+
+  const closeInviteDialog = () => {
+    setInviteDialog(false);
+    setInviteCopyStatus("");
+  };
+
+  const copyInviteLink = async () => {
+    if (!navigator.clipboard) {
+      setInviteCopyStatus("Copy unavailable. Select the link manually.");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      setInviteCopyStatus("Link copied.");
+    } catch {
+      setInviteCopyStatus("Copy failed. Select the link manually.");
+    }
+  };
 
   const kpis = {
     total: users.length,
@@ -118,6 +146,12 @@ function Users() {
         selected={selected}
         kpis={kpis}
         isAdmin={isAdmin}
+        inviteDialog={inviteDialog}
+        inviteUrl={inviteUrl}
+        inviteCopyStatus={inviteCopyStatus}
+        onOpenInvite={openInviteDialog}
+        onCloseInvite={closeInviteDialog}
+        onCopyInviteLink={copyInviteLink}
         onOpenPromote={() => setPromoteDialog(true)}
         onOpenSuspend={() => setSuspendDialog(true)}
         suspendDialog={suspendDialog}

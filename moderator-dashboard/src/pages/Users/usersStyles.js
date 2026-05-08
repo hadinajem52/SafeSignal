@@ -129,6 +129,11 @@ export const USERS_CSS = `
   .u-dialog-body { padding: 16px 20px; }
   .u-dialog-select-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); margin-bottom: 6px; }
   .u-dialog-select { background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-text); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 12px; font-weight: 600; padding: 8px 10px; outline: none; cursor: pointer; appearance: none; width: 100%; }
+  .u-invite-copy { display: flex; gap: 8px; }
+  .u-invite-copy input { flex: 1; min-width: 0; background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-text); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 12px; font-weight: 600; padding: 8px 10px; outline: none; }
+  .u-invite-copy button { border: 1px solid var(--color-primary); background: rgba(0,240,255,0.06); color: var(--color-primary); font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; padding: 8px 14px; cursor: pointer; }
+  .u-invite-copy button:hover { background: rgba(0,240,255,0.12); }
+  .u-dialog-note { margin-top: 10px; font-size: 11px; font-weight: 600; color: var(--color-text-muted); line-height: 1.5; }
   .u-dialog-foot { display: flex; gap: 8px; justify-content: flex-end; padding: 0 20px 20px; }
   .u-dialog-cancel { background: none; border: 1px solid var(--color-border); color: var(--color-text-muted); font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; padding: 8px 16px; cursor: pointer; }
   .u-dialog-cancel:hover { border-color: var(--color-text-muted); color: var(--color-text); }
