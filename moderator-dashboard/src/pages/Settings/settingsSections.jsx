@@ -5,11 +5,14 @@ import { SecHead, SettingRow, SqToggle } from "./settingsComponents";
 export function ProfileSection({
   user,
   displayName,
-  emailInput,
+  emailAddress,
+  profileDraftName,
+  profileDraftEmail,
   editingProfile,
-  setEditingProfile,
-  setDisplayName,
-  setEmailInput,
+  startProfileEdit,
+  saveProfileDraft,
+  setProfileDraftName,
+  setProfileDraftEmail,
   memberSince,
   language,
   setLanguage,
@@ -18,7 +21,6 @@ export function ProfileSection({
   dateFormat,
   setDateFormat,
   persistLocalPref,
-  showToast,
   initials,
 }) {
   return (
@@ -30,21 +32,18 @@ export function ProfileSection({
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="st-profile-name">{displayName || user?.username || "Unknown"}</div>
             <div className="st-profile-role">{user?.role ?? "moderator"}</div>
-            <div className="st-profile-email">{user?.email ?? ""}</div>
+            <div className="st-profile-email">{emailAddress || user?.email || ""}</div>
           </div>
           <div style={{ display: "flex", gap: 8, marginLeft: "auto", flexShrink: 0 }}>
             {editingProfile ? (
               <button
                 className="st-btn st-btn-primary"
-                onClick={() => {
-                  setEditingProfile(false);
-                  showToast("Profile display updated.");
-                }}
+                onClick={saveProfileDraft}
               >
                 {IC.check} Save
               </button>
             ) : (
-              <button className="st-btn st-btn-ghost" onClick={() => setEditingProfile(true)}>
+              <button className="st-btn st-btn-ghost" onClick={startProfileEdit}>
                 Edit Profile
               </button>
             )}
@@ -56,8 +55,8 @@ export function ProfileSection({
             {editingProfile ? (
               <input
                 className="st-input"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
+                value={profileDraftName}
+                onChange={(e) => setProfileDraftName(e.target.value)}
                 style={{ minWidth: 200 }}
               />
             ) : (
@@ -71,13 +70,13 @@ export function ProfileSection({
               <input
                 className="st-input"
                 type="email"
-                value={emailInput}
-                onChange={(e) => setEmailInput(e.target.value)}
+                value={profileDraftEmail}
+                onChange={(e) => setProfileDraftEmail(e.target.value)}
                 style={{ minWidth: 220 }}
               />
             ) : (
               <span style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-muted)" }}>
-                {user?.email}
+                {emailAddress || user?.email}
               </span>
             )}
           </SettingRow>

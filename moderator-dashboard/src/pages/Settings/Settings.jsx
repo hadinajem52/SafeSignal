@@ -55,7 +55,9 @@ function SettingsPage() {
 
   const [editingProfile, setEditingProfile] = useState(false);
   const [displayName, setDisplayName] = useState(user?.username ?? "");
-  const [emailInput, setEmailInput] = useState(user?.email ?? "");
+  const [emailAddress, setEmailAddress] = useState(user?.email ?? "");
+  const [profileDraftName, setProfileDraftName] = useState(user?.username ?? "");
+  const [profileDraftEmail, setProfileDraftEmail] = useState(user?.email ?? "");
 
   const [currentPw, setCurrentPw] = useState("");
   const [newPw, setNewPw] = useState("");
@@ -66,9 +68,27 @@ function SettingsPage() {
   const [confirmReset, setConfirmReset] = useState(false);
 
   useEffect(() => {
-    if (user?.username) setDisplayName(user.username);
-    if (user?.email) setEmailInput(user.email);
+    const nextName = user?.username ?? "";
+    const nextEmail = user?.email ?? "";
+
+    setDisplayName(nextName);
+    setEmailAddress(nextEmail);
+    setProfileDraftName(nextName);
+    setProfileDraftEmail(nextEmail);
   }, [user]);
+
+  function startProfileEdit() {
+    setProfileDraftName(displayName);
+    setProfileDraftEmail(emailAddress);
+    setEditingProfile(true);
+  }
+
+  function saveProfileDraft() {
+    setDisplayName(profileDraftName.trim() || user?.username || "");
+    setEmailAddress(profileDraftEmail.trim() || user?.email || "");
+    setEditingProfile(false);
+    showToast("Profile display updated.");
+  }
 
   const { isLoading, isError, error, refetch } = useQuery({
     queryKey: ["dashboardSettings"],
@@ -273,11 +293,14 @@ function SettingsPage() {
       <ProfileSection
         user={user}
         displayName={displayName}
-        emailInput={emailInput}
+        emailAddress={emailAddress}
+        profileDraftName={profileDraftName}
+        profileDraftEmail={profileDraftEmail}
         editingProfile={editingProfile}
-        setEditingProfile={setEditingProfile}
-        setDisplayName={setDisplayName}
-        setEmailInput={setEmailInput}
+        startProfileEdit={startProfileEdit}
+        saveProfileDraft={saveProfileDraft}
+        setProfileDraftName={setProfileDraftName}
+        setProfileDraftEmail={setProfileDraftEmail}
         memberSince={memberSince}
         language={language}
         setLanguage={setLanguage}
@@ -286,7 +309,6 @@ function SettingsPage() {
         dateFormat={dateFormat}
         setDateFormat={setDateFormat}
         persistLocalPref={persistLocalPref}
-        showToast={showToast}
         initials={getInitials(displayName || user?.username || "")}
       />
     ),
