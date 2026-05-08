@@ -113,6 +113,12 @@ export default function UsersView({
   selected,
   kpis,
   isAdmin,
+  inviteDialog,
+  inviteUrl,
+  inviteCopyStatus,
+  onOpenInvite,
+  onCloseInvite,
+  onCopyInviteLink,
   onOpenPromote,
   onOpenSuspend,
   suspendDialog,
@@ -133,7 +139,7 @@ export default function UsersView({
       <div className="u-wrap">
         <div className="u-topbar">
           <div className="u-topbar-title">Users Management</div>
-          <button className="u-invite-btn">
+          <button className="u-invite-btn" onClick={onOpenInvite}>
             <IconMail /> Invite User
           </button>
         </div>
@@ -444,6 +450,30 @@ export default function UsersView({
           )}
         </div>
       </div>
+
+      <AlertDialog
+        open={inviteDialog}
+        onClose={onCloseInvite}
+        title="Invite User"
+        description="Send this access URL to the user. New staff accounts remain pending until an administrator approves the request."
+        confirmLabel="Done"
+        confirmVariant="blue"
+        onConfirm={onCloseInvite}
+      >
+        <div className="u-dialog-select-lbl">Access URL</div>
+        <div className="u-invite-copy">
+          <input type="text" readOnly value={inviteUrl} onFocus={(e) => e.target.select()} />
+          <button type="button" onClick={onCopyInviteLink}>
+            Copy
+          </button>
+        </div>
+        {inviteCopyStatus && <div className="u-dialog-note">{inviteCopyStatus}</div>}
+        {!isAdmin && (
+          <div className="u-dialog-note">
+            Admin approval is required before moderator or law enforcement access becomes active.
+          </div>
+        )}
+      </AlertDialog>
 
       {selected && (
         <AlertDialog
