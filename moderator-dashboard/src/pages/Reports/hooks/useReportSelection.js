@@ -13,6 +13,13 @@ export function useReportSelection(filteredReports) {
 
   // Keep selection valid if filters remove the currently selected report
   useEffect(() => {
+    setSelectedReport((current) => {
+      if (!current) return filteredReports[0] ?? null;
+      return filteredReports.some((report) => report.id === current.id)
+        ? current
+        : filteredReports[0] ?? null;
+    });
+
     setSelectedReportIds((prev) =>
       prev.filter((id) => filteredReports.some((r) => r.id === id)),
     );

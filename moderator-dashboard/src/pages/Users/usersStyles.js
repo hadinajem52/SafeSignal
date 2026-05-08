@@ -58,6 +58,7 @@ export const USERS_CSS = `
 
   .u-status-chip { font-size: 9px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 2px 6px; border: 1px solid; display: inline-flex; align-items: center; }
   .u-status-chip.active    { border-color: var(--color-success); color: var(--color-success); background: rgba(0,240,255,0.06); }
+  .u-status-chip.pending   { border-color: var(--color-warning); color: var(--color-warning); background: rgba(255,204,0,0.06); }
   .u-status-chip.suspended { border-color: var(--color-error); color: var(--color-error); background: rgba(255,51,51,0.06); }
 
   .u-rep-count { font-size: 12px; font-weight: 700; color: var(--color-text); font-variant-numeric: tabular-nums; text-align: right; }
