@@ -79,8 +79,7 @@ function Users() {
     const q = search.toLowerCase();
     if (q && !u.name.toLowerCase().includes(q) && !u.email.toLowerCase().includes(q)) return false;
     if (roleFilter !== "all" && u.role !== roleFilter) return false;
-    if (statusFilter === "active" && u.isSuspended) return false;
-    if (statusFilter === "suspended" && !u.isSuspended) return false;
+    if (statusFilter !== "all" && u.status !== statusFilter) return false;
     return true;
   });
 
@@ -88,8 +87,8 @@ function Users() {
 
   const kpis = {
     total: users.length,
-    active: users.filter((u) => !u.isSuspended).length,
-    suspended: users.filter((u) => u.isSuspended).length,
+    active: users.filter((u) => u.status === "active").length,
+    suspended: users.filter((u) => u.status === "suspended").length,
     mods: users.filter(
       (u) =>
         u.role === "moderator" ||

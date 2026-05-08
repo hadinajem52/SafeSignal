@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { useBulkReportActions } from "./useBulkReportActions";
 import { useReportKeyboardShortcuts } from "./useReportKeyboardShortcuts";
 import { useReportMutations } from "./useReportMutations";
+import { canRejectReport } from "../reportStatusRules";
 
 export function useReportActions({
   queryClient,
@@ -46,6 +47,7 @@ export function useReportActions({
     executeBulkAction,
   } = useBulkReportActions({
     reportsAPI,
+    filteredReports,
     selectedReport,
     selectedReportIds,
     setSelectedReport,
@@ -61,8 +63,12 @@ export function useReportActions({
 
   const handleRejectRequest = useCallback(() => {
     if (!selectedReport) return;
+    if (!canRejectReport(selectedReport)) {
+      pushToast(`Cannot reject a report with status ${selectedReport.status}.`, "warning");
+      return;
+    }
     setSingleConfirmAction("reject");
-  }, [selectedReport]);
+  }, [pushToast, selectedReport]);
 
   const executeSingleAction = useCallback(async () => {
     if (!selectedReport || !singleConfirmAction) return;
@@ -76,6 +82,7 @@ export function useReportActions({
     selectedReport,
     verifyPending: verifyMutation.isPending,
     rejectPending: rejectMutation.isPending,
+    canRejectSelectedReport: canRejectReport(selectedReport),
     handleEscalateRequest,
     handleRejectRequest,
     handleSelectNextReport,

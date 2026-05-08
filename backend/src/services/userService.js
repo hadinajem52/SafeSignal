@@ -49,13 +49,21 @@ const USER_STATS_SELECT = `
  * @returns {Object} Formatted user object
  */
 function formatUserResponse(user) {
+  const isPendingApproval = ['moderator', 'law_enforcement'].includes(user.role) && !user.is_verified;
+  const status = user.is_suspended
+    ? 'suspended'
+    : isPendingApproval
+      ? 'pending'
+      : 'active';
+
   return {
     id: user.user_id,
     name: user.username,
     email: user.email,
     role: user.role,
-    status: user.is_suspended ? 'suspended' : 'active',
+    status,
     isSuspended: user.is_suspended,
+    isVerified: user.is_verified,
     totalReports: parseInt(user.total_reports || 0),
     verifiedReports: parseInt(user.verified_reports || 0),
     rejectedReports: parseInt(user.rejected_reports || 0),
@@ -76,7 +84,7 @@ async function getAllUsers(filters = {}) {
 
   let query = `
     SELECT 
-      user_id, username, email, role, is_suspended, created_at,
+      user_id, username, email, role, is_suspended, is_verified, created_at,
       ${USER_STATS_SELECT}
     FROM users u
     WHERE 1=1
@@ -107,7 +115,7 @@ async function getAllUsers(filters = {}) {
 async function getUserById(userId) {
   const user = await db.oneOrNone(
     `SELECT 
-      user_id, username, email, role, is_suspended, created_at,
+      user_id, username, email, role, is_suspended, is_verified, created_at,
       ${USER_STATS_SELECT}
     FROM users u
     WHERE user_id = $1`,

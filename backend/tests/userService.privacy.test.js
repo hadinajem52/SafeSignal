@@ -88,6 +88,7 @@ describe('userService privacy fields', () => {
       email: 'casey@example.com',
       role: 'citizen',
       is_suspended: false,
+      is_verified: true,
       created_at: new Date('2026-01-01T00:00:00Z'),
       total_reports: 1,
       verified_reports: 0,
@@ -106,5 +107,25 @@ describe('userService privacy fields', () => {
     expect(user).not.toHaveProperty('lastKnownLatitude');
     expect(user).not.toHaveProperty('location_consent');
     expect(user).not.toHaveProperty('locationConsent');
+  });
+
+  it('marks unverified staff users as pending instead of active', async () => {
+    db.oneOrNone.mockResolvedValue({
+      user_id: 8,
+      username: 'Pending LE',
+      email: 'pending@example.com',
+      role: 'law_enforcement',
+      is_suspended: false,
+      is_verified: false,
+      created_at: new Date('2026-01-02T00:00:00Z'),
+      total_reports: 0,
+      verified_reports: 0,
+      rejected_reports: 0,
+    });
+
+    const user = await userService.getUserById(8);
+
+    expect(user.status).toBe('pending');
+    expect(user.isVerified).toBe(false);
   });
 });

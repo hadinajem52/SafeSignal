@@ -100,6 +100,7 @@ function ReportDetail({
   updateCategoryPending,
   verifyPending,
   rejectPending,
+  canReject = true,
   onMerge,
   onApplySuggestedCategory,
   onVerify,
@@ -147,7 +148,7 @@ function ReportDetail({
           {/* Reject — hover → danger */}
           <button
             onClick={onReject}
-            disabled={rejectPending}
+            disabled={rejectPending || !canReject}
             aria-label="Reject report"
             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.04em]
               border border-border text-muted bg-transparent transition-colors

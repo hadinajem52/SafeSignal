@@ -25,6 +25,7 @@ const constellationService = require('./constellationService');
 
 const LEI_STATUSES = ['verified', 'dispatched', 'on_scene', 'investigating', 'police_closed'];
 const STAFF_ROLES = new Set(['admin', 'moderator', 'law_enforcement']);
+const REJECTABLE_STATUSES = new Set(['submitted', 'auto_processed', 'auto_flagged', 'in_review', 'needs_info']);
 const shouldIncludeStaffConstellation = (includeConstellation, userRole) =>
   Boolean(includeConstellation && STAFF_ROLES.has(userRole));
 const profanityFilter = new Filter();
@@ -2210,6 +2211,10 @@ async function rejectIncident(incidentId, requestingUser) {
 
   if (!incident) {
     throw ServiceError.notFound('Incident');
+  }
+
+  if (!REJECTABLE_STATUSES.has(incident.status)) {
+    throw ServiceError.conflict(`Cannot reject a report with status ${incident.status}`);
   }
 
   const updated = await db.one(

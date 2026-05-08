@@ -18,6 +18,17 @@ import {
   IconWarn,
 } from "./usersIcons";
 
+function getUserStatusClass(user) {
+  return user.status || (user.isSuspended ? "suspended" : "active");
+}
+
+function getUserStatusLabel(user) {
+  const status = getUserStatusClass(user);
+  return status === "pending"
+    ? "Pending"
+    : status.charAt(0).toUpperCase() + status.slice(1);
+}
+
 function SignalBars({ accuracy, total }) {
   const count = Math.min(Math.max(total, 1), 8);
   return (
@@ -167,7 +178,7 @@ export default function UsersView({
             <option value="law_enforcement">Law Enforcement</option>
             <option value="admin">Admin</option>
           </select>
-          {["all", "active", "suspended"].map((s) => (
+          {["all", "active", "pending", "suspended"].map((s) => (
             <button
               key={s}
               className={`u-filter-btn ${statusFilter === s ? "active" : ""}`}
@@ -227,8 +238,8 @@ export default function UsersView({
                         <span className={`u-role-chip ${roleChipClass(u.role)}`}>{roleLabel(u.role)}</span>
                       </div>
                       <div>
-                        <span className={`u-status-chip ${u.isSuspended ? "suspended" : "active"}`}>
-                          {u.isSuspended ? "Suspended" : "Active"}
+                        <span className={`u-status-chip ${getUserStatusClass(u)}`}>
+                          {getUserStatusLabel(u)}
                         </span>
                       </div>
                       <div>
@@ -287,8 +298,8 @@ export default function UsersView({
                           <span className={`u-role-chip ${roleChipClass(selected.role)}`}>
                             {roleLabel(selected.role)}
                           </span>
-                          <span className={`u-status-chip ${selected.isSuspended ? "suspended" : "active"}`}>
-                            {selected.isSuspended ? "Suspended" : "Active"}
+                          <span className={`u-status-chip ${getUserStatusClass(selected)}`}>
+                            {getUserStatusLabel(selected)}
                           </span>
                           {lowSignal && (
                             <span
