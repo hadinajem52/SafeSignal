@@ -56,6 +56,7 @@ function LawEnforcement() {
     isLoading,
     filteredIncidents,
     allLeiIncidents,
+    activeLeiIncidents,
     selectedIncident,
     actionLog,
     displayAlerts,
@@ -68,7 +69,16 @@ function LawEnforcement() {
   });
 
   useEffect(() => {
-    if (!selectedIncidentId && filteredIncidents.length) {
+    if (!filteredIncidents.length) {
+      if (selectedIncidentId) setSelectedIncidentId(null);
+      return;
+    }
+
+    const hasVisibleSelection = filteredIncidents.some(
+      (incident) => String(incident.id) === String(selectedIncidentId),
+    );
+
+    if (!hasVisibleSelection) {
       setSelectedIncidentId(filteredIncidents[0].id);
     }
   }, [filteredIncidents, selectedIncidentId]);
@@ -314,7 +324,7 @@ function LawEnforcement() {
 
         {activeView === "map" && (
           <div style={{ flex: 1, minHeight: 0 }}>
-            <OpsMapView incidents={allLeiIncidents} />
+            <OpsMapView incidents={activeLeiIncidents} />
           </div>
         )}
 

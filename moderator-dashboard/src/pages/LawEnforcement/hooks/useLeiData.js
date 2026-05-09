@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { leiAPI } from "../../../services/api";
+import { ACTIVE_LEI_STATUSES } from "../constants";
 
 export default function useLeiData({
   statusFilter,
@@ -38,6 +39,9 @@ export default function useLeiData({
   const filteredIncidents = useMemo(() => {
     const q = searchTerm.toLowerCase();
     return incidents
+      .filter((inc) =>
+        statusFilter === "all" ? ACTIVE_LEI_STATUSES.includes(inc.status) : true,
+      )
       .filter((inc) => {
         const t = (inc.title || "").toLowerCase();
         const d = (inc.description || "").toLowerCase();
@@ -63,17 +67,33 @@ export default function useLeiData({
         id: inc.incident_id,
         reportedAt: inc.incident_date || inc.created_at,
       }));
-  }, [incidents, searchTerm, sortMode]);
+  }, [incidents, searchTerm, sortMode, statusFilter]);
 
-  const selectedIncident = incidentDetail?.incident
+  const visibleSelectedIncident = filteredIncidents.find(
+    (inc) => String(inc.id) === String(selectedIncidentId),
+  );
+  const detailedIncident = incidentDetail?.incident;
+  const detailMatchesSelection =
+    visibleSelectedIncident &&
+    String(detailedIncident?.incident_id) === String(selectedIncidentId);
+
+  const selectedIncident = detailMatchesSelection
     ? {
-        ...incidentDetail.incident,
-        id: incidentDetail.incident.incident_id,
+        ...detailedIncident,
+        id: detailedIncident.incident_id,
         reportedAt:
-          incidentDetail.incident.incident_date || incidentDetail.incident.created_at,
+          detailedIncident.incident_date || detailedIncident.created_at,
       }
-    : filteredIncidents.find((inc) => inc.id === selectedIncidentId);
-  const actionLog = incidentDetail?.actions || [];
+    : visibleSelectedIncident;
+  const actionLog = detailMatchesSelection ? incidentDetail?.actions || [] : [];
+
+  const activeLeiIncidents = useMemo(
+    () =>
+      allLeiIncidents.filter((inc) =>
+        ACTIVE_LEI_STATUSES.includes(inc.status),
+      ),
+    [allLeiIncidents],
+  );
 
   const displayAlerts = useMemo(() => {
     const derived = allLeiIncidents
@@ -109,6 +129,7 @@ export default function useLeiData({
     isLoading,
     filteredIncidents,
     allLeiIncidents,
+    activeLeiIncidents,
     selectedIncident,
     actionLog,
     displayAlerts,
