@@ -73,7 +73,7 @@ function ReportList({
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-text leading-snug truncate">{report.title}</p>
                 <div className="mt-1.5">
-                  <StatusBadge status={report.status} size="xs" />
+                  <StatusBadge status={report.status} size="xs" className="!rounded-none" />
                   {constellationMeta ? (
                     <span
                       className="ml-1.5 inline-flex items-center border px-1.5 py-0.5 text-[9px] font-bold uppercase text-pretty"

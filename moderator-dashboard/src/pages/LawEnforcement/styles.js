@@ -28,7 +28,7 @@ const leStyles = `
     align-items: center;
     background: var(--le-surface);
     flex-shrink: 0;
-    height: 52px;
+    height: 61px;
     position: sticky;
     top: 0;
     z-index: 20;

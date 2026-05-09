@@ -3,7 +3,7 @@ export const SETTINGS_CSS = `
 
   .st-topbar {
     border-bottom:1px solid var(--color-border);
-    padding:0 24px; display:flex; align-items:center; height:52px;
+    padding:0 24px; display:flex; align-items:center; height:61px;
     background:var(--color-card); flex-shrink:0; gap:16px;
     position:sticky; top:0; z-index:20;
   }
