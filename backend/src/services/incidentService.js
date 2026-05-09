@@ -1124,6 +1124,45 @@ async function getAllIncidents(filters = {}) {
     : incidents;
 }
 
+async function countIncidents(filters = {}) {
+  const { category, status, severity } = filters;
+  let query = `
+    SELECT COUNT(*) AS total
+    FROM incidents i
+    WHERE i.is_draft = FALSE
+  `;
+  const params = [];
+  let paramCount = 1;
+
+  if (category) {
+    query += ` AND i.category = $${paramCount}`;
+    params.push(category);
+    paramCount++;
+  }
+
+  if (status) {
+    const statuses = String(status).split(',').map((s) => s.trim()).filter(Boolean);
+    if (statuses.length === 1) {
+      query += ` AND i.status = $${paramCount}`;
+      params.push(statuses[0]);
+      paramCount += 1;
+    } else if (statuses.length > 1) {
+      const placeholders = statuses.map((_, i) => `$${paramCount + i}`).join(', ');
+      query += ` AND i.status IN (${placeholders})`;
+      params.push(...statuses);
+      paramCount += statuses.length;
+    }
+  }
+
+  if (severity) {
+    query += ` AND i.severity = $${paramCount}`;
+    params.push(severity);
+  }
+
+  const result = await db.one(query, params);
+  return parseInt(result.total || 0, 10);
+}
+
 /**
  * Get incidents for a specific user
  * @param {number} userId - The user's ID
@@ -2375,6 +2414,7 @@ module.exports = {
   // Service methods
   createIncident,
   getAllIncidents,
+  countIncidents,
   getUserIncidents,
   getPublicIncidentById,
   getStaffIncidentById,

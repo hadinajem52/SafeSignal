@@ -1,6 +1,8 @@
 import SLAGauge from "./SLAGauge";
 
 export default function SLACard({ kpis }) {
+  const actionedCount = kpis.actionedCount ?? kpis.responseTimes?.length ?? 0;
+
   return (
     <div className="dac-card">
       <div className="dac-card-header">
@@ -24,7 +26,7 @@ export default function SLACard({ kpis }) {
                 : `${kpis.avgResponse}m`,
             color: "var(--dac-amber)",
           },
-          { label: "Cases Sampled", value: kpis.responseTimes.length, color: "var(--dac-blue)" },
+          { label: "Cases Sampled", value: actionedCount, color: "var(--dac-blue)" },
         ].map((s) => (
           <div key={s.label} className="dac-sla-cell">
             <div className="dac-sla-cell-label">{s.label}</div>

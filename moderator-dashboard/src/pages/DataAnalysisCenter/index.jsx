@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { reportsAPI, statsAPI, usersAPI } from "../../services/api";
+import { statsAPI } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
-import { ACTIONED_STATUSES } from "../../constants/incidentStatuses";
 import {
   AIInsightsCard,
   CategoryTrendCard,
@@ -15,9 +14,42 @@ import {
   SLACard,
   Tooltip,
 } from "./components";
-import { diffMinutes, getPeriodMs } from "./components/helpers";
-import { useAnalyticsData } from "./hooks/useAnalyticsData";
 import "./dac.css";
+
+const EMPTY_ANALYTICS = {
+  incidentsCount: 0,
+  kpis: {
+    avgResponse: 0,
+    slaRate: 0,
+    resolutionRate: 0,
+    avgTimeToClose: "0",
+    responseTimes: [],
+    actionedCount: 0,
+    slaCompliant: 0,
+    slaBreached: 0,
+    closedCount: 0,
+  },
+  histogramData: [],
+  histMax: 1,
+  percentiles: [],
+  trendLine: [],
+  trendMax: 1,
+  trendTotal: 0,
+  trendWeeklyAvg: "0.0",
+  trendXLabels: [],
+  peakLabel: "—",
+  heatmap: Array.from({ length: 7 }, () => Array(24).fill(0)),
+  heatMax: 1,
+  heatPeak: { peakDow: 0, peakHour: 0, peakCount: 0, peakDayLabel: "Mon" },
+  funnelData: [],
+  catTrend: {},
+  catMax: 1,
+  activeCats: [],
+  catBucketLabels: [],
+  hotspots: [],
+  reporterStats: [],
+  insightsPayload: null,
+};
 
 export default function DataAnalysisCenter() {
   const { user } = useAuth();
@@ -31,33 +63,22 @@ export default function DataAnalysisCenter() {
   const hideTip = () => setTip(null);
 
   const {
-    data: allIncidents = [],
-    isLoading: incLoading,
-    isError: incError,
+    data: analytics = EMPTY_ANALYTICS,
+    isLoading: analyticsLoading,
+    isError: analyticsError,
   } = useQuery({
-    queryKey: ["dac-incidents"],
+    queryKey: ["dac-analytics", period],
     queryFn: async () => {
-      const r = await reportsAPI.getAll({ limit: 500 });
-      if (!r.success) throw new Error(r.error || "Failed to fetch incidents");
-      return r.data || [];
+      const r = await statsAPI.getDacAnalytics({ period });
+      if (!r.success) throw new Error(r.error || "Failed to fetch analytics");
+      return r.data || EMPTY_ANALYTICS;
     },
     staleTime: 60000,
     refetchInterval: 30000,
   });
 
-  const { data: allUsers = [], isError: usersError } = useQuery({
-    queryKey: ["dac-users"],
-    queryFn: async () => {
-      const r = await usersAPI.getAll();
-      if (!r.success) throw new Error(r.error || "Failed to fetch users");
-      return r.data || [];
-    },
-    staleTime: 120000,
-    enabled: user?.role !== "law_enforcement",
-  });
-
   const {
-    incidents,
+    incidentsCount,
     kpis,
     histogramData,
     histMax,
@@ -78,128 +99,11 @@ export default function DataAnalysisCenter() {
     catBucketLabels,
     hotspots,
     reporterStats,
-  } = useAnalyticsData({ allIncidents, allUsers, period });
+    insightsPayload,
+  } = analytics;
 
-  const loading = incLoading && incidents.length === 0;
-  const periodMs = getPeriodMs(period);
-  const periodMinutes = periodMs / 60000;
-  const now = Date.now();
-  const prevIncidents = allIncidents.filter((incident) => {
-    if (incident.is_draft) return false;
-    const createdAt = new Date(incident.created_at).getTime();
-    return createdAt >= now - 2 * periodMs && createdAt < now - periodMs;
-  });
-
-  const prevResponseTimes = prevIncidents
-    .filter((incident) => ACTIONED_STATUSES.has(incident.status))
-    .map((incident) => diffMinutes(incident.created_at, incident.updated_at))
-    .filter((minutes) => minutes > 0 && minutes < periodMinutes);
-  const prevSlaCompliant = prevResponseTimes.filter(
-    (minutes) => minutes <= 30,
-  ).length;
-  const prevSlaRate =
-    prevResponseTimes.length > 0
-      ? Math.round((prevSlaCompliant / prevResponseTimes.length) * 100)
-      : 0;
-
-  const buildCategoryCounts = (items) => {
-    const counts = {};
-    items.forEach((incident) => {
-      const category = incident.category || "unknown";
-      counts[category] = (counts[category] || 0) + 1;
-    });
-    return Object.entries(counts).sort(([, a], [, b]) => b - a);
-  };
-
-  const currentCategoryCounts = buildCategoryCounts(incidents);
-  const prevCategoryCounts = buildCategoryCounts(prevIncidents);
-  const [topCategoryName, topCategoryCount] = currentCategoryCounts[0] || [null, 0];
-  const prevTopCategoryName = prevCategoryCounts[0]?.[0] || null;
-  const prevMatchingCategoryCount = topCategoryName
-    ? prevCategoryCounts.find(([category]) => category === topCategoryName)?.[1] || 0
-    : 0;
-  const categoryDelta = topCategoryName
-    ? {
-        category: topCategoryName,
-        current_count: topCategoryCount,
-        prev_count: prevMatchingCategoryCount,
-        pct_change:
-          prevMatchingCategoryCount > 0
-            ? Number.parseFloat(
-                (
-                  ((topCategoryCount - prevMatchingCategoryCount) /
-                    prevMatchingCategoryCount) *
-                  100
-                ).toFixed(1),
-              )
-            : topCategoryCount > 0
-              ? 100
-              : 0,
-      }
-    : null;
-
-  const topHotspotPayload = Object.entries(
-    incidents.reduce((counts, incident) => {
-      const locationName = incident.location_name || "Unknown";
-      counts[locationName] = (counts[locationName] || 0) + 1;
-      return counts;
-    }, {}),
-  )
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 5)
-    .map(([name, count]) => ({ name, count }));
-
-  const midpoint = Math.ceil(trendLine.length / 2);
-  const firstHalfTotal = trendLine
-    .slice(0, midpoint)
-    .reduce((sum, value) => sum + value, 0);
-  const secondHalfTotal = trendLine
-    .slice(midpoint)
-    .reduce((sum, value) => sum + value, 0);
-  const trendDirection =
-    secondHalfTotal > firstHalfTotal
-      ? "rising"
-      : secondHalfTotal < firstHalfTotal
-        ? "falling"
-        : "stable";
-
-  const p75Metric = percentiles[2];
-  const p75ResponseMinutes = p75Metric
-    ? Number.parseFloat(p75Metric.val) * (p75Metric.unit === "hr" ? 60 : 1)
-    : null;
-  const prevPeriod =
-    prevIncidents.length > 0
-      ? {
-          total_incidents: prevIncidents.length,
-          sla_rate: prevSlaRate,
-          top_category: prevTopCategoryName,
-        }
-      : null;
-
-  const insightsPayload = {
-    period,
-    total_incidents: incidents.length,
-    kpis: {
-      avg_response_min: kpis.avgResponse,
-      sla_rate: kpis.slaRate,
-      sla_compliant: kpis.slaCompliant,
-      sla_breached: kpis.slaBreached,
-      resolution_rate: kpis.resolutionRate,
-      avg_time_to_close_days: Number.parseFloat(kpis.avgTimeToClose),
-    },
-    top_categories: currentCategoryCounts.slice(0, 6),
-    top_hotspots: topHotspotPayload,
-    peak_activity: {
-      day: heatPeak.peakDayLabel,
-      hour: heatPeak.peakHour,
-      count: heatPeak.peakCount,
-    },
-    funnel: funnelData.map((f) => ({ label: f.label, count: f.count })),
-    prev_period: prevPeriod,
-    trend_direction: trendDirection,
-    p75_response_min: p75ResponseMinutes,
-    category_delta: categoryDelta,
-  };
+  const loading = analyticsLoading && incidentsCount === 0;
+  const trendDirection = insightsPayload?.trend_direction || "stable";
 
   const {
     data: insightsData,
@@ -218,7 +122,7 @@ export default function DataAnalysisCenter() {
       return result.data;
     },
     staleTime: 300000,
-    enabled: !loading && incidents.length > 0,
+    enabled: !loading && incidentsCount > 0 && Boolean(insightsPayload),
     retry: 1,
   });
 
@@ -248,20 +152,9 @@ export default function DataAnalysisCenter() {
           {loading && (
             <div className="dac-loading">Loading analytics data…</div>
           )}
-          {incError && (
+          {analyticsError && (
             <div className="dac-error-banner">
-              ⚠ Failed to load incident data — analytics may be incomplete.
-            </div>
-          )}
-          {usersError && (
-            <div className="dac-error-banner">
-              ⚠ Failed to load user data — reporter quality stats unavailable.
-            </div>
-          )}
-          {allIncidents.length >= 500 && (
-            <div className="dac-warn-banner">
-              ⚠ Showing first 500 incidents — metrics may not reflect the full
-              dataset.
+              ⚠ Failed to load analytics data.
             </div>
           )}
 
@@ -278,7 +171,7 @@ export default function DataAnalysisCenter() {
 
           <KpiRow
             kpis={kpis}
-            incidentsCount={incidents.length}
+            incidentsCount={incidentsCount}
             period={period}
           />
 

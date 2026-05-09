@@ -16,6 +16,8 @@ export default function ResponseTimeCards({
   moveTip,
   hideTip,
 }) {
+  const actionedCount = kpis.actionedCount ?? kpis.responseTimes?.length ?? 0;
+
   return (
     <>
       <div className="dac-section-row">
@@ -30,7 +32,7 @@ export default function ResponseTimeCards({
           <div className="dac-card-header">
             <div className="dac-card-title">Time-to-Dispatch Histogram</div>
             <div className="dac-card-meta">
-              {kpis.responseTimes.length} actioned cases
+              {actionedCount} actioned cases
             </div>
           </div>
           <div style={{ padding: "16px 16px 0" }}>
@@ -53,8 +55,8 @@ export default function ResponseTimeCards({
                         dot: b.color,
                         label: "% of actioned",
                         value:
-                          kpis.responseTimes.length > 0
-                            ? `${((b.count / kpis.responseTimes.length) * 100).toFixed(1)}%`
+                          actionedCount > 0
+                            ? `${((b.count / actionedCount) * 100).toFixed(1)}%`
                             : "—",
                       },
                     ])
