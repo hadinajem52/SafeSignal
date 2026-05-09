@@ -1,9 +1,3 @@
-
-- `BUG-005`: filtered user lists and the detail pane get out of sync; the detail pane keeps showing a user after the filtered list becomes empty.
-
-
-
-
 - `BUG-009`: the Apply Access success message uses generic wording instead of the submitted address.
 
 - `BUG-010`: notification controls are not properly interactable, and the digest action lacks clear success feedback.

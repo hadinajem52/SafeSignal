@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { usersAPI } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
@@ -77,15 +77,26 @@ function Users() {
     }
   }, [selectedId, users]);
 
-  const filtered = users.filter((u) => {
-    const q = search.toLowerCase();
-    if (q && !u.name.toLowerCase().includes(q) && !u.email.toLowerCase().includes(q)) return false;
-    if (roleFilter !== "all" && u.role !== roleFilter) return false;
-    if (statusFilter !== "all" && u.status !== statusFilter) return false;
-    return true;
-  });
+  const filtered = useMemo(
+    () =>
+      users.filter((u) => {
+        const q = search.toLowerCase();
+        if (q && !u.name.toLowerCase().includes(q) && !u.email.toLowerCase().includes(q)) return false;
+        if (roleFilter !== "all" && u.role !== roleFilter) return false;
+        if (statusFilter !== "all" && u.status !== statusFilter) return false;
+        return true;
+      }),
+    [roleFilter, search, statusFilter, users],
+  );
 
-  const selected = users.find((u) => u.id === selectedId) ?? null;
+  const selected = filtered.find((u) => u.id === selectedId) ?? null;
+
+  useEffect(() => {
+    if (selectedId && !selected) {
+      setSelectedId(null);
+    }
+  }, [selected, selectedId]);
+
   const inviteUrl =
     typeof window === "undefined" ? "/login" : `${window.location.origin}/login`;
 
