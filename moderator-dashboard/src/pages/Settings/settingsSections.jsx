@@ -181,20 +181,18 @@ export function NotificationsSection({
           <SettingRow label="Browser Notifications" desc="Push notifications in supported browsers">
             <SqToggle
               id="notif-browser"
-              checked={false}
-              onChange={() => {}}
-              disabled
+              checked={settings.browserNotifications}
+              onChange={(val) => updateApiSetting("browserNotifications", val)}
+              disabled={isMutating}
             />
-            <span className="st-control-note">Not available</span>
           </SettingRow>
           <SettingRow label="Sound Alerts" desc="Play a sound for critical incident notifications">
             <SqToggle
               id="notif-sound"
-              checked={false}
-              onChange={() => {}}
-              disabled
+              checked={settings.soundAlerts}
+              onChange={(val) => updateApiSetting("soundAlerts", val)}
+              disabled={isMutating}
             />
-            <span className="st-control-note">Not available</span>
           </SettingRow>
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>

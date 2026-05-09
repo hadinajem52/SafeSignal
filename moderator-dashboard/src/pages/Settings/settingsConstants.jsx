@@ -266,6 +266,8 @@ export const NAV = [
 export const DEFAULT_SETTINGS = {
   emailNotifications: true,
   reportAlerts: true,
+  browserNotifications: false,
+  soundAlerts: false,
   weeklyDigest: false,
   darkMode: false,
   autoVerify: false,
