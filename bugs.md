@@ -1,6 +1,5 @@
 - `BUG-009`: the Apply Access success message uses generic wording instead of the submitted address.
 
-- `BUG-010`: notification controls are not properly interactable, and the digest action lacks clear success feedback.
 
 - `BUG-011`: security controls have accessibility/input issues, including an unlabeled visibility toggle and a 2FA checkbox that is not manually interactable.
 
