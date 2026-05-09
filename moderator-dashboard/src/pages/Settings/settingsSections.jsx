@@ -145,7 +145,6 @@ export function NotificationsSection({
   settings,
   isMutating,
   updateApiSetting,
-  showToast,
   saveMutation,
   alertSeverities,
   toggleSeverity,
@@ -156,6 +155,7 @@ export function NotificationsSection({
   toggleDay,
   setSettings,
   digestMutation,
+  digestNotice,
 }) {
   return (
     <>
@@ -182,15 +182,19 @@ export function NotificationsSection({
             <SqToggle
               id="notif-browser"
               checked={false}
-              onChange={() => showToast("Browser notifications not yet supported.", "warn")}
+              onChange={() => {}}
+              disabled
             />
+            <span className="st-control-note">Not available</span>
           </SettingRow>
           <SettingRow label="Sound Alerts" desc="Play a sound for critical incident notifications">
             <SqToggle
               id="notif-sound"
               checked={false}
-              onChange={() => showToast("Sound alerts not yet supported.", "warn")}
+              onChange={() => {}}
+              disabled
             />
+            <span className="st-control-note">Not available</span>
           </SettingRow>
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
@@ -210,10 +214,12 @@ export function NotificationsSection({
           {SEVERITIES.map((s) => {
             const active = alertSeverities.includes(s.key);
             return (
-              <div
+              <button
+                type="button"
                 key={s.key}
                 className={`st-sev-cell${active ? " active" : ""}`}
                 onClick={() => toggleSeverity(s.key)}
+                aria-pressed={active}
               >
                 <div className="st-sev-top">
                   <div className="st-sev-dot" style={{ background: s.color, opacity: active ? 1 : 0.25 }} />
@@ -223,7 +229,7 @@ export function NotificationsSection({
                   {s.label}
                 </div>
                 <div className="st-sev-desc">{s.desc}</div>
-              </div>
+              </button>
             );
           })}
         </div>
@@ -268,19 +274,25 @@ export function NotificationsSection({
               {DAYS.map((d, i) => {
                 const on = digestDays.includes(i);
                 return (
-                  <div key={d} className="st-day-item" onClick={() => toggleDay(i)}>
+                  <button
+                    type="button"
+                    key={d}
+                    className="st-day-item"
+                    onClick={() => toggleDay(i)}
+                    aria-pressed={on}
+                  >
                     <span className="st-day-label">{d}</span>
                     <div className={`st-day-box ${on ? "on" : "off"}`}>
                       {on ? IC.check : <span style={{ fontSize: 10 }}>—</span>}
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
           )}
         </div>
         {settings.weeklyDigest && (
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
             <button
               className="st-btn st-btn-ghost"
               onClick={() => digestMutation.mutate()}
@@ -288,6 +300,7 @@ export function NotificationsSection({
             >
               {IC.send} {digestMutation.isPending ? "Sending…" : "Send Digest Now"}
             </button>
+            {digestNotice && <div className="st-inline-status" role="status">{digestNotice}</div>}
           </div>
         )}
       </div>

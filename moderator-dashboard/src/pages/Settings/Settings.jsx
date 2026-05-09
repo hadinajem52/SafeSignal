@@ -30,6 +30,7 @@ function SettingsPage() {
 
   const [activeSection, setActiveSection] = useState("profile");
   const [toast, setToast] = useState(null);
+  const [digestNotice, setDigestNotice] = useState(null);
   const toastTimerRef = useRef(null);
 
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
@@ -171,10 +172,16 @@ function SettingsPage() {
       if (result.success) return result.data;
       throw new Error(result.error);
     },
-    onSuccess: (data) =>
-      showToast(`Digest sent. ${data?.summary?.total_reports ?? 0} reports.`),
-    onError: (err) =>
-      showToast(err.message || "Failed to send digest.", "error"),
+    onMutate: () => setDigestNotice(null),
+    onSuccess: (data) => {
+      const reportCount = data?.summary?.total_reports ?? 0;
+      setDigestNotice(`Digest sent successfully. ${reportCount} reports included.`);
+      showToast(`Digest sent. ${reportCount} reports.`);
+    },
+    onError: (err) => {
+      setDigestNotice(null);
+      showToast(err.message || "Failed to send digest.", "error");
+    },
   });
 
   const darkModeMutation = useMutation({
@@ -342,7 +349,6 @@ function SettingsPage() {
         settings={settings}
         isMutating={isMutating}
         updateApiSetting={updateApiSetting}
-        showToast={showToast}
         saveMutation={saveMutation}
         alertSeverities={alertSeverities}
         toggleSeverity={toggleSeverity}
@@ -353,6 +359,7 @@ function SettingsPage() {
         toggleDay={toggleDay}
         setSettings={setSettings}
         digestMutation={digestMutation}
+        digestNotice={digestNotice}
       />
     ),
     appearance: (

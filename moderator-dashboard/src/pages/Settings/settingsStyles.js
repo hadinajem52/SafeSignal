@@ -52,6 +52,7 @@ export const SETTINGS_CSS = `
   .st-label { font-size:13px; font-weight:600; color:var(--color-text); margin-bottom:2px; }
   .st-desc { font-size:11px; font-weight:500; color:var(--color-text-muted); line-height:1.5; }
   .st-ctrl { flex-shrink:0; display:flex; align-items:center; gap:10px; }
+  .st-control-note { font-size:10px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; color:var(--color-text-muted); }
 
   /* Square Toggle */
   .sq-wrap { position:relative; width:38px; height:20px; cursor:pointer; flex-shrink:0; }
@@ -118,8 +119,9 @@ export const SETTINGS_CSS = `
   .st-role-badge { font-size:10px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; border:1px solid var(--color-primary); padding:2px 8px; color:var(--color-primary); }
 
   .st-sev-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--color-border); border:1px solid var(--color-border); }
-  .st-sev-cell { background:var(--color-card); padding:12px 14px; cursor:pointer; transition:background 0.1s; user-select:none; }
+  .st-sev-cell { background:var(--color-card); padding:12px 14px; cursor:pointer; transition:background 0.1s; user-select:none; border:0; text-align:left; font-family:'Plus Jakarta Sans',sans-serif; }
   .st-sev-cell:hover { background:var(--color-surface); }
+  .st-sev-cell:focus-visible { outline:1.5px solid var(--color-primary); outline-offset:-3px; }
   .st-sev-cell.active { background:var(--color-surface); }
   .st-sev-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
   .st-sev-dot { width:8px; height:8px; border-radius:50%; }
@@ -127,7 +129,8 @@ export const SETTINGS_CSS = `
   .st-sev-desc { font-size:10px; font-weight:500; color:var(--color-text-muted); }
 
   .st-day-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; padding:14px 18px; border-top:1px solid var(--color-border); }
-  .st-day-item { display:flex; flex-direction:column; align-items:center; gap:5px; cursor:pointer; }
+  .st-day-item { display:flex; flex-direction:column; align-items:center; gap:5px; cursor:pointer; border:0; background:none; padding:0; font-family:'Plus Jakarta Sans',sans-serif; }
+  .st-day-item:focus-visible .st-day-box { outline:1.5px solid var(--color-primary); outline-offset:2px; }
   .st-day-label { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--color-text-muted); }
   .st-day-box { width:32px; height:32px; border:1px solid var(--color-border); display:flex; align-items:center; justify-content:center; transition:all 0.1s; background:var(--color-surface); font-size:12px; font-weight:700; }
   .st-day-box.on { border-color:var(--color-primary); background:rgba(0,240,255,0.08); color:var(--color-primary); }
@@ -147,6 +150,7 @@ export const SETTINGS_CSS = `
   .st-toast { position:fixed; bottom:24px; right:24px; background:var(--color-card); border:1px solid var(--color-success); border-left:3px solid var(--color-success); padding:10px 16px; font-size:12px; font-weight:600; color:var(--color-success); display:flex; align-items:center; gap:8px; z-index:9999; animation:st-up 0.2s ease-out; pointer-events:none; font-family:'Plus Jakarta Sans',sans-serif; }
   .st-toast.error { border-color:var(--color-error); border-left-color:var(--color-error); color:var(--color-error); }
   .st-toast.warn { border-color:var(--color-warning); border-left-color:var(--color-warning); color:var(--color-warning); }
+  .st-inline-status { font-size:11px; font-weight:700; color:var(--color-success); align-self:center; }
   @keyframes st-up { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
 
   .st-danger-card { border:1px solid rgba(229,72,77,0.22); background:rgba(229,72,77,0.025); margin-bottom:1px; }
