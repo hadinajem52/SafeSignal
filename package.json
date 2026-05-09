@@ -1,6 +1,8 @@
 {
   "dependencies": {
+    "@faker-js/faker": "^10.4.0",
     "@shopify/restyle": "^2.4.5",
+    "faker": "^6.6.6",
     "lucide-react": "^0.575.0",
     "node": "^25.8.0"
   }
