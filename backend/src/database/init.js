@@ -81,9 +81,25 @@ const initDatabase = async () => {
           'report_filed'
         )),
         closure_details JSONB,
+        first_action_at TIMESTAMP,
+        verified_at TIMESTAMP,
+        dispatched_at TIMESTAMP,
+        on_scene_at TIMESTAMP,
+        closed_at TIMESTAMP,
+        rejected_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+    `);
+
+    await db.none(`
+      ALTER TABLE incidents
+      ADD COLUMN IF NOT EXISTS first_action_at TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS dispatched_at TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS on_scene_at TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS closed_at TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS rejected_at TIMESTAMP;
     `);
 
     // Ensure status and closure constraints are updated for existing tables
@@ -308,6 +324,8 @@ const initDatabase = async () => {
       CREATE INDEX IF NOT EXISTS idx_incidents_location_geo ON incidents USING GIST (location);
       CREATE INDEX IF NOT EXISTS idx_incidents_status ON incidents (status);
       CREATE INDEX IF NOT EXISTS idx_incidents_created_at ON incidents (created_at);
+      CREATE INDEX IF NOT EXISTS idx_incidents_first_action_at ON incidents (first_action_at);
+      CREATE INDEX IF NOT EXISTS idx_incidents_closed_at ON incidents (closed_at);
       CREATE INDEX IF NOT EXISTS idx_incidents_reporter ON incidents (reporter_id);
       CREATE INDEX IF NOT EXISTS idx_incidents_dashboard ON incidents (is_draft, status, created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_incidents_map ON incidents (status, incident_date DESC) WHERE is_draft = FALSE;

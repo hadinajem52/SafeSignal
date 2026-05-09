@@ -293,34 +293,36 @@ function getReporterColor(percent) {
 async function getDacKpis(now, cutoff, periodMinutes) {
     const row = await db.one(`
       WITH scoped AS (
-        SELECT status, created_at, updated_at
+        SELECT status, created_at, first_action_at, closed_at
         FROM incidents
         WHERE is_draft = FALSE
           AND created_at >= $1::timestamptz
           AND created_at < $2::timestamptz
       ),
       response_times AS (
-        SELECT EXTRACT(EPOCH FROM (updated_at - created_at)) / 60.0 AS minutes
+        SELECT EXTRACT(EPOCH FROM (first_action_at - created_at)) / 60.0 AS minutes
         FROM scoped
         WHERE status = ANY($3::text[])
-          AND updated_at IS NOT NULL
-          AND EXTRACT(EPOCH FROM (updated_at - created_at)) / 60.0 > 0
-          AND EXTRACT(EPOCH FROM (updated_at - created_at)) / 60.0 < $5::float
+          AND first_action_at IS NOT NULL
+          AND EXTRACT(EPOCH FROM (first_action_at - created_at)) / 60.0 > 0
+          AND EXTRACT(EPOCH FROM (first_action_at - created_at)) / 60.0 < $5::float
       ),
       close_times AS (
-        SELECT EXTRACT(EPOCH FROM (updated_at - created_at)) / 86400.0 AS days
+        SELECT EXTRACT(EPOCH FROM (closed_at - created_at)) / 86400.0 AS days
         FROM scoped
         WHERE status = ANY($4::text[])
-          AND updated_at IS NOT NULL
-          AND updated_at > created_at
+          AND closed_at IS NOT NULL
+          AND closed_at > created_at
       )
       SELECT
         (SELECT COUNT(*) FROM scoped)::int AS total_incidents,
         (SELECT COUNT(*) FROM scoped WHERE status = ANY($4::text[]))::int AS closed_count,
-        COALESCE((SELECT ROUND(AVG(minutes)) FROM response_times), 0)::int AS avg_response,
+        (SELECT COUNT(*) FROM response_times)::int AS response_sample_count,
+        (SELECT COUNT(*) FROM close_times)::int AS close_duration_count,
+        (SELECT ROUND(AVG(minutes)) FROM response_times)::int AS avg_response,
         (SELECT COUNT(*) FROM response_times)::int AS actioned_count,
         (SELECT COUNT(*) FROM response_times WHERE minutes <= ${SLA_MINUTES})::int AS sla_compliant,
-        COALESCE((SELECT AVG(days) FROM close_times), 0) AS avg_time_to_close,
+        (SELECT AVG(days) FROM close_times) AS avg_time_to_close,
         COALESCE((SELECT percentile_cont(0.25) WITHIN GROUP (ORDER BY minutes) FROM response_times), 0) AS p25,
         COALESCE((SELECT percentile_cont(0.50) WITHIN GROUP (ORDER BY minutes) FROM response_times), 0) AS p50,
         COALESCE((SELECT percentile_cont(0.75) WITHIN GROUP (ORDER BY minutes) FROM response_times), 0) AS p75,
@@ -339,16 +341,22 @@ async function getDacKpis(now, cutoff, periodMinutes) {
     const closedCount = toInt(row.closed_count);
     const slaCompliant = toInt(row.sla_compliant);
     const slaBreached = actionedCount - slaCompliant;
+    const responseSampleCount = toInt(row.response_sample_count);
+    const closeDurationCount = toInt(row.close_duration_count);
 
     return {
         totalIncidents,
         kpis: {
-            avgResponse: toInt(row.avg_response),
+            avgResponse: row.avg_response === null || row.avg_response === undefined ? null : toInt(row.avg_response),
             slaRate: actionedCount > 0 ? Math.round((slaCompliant / actionedCount) * 100) : 0,
             resolutionRate: totalIncidents > 0 ? Math.round((closedCount / totalIncidents) * 100) : 0,
-            avgTimeToClose: toNumber(row.avg_time_to_close).toFixed(1),
+            avgTimeToClose: row.avg_time_to_close === null || row.avg_time_to_close === undefined
+                ? null
+                : toNumber(row.avg_time_to_close).toFixed(1),
             responseTimes: [],
             actionedCount,
+            responseSampleCount,
+            closeDurationCount,
             slaCompliant,
             slaBreached,
             closedCount,
@@ -359,12 +367,19 @@ async function getDacKpis(now, cutoff, periodMinutes) {
             color: bucket.color,
             count: toInt(row[`hist_${index}`]),
         })),
-        percentiles: [
-            { label: 'P25', ...formatResponseMinutes(row.p25), color: 'var(--dac-green)', fill: 25 },
-            { label: 'P50', ...formatResponseMinutes(row.p50), color: 'var(--dac-blue)', fill: 50 },
-            { label: 'P75', ...formatResponseMinutes(row.p75), color: 'var(--dac-amber)', fill: 75 },
-            { label: 'P90', ...formatResponseMinutes(row.p90), color: 'var(--dac-red)', fill: 90 },
-        ],
+        percentiles: responseSampleCount > 0
+            ? [
+                { label: 'P25', ...formatResponseMinutes(row.p25), color: 'var(--dac-green)', fill: 25 },
+                { label: 'P50', ...formatResponseMinutes(row.p50), color: 'var(--dac-blue)', fill: 50 },
+                { label: 'P75', ...formatResponseMinutes(row.p75), color: 'var(--dac-amber)', fill: 75 },
+                { label: 'P90', ...formatResponseMinutes(row.p90), color: 'var(--dac-red)', fill: 90 },
+            ]
+            : [
+                { label: 'P25', val: '—', unit: '', color: 'var(--dac-green)', fill: 25 },
+                { label: 'P50', val: '—', unit: '', color: 'var(--dac-blue)', fill: 50 },
+                { label: 'P75', val: '—', unit: '', color: 'var(--dac-amber)', fill: 75 },
+                { label: 'P90', val: '—', unit: '', color: 'var(--dac-red)', fill: 90 },
+            ],
     };
 }
 
@@ -576,19 +591,19 @@ async function getDacInsightInputs(cutoff, now, previousCutoff, funnelData, heat
         `, [previousCutoff, cutoff]),
         db.one(`
           WITH scoped AS (
-            SELECT status, created_at, updated_at, category
+            SELECT status, created_at, first_action_at, category
             FROM incidents
             WHERE is_draft = FALSE
               AND created_at >= $1::timestamptz
               AND created_at < $2::timestamptz
           ),
           response_times AS (
-            SELECT EXTRACT(EPOCH FROM (updated_at - created_at)) / 60.0 AS minutes
+            SELECT EXTRACT(EPOCH FROM (first_action_at - created_at)) / 60.0 AS minutes
             FROM scoped
             WHERE status = ANY($3::text[])
-              AND updated_at IS NOT NULL
-              AND EXTRACT(EPOCH FROM (updated_at - created_at)) / 60.0 > 0
-              AND EXTRACT(EPOCH FROM (updated_at - created_at)) / 60.0 < $4::float
+              AND first_action_at IS NOT NULL
+              AND EXTRACT(EPOCH FROM (first_action_at - created_at)) / 60.0 > 0
+              AND EXTRACT(EPOCH FROM (first_action_at - created_at)) / 60.0 < $4::float
           )
           SELECT
             (SELECT COUNT(*) FROM scoped)::int AS total_incidents,
@@ -648,7 +663,7 @@ async function getDacInsightInputs(cutoff, now, previousCutoff, funnelData, heat
                 sla_compliant: kpis.slaCompliant,
                 sla_breached: kpis.slaBreached,
                 resolution_rate: kpis.resolutionRate,
-                avg_time_to_close_days: Number.parseFloat(kpis.avgTimeToClose),
+                avg_time_to_close_days: kpis.avgTimeToClose === null ? null : Number.parseFloat(kpis.avgTimeToClose),
             },
             top_categories: currentCategoryCounts.slice(0, 6),
             top_hotspots: hotspotRows.map((row) => ({ name: row.name, count: toInt(row.count) })),
@@ -699,7 +714,8 @@ async function getDacAnalytics(period = '30d') {
         ? 'rising'
         : secondHalfTotal < firstHalfTotal ? 'falling' : 'stable';
     const p75Metric = kpiData.percentiles[2];
-    const p75ResponseMinutes = p75Metric
+    const p75Value = Number.parseFloat(p75Metric?.val);
+    const p75ResponseMinutes = Number.isFinite(p75Value)
         ? Number.parseFloat(p75Metric.val) * (p75Metric.unit === 'hr' ? 60 : 1)
         : null;
 

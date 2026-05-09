@@ -7,7 +7,11 @@ const closeAllReports = async () => {
         // Update incidents to 'resolved' and closure_outcome to 'resolved_handled'
         const result = await db.result(
             `UPDATE incidents 
-             SET status = 'resolved', closure_outcome = 'resolved_handled', updated_at = CURRENT_TIMESTAMP
+             SET status = 'resolved',
+                 closure_outcome = 'resolved_handled',
+                 first_action_at = COALESCE(first_action_at, CURRENT_TIMESTAMP),
+                 closed_at = COALESCE(closed_at, CURRENT_TIMESTAMP),
+                 updated_at = CURRENT_TIMESTAMP
              WHERE status NOT IN ('resolved', 'rejected', 'archived', 'police_closed', 'merged')`
         );
 

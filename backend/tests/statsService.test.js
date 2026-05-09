@@ -135,4 +135,56 @@ describe('statsService DAC analytics', () => {
     });
     expect(analytics.incidents).toBeUndefined();
   });
+
+  it('does not manufacture response or close durations without lifecycle timestamps', async () => {
+    db.one
+      .mockResolvedValueOnce({
+        total_incidents: 10,
+        closed_count: 4,
+        response_sample_count: 0,
+        close_duration_count: 0,
+        avg_response: null,
+        actioned_count: 0,
+        sla_compliant: 0,
+        avg_time_to_close: null,
+        p25: 0,
+        p50: 0,
+        p75: 0,
+        p90: 0,
+        hist_0: 0,
+        hist_1: 0,
+        hist_2: 0,
+        hist_3: 0,
+        hist_4: 0,
+        hist_5: 0,
+        hist_6: 0,
+      })
+      .mockResolvedValueOnce({
+        total_incidents: 0,
+        actioned_count: 0,
+        sla_compliant: 0,
+        top_category: null,
+      });
+    db.manyOrNone
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+
+    const analytics = await statsService.getDacAnalytics('30d');
+
+    expect(analytics.kpis.avgResponse).toBeNull();
+    expect(analytics.kpis.avgTimeToClose).toBeNull();
+    expect(analytics.kpis.responseSampleCount).toBe(0);
+    expect(analytics.kpis.closeDurationCount).toBe(0);
+    expect(analytics.percentiles[0]).toMatchObject({ label: 'P25', val: '—', unit: '' });
+    expect(db.one.mock.calls[0][0]).toContain('first_action_at - created_at');
+    expect(db.one.mock.calls[0][0]).toContain('closed_at - created_at');
+    expect(db.one.mock.calls[0][0]).not.toContain('updated_at - created_at');
+  });
 });
