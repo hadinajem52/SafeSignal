@@ -1,10 +1,10 @@
-# Azure DevOps Board Backfill Plan With Assignments
+# Azure DevOps Board Completion Plan With Assignments
 
 ## Purpose
 
-Backfill the Azure DevOps board for `https://dev.azure.com/202310415/SafeSignal` so it reflects completed project work, completed QA coverage, and resolved defects discovered during testing.
+Update the Azure DevOps board for `https://dev.azure.com/202310415/SafeSignal` so it reflects completed project work, completed QA coverage, and resolved defects discovered during testing.
 
-The update is intentionally a board/documentation backfill. It should not modify source code or test files.
+The update is intentionally limited to board and documentation records. It should not modify source code or test files.
 
 ## Source Of Truth
 
@@ -13,7 +13,7 @@ The update is intentionally a board/documentation backfill. It should not modify
 - Azure DevOps team: `SafeSignal Team`
 - Area path: `SafeSignal`
 - CSV source: `testcases/unified-test-cases.csv`
-- Backfill tag: `SafeSignal-Backfill-2026`
+- Board update reference: completed SafeSignal board records
 
 Current CSV summary:
 - Total test cases: `62`
@@ -59,7 +59,7 @@ Completed status is represented by past sprint finish dates.
 
 ## User Stories
 
-Create 8 `User Story` work items. Each story should be `Closed`, tagged with `SafeSignal-Backfill-2026`, assigned to the listed owner, and placed in the listed sprint.
+Create 8 `User Story` work items. Each story should be `Closed`, assigned to the listed owner, and placed in the listed sprint.
 
 | Story title | Owner | Sprint | Priority | Story points |
 | --- | --- | --- | --- | --- |
@@ -88,7 +88,7 @@ Each story acceptance criteria should state:
 
 ## Tasks
 
-Create 24 `Task` work items, 3 tasks per user story. Each task should be `Closed`, tagged, assigned, prioritized, and linked as a child of its parent story.
+Create 24 `Task` work items, 3 tasks per user story. Each task should be `Closed`, assigned, prioritized, and linked as a child of its parent story.
 
 | Parent story | Task title | Owner | Priority |
 | --- | --- | --- | --- |
@@ -115,7 +115,7 @@ Create 24 `Task` work items, 3 tasks per user story. Each task should be `Closed
 | Law-enforcement incident queue and detail workflow | Implement incident detail actions, publish toggle, and fuzz controls | Selim | 2 |
 | Runtime stability, maps, performance, and final QA closure | Resolve console/runtime proxy and router warnings where in scope | Selim | 1 |
 | Runtime stability, maps, performance, and final QA closure | Verify non-functional performance and basic security posture checks | Selim | 2 |
-| Runtime stability, maps, performance, and final QA closure | Backfill QA test case work items and link failed cases to bugs | Elie | 2 |
+| Runtime stability, maps, performance, and final QA closure | Create QA test case work items and link failed cases to bugs | Elie | 2 |
 
 Task field policy:
 
@@ -127,7 +127,7 @@ Task field policy:
 
 ## Bug Grouping
 
-Create 16 `Bug` work items, grouped by distinct `Bug Id` from the CSV. Each bug should be `Resolved`, tagged, assigned, and linked to the closest user story.
+Create 16 `Bug` work items, grouped by distinct `Bug Id` from the CSV. Each bug should be `Resolved`, assigned, and linked to the closest user story.
 
 | Bug ID | CSV failing rows | Primary area | Owner | Priority | Related story |
 | --- | ---: | --- | --- | ---: | --- |
@@ -157,7 +157,7 @@ Each bug should include:
 - Expected result.
 - Actual result.
 - Outcome.
-- A note that the item is a resolved QA backfill defect.
+- A note that the item is a resolved QA defect.
 
 ## Test Cases
 
@@ -168,7 +168,7 @@ Test case policy:
 - Work item type: `Test Case`
 - State: `Closed`
 - Title format: `[TC-ID] Test Case Title`
-- Tag: `SafeSignal-Backfill-2026`
+- Description includes the QA validation context.
 - Assignment: derived from `View Name` and `Feature Name`
 - Iteration: match the closest feature sprint
 
@@ -206,9 +206,9 @@ Failed test case link policy:
 Before creating a work item:
 
 1. Query existing work items where `System.TeamProject = 'SafeSignal'`.
-2. Filter by `System.Tags CONTAINS 'SafeSignal-Backfill-2026'`.
-3. Match by exact `System.WorkItemType` and exact `System.Title`.
-4. Reuse the existing work item when a match exists.
+2. Match by exact `System.WorkItemType` and exact `System.Title`.
+3. Reuse the existing work item when a match exists.
+4. Keep descriptions concise and focused on project and QA context.
 5. Do not delete or overwrite unrelated work items.
 
 The existing `Azure CLI permission probe task` should remain untouched unless explicitly requested.
@@ -223,7 +223,7 @@ Required flags:
 $org = "https://dev.azure.com/202310415"
 $project = "SafeSignal"
 $team = "SafeSignal Team"
-$tag = "SafeSignal-Backfill-2026"
+$project = "SafeSignal"
 ```
 
 Execution order:
@@ -254,7 +254,7 @@ Common fields:
 - `System.AssignedTo`
 - `System.AreaPath`
 - `System.IterationPath`
-- `System.Tags`
+- `System.Description`
 - `System.State`
 - `Microsoft.VSTS.Common.Priority`
 
@@ -282,11 +282,11 @@ Test case fields:
 
 ## Validation Checklist
 
-Run read-only validation after the backfill:
+Run read-only validation after the board update:
 
 - Five sprint paths exist.
 - All five sprints are assigned to `SafeSignal Team`.
-- Tagged work item counts are:
+- Work item counts are:
   - `8` user stories.
   - `24` tasks.
   - `16` bugs.
@@ -296,12 +296,12 @@ Run read-only validation after the backfill:
   - Tasks: `Closed`
   - Bugs: `Resolved`
   - Test cases: `Closed`
-- Every tagged work item has `System.AssignedTo`.
-- No tagged work item is assigned to Zeina RIZKALLAH.
-- Every tagged task has a parent story.
+- Every planned work item has `System.AssignedTo`.
+- No planned work item is assigned to Zeina RIZKALLAH.
+- Every planned task has a parent story.
 - Every grouped bug description references at least one CSV test case ID.
 - Every failed CSV row is represented by a grouped bug.
-- `docs/azure-devops-board-backfill-plan.md` exists and documents the implemented policy.
+- The board policy document exists and matches the implemented work item structure.
 
 ## Risks And Mitigations
 
@@ -313,10 +313,10 @@ Run read-only validation after the backfill:
 
 ## Definition Of Done
 
-The board backfill is complete only when:
+The board update is complete only when:
 
 - Sprint iterations are present and team-visible.
-- All required work item counts are present under the backfill tag.
+- All required work item counts are present and traceable through exact titles.
 - All created work items are assigned to Hadi, Mario, Elie, or Selim.
 - No created work item is assigned to Zeina.
 - User stories and tasks are closed.
