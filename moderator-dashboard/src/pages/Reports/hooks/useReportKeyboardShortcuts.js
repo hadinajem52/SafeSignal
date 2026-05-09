@@ -4,6 +4,7 @@ export function useReportKeyboardShortcuts({
   selectedReport,
   verifyPending,
   rejectPending,
+  canEscalateSelectedReport = true,
   canRejectSelectedReport = true,
   handleEscalateRequest,
   handleRejectRequest,
@@ -30,7 +31,7 @@ export function useReportKeyboardShortcuts({
       }
       if (!selectedReport) return;
 
-      if (key === "e" && !verifyPending) {
+      if (key === "e" && !verifyPending && canEscalateSelectedReport) {
         event.preventDefault();
         handleEscalateRequest();
       }
@@ -47,6 +48,7 @@ export function useReportKeyboardShortcuts({
     handleEscalateRequest,
     handleRejectRequest,
     handleSelectNextReport,
+    canEscalateSelectedReport,
     canRejectSelectedReport,
     rejectPending,
     selectedReport,

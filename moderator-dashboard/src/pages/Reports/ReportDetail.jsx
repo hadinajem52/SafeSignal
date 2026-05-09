@@ -100,6 +100,7 @@ function ReportDetail({
   updateCategoryPending,
   verifyPending,
   rejectPending,
+  canVerify = true,
   canReject = true,
   onMerge,
   onApplySuggestedCategory,
@@ -136,7 +137,7 @@ function ReportDetail({
           {/* Escalate — hover → success */}
           <button
             onClick={onVerify}
-            disabled={verifyPending}
+            disabled={verifyPending || !canVerify}
             aria-label="Escalate report"
             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.04em]
               border border-border text-muted bg-transparent transition-colors
