@@ -173,7 +173,7 @@ function AdminPanel() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Topbar */}
-      <div className="flex-shrink-0 border-b border-border bg-card px-6 py-4">
+      <div className="flex-shrink-0 border-b border-border bg-card px-6 h-[61px] flex flex-col justify-center">
         <div className="flex items-center gap-3 mb-0.5">
           <ShieldCheck size={20} className="text-primary" />
           <h1 className="font-display font-extrabold text-xl tracking-tight text-text uppercase">

@@ -80,7 +80,7 @@ function Navigation({ collapsed, onToggle }) {
   return (
     <div
       className={`
-        flex flex-col flex-shrink-0 bg-card border-r border-border
+        flex flex-col flex-shrink-0 bg-card border-r border-border font-display
         transition-all duration-300 ease-in-out overflow-hidden
         ${collapsed ? 'w-[60px]' : 'w-56'}
       `}

@@ -190,7 +190,7 @@ function Reports() {
       </div>
 
       {/* ── Topbar ── */}
-      <div className="flex-shrink-0 flex items-center h-[52px] px-6 bg-surface border-b border-border">
+      <div className="flex-shrink-0 flex items-center h-[61px] px-6 bg-surface border-b border-border">
         <div className="flex items-center gap-2.5 mr-8 font-display font-extrabold text-[17px] tracking-wide uppercase text-text flex-shrink-0">
           <FileText size={14} />
           Reports Queue
