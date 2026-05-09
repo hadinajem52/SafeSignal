@@ -67,6 +67,35 @@ describe('incident moderation state transitions', () => {
 
     expect(result.status).toBe('rejected');
     expect(db.one).toHaveBeenCalledWith(expect.stringContaining("SET status = 'rejected'"), [12]);
+    expect(db.one.mock.calls[0][0]).toContain('first_action_at = CASE');
+    expect(db.one.mock.calls[0][0]).toContain('rejected_at = CASE');
+    expect(db.none).toHaveBeenCalledTimes(1);
+  });
+
+  it('verifies a submitted incident and stamps first action and verification timestamps', async () => {
+    const incident = {
+      incident_id: 13,
+      status: 'submitted',
+      severity: 'medium',
+    };
+    const updated = {
+      ...incident,
+      status: 'verified',
+    };
+
+    db.oneOrNone.mockResolvedValue(incident);
+    db.one.mockResolvedValue(updated);
+    db.none.mockResolvedValue();
+
+    const result = await incidentService.verifyIncident(13, {
+      userId: 3,
+      role: 'moderator',
+    });
+
+    expect(result.status).toBe('verified');
+    expect(db.one).toHaveBeenCalledWith(expect.stringContaining("SET status = 'verified'"), [13]);
+    expect(db.one.mock.calls[0][0]).toContain('first_action_at = CASE');
+    expect(db.one.mock.calls[0][0]).toContain('verified_at = CASE');
     expect(db.none).toHaveBeenCalledTimes(1);
   });
 });

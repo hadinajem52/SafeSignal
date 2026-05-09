@@ -2,6 +2,7 @@ import SLAGauge from "./SLAGauge";
 
 export default function SLACard({ kpis }) {
   const actionedCount = kpis.actionedCount ?? kpis.responseTimes?.length ?? 0;
+  const hasResponseSample = actionedCount > 0;
 
   return (
     <div className="dac-card">
@@ -10,9 +11,13 @@ export default function SLACard({ kpis }) {
         <div className="dac-card-meta">30-min action target</div>
       </div>
       <div className="dac-sla-center">
-        <SLAGauge pct={kpis.slaRate} />
-        <div className="dac-sla-pct">{kpis.slaRate}%</div>
-        <div className="dac-sla-sub">of verified cases actioned within 30 min</div>
+        <SLAGauge pct={hasResponseSample ? kpis.slaRate : 0} />
+        <div className="dac-sla-pct">{hasResponseSample ? `${kpis.slaRate}%` : "—"}</div>
+        <div className="dac-sla-sub">
+          {hasResponseSample
+            ? "of verified cases actioned within 30 min"
+            : "waiting for first-action timestamps"}
+        </div>
       </div>
       <div className="dac-sla-breakdown">
         {[
@@ -23,7 +28,9 @@ export default function SLACard({ kpis }) {
             value:
               kpis.avgResponse >= 60
                 ? `${(kpis.avgResponse / 60).toFixed(1)}h`
-                : `${kpis.avgResponse}m`,
+                : kpis.avgResponse === null || kpis.avgResponse === undefined
+                  ? "—"
+                  : `${kpis.avgResponse}m`,
             color: "var(--dac-amber)",
           },
           { label: "Cases Sampled", value: actionedCount, color: "var(--dac-blue)" },

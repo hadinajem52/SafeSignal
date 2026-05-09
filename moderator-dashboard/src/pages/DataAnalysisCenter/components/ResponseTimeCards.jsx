@@ -24,13 +24,13 @@ export default function ResponseTimeCards({
         <div className="dac-section-title">Response Time Distribution</div>
         <div className="dac-section-line" />
         <div className="dac-section-meta">
-          Created → last-updated (estimate; no dedicated first-response field)
+          Created → first recorded action
         </div>
       </div>
       <div className="dac-grid-2">
         <div className="dac-card">
           <div className="dac-card-header">
-            <div className="dac-card-title">Time-to-Dispatch Histogram</div>
+            <div className="dac-card-title">Time-to-First-Action Histogram</div>
             <div className="dac-card-meta">
               {actionedCount} actioned cases
             </div>

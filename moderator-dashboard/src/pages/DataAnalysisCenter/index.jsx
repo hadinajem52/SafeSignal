@@ -28,6 +28,7 @@ const EMPTY_ANALYTICS = {
     slaCompliant: 0,
     slaBreached: 0,
     closedCount: 0,
+    closeDurationCount: 0,
   },
   histogramData: [],
   histMax: 1,

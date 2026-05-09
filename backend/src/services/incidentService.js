@@ -26,6 +26,23 @@ const constellationService = require('./constellationService');
 const LEI_STATUSES = ['verified', 'dispatched', 'on_scene', 'investigating', 'police_closed'];
 const STAFF_ROLES = new Set(['admin', 'moderator', 'law_enforcement']);
 const ACTIONABLE_MODERATION_STATUSES = new Set(['submitted', 'auto_processed', 'auto_flagged', 'in_review', 'needs_info']);
+const FIRST_ACTION_STATUSES = new Set([
+  'auto_processed',
+  'auto_flagged',
+  'in_review',
+  'verified',
+  'dispatched',
+  'on_scene',
+  'investigating',
+  'police_closed',
+  'rejected',
+  'needs_info',
+  'published',
+  'resolved',
+  'archived',
+  'merged',
+]);
+const CLOSED_STATUSES = new Set(['police_closed', 'resolved', 'archived']);
 const shouldIncludeStaffConstellation = (includeConstellation, userRole) =>
   Boolean(includeConstellation && STAFF_ROLES.has(userRole));
 const profanityFilter = new Filter();
@@ -78,6 +95,36 @@ const STREET_SUFFIX_MAP = {
   parkway: 'parkway',
 };
 const NORMALIZED_STREET_SUFFIXES = new Set(Object.values(STREET_SUFFIX_MAP));
+
+function getLifecycleTimestampUpdate(statusExpression, guardExpression = 'TRUE') {
+  return `
+         first_action_at = CASE
+           WHEN ${guardExpression} AND ${statusExpression} IN ('${Array.from(FIRST_ACTION_STATUSES).join("','")}')
+             THEN COALESCE(first_action_at, CURRENT_TIMESTAMP)
+           ELSE first_action_at
+         END,
+         verified_at = CASE
+           WHEN ${guardExpression} AND ${statusExpression} = 'verified' THEN COALESCE(verified_at, CURRENT_TIMESTAMP)
+           ELSE verified_at
+         END,
+         dispatched_at = CASE
+           WHEN ${guardExpression} AND ${statusExpression} = 'dispatched' THEN COALESCE(dispatched_at, CURRENT_TIMESTAMP)
+           ELSE dispatched_at
+         END,
+         on_scene_at = CASE
+           WHEN ${guardExpression} AND ${statusExpression} = 'on_scene' THEN COALESCE(on_scene_at, CURRENT_TIMESTAMP)
+           ELSE on_scene_at
+         END,
+         closed_at = CASE
+           WHEN ${guardExpression} AND ${statusExpression} IN ('${Array.from(CLOSED_STATUSES).join("','")}')
+             THEN COALESCE(closed_at, CURRENT_TIMESTAMP)
+           ELSE closed_at
+         END,
+         rejected_at = CASE
+           WHEN ${guardExpression} AND ${statusExpression} = 'rejected' THEN COALESCE(rejected_at, CURRENT_TIMESTAMP)
+           ELSE rejected_at
+         END,`;
+}
 
 /**
  * Map an ML risk score (0–1) to a severity level.
@@ -395,6 +442,7 @@ async function applyAutoVerificationIfEligible(incident, context = {}) {
   const updated = await db.one(
     `UPDATE incidents
      SET status = 'verified',
+         ${getLifecycleTimestampUpdate("'verified'")}
          updated_at = CURRENT_TIMESTAMP
      WHERE incident_id = $1
      RETURNING *`,
@@ -919,7 +967,9 @@ async function createIncident(incidentData, reporterId) {
 
           await db.none(
             `UPDATE incidents
-             SET status = 'auto_processed', updated_at = CURRENT_TIMESTAMP
+             SET status = 'auto_processed',
+                 ${getLifecycleTimestampUpdate("'auto_processed'")}
+                 updated_at = CURRENT_TIMESTAMP
              WHERE incident_id = $1 AND status = 'submitted'`,
             [incident.incident_id]
           );
@@ -958,6 +1008,7 @@ async function createIncident(incidentData, reporterId) {
             `UPDATE incidents
              SET status = 'auto_flagged',
                  severity = $2,
+                 ${getLifecycleTimestampUpdate("'auto_flagged'")}
                  updated_at = CURRENT_TIMESTAMP
              WHERE incident_id = $1
              RETURNING *`,
@@ -1606,7 +1657,9 @@ async function linkDuplicateIncident(incidentId, duplicateIncidentId, requesting
 
   const updatedDuplicate = await db.one(
     `UPDATE incidents
-     SET status = 'merged', updated_at = CURRENT_TIMESTAMP
+     SET status = 'merged',
+         ${getLifecycleTimestampUpdate("'merged'")}
+         updated_at = CURRENT_TIMESTAMP
      WHERE incident_id = $1
      RETURNING *`,
     [duplicateIncidentId]
@@ -1813,6 +1866,7 @@ async function updateIncident(incidentId, updateData, requestingUser) {
          category = COALESCE($4, category),
          severity = COALESCE($5, severity),
          status = COALESCE($6, status),
+         ${getLifecycleTimestampUpdate('COALESCE($6, status)', '$6 IS NOT NULL')}
          is_draft = COALESCE($7, is_draft),
          location_name = COALESCE($8, location_name),
          latitude = COALESCE($9, latitude),
@@ -1892,6 +1946,7 @@ async function patchIncident(incidentId, updateData, requestingUser) {
          category = COALESCE($4, category),
          severity = COALESCE($5, severity),
          status = COALESCE($6, status),
+         ${getLifecycleTimestampUpdate('COALESCE($6, status)', '$6 IS NOT NULL')}
          updated_at = CURRENT_TIMESTAMP
      WHERE incident_id = $1
      RETURNING *`,
@@ -2094,6 +2149,7 @@ async function updateLEIStatus(incidentId, status, closureOutcome, closureDetail
   const updatedIncident = await db.one(
     `UPDATE incidents
      SET status = $2,
+         ${getLifecycleTimestampUpdate('$2')}
          is_disclosed = COALESCE($5, is_disclosed),
          is_location_fuzzed = COALESCE($6, is_location_fuzzed),
          closure_outcome = $3,
@@ -2212,6 +2268,7 @@ async function verifyIncident(incidentId, requestingUser) {
   const updated = await db.one(
     `UPDATE incidents 
      SET status = 'verified',
+         ${getLifecycleTimestampUpdate("'verified'")}
          updated_at = CURRENT_TIMESTAMP 
      WHERE incident_id = $1 
      RETURNING *`,
@@ -2263,6 +2320,7 @@ async function rejectIncident(incidentId, requestingUser) {
   const updated = await db.one(
     `UPDATE incidents 
      SET status = 'rejected',
+         ${getLifecycleTimestampUpdate("'rejected'")}
          is_disclosed = FALSE,
          is_location_fuzzed = FALSE,
          updated_at = CURRENT_TIMESTAMP 
@@ -2380,7 +2438,7 @@ async function getPublicFeed({ category, closure_outcome, severity, lat, lng, ra
        i.incident_id, i.title, i.description, i.category, i.severity, i.status,
        i.closure_outcome, i.closure_details,
        i.location_name, i.photo_urls,
-       i.incident_date, i.created_at, i.updated_at AS closed_at,
+       i.incident_date, i.created_at, COALESCE(i.closed_at, i.updated_at) AS closed_at,
        CASE WHEN i.is_location_fuzzed
          THEN i.latitude  + (random() - 0.5) * 0.0027
          ELSE i.latitude
