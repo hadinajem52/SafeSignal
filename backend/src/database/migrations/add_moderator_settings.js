@@ -10,6 +10,8 @@ async function migrate() {
         user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE UNIQUE,
         email_notifications BOOLEAN NOT NULL DEFAULT TRUE,
         report_alerts BOOLEAN NOT NULL DEFAULT TRUE,
+        browser_notifications BOOLEAN NOT NULL DEFAULT FALSE,
+        sound_alerts BOOLEAN NOT NULL DEFAULT FALSE,
         weekly_digest BOOLEAN NOT NULL DEFAULT FALSE,
         dark_mode BOOLEAN NOT NULL DEFAULT FALSE,
         auto_verify BOOLEAN NOT NULL DEFAULT FALSE,
@@ -28,6 +30,16 @@ async function migrate() {
     await db.none(`
       ALTER TABLE moderator_settings
       ADD COLUMN IF NOT EXISTS dark_mode BOOLEAN NOT NULL DEFAULT FALSE;
+    `);
+
+    await db.none(`
+      ALTER TABLE moderator_settings
+      ADD COLUMN IF NOT EXISTS browser_notifications BOOLEAN NOT NULL DEFAULT FALSE;
+    `);
+
+    await db.none(`
+      ALTER TABLE moderator_settings
+      ADD COLUMN IF NOT EXISTS sound_alerts BOOLEAN NOT NULL DEFAULT FALSE;
     `);
 
     await db.none(`

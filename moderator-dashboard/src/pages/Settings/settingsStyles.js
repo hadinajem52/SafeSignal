@@ -52,7 +52,6 @@ export const SETTINGS_CSS = `
   .st-label { font-size:13px; font-weight:600; color:var(--color-text); margin-bottom:2px; }
   .st-desc { font-size:11px; font-weight:500; color:var(--color-text-muted); line-height:1.5; }
   .st-ctrl { flex-shrink:0; display:flex; align-items:center; gap:10px; }
-  .st-control-note { font-size:10px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; color:var(--color-text-muted); }
 
   /* Square Toggle */
   .sq-wrap { position:relative; width:38px; height:20px; cursor:pointer; flex-shrink:0; }

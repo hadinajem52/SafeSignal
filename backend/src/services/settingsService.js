@@ -9,6 +9,8 @@ const ServiceError = require('../utils/ServiceError');
 const DEFAULT_SETTINGS = Object.freeze({
   emailNotifications: true,
   reportAlerts: true,
+  browserNotifications: false,
+  soundAlerts: false,
   weeklyDigest: false,
   darkMode: false,
   autoVerify: false,
@@ -28,6 +30,8 @@ async function ensureSettingsTable() {
       user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE UNIQUE,
       email_notifications BOOLEAN NOT NULL DEFAULT TRUE,
       report_alerts BOOLEAN NOT NULL DEFAULT TRUE,
+      browser_notifications BOOLEAN NOT NULL DEFAULT FALSE,
+      sound_alerts BOOLEAN NOT NULL DEFAULT FALSE,
       weekly_digest BOOLEAN NOT NULL DEFAULT FALSE,
       dark_mode BOOLEAN NOT NULL DEFAULT FALSE,
       auto_verify BOOLEAN NOT NULL DEFAULT FALSE,
@@ -49,6 +53,16 @@ async function ensureSettingsTable() {
   `);
 
   await db.none(`
+    ALTER TABLE moderator_settings
+    ADD COLUMN IF NOT EXISTS browser_notifications BOOLEAN NOT NULL DEFAULT FALSE;
+  `);
+
+  await db.none(`
+    ALTER TABLE moderator_settings
+    ADD COLUMN IF NOT EXISTS sound_alerts BOOLEAN NOT NULL DEFAULT FALSE;
+  `);
+
+  await db.none(`
     CREATE INDEX IF NOT EXISTS idx_moderator_settings_user_id ON moderator_settings (user_id);
   `);
 
@@ -59,6 +73,8 @@ function mapDbRowToSettings(row) {
   return {
     emailNotifications: row.email_notifications,
     reportAlerts: row.report_alerts,
+    browserNotifications: row.browser_notifications,
+    soundAlerts: row.sound_alerts,
     weeklyDigest: row.weekly_digest,
     darkMode: row.dark_mode,
     autoVerify: row.auto_verify,
@@ -71,10 +87,20 @@ function validateSettingsPayload(payload, existingSettings = DEFAULT_SETTINGS) {
     throw ServiceError.badRequest('Settings payload is required');
   }
 
-  const booleanKeys = ['emailNotifications', 'reportAlerts', 'weeklyDigest', 'darkMode', 'autoVerify'];
+  const booleanKeys = [
+    'emailNotifications',
+    'reportAlerts',
+    'browserNotifications',
+    'soundAlerts',
+    'weeklyDigest',
+    'darkMode',
+    'autoVerify',
+  ];
   const mergedSettings = {
     emailNotifications: existingSettings.emailNotifications,
     reportAlerts: existingSettings.reportAlerts,
+    browserNotifications: existingSettings.browserNotifications,
+    soundAlerts: existingSettings.soundAlerts,
     weeklyDigest: existingSettings.weeklyDigest,
     darkMode: existingSettings.darkMode,
     autoVerify: existingSettings.autoVerify,
@@ -125,15 +151,19 @@ async function upsertSettings(userId, settings) {
       user_id,
       email_notifications,
       report_alerts,
+      browser_notifications,
+      sound_alerts,
       weekly_digest,
       dark_mode,
       auto_verify,
       min_confidence_score
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     ON CONFLICT (user_id)
     DO UPDATE SET
       email_notifications = EXCLUDED.email_notifications,
       report_alerts = EXCLUDED.report_alerts,
+      browser_notifications = EXCLUDED.browser_notifications,
+      sound_alerts = EXCLUDED.sound_alerts,
       weekly_digest = EXCLUDED.weekly_digest,
       dark_mode = EXCLUDED.dark_mode,
       auto_verify = EXCLUDED.auto_verify,
@@ -142,6 +172,8 @@ async function upsertSettings(userId, settings) {
     RETURNING
       email_notifications,
       report_alerts,
+      browser_notifications,
+      sound_alerts,
       weekly_digest,
       dark_mode,
       auto_verify,
@@ -150,6 +182,8 @@ async function upsertSettings(userId, settings) {
       userId,
       settings.emailNotifications,
       settings.reportAlerts,
+      settings.browserNotifications,
+      settings.soundAlerts,
       settings.weeklyDigest,
       settings.darkMode,
       settings.autoVerify,
@@ -167,6 +201,8 @@ async function getSettingsForUser(userId) {
     `SELECT
       email_notifications,
       report_alerts,
+      browser_notifications,
+      sound_alerts,
       weekly_digest,
       dark_mode,
       auto_verify,
