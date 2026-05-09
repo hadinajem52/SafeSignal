@@ -8,6 +8,12 @@ export const statsAPI = {
       "Failed to fetch stats",
     ),
 
+  getDacAnalytics: async (params = {}) =>
+    requestData(
+      () => api.get("/stats/dac", { params }),
+      "Failed to fetch analytics",
+    ),
+
   getAIInsights: async (payload) =>
     requestData(
       () => api.post("/stats/ai-insights", payload),

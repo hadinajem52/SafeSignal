@@ -152,7 +152,7 @@ router.get('/', optionalAuth, async (req, res) => {
       include_constellation: includeConstellation,
     } = req.query;
 
-    const incidents = await incidentService.getAllIncidents({
+    const filters = {
       category,
       status,
       severity,
@@ -160,12 +160,19 @@ router.get('/', optionalAuth, async (req, res) => {
       offset,
       includeConstellation: includeConstellation === 'true',
       userRole: req.user?.role,
-    });
+    };
+    const [incidents, total] = await Promise.all([
+      incidentService.getAllIncidents(filters),
+      incidentService.countIncidents(filters),
+    ]);
 
     res.json({
       status: 'OK',
       data: incidents,
       count: incidents.length,
+      total,
+      limit: parseInt(limit, 10),
+      offset: parseInt(offset, 10),
     });
   } catch (error) {
     handleServiceError(error, res, 'Failed to fetch incidents');

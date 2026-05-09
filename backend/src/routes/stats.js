@@ -52,6 +52,24 @@ router.get('/moderator/dashboard', authenticateToken, requireRole(['moderator', 
 });
 
 /**
+ * @route   GET /api/stats/dac
+ * @desc    Get production-grade aggregate analytics for the Data Analysis Center
+ * @access  Private (Moderator/Admin/Law Enforcement)
+ */
+router.get('/dac', authenticateToken, requireRole(['moderator', 'admin', 'law_enforcement']), async (req, res) => {
+  try {
+    const analytics = await statsService.getDacAnalytics(req.query.period);
+
+    res.json({
+      status: 'OK',
+      data: analytics,
+    });
+  } catch (error) {
+    handleServiceError(error, res, 'Failed to fetch Data Analysis Center analytics');
+  }
+});
+
+/**
  * @route   POST /api/stats/ai-insights
  * @desc    Generate AI analytics briefing from pre-computed stats payload
  * @access  Private (Moderator/Admin/Law Enforcement)
