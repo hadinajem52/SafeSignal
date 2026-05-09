@@ -19,6 +19,7 @@ function ReportFilters({
   totalResults,
   selectedCount,
   bulkActionPending,
+  canBulkVerify = true,
   canBulkReject = true,
   onBulkVerify,
   onBulkReject,
@@ -96,7 +97,7 @@ function ReportFilters({
             </span>
             <button
               onClick={onBulkVerify}
-              disabled={bulkActionPending === 'reject'}
+              disabled={bulkActionPending === 'reject' || !canBulkVerify}
               className="px-2.5 py-1 border border-success/40 text-success text-[11px] font-bold
                 uppercase tracking-[0.03em] hover:bg-success/10 disabled:opacity-40 transition-colors"
             >

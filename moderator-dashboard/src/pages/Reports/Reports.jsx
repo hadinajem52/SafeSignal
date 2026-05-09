@@ -11,7 +11,7 @@ import ReportList from "./ReportList";
 import { useReportPanelResize } from "./hooks/useReportPanelResize";
 import { useReportSelection } from "./hooks/useReportSelection";
 import { useReportActions } from "./hooks/useReportActions";
-import { canRejectReport } from "./reportStatusRules";
+import { canEscalateReport, canRejectReport } from "./reportStatusRules";
 
 // Priority score: severity is the primary sort key; age (log-scaled) is a
 // tiebreaker within the same tier so stale reports don't beat newer ones.
@@ -168,6 +168,9 @@ function Reports() {
   const rejectableSelectedCount = selectedReportIds.filter((id) =>
     canRejectReport(filteredReports.find((report) => report.id === id)),
   ).length;
+  const escalatableSelectedCount = selectedReportIds.filter((id) =>
+    canEscalateReport(filteredReports.find((report) => report.id === id)),
+  ).length;
 
   return (
     <div className="flex flex-col h-dvh overflow-hidden bg-bg">
@@ -222,6 +225,7 @@ function Reports() {
         totalResults={filteredReports.length}
         selectedCount={selectedReportIds.length}
         bulkActionPending={bulkActionPending}
+        canBulkVerify={escalatableSelectedCount > 0}
         canBulkReject={rejectableSelectedCount > 0}
         onBulkVerify={() => setBulkConfirmAction("verify")}
         onBulkReject={() => setBulkConfirmAction("reject")}
@@ -270,6 +274,7 @@ function Reports() {
               updateCategoryPending={updateCategoryMutation.isPending}
               verifyPending={verifyMutation.isPending}
               rejectPending={rejectMutation.isPending}
+              canVerify={canEscalateReport(selectedReport)}
               canReject={canRejectReport(selectedReport)}
               onMerge={onMerge}
               onApplySuggestedCategory={onApplySuggestedCategory}
@@ -350,7 +355,7 @@ function Reports() {
         title={`Bulk ${bulkConfirmAction === "verify" ? "Escalate" : "Reject"} ${selectedReportIds.length} report${selectedReportIds.length !== 1 ? "s" : ""}?`}
         message={
           bulkConfirmAction === "verify"
-            ? `This will escalate all ${selectedReportIds.length} selected reports and forward them to law enforcement.`
+            ? `This will escalate ${escalatableSelectedCount} selected report${escalatableSelectedCount !== 1 ? "s" : ""} and forward them to law enforcement. Ineligible reports will be skipped.`
             : `This will reject ${rejectableSelectedCount} selected report${rejectableSelectedCount !== 1 ? "s" : ""}. Ineligible reports will be skipped.`
         }
         confirmLabel={
@@ -363,6 +368,7 @@ function Reports() {
         }
         confirmDisabled={
           Boolean(bulkActionPending) ||
+          (bulkConfirmAction === "verify" && escalatableSelectedCount === 0) ||
           (bulkConfirmAction === "reject" && rejectableSelectedCount === 0)
         }
         onCancel={() => setBulkConfirmAction(null)}

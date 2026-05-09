@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { useBulkReportActions } from "./useBulkReportActions";
 import { useReportKeyboardShortcuts } from "./useReportKeyboardShortcuts";
 import { useReportMutations } from "./useReportMutations";
-import { canRejectReport } from "../reportStatusRules";
+import { canEscalateReport, canRejectReport } from "../reportStatusRules";
 
 export function useReportActions({
   queryClient,
@@ -58,8 +58,12 @@ export function useReportActions({
 
   const handleEscalateRequest = useCallback(() => {
     if (!selectedReport) return;
+    if (!canEscalateReport(selectedReport)) {
+      pushToast(`Cannot escalate a report with status ${selectedReport.status}.`, "warning");
+      return;
+    }
     setSingleConfirmAction("escalate");
-  }, [selectedReport]);
+  }, [pushToast, selectedReport]);
 
   const handleRejectRequest = useCallback(() => {
     if (!selectedReport) return;
@@ -82,6 +86,7 @@ export function useReportActions({
     selectedReport,
     verifyPending: verifyMutation.isPending,
     rejectPending: rejectMutation.isPending,
+    canEscalateSelectedReport: canEscalateReport(selectedReport),
     canRejectSelectedReport: canRejectReport(selectedReport),
     handleEscalateRequest,
     handleRejectRequest,

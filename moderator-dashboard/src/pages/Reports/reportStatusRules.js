@@ -1,4 +1,4 @@
-const REJECTABLE_STATUSES = new Set([
+const ACTIONABLE_MODERATION_STATUSES = new Set([
   "submitted",
   "auto_processed",
   "auto_flagged",
@@ -6,6 +6,10 @@ const REJECTABLE_STATUSES = new Set([
   "needs_info",
 ]);
 
+export function canEscalateReport(report) {
+  return Boolean(report && ACTIONABLE_MODERATION_STATUSES.has(report.status));
+}
+
 export function canRejectReport(report) {
-  return Boolean(report && REJECTABLE_STATUSES.has(report.status));
+  return Boolean(report && ACTIONABLE_MODERATION_STATUSES.has(report.status));
 }

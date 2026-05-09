@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { canRejectReport } from "../reportStatusRules";
+import { canEscalateReport, canRejectReport } from "../reportStatusRules";
 
 export function useBulkReportActions({
   reportsAPI,
@@ -22,7 +22,7 @@ export function useBulkReportActions({
       const actionableIds =
         action === "reject"
           ? selectedReportIds.filter((id) => canRejectReport(reportsById.get(id)))
-          : selectedReportIds;
+          : selectedReportIds.filter((id) => canEscalateReport(reportsById.get(id)));
 
       if (!actionableIds.length) {
         pushToast(`No selected reports can be ${action === "verify" ? "escalated" : "rejected"}.`, "warning");
