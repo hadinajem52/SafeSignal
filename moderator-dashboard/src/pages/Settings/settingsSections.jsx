@@ -402,9 +402,12 @@ export function SecuritySection({
         <SecHead title="Change Password" />
         <div className="st-block">
           <div className="st-col-row">
-            <div className="st-label">Current Password</div>
+            <label className="st-label" htmlFor="current-password">
+              Current Password
+            </label>
             <div className="st-input-row">
               <input
+                id="current-password"
                 className="st-input"
                 type={showPw ? "text" : "password"}
                 placeholder="Enter current password"
@@ -414,9 +417,12 @@ export function SecuritySection({
             </div>
           </div>
           <div className="st-col-row">
-            <div className="st-label">New Password</div>
+            <label className="st-label" htmlFor="new-password">
+              New Password
+            </label>
             <div className="st-input-row">
               <input
+                id="new-password"
                 className="st-input"
                 type={showPw ? "text" : "password"}
                 placeholder="Min. 8 characters"
@@ -426,9 +432,12 @@ export function SecuritySection({
             </div>
           </div>
           <div className="st-col-row">
-            <div className="st-label">Confirm New Password</div>
+            <label className="st-label" htmlFor="confirm-password">
+              Confirm New Password
+            </label>
             <div className="st-input-row">
               <input
+                id="confirm-password"
                 className="st-input"
                 type={showPw ? "text" : "password"}
                 placeholder="Repeat new password"
@@ -438,6 +447,9 @@ export function SecuritySection({
               <button
                 className="st-btn st-btn-ghost"
                 type="button"
+                aria-label={showPw ? "Hide password fields" : "Show password fields"}
+                aria-pressed={showPw}
+                title={showPw ? "Hide password fields" : "Show password fields"}
                 onClick={() => setShowPw((v) => !v)}
                 style={{ padding: "6px 10px" }}
               >
@@ -464,9 +476,10 @@ export function SecuritySection({
             <SqToggle
               id="sec-2fa"
               checked={twoFaEnabled}
-              onChange={() => {
+              ariaLabel="Enable two-factor authentication"
+              onChange={(enabled) => {
+                setTwoFaEnabled(enabled);
                 showToast("Two-factor authentication is not available in this build.", "warn");
-                setTwoFaEnabled(false);
               }}
             />
           </SettingRow>

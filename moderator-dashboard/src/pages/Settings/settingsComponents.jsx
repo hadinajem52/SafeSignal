@@ -1,12 +1,13 @@
 import React from "react";
 import { NAV, IC } from "./settingsConstants";
 
-export function SqToggle({ checked, onChange, disabled, id }) {
+export function SqToggle({ checked, onChange, disabled, id, ariaLabel }) {
   return (
     <label className="sq-wrap" htmlFor={id}>
       <input
         type="checkbox"
         id={id}
+        aria-label={ariaLabel}
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
         disabled={disabled}

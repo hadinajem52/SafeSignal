@@ -61,6 +61,7 @@ export const SETTINGS_CSS = `
     background:var(--color-surface); transition:background 0.15s, border-color 0.15s;
   }
   .sq-wrap input:checked + .sq-track { background:var(--color-primary); border-color:var(--color-primary); }
+  .sq-wrap:focus-within .sq-track { outline:1.5px solid var(--color-primary); outline-offset:2px; }
   .sq-thumb {
     position:absolute; top:3px; left:3px; width:12px; height:12px;
     background:var(--color-text-muted); transition:transform 0.15s, background 0.15s;
