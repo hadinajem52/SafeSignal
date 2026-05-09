@@ -8,6 +8,13 @@ export const WORKFLOW_STEPS = [
   { id: "police_closed", label: "Closed" },
 ];
 
+export const ACTIVE_LEI_STATUSES = [
+  "verified",
+  "dispatched",
+  "on_scene",
+  "investigating",
+];
+
 export const STATUS_TRANSITIONS = {
   verified: ["dispatched", "police_closed"],
   dispatched: ["on_scene", "police_closed"],
