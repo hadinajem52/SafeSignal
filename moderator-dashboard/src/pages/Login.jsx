@@ -48,12 +48,14 @@ function Login() {
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [applySubmitted, setApplySubmitted] = useState(false)
+  const [submittedEmail, setSubmittedEmail] = useState('')
 
   useEffect(() => {
     setError('')
     setFieldErrors({})
     setSuccessMessage('')
     setApplySubmitted(false)
+    setSubmittedEmail('')
   }, [mode])
 
   const validateLogin = () => {
@@ -90,17 +92,19 @@ function Login() {
 
   const handleApplicationSubmit = async (e) => {
     e.preventDefault()
+    const applicationEmail = email.trim()
     setError('')
     setSuccessMessage('')
     setLoading(true)
     try {
       const result = await authAPI.register({
         username,
-        email,
+        email: applicationEmail,
         password,
         role: requestedRole,
       })
       if (result.success) {
+        setSubmittedEmail(applicationEmail)
         setApplySubmitted(true)
         setUsername('')
         setEmail('')
@@ -442,7 +446,7 @@ function Login() {
                   </div>
                   <p className="text-xs text-[#5C7390] leading-[1.7] mb-4">
                     Your access request has been received. An administrator will review it and contact you at{' '}
-                    <strong className="text-[#D9E4F0]">{email || 'your email'}</strong> shortly.
+                    <strong className="text-[#D9E4F0]">{submittedEmail}</strong> shortly.
                     Your account stays pending until approved.
                   </p>
                   <button
