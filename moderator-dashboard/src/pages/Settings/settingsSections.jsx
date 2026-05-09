@@ -14,13 +14,10 @@ export function ProfileSection({
   setProfileDraftName,
   setProfileDraftEmail,
   memberSince,
-  language,
-  setLanguage,
-  timezone,
-  setTimezone,
-  dateFormat,
-  setDateFormat,
-  persistLocalPref,
+  preferenceDraft,
+  hasUnsavedPreferences,
+  updatePreferenceDraft,
+  saveProfilePreferences,
   initials,
 }) {
   return (
@@ -97,11 +94,8 @@ export function ProfileSection({
           <SettingRow label="Language" desc="Interface display language" noBorderTop>
             <select
               className="st-select"
-              value={language}
-              onChange={(e) => {
-                setLanguage(e.target.value);
-                persistLocalPref("language", e.target.value);
-              }}
+              value={preferenceDraft.language}
+              onChange={(e) => updatePreferenceDraft("language", e.target.value)}
             >
               <option value="en">English</option>
               <option value="ar">Arabic</option>
@@ -111,11 +105,8 @@ export function ProfileSection({
           <SettingRow label="Timezone" desc="Used for timestamps throughout the dashboard">
             <select
               className="st-select"
-              value={timezone}
-              onChange={(e) => {
-                setTimezone(e.target.value);
-                persistLocalPref("timezone", e.target.value);
-              }}
+              value={preferenceDraft.timezone}
+              onChange={(e) => updatePreferenceDraft("timezone", e.target.value)}
             >
               <option value="Asia/Beirut">Asia/Beirut (GMT+3)</option>
               <option value="UTC">UTC (GMT+0)</option>
@@ -127,17 +118,23 @@ export function ProfileSection({
           <SettingRow label="Date Format" desc="Applied to all timestamps and exports">
             <select
               className="st-select"
-              value={dateFormat}
-              onChange={(e) => {
-                setDateFormat(e.target.value);
-                persistLocalPref("dateFormat", e.target.value);
-              }}
+              value={preferenceDraft.dateFormat}
+              onChange={(e) => updatePreferenceDraft("dateFormat", e.target.value)}
             >
               <option value="MM/DD/YYYY">MM/DD/YYYY</option>
               <option value="DD/MM/YYYY">DD/MM/YYYY</option>
               <option value="YYYY-MM-DD">YYYY-MM-DD</option>
             </select>
           </SettingRow>
+        </div>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
+          <button
+            className="st-btn st-btn-primary"
+            onClick={saveProfilePreferences}
+            disabled={!hasUnsavedPreferences}
+          >
+            {IC.check} Save Preferences
+          </button>
         </div>
       </div>
     </>

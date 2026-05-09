@@ -52,6 +52,11 @@ function SettingsPage() {
     localPrefs.timezone ?? "Asia/Beirut",
   );
   const [language, setLanguage] = useState(localPrefs.language ?? "en");
+  const [profilePreferenceDraft, setProfilePreferenceDraft] = useState({
+    language: localPrefs.language ?? "en",
+    timezone: localPrefs.timezone ?? "Asia/Beirut",
+    dateFormat: localPrefs.dateFormat ?? "MM/DD/YYYY",
+  });
 
   const [editingProfile, setEditingProfile] = useState(false);
   const [displayName, setDisplayName] = useState(user?.username ?? "");
@@ -89,6 +94,10 @@ function SettingsPage() {
     setEditingProfile(false);
     showToast("Profile display updated.");
   }
+
+  useEffect(() => {
+    setProfilePreferenceDraft({ language, timezone, dateFormat });
+  }, [language, timezone, dateFormat]);
 
   const { isLoading, isError, error, refetch } = useQuery({
     queryKey: ["dashboardSettings"],
@@ -216,6 +225,20 @@ function SettingsPage() {
     saveLocalPrefs(p);
   }
 
+  function updateProfilePreferenceDraft(key, value) {
+    setProfilePreferenceDraft((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function saveProfilePreferences() {
+    setLanguage(profilePreferenceDraft.language);
+    setTimezone(profilePreferenceDraft.timezone);
+    setDateFormat(profilePreferenceDraft.dateFormat);
+    persistLocalPref("language", profilePreferenceDraft.language);
+    persistLocalPref("timezone", profilePreferenceDraft.timezone);
+    persistLocalPref("dateFormat", profilePreferenceDraft.dateFormat);
+    showToast("Preferences saved.");
+  }
+
   function toggleSeverity(key) {
     setAlertSeverities((prev) => {
       const has = prev.includes(key);
@@ -274,6 +297,11 @@ function SettingsPage() {
     }
   }, [user]);
 
+  const hasUnsavedProfilePreferences =
+    profilePreferenceDraft.language !== language ||
+    profilePreferenceDraft.timezone !== timezone ||
+    profilePreferenceDraft.dateFormat !== dateFormat;
+
   if (isLoading) return <LoadingState />;
   if (isError) {
     return (
@@ -302,13 +330,10 @@ function SettingsPage() {
         setProfileDraftName={setProfileDraftName}
         setProfileDraftEmail={setProfileDraftEmail}
         memberSince={memberSince}
-        language={language}
-        setLanguage={setLanguage}
-        timezone={timezone}
-        setTimezone={setTimezone}
-        dateFormat={dateFormat}
-        setDateFormat={setDateFormat}
-        persistLocalPref={persistLocalPref}
+        preferenceDraft={profilePreferenceDraft}
+        hasUnsavedPreferences={hasUnsavedProfilePreferences}
+        updatePreferenceDraft={updateProfilePreferenceDraft}
+        saveProfilePreferences={saveProfilePreferences}
         initials={getInitials(displayName || user?.username || "")}
       />
     ),
