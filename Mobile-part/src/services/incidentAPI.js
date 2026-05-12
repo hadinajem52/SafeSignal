@@ -13,10 +13,10 @@ export const incidentAPI = {
         },
       });
 
-      if (response.data.status === 'SUCCESS') {
+      if (response.data.status === 'SUCCESS' || response.data.status === 'OK') {
         return {
           success: true,
-          incident: response.data.data.incident,
+          incident: response.data.data?.incident || response.data.data,
           message: response.data.message,
         };
       }
