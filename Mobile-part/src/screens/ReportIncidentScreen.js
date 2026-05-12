@@ -332,9 +332,9 @@ const ReportIncidentScreen = ({ navigation, route }) => {
             setEnableMlClassification(true);
             setEnableMlRisk(true);
             setIsAnonymous(!!preferences.defaultAnonymous);
-            setSubmitSuccessMessage(
-              "Report submitted. Thanks for reporting this.",
-            );
+            const successMessage = "Report submitted. Thanks for reporting this.";
+            setSubmitSuccessMessage(successMessage);
+            showToast(successMessage, 'success');
 
             if (successNavigationTimerRef.current) {
               clearTimeout(successNavigationTimerRef.current);
