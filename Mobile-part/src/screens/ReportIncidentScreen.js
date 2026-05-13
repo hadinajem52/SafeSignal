@@ -342,7 +342,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
 
             successNavigationTimerRef.current = setTimeout(() => {
               setSubmitSuccessMessage("");
-              navigation.navigate("Home");
+              navigation.navigate("Dashboard", { screen: "Home" });
             }, 1800);
           } else {
             showToast('Draft saved. You can continue editing anytime.', 'success');
