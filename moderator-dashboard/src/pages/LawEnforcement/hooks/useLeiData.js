@@ -77,14 +77,18 @@ export default function useLeiData({
     visibleSelectedIncident &&
     String(detailedIncident?.incident_id) === String(selectedIncidentId);
 
-  const selectedIncident = detailMatchesSelection
-    ? {
-        ...detailedIncident,
-        id: detailedIncident.incident_id,
-        reportedAt:
-          detailedIncident.incident_date || detailedIncident.created_at,
-      }
-    : visibleSelectedIncident;
+  const selectedIncident = useMemo(() => {
+    if (!detailMatchesSelection) {
+      return visibleSelectedIncident;
+    }
+
+    return {
+      ...detailedIncident,
+      id: detailedIncident.incident_id,
+      reportedAt:
+        detailedIncident.incident_date || detailedIncident.created_at,
+    };
+  }, [detailMatchesSelection, detailedIncident, visibleSelectedIncident]);
   const actionLog = detailMatchesSelection ? incidentDetail?.actions || [] : [];
 
   const activeLeiIncidents = useMemo(
