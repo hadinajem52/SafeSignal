@@ -3,11 +3,12 @@ import api from './apiClient';
 export const incidentAPI = {
   async submitIncident(incidentData) {
     try {
+      const { idempotencyKey: providedIdempotencyKey, ...payload } = incidentData;
       const idempotencyKey =
-        incidentData.idempotencyKey ||
-        `incident_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        providedIdempotencyKey ||
+        `incident_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 
-      const response = await api.post('/incidents/submit', incidentData, {
+      const response = await api.post('/incidents/submit', payload, {
         headers: {
           'Idempotency-Key': idempotencyKey,
         },

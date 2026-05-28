@@ -57,6 +57,8 @@ const initDatabase = async () => {
         is_disclosed BOOLEAN DEFAULT FALSE,
         is_location_fuzzed BOOLEAN DEFAULT FALSE,
         photo_urls TEXT[],
+        idempotency_key VARCHAR(128),
+        idempotency_payload_hash VARCHAR(64),
         status VARCHAR(50) DEFAULT 'submitted' CHECK (status IN (
           'submitted',
           'auto_processed',
@@ -100,6 +102,12 @@ const initDatabase = async () => {
       ADD COLUMN IF NOT EXISTS on_scene_at TIMESTAMP,
       ADD COLUMN IF NOT EXISTS closed_at TIMESTAMP,
       ADD COLUMN IF NOT EXISTS rejected_at TIMESTAMP;
+    `);
+
+    await db.none(`
+      ALTER TABLE incidents
+      ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(128),
+      ADD COLUMN IF NOT EXISTS idempotency_payload_hash VARCHAR(64);
     `);
 
     // Ensure status and closure constraints are updated for existing tables
@@ -331,6 +339,7 @@ const initDatabase = async () => {
       CREATE INDEX IF NOT EXISTS idx_incidents_map ON incidents (status, incident_date DESC) WHERE is_draft = FALSE;
       CREATE INDEX IF NOT EXISTS idx_incidents_feed ON incidents (is_disclosed, status, updated_at DESC) WHERE is_disclosed = TRUE;
       CREATE INDEX IF NOT EXISTS idx_incidents_user_reports ON incidents (reporter_id, is_draft, created_at DESC);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_incidents_idempotency ON incidents (reporter_id, idempotency_key) WHERE idempotency_key IS NOT NULL;
       CREATE INDEX IF NOT EXISTS idx_incidents_category ON incidents (category);
       CREATE INDEX IF NOT EXISTS idx_reports_incident_id ON reports (incident_id);
       CREATE INDEX IF NOT EXISTS idx_moderation_queue_status ON moderation_queue (status);

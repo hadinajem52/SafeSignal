@@ -12,7 +12,8 @@
     "db:seed": "node src/database/seed.js",
     "db:migrate:incident-public-visibility": "node src/database/migrations/add_incident_public_visibility.js",
     "db:migrate:witness-constellation": "node src/database/migrations/add_witness_constellation.js",
-    "db:migrate:incident-lifecycle": "node src/database/migrations/add_incident_lifecycle_timestamps.js"
+    "db:migrate:incident-lifecycle": "node src/database/migrations/add_incident_lifecycle_timestamps.js",
+    "db:migrate:incident-idempotency": "node src/database/migrations/add_incident_idempotency.js"
   },
   "jest": {
     "testEnvironment": "node",

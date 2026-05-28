@@ -27,6 +27,9 @@ import styles from "./reportIncidentStyles";
 
 const { INCIDENT_CATEGORIES, SEVERITY_LEVELS } = incidentConstants;
 
+const createIncidentIdempotencyKey = () =>
+  `incident_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+
 const ReportIncidentScreen = ({ navigation, route }) => {
   const { user } = useAuth();
   const { theme } = useTheme();
@@ -37,6 +40,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccessMessage, setSubmitSuccessMessage] = useState("");
   const isSubmittingRef = useRef(false);
+  const idempotencyKeyRef = useRef(createIncidentIdempotencyKey());
   const successNavigationTimerRef = useRef(null);
   const hasAppliedDefaultAnonymous = useRef(false);
   const [enableMlClassification, setEnableMlClassification] = useState(true);
@@ -113,6 +117,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     setPhotos(draft?.photos || []);
     setEnableMlClassification(draft?.enableMlClassification ?? true);
     setEnableMlRisk(draft?.enableMlRisk ?? true);
+    idempotencyKeyRef.current = draft?.idempotencyKey || createIncidentIdempotencyKey();
     if (draft?.id) {
       setDraftId(draft.id);
     }
@@ -132,6 +137,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
       enableMlClassification,
       enableMlRisk,
       photos,
+      idempotencyKey: idempotencyKeyRef.current,
     }),
     [
       description,
@@ -256,6 +262,11 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     saveDraft(true);
   }, [saveDraft]);
 
+  const handleDiscardDraft = useCallback(() => {
+    discardDraft();
+    idempotencyKeyRef.current = createIncidentIdempotencyKey();
+  }, [discardDraft]);
+
   /**
    * Handle incident submission
    */
@@ -300,7 +311,8 @@ const ReportIncidentScreen = ({ navigation, route }) => {
           enableMlClassification,
           enableMlRisk,
           isDraft: asDraft,
-          photoUrls: photos, // In production, upload these to cloud storage first
+          photoUrls: photos,
+          idempotencyKey: asDraft ? undefined : idempotencyKeyRef.current,
         };
 
         let result;
@@ -332,6 +344,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
             setEnableMlClassification(true);
             setEnableMlRisk(true);
             setIsAnonymous(!!preferences.defaultAnonymous);
+            idempotencyKeyRef.current = createIncidentIdempotencyKey();
             const successMessage = "Report submitted. Thanks for reporting this.";
             setSubmitSuccessMessage(successMessage);
             showToast(successMessage, 'success');
@@ -551,10 +564,10 @@ const ReportIncidentScreen = ({ navigation, route }) => {
           title="Unsaved Draft"
           message="You have an unsaved draft. Would you like to continue editing it?"
           actions={[
-            { text: 'Discard', style: 'destructive', onPress: discardDraft },
+            { text: 'Discard', style: 'destructive', onPress: handleDiscardDraft },
             { text: 'Continue', onPress: confirmDraft },
           ]}
-          onRequestClose={discardDraft}
+          onRequestClose={handleDiscardDraft}
         />
 
         {/* Action Buttons */}

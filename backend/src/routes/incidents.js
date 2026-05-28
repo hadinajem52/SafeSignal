@@ -78,6 +78,10 @@ function handleServiceError(error, res, defaultMessage) {
   });
 }
 
+function getIdempotencyKey(req) {
+  return req.get('Idempotency-Key') || req.body.idempotencyKey;
+}
+
 /**
  * @route   POST /api/incidents/submit
  * @desc    Create a new incident report (alias for POST /)
@@ -93,7 +97,8 @@ router.post(
     try {
       const incident = await incidentService.createIncident(
         req.body,
-        req.user.userId
+        req.user.userId,
+        { idempotencyKey: getIdempotencyKey(req) }
       );
 
       res.status(201).json({
@@ -122,7 +127,8 @@ router.post(
     try {
       const incident = await incidentService.createIncident(
         req.body,
-        req.user.userId
+        req.user.userId,
+        { idempotencyKey: getIdempotencyKey(req) }
       );
 
       res.status(201).json({
