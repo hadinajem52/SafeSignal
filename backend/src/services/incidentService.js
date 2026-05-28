@@ -9,6 +9,7 @@ const db = require('../config/database');
 const ServiceError = require('../utils/ServiceError');
 const logger = require('../utils/logger');
 const Filter = require('bad-words');
+const crypto = require('crypto');
 const mlClient = require('../utils/mlClient');
 
 const {
@@ -43,9 +44,73 @@ const FIRST_ACTION_STATUSES = new Set([
   'merged',
 ]);
 const CLOSED_STATUSES = new Set(['police_closed', 'resolved', 'archived']);
+const MAX_IDEMPOTENCY_KEY_LENGTH = 128;
 const shouldIncludeStaffConstellation = (includeConstellation, userRole) =>
   Boolean(includeConstellation && STAFF_ROLES.has(userRole));
 const profanityFilter = new Filter();
+
+function normalizeIdempotencyKey(value) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const key = String(value).trim();
+  if (!key) {
+    return null;
+  }
+
+  if (key.length > MAX_IDEMPOTENCY_KEY_LENGTH) {
+    throw ServiceError.badRequest('Idempotency key is too long');
+  }
+
+  return key;
+}
+
+function normalizeIncidentDate(value) {
+  if (!value) {
+    return null;
+  }
+
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? String(value) : date.toISOString();
+}
+
+function buildIncidentPayloadHash(incidentData, reporterId) {
+  const latitude = Number(incidentData.latitude);
+  const longitude = Number(incidentData.longitude);
+  const payload = {
+    reporterId,
+    title: incidentData.title,
+    description: incidentData.description,
+    category: incidentData.category,
+    latitude: Number.isFinite(latitude) ? latitude : incidentData.latitude,
+    longitude: Number.isFinite(longitude) ? longitude : incidentData.longitude,
+    locationName: incidentData.locationName || null,
+    incidentDate: normalizeIncidentDate(incidentData.incidentDate),
+    severity: incidentData.severity,
+    isAnonymous: Boolean(incidentData.isAnonymous),
+    isDraft: Boolean(incidentData.isDraft),
+    photoUrls: Array.isArray(incidentData.photoUrls) ? incidentData.photoUrls : null,
+    enableMlClassification: incidentData.enableMlClassification !== false,
+    enableMlRisk: incidentData.enableMlRisk !== false,
+  };
+
+  return crypto
+    .createHash('sha256')
+    .update(JSON.stringify(payload))
+    .digest('hex');
+}
+
+function stripIncidentIdempotencyFields(incident) {
+  if (!incident) {
+    return incident;
+  }
+
+  const publicIncident = { ...incident };
+  delete publicIncident.idempotency_key;
+  delete publicIncident.idempotency_payload_hash;
+  return publicIncident;
+}
 
 const CATEGORY_KEYWORDS = {
   theft: ['theft', 'stolen', 'robbery', 'burglary', 'break-in', 'shoplift', 'snatch', 'package theft'],
@@ -484,7 +549,7 @@ async function applyAutoVerificationIfEligible(incident, context = {}) {
  * @param {number} reporterId - The ID of the user creating the incident
  * @returns {Promise<Object>} The created incident
  */
-async function createIncident(incidentData, reporterId) {
+async function createIncident(incidentData, reporterId, options = {}) {
   // Check if user is suspended
   const user = await db.oneOrNone('SELECT is_suspended FROM users WHERE user_id = $1', [reporterId]);
   
@@ -512,32 +577,81 @@ async function createIncident(incidentData, reporterId) {
     enableMlRisk,
   } = incidentData;
 
-  const incident = await db.one(
-    `INSERT INTO incidents (
-      reporter_id, title, description, category, latitude, longitude,
-      location, location_name, incident_date, severity, is_anonymous, is_draft, photo_urls, status
-    ) VALUES (
-      $1, $2, $3, $4, $5, $6,
-      ST_SetSRID(ST_MakePoint($6::float, $5::float), 4326)::geography,
-      $7, $8, $9, $10, $11, $12, $13
-    )
-    RETURNING *`,
-    [
-      reporterId,
-      title,
-      description,
-      category,
-      latitude,
-      longitude,
-      locationName || null,
-      incidentDate || new Date(),
-      severity,
-      isAnonymous || false,
-      isDraft || false,
-      photoUrls || null,
-      isDraft ? 'draft' : 'submitted',
-    ]
-  );
+  const normalizedIdempotencyKey = !isDraft
+    ? normalizeIdempotencyKey(options.idempotencyKey || incidentData.idempotencyKey)
+    : null;
+  const idempotencyPayloadHash = normalizedIdempotencyKey
+    ? buildIncidentPayloadHash(incidentData, reporterId)
+    : null;
+  const insertParams = [
+    reporterId,
+    title,
+    description,
+    category,
+    latitude,
+    longitude,
+    locationName || null,
+    incidentDate || new Date(),
+    severity,
+    isAnonymous || false,
+    isDraft || false,
+    photoUrls || null,
+    isDraft ? 'draft' : 'submitted',
+  ];
+
+  let incident;
+
+  if (normalizedIdempotencyKey) {
+    incident = await db.oneOrNone(
+      `INSERT INTO incidents (
+        reporter_id, title, description, category, latitude, longitude,
+        location, location_name, incident_date, severity, is_anonymous, is_draft,
+        photo_urls, status, idempotency_key, idempotency_payload_hash
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6,
+        ST_SetSRID(ST_MakePoint($6::float, $5::float), 4326)::geography,
+        $7, $8, $9, $10, $11, $12, $13, $14, $15
+      )
+      ON CONFLICT (reporter_id, idempotency_key)
+        WHERE idempotency_key IS NOT NULL
+        DO NOTHING
+      RETURNING *`,
+      [...insertParams, normalizedIdempotencyKey, idempotencyPayloadHash]
+    );
+
+    if (!incident) {
+      const existingIncident = await db.oneOrNone(
+        `SELECT *
+         FROM incidents
+         WHERE reporter_id = $1
+           AND idempotency_key = $2`,
+        [reporterId, normalizedIdempotencyKey]
+      );
+
+      if (!existingIncident) {
+        throw ServiceError.conflict('Incident submission is already being processed');
+      }
+
+      if (existingIncident.idempotency_payload_hash !== idempotencyPayloadHash) {
+        throw ServiceError.conflict('Idempotency key was already used for a different incident payload');
+      }
+
+      return stripIncidentIdempotencyFields(existingIncident);
+    }
+  } else {
+    incident = await db.one(
+      `INSERT INTO incidents (
+        reporter_id, title, description, category, latitude, longitude,
+        location, location_name, incident_date, severity, is_anonymous, is_draft, photo_urls, status
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6,
+        ST_SetSRID(ST_MakePoint($6::float, $5::float), 4326)::geography,
+        $7, $8, $9, $10, $11, $12, $13
+      )
+      RETURNING *`,
+      insertParams
+    );
+  }
 
   const autoVerificationContext = {
     confidencePercent: null,
@@ -546,6 +660,7 @@ async function createIncident(incidentData, reporterId) {
   };
 
   if (!incident.is_draft) {
+    (async () => {
     try {
       const latitudeValue = parseFloat(incident.latitude);
       const longitudeValue = parseFloat(incident.longitude);
@@ -1061,9 +1176,7 @@ async function createIncident(incidentData, reporterId) {
     } catch (error) {
       logger.warn(`Dedup/ML processing failed for incident ${incident.incident_id}: ${error.message}`);
     }
-  }
 
-  if (!incident.is_draft) {
     try {
       await applyAutoVerificationIfEligible(incident, autoVerificationContext);
     } catch (error) {
@@ -1098,9 +1211,12 @@ async function createIncident(incidentData, reporterId) {
       .catch((error) => {
         logger.error(`Constellation creation failed for incident ${incident.incident_id}: ${error.message}`);
       });
+    })().catch((error) => {
+      logger.error(`Post-processing failed for incident ${incident.incident_id}: ${error.message}`);
+    });
   }
 
-  return incident;
+  return stripIncidentIdempotencyFields(incident);
 }
 
 /**
