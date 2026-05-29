@@ -388,7 +388,8 @@ const leStyles = `
   .lei-ops-map-legend-cat-dot { width:16px; height:16px; border-radius:3px; background:var(--le-border); display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:800; color:var(--le-text); }
 
   .lei-evidence-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
-  .lei-evidence-img { width:100%; height:96px; object-fit:cover; border:1px solid var(--le-border); }
+  .lei-evidence-link { display:block; overflow:hidden; border:1px solid var(--le-border); background:var(--le-surface); }
+  .lei-evidence-img { display:block; width:100%; height:96px; object-fit:cover; }
 `;
 
 export default leStyles;
