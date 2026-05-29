@@ -143,6 +143,21 @@ const myReportsStyles = StyleSheet.create({
   constellationText: {
     marginLeft: 6,
   },
+  duplicateNotice: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    marginBottom: 12,
+    maxWidth: '100%',
+  },
+  duplicateNoticeText: {
+    marginLeft: 6,
+    flexShrink: 1,
+  },
 
   progressSection: {
     marginBottom: 12,

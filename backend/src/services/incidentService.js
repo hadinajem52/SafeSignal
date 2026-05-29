@@ -1328,6 +1328,8 @@ async function getAllIncidents(filters = {}) {
       params.push(...statuses);
       paramCount += statuses.length;
     }
+  } else {
+    query += ` AND i.status <> 'merged'`;
   }
 
   if (severity) {
@@ -1373,6 +1375,8 @@ async function countIncidents(filters = {}) {
       params.push(...statuses);
       paramCount += statuses.length;
     }
+  } else {
+    query += ` AND i.status <> 'merged'`;
   }
 
   if (severity) {
@@ -1403,6 +1407,8 @@ async function getUserIncidents(userId, filters = {}) {
       i.latitude, i.longitude, i.location_name, i.status, i.is_draft,
       i.created_at, i.incident_date, i.photo_urls, i.video_url, i.is_anonymous,
       i.closure_outcome, i.closure_details,
+      duplicate_parent.incident_id AS duplicate_of_incident_id,
+      duplicate_parent.title AS duplicate_of_title,
       c.constellation_id,
       c.status AS constellation_status,
       c.confidence_state AS constellation_confidence_state,
@@ -1414,6 +1420,17 @@ async function getUserIncidents(userId, filters = {}) {
       COUNT(*) OVER() as total_count
     FROM incidents i
     JOIN users u ON i.reporter_id = u.user_id
+    LEFT JOIN LATERAL (
+      SELECT ci.incident_id, ci.title
+      FROM reports dr
+      JOIN report_links rl ON rl.duplicate_report_id = dr.report_id
+        AND rl.link_type = 'duplicate'
+      JOIN reports cr ON cr.report_id = rl.canonical_report_id
+      JOIN incidents ci ON ci.incident_id = cr.incident_id
+      WHERE dr.incident_id = i.incident_id
+      ORDER BY rl.created_at DESC
+      LIMIT 1
+    ) duplicate_parent ON TRUE
     LEFT JOIN LATERAL (
       SELECT constellation_id, status, confidence_state, supporting_signals,
              contradicting_signals, summary, expires_at
@@ -1790,12 +1807,12 @@ async function linkDuplicateIncident(incidentId, duplicateIncidentId, requesting
     throw ServiceError.badRequest('Incident cannot be linked to itself');
   }
 
-  const [canonical, duplicate] = await Promise.all([
+  const [requestedCanonical, requestedDuplicate] = await Promise.all([
     db.oneOrNone('SELECT * FROM incidents WHERE incident_id = $1', [incidentId]),
     db.oneOrNone('SELECT * FROM incidents WHERE incident_id = $1', [duplicateIncidentId]),
   ]);
 
-  if (!canonical || !duplicate) {
+  if (!requestedCanonical || !requestedDuplicate) {
     throw ServiceError.notFound('Incident');
   }
 
@@ -1813,10 +1830,46 @@ async function linkDuplicateIncident(incidentId, duplicateIncidentId, requesting
     return report.report_id;
   };
 
-  const [canonicalReportId, duplicateReportId] = await Promise.all([
-    ensureReport(canonical),
-    ensureReport(duplicate),
+  const [requestedCanonicalReportId, requestedDuplicateReportId] = await Promise.all([
+    ensureReport(requestedCanonical),
+    ensureReport(requestedDuplicate),
   ]);
+
+  const existingLinks = await db.manyOrNone(
+    `SELECT canonical_report_id, duplicate_report_id
+     FROM report_links
+     WHERE link_type = 'duplicate'
+       AND (
+         (canonical_report_id = $1 AND duplicate_report_id = $2)
+         OR (canonical_report_id = $2 AND duplicate_report_id = $1)
+       )`,
+    [requestedCanonicalReportId, requestedDuplicateReportId]
+  );
+
+  let canonical = requestedCanonical;
+  let duplicate = requestedDuplicate;
+  let canonicalReportId = requestedCanonicalReportId;
+  let duplicateReportId = requestedDuplicateReportId;
+
+  const hasReverseLink = existingLinks.some((link) => (
+    Number(link.canonical_report_id) === Number(requestedDuplicateReportId)
+    && Number(link.duplicate_report_id) === Number(requestedCanonicalReportId)
+  ));
+
+  if (hasReverseLink) {
+    canonical = requestedDuplicate;
+    duplicate = requestedCanonical;
+    canonicalReportId = requestedDuplicateReportId;
+    duplicateReportId = requestedCanonicalReportId;
+  }
+
+  await db.none(
+    `DELETE FROM report_links
+     WHERE link_type = 'duplicate'
+       AND canonical_report_id = $1
+       AND duplicate_report_id = $2`,
+    [duplicateReportId, canonicalReportId]
+  );
 
   await db.none(
     `INSERT INTO report_links (canonical_report_id, duplicate_report_id, link_type)
@@ -1832,11 +1885,11 @@ async function linkDuplicateIncident(incidentId, duplicateIncidentId, requesting
          updated_at = CURRENT_TIMESTAMP
      WHERE incident_id = $1
      RETURNING *`,
-    [duplicateIncidentId]
+    [duplicate.incident_id]
   );
 
-  await logAction(incidentId, requestingUser.userId, 'merged', `Merged duplicate incident ${duplicateIncidentId}`);
-  await logAction(duplicateIncidentId, requestingUser.userId, 'merged', `Marked as duplicate of ${incidentId}`);
+  await logAction(canonical.incident_id, requestingUser.userId, 'merged', `Merged duplicate incident ${duplicate.incident_id}`);
+  await logAction(duplicate.incident_id, requestingUser.userId, 'merged', `Marked as duplicate of ${canonical.incident_id}`);
 
   // Record moderator verdict in report_ml so the ground-truth label is captured
   // alongside the AI's original dedup score for offline calibration.
@@ -1846,13 +1899,13 @@ async function linkDuplicateIncident(incidentId, duplicateIncidentId, requesting
        SET dedup_verdict = 'confirmed_duplicate',
            dedup_verdict_by = $1,
            dedup_verdict_at = CURRENT_TIMESTAMP
-       WHERE report_id = (
-         SELECT report_id FROM reports WHERE incident_id = $2 ORDER BY created_at DESC LIMIT 1
-       )`,
-      [requestingUser.userId, duplicateIncidentId]
+        WHERE report_id = (
+          SELECT report_id FROM reports WHERE incident_id = $2 ORDER BY created_at DESC LIMIT 1
+        )`,
+      [requestingUser.userId, duplicate.incident_id]
     );
   } catch (verdictError) {
-    logger.warn(`Failed to record dedup verdict for incident ${duplicateIncidentId}: ${verdictError.message}`);
+    logger.warn(`Failed to record dedup verdict for incident ${duplicate.incident_id}: ${verdictError.message}`);
   }
 
   emitToRoles(['moderator', 'admin'], 'incident:update', {
@@ -1868,12 +1921,12 @@ async function linkDuplicateIncident(incidentId, duplicateIncidentId, requesting
       actorRole: requestingUser.role,
     });
   } catch (error) {
-    logger.warn(`Failed to notify staff for duplicate merge on incident ${duplicateIncidentId}: ${error.message}`);
+    logger.warn(`Failed to notify staff for duplicate merge on incident ${duplicate.incident_id}: ${error.message}`);
   }
 
   return {
-    canonicalIncidentId: incidentId,
-    duplicateIncidentId,
+    canonicalIncidentId: canonical.incident_id,
+    duplicateIncidentId: duplicate.incident_id,
     status: updatedDuplicate.status,
   };
 }
