@@ -388,8 +388,9 @@ const leStyles = `
   .lei-ops-map-legend-cat-dot { width:16px; height:16px; border-radius:3px; background:var(--le-border); display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:800; color:var(--le-text); }
 
   .lei-evidence-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
-  .lei-evidence-link { display:block; overflow:hidden; border:1px solid var(--le-border); background:var(--le-surface); }
+  .lei-evidence-link { display:block; width:100%; overflow:hidden; border:1px solid var(--le-border); background:var(--le-surface); padding:0; cursor:zoom-in; font:inherit; }
   .lei-evidence-img { display:block; width:100%; height:96px; object-fit:cover; }
+  .lei-evidence-unavailable { min-height:96px; display:flex; align-items:center; justify-content:center; border:1px solid var(--le-border); background:var(--le-surface); padding:8px; color:var(--le-muted); font-size:10px; font-weight:700; text-align:center; text-transform:uppercase; line-height:1.4; }
 `;
 
 export default leStyles;

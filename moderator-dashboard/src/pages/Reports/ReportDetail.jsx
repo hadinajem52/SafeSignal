@@ -2,6 +2,7 @@ import React from "react";
 import { ChevronRight } from "lucide-react";
 import DetailSection from "../../components/DetailSection";
 import DedupCandidatesPanel from "../../components/DedupCandidatesPanel";
+import EvidencePhotoViewer from "../../components/EvidencePhotoViewer";
 import GoogleMapPanel from "../../components/GoogleMapPanel";
 import SeverityBadge from "../../components/SeverityBadge";
 import StatusBadge from "../../components/StatusBadge";
@@ -91,7 +92,37 @@ function CommunitySignalCard({ constellation }) {
   );
 }
 
-function EvidencePanel({ photoUrls }) {
+function EvidencePhoto({ url, index, onOpen }) {
+  const [hasError, setHasError] = React.useState(false);
+  const resolvedUrl = resolveReportPhotoUrl(url);
+
+  if (hasError) {
+    return (
+      <div className="flex h-32 items-center justify-center border border-border bg-surface px-3 text-center text-[11px] font-semibold uppercase text-muted text-pretty">
+        Evidence photo unavailable
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen({ src: resolvedUrl, alt: `Evidence photo ${index + 1}` })}
+      className="group block w-full cursor-zoom-in overflow-hidden border border-border bg-surface"
+      aria-label={`Open evidence photo ${index + 1} fullscreen`}
+    >
+      <img
+        src={resolvedUrl}
+        alt={`Evidence photo ${index + 1}`}
+        className="h-32 w-full object-cover transition-opacity group-hover:opacity-90"
+        loading="lazy"
+        onError={() => setHasError(true)}
+      />
+    </button>
+  );
+}
+
+function EvidencePanel({ photoUrls, onOpenPhoto }) {
   if (!photoUrls.length) return null;
 
   return (
@@ -104,27 +135,14 @@ function EvidencePanel({ photoUrls }) {
       }
     >
       <div className="grid grid-cols-2 gap-2">
-        {photoUrls.map((url, index) => {
-          const resolvedUrl = resolveReportPhotoUrl(url);
-
-          return (
-            <a
-              key={`${url}-${index}`}
-              href={resolvedUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="group block overflow-hidden border border-border bg-surface"
-              aria-label={`Open evidence photo ${index + 1}`}
-            >
-              <img
-                src={resolvedUrl}
-                alt={`Evidence photo ${index + 1}`}
-                className="h-32 w-full object-cover transition-opacity group-hover:opacity-90"
-                loading="lazy"
-              />
-            </a>
-          );
-        })}
+        {photoUrls.map((url, index) => (
+          <EvidencePhoto
+            key={`${url}-${index}`}
+            url={url}
+            index={index}
+            onOpen={onOpenPhoto}
+          />
+        ))}
       </div>
     </DetailSection>
   );
@@ -149,6 +167,8 @@ function ReportDetail({
   onNext,
   onOpenDuplicateCandidate,
 }) {
+  const [fullscreenPhoto, setFullscreenPhoto] = React.useState(null);
+
   if (!report) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-10">
@@ -236,7 +256,7 @@ function ReportDetail({
           </p>
         )}
 
-        <EvidencePanel photoUrls={photoUrls} />
+        <EvidencePanel photoUrls={photoUrls} onOpenPhoto={setFullscreenPhoto} />
 
         {/* Meta grid — condensed border-box style matching LE Interface */}
         <div className="grid grid-cols-2 border border-border">
@@ -376,6 +396,10 @@ function ReportDetail({
           onOpenCandidate={onOpenDuplicateCandidate}
         />
       </div>
+      <EvidencePhotoViewer
+        photo={fullscreenPhoto}
+        onClose={() => setFullscreenPhoto(null)}
+      />
     </div>
   );
 }

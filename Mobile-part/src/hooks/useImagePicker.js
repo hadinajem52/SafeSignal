@@ -7,6 +7,14 @@ import { useToast } from '../context/ToastContext';
 const { LIMITS } = limits;
 const { MAX_PHOTOS } = LIMITS;
 
+const getPhotoUri = (asset) => {
+  if (asset?.base64) {
+    return `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}`;
+  }
+
+  return asset?.uri;
+};
+
 const useImagePicker = () => {
   const { showToast } = useToast();
   const [photos, setPhotos] = useState([]);
@@ -22,9 +30,12 @@ const useImagePicker = () => {
       try {
         const pending = await ImagePicker.getPendingResultAsync();
         if (pending && !pending.canceled && pending.assets?.[0]) {
+          const photoUri = getPhotoUri(pending.assets[0]);
+          if (!photoUri) return;
+
           setPhotos((prev) => {
             if (prev.length >= MAX_PHOTOS) return prev;
-            return [...prev, pending.assets[0].uri];
+            return [...prev, photoUri];
           });
         }
       } catch (err) {
@@ -51,11 +62,15 @@ const useImagePicker = () => {
         mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [4, 3],
-        quality: 0.8,
+        quality: 0.7,
+        base64: true,
       });
 
       if (!result.canceled && result.assets[0]) {
-        setPhotos((prev) => [...prev, result.assets[0].uri]);
+        const photoUri = getPhotoUri(result.assets[0]);
+        if (photoUri) {
+          setPhotos((prev) => [...prev, photoUri]);
+        }
       }
     } catch (error) {
       console.error('Error picking image:', error);
@@ -86,14 +101,18 @@ const useImagePicker = () => {
           // allowsEditing is intentionally omitted for camera:
           // on Android it triggers a crop intent that many devices don't support,
           // causing the result to silently return { canceled: true }.
-          quality: 0.8,
+          quality: 0.7,
+          base64: true,
         });
       } finally {
         cameraActiveRef.current = false;
       }
 
       if (!result.canceled && result.assets?.[0]) {
-        setPhotos((prev) => [...prev, result.assets[0].uri]);
+        const photoUri = getPhotoUri(result.assets[0]);
+        if (photoUri) {
+          setPhotos((prev) => [...prev, photoUri]);
+        }
       }
     } catch (error) {
       cameraActiveRef.current = false;
