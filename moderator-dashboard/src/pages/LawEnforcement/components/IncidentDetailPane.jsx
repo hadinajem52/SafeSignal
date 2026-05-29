@@ -1,6 +1,7 @@
 import React from "react";
 import { ArrowUpRight } from "lucide-react";
 import { CLOSURE_OUTCOMES } from "../../../constants/incident";
+import EvidencePhotoViewer from "../../../components/EvidencePhotoViewer";
 import GoogleMapPanel from "../../../components/GoogleMapPanel";
 import {
   formatConstellationScore,
@@ -12,6 +13,36 @@ import { openMapsUrl } from "../../../utils/incidentUtils";
 import { getReportPhotoUrls, resolveReportPhotoUrl } from "../../../utils/reportPhotos";
 import { STATUS_ACTION_CONFIG, WORKFLOW_STEPS } from "../constants";
 import { getNextWorkflowStatus } from "../helpers";
+
+function EvidenceLink({ url, index, onOpen }) {
+  const [hasError, setHasError] = React.useState(false);
+  const resolvedUrl = resolveReportPhotoUrl(url);
+
+  if (hasError) {
+    return (
+      <div className="lei-evidence-unavailable">
+        Evidence photo unavailable
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen({ src: resolvedUrl, alt: `Evidence photo ${index + 1}` })}
+      className="lei-evidence-link"
+      aria-label={`Open evidence photo ${index + 1} fullscreen`}
+    >
+      <img
+        src={resolvedUrl}
+        alt={`Evidence photo ${index + 1}`}
+        className="lei-evidence-img"
+        loading="lazy"
+        onError={() => setHasError(true)}
+      />
+    </button>
+  );
+}
 
 function IncidentDetailPane({
   incident,
@@ -30,6 +61,8 @@ function IncidentDetailPane({
   onOfficerNotesChange,
   onRequestDisclosureUpdate,
 }) {
+  const [fullscreenPhoto, setFullscreenPhoto] = React.useState(null);
+
   if (!incident) {
     return (
       <div className="lei-detail-panel">
@@ -421,27 +454,14 @@ function IncidentDetailPane({
           <div style={{ marginTop: 24 }}>
             <div className="lei-section-label">Evidence</div>
             <div className="lei-evidence-grid">
-              {photoUrls.map((url, i) => {
-                const resolvedUrl = resolveReportPhotoUrl(url);
-
-                return (
-                  <a
-                    key={`${url}-${i}`}
-                    href={resolvedUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="lei-evidence-link"
-                    aria-label={`Open evidence photo ${i + 1}`}
-                  >
-                    <img
-                      src={resolvedUrl}
-                      alt={`Evidence photo ${i + 1}`}
-                      className="lei-evidence-img"
-                      loading="lazy"
-                    />
-                  </a>
-                );
-              })}
+              {photoUrls.map((url, i) => (
+                <EvidenceLink
+                  key={`${url}-${i}`}
+                  url={url}
+                  index={i}
+                  onOpen={setFullscreenPhoto}
+                />
+              ))}
             </div>
           </div>
         )}
@@ -478,6 +498,10 @@ function IncidentDetailPane({
           )}
         </div>
       </div>
+      <EvidencePhotoViewer
+        photo={fullscreenPhoto}
+        onClose={() => setFullscreenPhoto(null)}
+      />
     </div>
   );
 }

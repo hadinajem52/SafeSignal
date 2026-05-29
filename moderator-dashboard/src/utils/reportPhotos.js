@@ -16,7 +16,7 @@ export function getReportPhotoUrls(report) {
 }
 
 export function resolveReportPhotoUrl(url) {
-  if (!url || /^(https?:|data:|blob:)/i.test(url)) {
+  if (!url || /^(https?:|data:|blob:|file:)/i.test(url)) {
     return url;
   }
 
