@@ -2,6 +2,7 @@ import { API_BASE_URL } from "./network";
 
 const API_ORIGIN = API_BASE_URL.replace(/\/api$/, "");
 const PHOTO_URL_FIELDS = ["photo_urls", "photoUrls", "photos"];
+const VIDEO_URL_FIELDS = ["video_url", "videoUrl", "video"];
 
 export function getReportPhotoUrls(report) {
   for (const field of PHOTO_URL_FIELDS) {
@@ -21,4 +22,16 @@ export function resolveReportPhotoUrl(url) {
   }
 
   return `${API_ORIGIN}/${String(url).replace(/^\/+/, "")}`;
+}
+
+export function getReportVideoUrl(report) {
+  for (const field of VIDEO_URL_FIELDS) {
+    const url = report?.[field];
+
+    if (typeof url === "string" && url.trim()) {
+      return url;
+    }
+  }
+
+  return null;
 }

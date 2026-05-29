@@ -88,17 +88,29 @@ function buildIncidentPayloadHash(incidentData, reporterId) {
     locationName: incidentData.locationName || null,
     incidentDate: normalizeIncidentDate(incidentData.incidentDate),
     severity: incidentData.severity,
-    isAnonymous: Boolean(incidentData.isAnonymous),
-    isDraft: Boolean(incidentData.isDraft),
-    photoUrls: Array.isArray(incidentData.photoUrls) ? incidentData.photoUrls : null,
-    enableMlClassification: incidentData.enableMlClassification !== false,
-    enableMlRisk: incidentData.enableMlRisk !== false,
+    isAnonymous: normalizeBoolean(incidentData.isAnonymous),
+    isDraft: normalizeBoolean(incidentData.isDraft),
+    enableMlClassification:
+      incidentData.enableMlClassification === undefined
+        ? true
+        : normalizeBoolean(incidentData.enableMlClassification),
+    enableMlRisk:
+      incidentData.enableMlRisk === undefined
+        ? true
+        : normalizeBoolean(incidentData.enableMlRisk),
   };
 
   return crypto
     .createHash('sha256')
     .update(JSON.stringify(payload))
     .digest('hex');
+}
+
+function normalizeBoolean(value) {
+  if (value === true || value === false) return value;
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  return Boolean(value);
 }
 
 function stripIncidentIdempotencyFields(incident) {
@@ -573,11 +585,18 @@ async function createIncident(incidentData, reporterId, options = {}) {
     isAnonymous,
     isDraft,
     photoUrls,
+    videoUrl,
     enableMlClassification,
     enableMlRisk,
   } = incidentData;
+  const normalizedIsAnonymous = normalizeBoolean(isAnonymous);
+  const normalizedIsDraft = normalizeBoolean(isDraft);
+  const normalizedEnableMlClassification =
+    enableMlClassification === undefined ? true : normalizeBoolean(enableMlClassification);
+  const normalizedEnableMlRisk =
+    enableMlRisk === undefined ? true : normalizeBoolean(enableMlRisk);
 
-  const normalizedIdempotencyKey = !isDraft
+  const normalizedIdempotencyKey = !normalizedIsDraft
     ? normalizeIdempotencyKey(options.idempotencyKey || incidentData.idempotencyKey)
     : null;
   const idempotencyPayloadHash = normalizedIdempotencyKey
@@ -593,10 +612,11 @@ async function createIncident(incidentData, reporterId, options = {}) {
     locationName || null,
     incidentDate || new Date(),
     severity,
-    isAnonymous || false,
-    isDraft || false,
+    normalizedIsAnonymous,
+    normalizedIsDraft,
     photoUrls || null,
-    isDraft ? 'draft' : 'submitted',
+    videoUrl || null,
+    normalizedIsDraft ? 'draft' : 'submitted',
   ];
 
   let incident;
@@ -606,11 +626,11 @@ async function createIncident(incidentData, reporterId, options = {}) {
       `INSERT INTO incidents (
         reporter_id, title, description, category, latitude, longitude,
         location, location_name, incident_date, severity, is_anonymous, is_draft,
-        photo_urls, status, idempotency_key, idempotency_payload_hash
+        photo_urls, video_url, status, idempotency_key, idempotency_payload_hash
       ) VALUES (
         $1, $2, $3, $4, $5, $6,
         ST_SetSRID(ST_MakePoint($6::float, $5::float), 4326)::geography,
-        $7, $8, $9, $10, $11, $12, $13, $14, $15
+        $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
       )
       ON CONFLICT (reporter_id, idempotency_key)
         WHERE idempotency_key IS NOT NULL
@@ -642,11 +662,11 @@ async function createIncident(incidentData, reporterId, options = {}) {
     incident = await db.one(
       `INSERT INTO incidents (
         reporter_id, title, description, category, latitude, longitude,
-        location, location_name, incident_date, severity, is_anonymous, is_draft, photo_urls, status
+        location, location_name, incident_date, severity, is_anonymous, is_draft, photo_urls, video_url, status
       ) VALUES (
         $1, $2, $3, $4, $5, $6,
         ST_SetSRID(ST_MakePoint($6::float, $5::float), 4326)::geography,
-        $7, $8, $9, $10, $11, $12, $13
+        $7, $8, $9, $10, $11, $12, $13, $14
       )
       RETURNING *`,
       insertParams
@@ -665,8 +685,8 @@ async function createIncident(incidentData, reporterId, options = {}) {
       const latitudeValue = parseFloat(incident.latitude);
       const longitudeValue = parseFloat(incident.longitude);
       const mlText = `${incident.title} ${incident.description}`;
-      const allowMlClassification = enableMlClassification !== false;
-      const allowMlRisk = enableMlRisk !== false;
+      const allowMlClassification = normalizedEnableMlClassification;
+      const allowMlRisk = normalizedEnableMlRisk;
       const allowExternalMl = allowMlClassification || allowMlRisk;
 
       // Fetch dedup candidates before the ML call so candidate texts can be
@@ -793,12 +813,13 @@ async function createIncident(incidentData, reporterId, options = {}) {
 
       if (!Number.isNaN(latitudeValue) && !Number.isNaN(longitudeValue)) {
         const report = await db.one(
-          `INSERT INTO reports (incident_id, photo_urls, metadata, ml_confidence_score)
-           VALUES ($1, $2, $3, $4)
+          `INSERT INTO reports (incident_id, photo_urls, video_url, metadata, ml_confidence_score)
+           VALUES ($1, $2, $3, $4, $5)
            RETURNING report_id`,
           [
             incident.incident_id,
             incident.photo_urls || null,
+            incident.video_url || null,
             { source: 'incident' },
             categoryConfidence === null || categoryConfidence === undefined
               ? null
@@ -1347,7 +1368,7 @@ async function getUserIncidents(userId, filters = {}) {
     SELECT 
       i.incident_id, i.title, i.description, i.category, i.severity,
       i.latitude, i.longitude, i.location_name, i.status, i.is_draft,
-      i.created_at, i.incident_date, i.photo_urls, i.is_anonymous,
+      i.created_at, i.incident_date, i.photo_urls, i.video_url, i.is_anonymous,
       i.closure_outcome, i.closure_details,
       c.constellation_id,
       c.status AS constellation_status,
@@ -1750,10 +1771,10 @@ async function linkDuplicateIncident(incidentId, duplicateIncidentId, requesting
     if (existing) return existing.report_id;
 
     const report = await db.one(
-      `INSERT INTO reports (incident_id, photo_urls, metadata)
-       VALUES ($1, $2, $3)
+      `INSERT INTO reports (incident_id, photo_urls, video_url, metadata)
+       VALUES ($1, $2, $3, $4)
        RETURNING report_id`,
-      [incident.incident_id, incident.photo_urls || null, { source: 'incident' }]
+      [incident.incident_id, incident.photo_urls || null, incident.video_url || null, { source: 'incident' }]
     );
 
     return report.report_id;
@@ -1963,14 +1984,17 @@ async function updateIncident(incidentId, updateData, requestingUser) {
     locationName,
     latitude,
     longitude,
+    photoUrls,
+    videoUrl,
   } = updateData;
+  const normalizedIsDraft = isDraft === undefined ? undefined : normalizeBoolean(isDraft);
 
   // Determine new status based on isDraft flag
   let newStatus = status;
-  if (isDraft === false && incident.is_draft === true) {
+  if (normalizedIsDraft === false && incident.is_draft === true) {
     // Converting draft to submitted
     newStatus = 'submitted';
-  } else if (isDraft === true) {
+  } else if (normalizedIsDraft === true) {
     // Saving as draft
     newStatus = 'draft';
   }
@@ -1987,6 +2011,8 @@ async function updateIncident(incidentId, updateData, requestingUser) {
          location_name = COALESCE($8, location_name),
          latitude = COALESCE($9, latitude),
          longitude = COALESCE($10, longitude),
+         photo_urls = COALESCE($11, photo_urls),
+         video_url = COALESCE($12, video_url),
          location = CASE
            WHEN $9 IS NOT NULL AND $10 IS NOT NULL
              THEN ST_SetSRID(ST_MakePoint($10::float, $9::float), 4326)::geography
@@ -2002,10 +2028,12 @@ async function updateIncident(incidentId, updateData, requestingUser) {
       category,
       severity,
       newStatus,
-      isDraft !== undefined ? isDraft : null,
+      normalizedIsDraft !== undefined ? normalizedIsDraft : null,
       locationName,
       latitude,
       longitude,
+      Array.isArray(photoUrls) ? photoUrls : null,
+      videoUrl || null,
     ]
   );
 
@@ -2025,7 +2053,35 @@ async function updateIncident(incidentId, updateData, requestingUser) {
     logger.warn(`Failed to notify staff for incident update ${incidentId}: ${error.message}`);
   }
 
+  if (normalizedIsDraft === false && incident.is_draft === true) {
+    await ensureReportMediaRecord(updatedIncident);
+  }
+
   return updatedIncident;
+}
+
+async function ensureReportMediaRecord(incident) {
+  const existingReport = await db.oneOrNone(
+    'SELECT report_id FROM reports WHERE incident_id = $1 ORDER BY created_at DESC LIMIT 1',
+    [incident.incident_id]
+  );
+
+  if (existingReport) {
+    await db.none(
+      `UPDATE reports
+       SET photo_urls = $2,
+           video_url = $3
+       WHERE report_id = $1`,
+      [existingReport.report_id, incident.photo_urls || null, incident.video_url || null]
+    );
+    return;
+  }
+
+  await db.none(
+    `INSERT INTO reports (incident_id, photo_urls, video_url, metadata)
+     VALUES ($1, $2, $3, $4)`,
+    [incident.incident_id, incident.photo_urls || null, incident.video_url || null, { source: 'incident' }]
+  );
 }
 
 /**
@@ -2553,7 +2609,7 @@ async function getPublicFeed({ category, closure_outcome, severity, lat, lng, ra
     `SELECT
        i.incident_id, i.title, i.description, i.category, i.severity, i.status,
        i.closure_outcome, i.closure_details,
-       i.location_name, i.photo_urls,
+       i.location_name, i.photo_urls, i.video_url,
        i.incident_date, i.created_at, COALESCE(i.closed_at, i.updated_at) AS closed_at,
        CASE WHEN i.is_location_fuzzed
          THEN i.latitude  + (random() - 0.5) * 0.0027

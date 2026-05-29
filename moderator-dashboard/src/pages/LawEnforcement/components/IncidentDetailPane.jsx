@@ -10,7 +10,11 @@ import {
 } from "../../../utils/constellationUtils";
 import { getTimeAgo } from "../../../utils/dateUtils";
 import { openMapsUrl } from "../../../utils/incidentUtils";
-import { getReportPhotoUrls, resolveReportPhotoUrl } from "../../../utils/reportPhotos";
+import {
+  getReportPhotoUrls,
+  getReportVideoUrl,
+  resolveReportPhotoUrl,
+} from "../../../utils/reportPhotos";
 import { STATUS_ACTION_CONFIG, WORKFLOW_STEPS } from "../constants";
 import { getNextWorkflowStatus } from "../helpers";
 
@@ -41,6 +45,31 @@ function EvidenceLink({ url, index, onOpen }) {
         onError={() => setHasError(true)}
       />
     </button>
+  );
+}
+
+function EvidenceVideo({ videoUrl, onOpen }) {
+  if (!videoUrl) return null;
+
+  const resolvedUrl = resolveReportPhotoUrl(videoUrl);
+
+  return (
+    <div className="lei-evidence-video">
+      <video src={resolvedUrl} controls className="lei-evidence-video-player" />
+      <button
+        type="button"
+        className="lei-evidence-video-action"
+        onClick={() =>
+          onOpen({
+            src: resolvedUrl,
+            alt: "Evidence video",
+            type: "video",
+          })
+        }
+      >
+        View fullscreen
+      </button>
+    </div>
   );
 }
 
@@ -84,6 +113,7 @@ function IncidentDetailPane({
   const constellationMeta = getConstellationMeta(incident.constellation);
   const constellationMarker = getConstellationMarkerStyle(incident.constellation);
   const photoUrls = getReportPhotoUrls(incident);
+  const videoUrl = getReportVideoUrl(incident);
 
   return (
     <div className="lei-detail-panel">
@@ -450,9 +480,10 @@ function IncidentDetailPane({
           )}
         </div>
 
-        {photoUrls.length > 0 && (
+        {(photoUrls.length > 0 || videoUrl) && (
           <div style={{ marginTop: 24 }}>
             <div className="lei-section-label">Evidence</div>
+            <EvidenceVideo videoUrl={videoUrl} onOpen={setFullscreenPhoto} />
             <div className="lei-evidence-grid">
               {photoUrls.map((url, i) => (
                 <EvidenceLink

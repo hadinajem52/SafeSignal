@@ -9,6 +9,7 @@ const { body, validationResult, param, query } = require('express-validator');
 const authenticateToken = require('../middleware/auth');
 const optionalAuth = require('../middleware/optionalAuth');
 const requireRole = require('../middleware/roles');
+const { incidentUpload } = require('../middleware/incidentUpload');
 const incidentService = require('../services/incidentService');
 const commentService = require('../services/commentService');
 const ServiceError = require('../utils/ServiceError');
@@ -34,6 +35,17 @@ const createIncidentValidation = [
   body('severity').isIn(VALID_SEVERITIES),
   body('enableMlClassification').optional().isBoolean(),
   body('enableMlRisk').optional().isBoolean(),
+  body('videoDurationMs')
+    .optional({ checkFalsy: true })
+    .isFloat({ min: 0, max: LIMITS.MAX_VIDEO_MINUTES * 60 * 1000 })
+    .withMessage(`Video must be ${LIMITS.MAX_VIDEO_MINUTES} minutes or shorter`),
+];
+
+const videoDurationValidation = [
+  body('videoDurationMs')
+    .optional({ checkFalsy: true })
+    .isFloat({ min: 0, max: LIMITS.MAX_VIDEO_MINUTES * 60 * 1000 })
+    .withMessage(`Video must be ${LIMITS.MAX_VIDEO_MINUTES} minutes or shorter`),
 ];
 
 /**
@@ -90,6 +102,7 @@ function getIdempotencyKey(req) {
 router.post(
   '/submit',
   authenticateToken,
+  incidentUpload,
   createIncidentValidation,
   async (req, res) => {
     if (handleValidationErrors(req, res)) return;
@@ -120,6 +133,7 @@ router.post(
 router.post(
   '/',
   authenticateToken,
+  incidentUpload,
   createIncidentValidation,
   async (req, res) => {
     if (handleValidationErrors(req, res)) return;
@@ -471,7 +485,8 @@ router.get('/user/:userId', [param('userId').isInt()], async (req, res) => {
 router.put(
   '/:id',
   authenticateToken,
-  [param('id').isInt()],
+  incidentUpload,
+  [param('id').isInt(), ...videoDurationValidation],
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

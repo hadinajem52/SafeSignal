@@ -23,6 +23,7 @@ const FeedCard = ({ incident, onPress }) => {
     colorKey: 'textSecondary',
   };
   const outcomeColor = theme[outcome.colorKey] || theme.textSecondary;
+  const hasVideo = Boolean(incident.video_url || incident.videoUrl);
 
   return (
     <TouchableOpacity
@@ -52,10 +53,20 @@ const FeedCard = ({ incident, onPress }) => {
 
       {/* Outcome + meta row */}
       <View style={styles.metaRow}>
-        <View style={[styles.outcomePill, { backgroundColor: `${outcomeColor}22` }]}>
-          <AppText variant="caption" style={{ color: outcomeColor }}>
-            {outcome.label}
-          </AppText>
+        <View style={styles.mediaStatusRow}>
+          <View style={[styles.outcomePill, { backgroundColor: `${outcomeColor}22` }]}>
+            <AppText variant="caption" style={{ color: outcomeColor }}>
+              {outcome.label}
+            </AppText>
+          </View>
+          {hasVideo ? (
+            <View style={[styles.videoPill, { backgroundColor: `${theme.primary}18` }]}>
+              <Ionicons name="videocam-outline" size={11} color={theme.primary} />
+              <AppText variant="caption" style={{ color: theme.primary, marginLeft: 3 }}>
+                Video
+              </AppText>
+            </View>
+          ) : null}
         </View>
         <View style={styles.metaRight}>
           <View style={styles.statusRow}>
@@ -116,10 +127,23 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  mediaStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+  },
   outcomePill: {
     borderRadius: 20,
     paddingHorizontal: 8,
     paddingVertical: 3,
+  },
+  videoPill: {
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 6,
   },
   metaRight: {
     alignItems: 'flex-end',

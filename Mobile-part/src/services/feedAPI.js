@@ -66,6 +66,7 @@ function normalizeIncident(i) {
     closure_outcome: i.closure_outcome,
     closureDetails: normalizeClosureDetails(i.closure_details),
     closure_details: normalizeClosureDetails(i.closure_details),
+    videoUrl: i.video_url,
+    video_url: i.video_url,
   };
 }
-

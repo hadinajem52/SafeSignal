@@ -11,7 +11,11 @@ import {
   getConstellationMeta,
 } from "../../utils/constellationUtils";
 import { formatCategoryLabel, openMapsUrl } from "../../utils/incidentUtils";
-import { getReportPhotoUrls, resolveReportPhotoUrl } from "../../utils/reportPhotos";
+import {
+  getReportPhotoUrls,
+  getReportVideoUrl,
+  resolveReportPhotoUrl,
+} from "../../utils/reportPhotos";
 
 // Bordered kbd chip — used in header action buttons and empty state
 function KbdChip({ label, style }) {
@@ -122,8 +126,37 @@ function EvidencePhoto({ url, index, onOpen }) {
   );
 }
 
-function EvidencePanel({ photoUrls, onOpenPhoto }) {
-  if (!photoUrls.length) return null;
+function EvidenceVideo({ videoUrl, onOpen }) {
+  if (!videoUrl) return null;
+
+  const resolvedUrl = resolveReportPhotoUrl(videoUrl);
+
+  return (
+    <div className="border border-border bg-surface">
+      <video
+        src={resolvedUrl}
+        controls
+        className="h-44 w-full bg-black object-contain"
+      />
+      <button
+        type="button"
+        onClick={() =>
+          onOpen({
+            src: resolvedUrl,
+            alt: "Evidence video",
+            type: "video",
+          })
+        }
+        className="w-full border-t border-border px-3 py-2 text-left text-[11px] font-bold uppercase text-primary hover:bg-surface/80"
+      >
+        View fullscreen
+      </button>
+    </div>
+  );
+}
+
+function EvidencePanel({ photoUrls, videoUrl, onOpenMedia }) {
+  if (!photoUrls.length && !videoUrl) return null;
 
   return (
     <DetailSection
@@ -131,18 +164,22 @@ function EvidencePanel({ photoUrls, onOpenPhoto }) {
       headerRight={
         <span className="text-[11px] font-semibold text-muted tabular-nums">
           {photoUrls.length} photo{photoUrls.length !== 1 ? "s" : ""}
+          {videoUrl ? " + video" : ""}
         </span>
       }
     >
-      <div className="grid grid-cols-2 gap-2">
-        {photoUrls.map((url, index) => (
-          <EvidencePhoto
-            key={`${url}-${index}`}
-            url={url}
-            index={index}
-            onOpen={onOpenPhoto}
-          />
-        ))}
+      <div className="space-y-2">
+        <EvidenceVideo videoUrl={videoUrl} onOpen={onOpenMedia} />
+        <div className="grid grid-cols-2 gap-2">
+          {photoUrls.map((url, index) => (
+            <EvidencePhoto
+              key={`${url}-${index}`}
+              url={url}
+              index={index}
+              onOpen={onOpenMedia}
+            />
+          ))}
+        </div>
       </div>
     </DetailSection>
   );
@@ -187,6 +224,7 @@ function ReportDetail({
   }
 
   const photoUrls = getReportPhotoUrls(report);
+  const videoUrl = getReportVideoUrl(report);
 
   return (
     <div className="flex flex-col h-full bg-card overflow-hidden">
@@ -256,7 +294,11 @@ function ReportDetail({
           </p>
         )}
 
-        <EvidencePanel photoUrls={photoUrls} onOpenPhoto={setFullscreenPhoto} />
+        <EvidencePanel
+          photoUrls={photoUrls}
+          videoUrl={videoUrl}
+          onOpenMedia={setFullscreenPhoto}
+        />
 
         {/* Meta grid — condensed border-box style matching LE Interface */}
         <div className="grid grid-cols-2 border border-border">

@@ -391,6 +391,10 @@ const leStyles = `
   .lei-evidence-link { display:block; width:100%; overflow:hidden; border:1px solid var(--le-border); background:var(--le-surface); padding:0; cursor:zoom-in; font:inherit; }
   .lei-evidence-img { display:block; width:100%; height:96px; object-fit:cover; }
   .lei-evidence-unavailable { min-height:96px; display:flex; align-items:center; justify-content:center; border:1px solid var(--le-border); background:var(--le-surface); padding:8px; color:var(--le-muted); font-size:10px; font-weight:700; text-align:center; text-transform:uppercase; line-height:1.4; }
+  .lei-evidence-video { border:1px solid var(--le-border); background:var(--le-surface); margin-bottom:8px; }
+  .lei-evidence-video-player { display:block; width:100%; max-height:260px; background:#000; object-fit:contain; }
+  .lei-evidence-video-action { width:100%; padding:8px 10px; border:0; border-top:1px solid var(--le-border); background:transparent; color:var(--le-blue); font-family:'Plus Jakarta Sans',sans-serif; font-size:10px; font-weight:800; text-align:left; text-transform:uppercase; cursor:pointer; }
+  .lei-evidence-video-action:hover { background:rgba(59,158,255,0.06); }
 `;
 
 export default leStyles;

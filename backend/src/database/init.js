@@ -57,6 +57,7 @@ const initDatabase = async () => {
         is_disclosed BOOLEAN DEFAULT FALSE,
         is_location_fuzzed BOOLEAN DEFAULT FALSE,
         photo_urls TEXT[],
+        video_url TEXT,
         idempotency_key VARCHAR(128),
         idempotency_payload_hash VARCHAR(64),
         status VARCHAR(50) DEFAULT 'submitted' CHECK (status IN (
@@ -108,6 +109,11 @@ const initDatabase = async () => {
       ALTER TABLE incidents
       ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(128),
       ADD COLUMN IF NOT EXISTS idempotency_payload_hash VARCHAR(64);
+    `);
+
+    await db.none(`
+      ALTER TABLE incidents
+      ADD COLUMN IF NOT EXISTS video_url TEXT;
     `);
 
     // Ensure status and closure constraints are updated for existing tables
@@ -173,6 +179,7 @@ const initDatabase = async () => {
         report_id SERIAL PRIMARY KEY,
         incident_id INTEGER NOT NULL REFERENCES incidents(incident_id) ON DELETE CASCADE,
         photo_urls TEXT[],
+        video_url TEXT,
         metadata JSONB,
         ml_confidence_score DECIMAL(3, 2),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -354,6 +361,11 @@ const initDatabase = async () => {
       CREATE INDEX IF NOT EXISTS idx_incident_comments_user_id ON incident_comments (user_id);
       CREATE INDEX IF NOT EXISTS idx_incident_comments_visibility ON incident_comments (incident_id, is_internal, created_at ASC);
       CREATE INDEX IF NOT EXISTS idx_moderator_settings_user_id ON moderator_settings (user_id);
+    `);
+
+    await db.none(`
+      ALTER TABLE reports
+      ADD COLUMN IF NOT EXISTS video_url TEXT;
     `);
 
     console.log('✓ Database schema initialized successfully');
