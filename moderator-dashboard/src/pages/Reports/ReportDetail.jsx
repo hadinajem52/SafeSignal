@@ -10,6 +10,7 @@ import {
   getConstellationMeta,
 } from "../../utils/constellationUtils";
 import { formatCategoryLabel, openMapsUrl } from "../../utils/incidentUtils";
+import { getReportPhotoUrls, resolveReportPhotoUrl } from "../../utils/reportPhotos";
 
 // Bordered kbd chip — used in header action buttons and empty state
 function KbdChip({ label, style }) {
@@ -90,6 +91,45 @@ function CommunitySignalCard({ constellation }) {
   );
 }
 
+function EvidencePanel({ photoUrls }) {
+  if (!photoUrls.length) return null;
+
+  return (
+    <DetailSection
+      title="Evidence"
+      headerRight={
+        <span className="text-[11px] font-semibold text-muted tabular-nums">
+          {photoUrls.length} photo{photoUrls.length !== 1 ? "s" : ""}
+        </span>
+      }
+    >
+      <div className="grid grid-cols-2 gap-2">
+        {photoUrls.map((url, index) => {
+          const resolvedUrl = resolveReportPhotoUrl(url);
+
+          return (
+            <a
+              key={`${url}-${index}`}
+              href={resolvedUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="group block overflow-hidden border border-border bg-surface"
+              aria-label={`Open evidence photo ${index + 1}`}
+            >
+              <img
+                src={resolvedUrl}
+                alt={`Evidence photo ${index + 1}`}
+                className="h-32 w-full object-cover transition-opacity group-hover:opacity-90"
+                loading="lazy"
+              />
+            </a>
+          );
+        })}
+      </div>
+    </DetailSection>
+  );
+}
+
 function ReportDetail({
   report,
   mlSummary,
@@ -125,6 +165,8 @@ function ReportDetail({
       </div>
     );
   }
+
+  const photoUrls = getReportPhotoUrls(report);
 
   return (
     <div className="flex flex-col h-full bg-card overflow-hidden">
@@ -193,6 +235,8 @@ function ReportDetail({
             {report.description}
           </p>
         )}
+
+        <EvidencePanel photoUrls={photoUrls} />
 
         {/* Meta grid — condensed border-box style matching LE Interface */}
         <div className="grid grid-cols-2 border border-border">

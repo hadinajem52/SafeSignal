@@ -9,6 +9,7 @@ import {
 } from "../../../utils/constellationUtils";
 import { getTimeAgo } from "../../../utils/dateUtils";
 import { openMapsUrl } from "../../../utils/incidentUtils";
+import { getReportPhotoUrls, resolveReportPhotoUrl } from "../../../utils/reportPhotos";
 import { STATUS_ACTION_CONFIG, WORKFLOW_STEPS } from "../constants";
 import { getNextWorkflowStatus } from "../helpers";
 
@@ -49,6 +50,7 @@ function IncidentDetailPane({
   const showCloseCaseOptions = !isComplete || incident.status === "police_closed";
   const constellationMeta = getConstellationMeta(incident.constellation);
   const constellationMarker = getConstellationMarkerStyle(incident.constellation);
+  const photoUrls = getReportPhotoUrls(incident);
 
   return (
     <div className="lei-detail-panel">
@@ -415,18 +417,31 @@ function IncidentDetailPane({
           )}
         </div>
 
-        {incident.photo_urls?.length > 0 && (
+        {photoUrls.length > 0 && (
           <div style={{ marginTop: 24 }}>
             <div className="lei-section-label">Evidence</div>
             <div className="lei-evidence-grid">
-              {incident.photo_urls.map((url, i) => (
-                <img
-                  key={`${url}-${i}`}
-                  src={url}
-                  alt="Evidence"
-                  className="lei-evidence-img"
-                />
-              ))}
+              {photoUrls.map((url, i) => {
+                const resolvedUrl = resolveReportPhotoUrl(url);
+
+                return (
+                  <a
+                    key={`${url}-${i}`}
+                    href={resolvedUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="lei-evidence-link"
+                    aria-label={`Open evidence photo ${i + 1}`}
+                  >
+                    <img
+                      src={resolvedUrl}
+                      alt={`Evidence photo ${i + 1}`}
+                      className="lei-evidence-img"
+                      loading="lazy"
+                    />
+                  </a>
+                );
+              })}
             </div>
           </div>
         )}
