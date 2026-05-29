@@ -1,5 +1,4 @@
 const express = require('express');
-const path = require('path');
 const cors = require('cors');
 const compression = require('compression');
 const helmet = require('helmet');
@@ -26,6 +25,7 @@ const usersRoutes = require('./routes/users');
 const mapRoutes = require('./routes/map');
 const settingsRoutes = require('./routes/settings');
 const adminRoutes = require('./routes/admin');
+const uploadsRoutes = require('./routes/uploads');
 
 const app = express();
 const REQUEST_BODY_LIMIT = '25mb';
@@ -54,7 +54,6 @@ app.use(compression());
 app.use(cors());
 app.use(express.json({ limit: REQUEST_BODY_LIMIT }));
 app.use(express.urlencoded({ limit: REQUEST_BODY_LIMIT, extended: true }));
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 app.use((req, res, next) => {
   logger.info(`Incoming Request: ${req.method} ${req.url}`, { ip: req.ip });
@@ -99,6 +98,7 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/map', mapRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/uploads', uploadsRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

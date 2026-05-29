@@ -6,6 +6,7 @@ import EvidencePhotoViewer from "../../components/EvidencePhotoViewer";
 import GoogleMapPanel from "../../components/GoogleMapPanel";
 import SeverityBadge from "../../components/SeverityBadge";
 import StatusBadge from "../../components/StatusBadge";
+import { useProtectedMediaUrl } from "../../hooks/useProtectedMediaUrl";
 import {
   formatConstellationScore,
   getConstellationMeta,
@@ -97,8 +98,8 @@ function CommunitySignalCard({ constellation }) {
 }
 
 function EvidencePhoto({ url, index, onOpen }) {
-  const [hasError, setHasError] = React.useState(false);
   const resolvedUrl = resolveReportPhotoUrl(url);
+  const { mediaUrl, hasError } = useProtectedMediaUrl(resolvedUrl);
 
   if (hasError) {
     return (
@@ -111,38 +112,48 @@ function EvidencePhoto({ url, index, onOpen }) {
   return (
     <button
       type="button"
-      onClick={() => onOpen({ src: resolvedUrl, alt: `Evidence photo ${index + 1}` })}
+      disabled={!mediaUrl}
+      onClick={() => onOpen({ src: mediaUrl, alt: `Evidence photo ${index + 1}` })}
       className="group block w-full cursor-zoom-in overflow-hidden border border-border bg-surface"
       aria-label={`Open evidence photo ${index + 1} fullscreen`}
     >
       <img
-        src={resolvedUrl}
+        src={mediaUrl || ""}
         alt={`Evidence photo ${index + 1}`}
         className="h-32 w-full object-cover transition-opacity group-hover:opacity-90"
         loading="lazy"
-        onError={() => setHasError(true)}
       />
     </button>
   );
 }
 
 function EvidenceVideo({ videoUrl, onOpen }) {
+  const resolvedUrl = resolveReportPhotoUrl(videoUrl);
+  const { mediaUrl, hasError } = useProtectedMediaUrl(resolvedUrl);
+
   if (!videoUrl) return null;
 
-  const resolvedUrl = resolveReportPhotoUrl(videoUrl);
+  if (hasError) {
+    return (
+      <div className="flex h-32 items-center justify-center border border-border bg-surface px-3 text-center text-[11px] font-semibold uppercase text-muted text-pretty">
+        Evidence video unavailable
+      </div>
+    );
+  }
 
   return (
     <div className="border border-border bg-surface">
       <video
-        src={resolvedUrl}
+        src={mediaUrl || ""}
         controls
         className="h-44 w-full bg-black object-contain"
       />
       <button
         type="button"
+        disabled={!mediaUrl}
         onClick={() =>
           onOpen({
-            src: resolvedUrl,
+            src: mediaUrl,
             alt: "Evidence video",
             type: "video",
           })
