@@ -13,7 +13,8 @@
     "db:migrate:incident-public-visibility": "node src/database/migrations/add_incident_public_visibility.js",
     "db:migrate:witness-constellation": "node src/database/migrations/add_witness_constellation.js",
     "db:migrate:incident-lifecycle": "node src/database/migrations/add_incident_lifecycle_timestamps.js",
-    "db:migrate:incident-idempotency": "node src/database/migrations/add_incident_idempotency.js"
+    "db:migrate:incident-idempotency": "node src/database/migrations/add_incident_idempotency.js",
+    "db:migrate:incident-video": "node src/database/migrations/add_incident_video_url.js"
   },
   "jest": {
     "testEnvironment": "node",
@@ -36,6 +37,7 @@
     "google-auth-library": "^8.9.0",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
+    "multer": "^2.1.1",
     "pg-promise": "^11.5.0",
     "socket.io": "^4.7.5",
     "winston": "^3.19.0"

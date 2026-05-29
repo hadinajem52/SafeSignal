@@ -3,6 +3,7 @@ import { View, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
+import { getMediaUri } from '../../utils/mediaUtils';
 
 /**
  * Props:
@@ -16,9 +17,14 @@ const IncidentPhotoUploader = ({
   onTakePhoto,
   onPickImage,
   onRemovePhoto,
+  video,
+  onRecordVideo,
+  onPickVideo,
+  onRemoveVideo,
 }) => {
   const { theme } = useTheme();
   const canAddMore = photos.length < 5;
+  const videoUri = getMediaUri(video);
 
   return (
     <View style={styles.inputGroup}>
@@ -31,7 +37,7 @@ const IncidentPhotoUploader = ({
       <View style={styles.photosContainer}>
         {photos.map((photo, index) => (
           <View key={index} style={styles.photoWrapper}>
-            <Image source={{ uri: photo }} style={[styles.photoThumbnail, { backgroundColor: theme.surface }]} />
+            <Image source={{ uri: getMediaUri(photo) }} style={[styles.photoThumbnail, { backgroundColor: theme.surface }]} />
             <TouchableOpacity
               style={styles.removePhotoButton}
               onPress={() => onRemovePhoto(index)}
@@ -61,6 +67,41 @@ const IncidentPhotoUploader = ({
           >
             <Ionicons name="image-outline" size={18} color={theme.primary} style={styles.actionIcon} />
             <AppText variant="small" style={[styles.actionText, { color: theme.primary }]}>Choose from Gallery</AppText>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      <AppText variant="small" style={[styles.subLabel, { color: theme.textSecondary }]}>
+        Optional video evidence: 1 clip, up to 10 minutes
+      </AppText>
+      {videoUri ? (
+        <View style={[styles.videoPreview, { borderColor: theme.inputBorder, backgroundColor: theme.surface }]}>
+          <Ionicons name="videocam-outline" size={18} color={theme.primary} />
+          <AppText variant="small" style={[styles.videoText, { color: theme.text }]} numberOfLines={1}>
+            {video?.name || 'Selected video'}
+          </AppText>
+          <TouchableOpacity style={styles.removeVideoButton} onPress={onRemoveVideo}>
+            <Ionicons name="close" size={14} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={[styles.actionBtn, { borderColor: theme.inputBorder, backgroundColor: theme.surface }]}
+            onPress={onRecordVideo}
+            activeOpacity={0.75}
+          >
+            <Ionicons name="videocam-outline" size={18} color={theme.primary} style={styles.actionIcon} />
+            <AppText variant="small" style={[styles.actionText, { color: theme.primary }]}>Record Video</AppText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionBtn, { borderColor: theme.inputBorder, backgroundColor: theme.surface }]}
+            onPress={onPickVideo}
+            activeOpacity={0.75}
+          >
+            <Ionicons name="film-outline" size={18} color={theme.primary} style={styles.actionIcon} />
+            <AppText variant="small" style={[styles.actionText, { color: theme.primary }]}>Choose Video</AppText>
           </TouchableOpacity>
         </View>
       )}
@@ -126,6 +167,26 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   actionText: {},
+  videoPreview: {
+    minHeight: 44,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  videoText: {
+    flex: 1,
+  },
+  removeVideoButton: {
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
 
 export default React.memo(IncidentPhotoUploader);

@@ -1,4 +1,39 @@
 import api from './apiClient';
+import { createUploadFile } from '../utils/mediaUtils';
+
+const appendValue = (formData, key, value) => {
+  if (value === undefined || value === null) return;
+  formData.append(key, String(value));
+};
+
+const buildIncidentFormData = (incidentData) => {
+  const formData = new FormData();
+  const { photos = [], video, photoUrls, ...fields } = incidentData;
+
+  Object.entries(fields).forEach(([key, value]) => {
+    appendValue(formData, key, value);
+  });
+
+  const reportPhotos = photos.length ? photos : photoUrls || [];
+  reportPhotos.forEach((photo, index) => {
+    const file = createUploadFile(photo, `incident-photo-${index + 1}.jpg`, 'image/jpeg');
+    if (file) formData.append('photos', file);
+  });
+
+  const videoFile = createUploadFile(video, 'incident-video.mp4', 'video/mp4');
+  if (videoFile) {
+    formData.append('video', videoFile);
+    appendValue(formData, 'videoDurationMs', video?.duration);
+  }
+
+  return formData;
+};
+
+const multipartConfig = {
+  headers: {
+    'Content-Type': 'multipart/form-data',
+  },
+};
 
 export const incidentAPI = {
   async submitIncident(incidentData) {
@@ -8,8 +43,9 @@ export const incidentAPI = {
         providedIdempotencyKey ||
         `incident_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 
-      const response = await api.post('/incidents/submit', payload, {
+      const response = await api.post('/incidents/submit', buildIncidentFormData(payload), {
         headers: {
+          ...multipartConfig.headers,
           'Idempotency-Key': idempotencyKey,
         },
       });
@@ -32,7 +68,11 @@ export const incidentAPI = {
 
   async updateIncident(incidentId, incidentData) {
     try {
-      const response = await api.put(`/incidents/${incidentId}`, incidentData);
+      const response = await api.put(
+        `/incidents/${incidentId}`,
+        buildIncidentFormData(incidentData),
+        multipartConfig,
+      );
 
       if (response.data.status === 'SUCCESS') {
         return {
@@ -104,6 +144,7 @@ export const incidentAPI = {
             createdAt: incident.created_at || incident.createdAt,
             locationName: incident.location_name || incident.locationName || '',
             location: hasCoordinates ? { latitude, longitude } : null,
+            videoUrl: incident.video_url || incident.videoUrl || null,
           };
         });
 

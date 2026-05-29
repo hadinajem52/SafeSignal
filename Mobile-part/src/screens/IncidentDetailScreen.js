@@ -5,7 +5,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import incidentConstants from '../../../constants/incident';
 import { formatDate } from '../utils/dateUtils';
-import { AppText, Card, SeverityBadge, StatusBadge, IncidentTimeline } from '../components';
+import {
+  AppText,
+  Card,
+  SeverityBadge,
+  StatusBadge,
+  IncidentTimeline,
+  IncidentVideoPlayer,
+} from '../components';
 import { normalizeClosureDetails } from '../utils/incidentUtils';
 import { useTheme } from '../context/ThemeContext';
 import { incidentAPI } from '../services/api';
@@ -101,6 +108,7 @@ const IncidentDetailScreen = ({ route, navigation }) => {
   const locationLabel = detailIncident.locationName || detailIncident.location_name || 'Location not set';
   const showTimeline = source !== 'community_feed';
   const constellationCopy = getConstellationCopy(detailIncident.constellation);
+  const videoUrl = detailIncident.video_url || detailIncident.videoUrl;
 
   return (
     <View style={[styles.screenWrapper, { backgroundColor: theme.surface, paddingTop: insets.top }]}>
@@ -142,6 +150,8 @@ const IncidentDetailScreen = ({ route, navigation }) => {
         <AppText variant="label" style={[styles.sectionTitle, { color: theme.text }]}>Description</AppText>
         <AppText variant="body" style={[styles.sectionText, { color: theme.textSecondary }]}>{description}</AppText>
       </Card>
+
+      <IncidentVideoPlayer videoUrl={videoUrl} />
 
       {constellationCopy ? (
         <Card style={[styles.constellationCard, { borderColor: theme.border, backgroundColor: theme.card }]}> 

@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const compression = require('compression');
 const helmet = require('helmet');
@@ -53,6 +54,7 @@ app.use(compression());
 app.use(cors());
 app.use(express.json({ limit: REQUEST_BODY_LIMIT }));
 app.use(express.urlencoded({ limit: REQUEST_BODY_LIMIT, extended: true }));
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 app.use((req, res, next) => {
   logger.info(`Incoming Request: ${req.method} ${req.url}`, { ip: req.ip });

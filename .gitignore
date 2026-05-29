@@ -39,6 +39,7 @@ google-services.json
 firebase-service-account*.json
 
 Artifacts
+backend/uploads/
 
 # Environments
 .env

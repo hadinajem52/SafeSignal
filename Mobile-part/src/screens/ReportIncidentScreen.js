@@ -108,13 +108,25 @@ const ReportIncidentScreen = ({ navigation, route }) => {
   });
 
   // Image Picker Hook
-  const { photos, setPhotos, removePhoto, pickImage, takePhoto } = useImagePicker();
+  const {
+    photos,
+    setPhotos,
+    video,
+    setVideo,
+    removePhoto,
+    removeVideo,
+    pickImage,
+    takePhoto,
+    pickVideo,
+    recordVideo,
+  } = useImagePicker();
 
   // Draft Management Logic
   const applyDraft = (draft) => {
     applyDraftForm(draft);
     applyDraftLocation(draft);
     setPhotos(draft?.photos || []);
+    setVideo(draft?.video || null);
     setEnableMlClassification(draft?.enableMlClassification ?? true);
     setEnableMlRisk(draft?.enableMlRisk ?? true);
     idempotencyKeyRef.current = draft?.idempotencyKey || createIncidentIdempotencyKey();
@@ -137,6 +149,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
       enableMlClassification,
       enableMlRisk,
       photos,
+      video,
       idempotencyKey: idempotencyKeyRef.current,
     }),
     [
@@ -151,6 +164,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
       selectedCategory,
       severity,
       title,
+      video,
     ],
   );
 
@@ -312,6 +326,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
           enableMlRisk,
           isDraft: asDraft,
           photoUrls: photos,
+          video,
           idempotencyKey: asDraft ? undefined : idempotencyKeyRef.current,
         };
 
@@ -553,9 +568,13 @@ const ReportIncidentScreen = ({ navigation, route }) => {
 
         <IncidentPhotoUploader
           photos={photos}
+          video={video}
           onTakePhoto={takePhoto}
           onPickImage={pickImage}
           onRemovePhoto={removePhoto}
+          onRecordVideo={recordVideo}
+          onPickVideo={pickVideo}
+          onRemoveVideo={removeVideo}
         />
 
         {/* Unsaved draft restore modal */}

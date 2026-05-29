@@ -16,6 +16,7 @@ function EvidencePhotoViewer({ photo, onClose }) {
   }, [onClose, photo]);
 
   if (!photo) return null;
+  const isVideo = photo.type === "video";
 
   return (
     <div
@@ -34,12 +35,21 @@ function EvidencePhotoViewer({ photo, onClose }) {
         >
           <X size={18} />
         </button>
-        <img
-          src={photo.src}
-          alt={photo.alt}
-          className="max-h-[86dvh] max-w-[92vw] object-contain"
-          onClick={(event) => event.stopPropagation()}
-        />
+        {isVideo ? (
+          <video
+            src={photo.src}
+            controls
+            className="max-h-[86dvh] max-w-[92vw]"
+            onClick={(event) => event.stopPropagation()}
+          />
+        ) : (
+          <img
+            src={photo.src}
+            alt={photo.alt}
+            className="max-h-[86dvh] max-w-[92vw] object-contain"
+            onClick={(event) => event.stopPropagation()}
+          />
+        )}
       </div>
     </div>
   );

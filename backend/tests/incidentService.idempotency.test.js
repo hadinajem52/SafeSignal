@@ -34,6 +34,7 @@ const incidentData = {
   severity: 'medium',
   isAnonymous: false,
   photoUrls: null,
+  videoUrl: null,
   enableMlClassification: false,
   enableMlRisk: false,
 };
@@ -59,7 +60,7 @@ describe('incident creation idempotency', () => {
       }
 
       if (query.includes('INSERT INTO incidents')) {
-        insertedPayloadHash = params[14];
+        insertedPayloadHash = params[15];
         return Promise.resolve(null);
       }
 

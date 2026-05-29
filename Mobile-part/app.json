@@ -50,10 +50,11 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "SafeSignal needs access to your photos to attach images to incident reports.",
-          "cameraPermission": "SafeSignal needs access to your camera to take photos of incidents."
+          "photosPermission": "SafeSignal needs access to your media library to attach photos and videos to incident reports.",
+          "cameraPermission": "SafeSignal needs access to your camera to capture photos and videos of incidents."
         }
-      ]
+      ],
+      "expo-video"
     ],
     "scheme": [
       "safesignal",
