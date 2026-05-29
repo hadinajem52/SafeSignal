@@ -1,21 +1,40 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import AppText from './Text';
 import { useTheme } from '../context/ThemeContext';
 import { resolveMediaUrl } from '../utils/mediaUtils';
+import { tokenStorage } from '../services/tokenStorage';
 
 const IncidentVideoPlayer = ({ videoUrl }) => {
   const { theme } = useTheme();
   const resolvedUrl = resolveMediaUrl(videoUrl);
+  const [token, setToken] = useState(null);
+
+  useEffect(() => {
+    let isActive = true;
+
+    tokenStorage.getToken().then((value) => {
+      if (isActive) {
+        setToken(value);
+      }
+    });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   if (!resolvedUrl) return null;
 
-  return <VideoEvidenceCard resolvedUrl={resolvedUrl} theme={theme} />;
+  return <VideoEvidenceCard resolvedUrl={resolvedUrl} theme={theme} token={token} />;
 };
 
-const VideoEvidenceCard = ({ resolvedUrl, theme }) => {
-  const player = useVideoPlayer(resolvedUrl, (instance) => {
+const VideoEvidenceCard = ({ resolvedUrl, theme, token }) => {
+  const source = token
+    ? { uri: resolvedUrl, headers: { Authorization: `Bearer ${token}` } }
+    : resolvedUrl;
+  const player = useVideoPlayer(source, (instance) => {
     instance.loop = false;
   });
 

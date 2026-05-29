@@ -3,6 +3,7 @@ import { ArrowUpRight } from "lucide-react";
 import { CLOSURE_OUTCOMES } from "../../../constants/incident";
 import EvidencePhotoViewer from "../../../components/EvidencePhotoViewer";
 import GoogleMapPanel from "../../../components/GoogleMapPanel";
+import { useProtectedMediaUrl } from "../../../hooks/useProtectedMediaUrl";
 import {
   formatConstellationScore,
   getConstellationMarkerStyle,
@@ -19,8 +20,8 @@ import { STATUS_ACTION_CONFIG, WORKFLOW_STEPS } from "../constants";
 import { getNextWorkflowStatus } from "../helpers";
 
 function EvidenceLink({ url, index, onOpen }) {
-  const [hasError, setHasError] = React.useState(false);
   const resolvedUrl = resolveReportPhotoUrl(url);
+  const { mediaUrl, hasError } = useProtectedMediaUrl(resolvedUrl);
 
   if (hasError) {
     return (
@@ -33,35 +34,45 @@ function EvidenceLink({ url, index, onOpen }) {
   return (
     <button
       type="button"
-      onClick={() => onOpen({ src: resolvedUrl, alt: `Evidence photo ${index + 1}` })}
+      disabled={!mediaUrl}
+      onClick={() => onOpen({ src: mediaUrl, alt: `Evidence photo ${index + 1}` })}
       className="lei-evidence-link"
       aria-label={`Open evidence photo ${index + 1} fullscreen`}
     >
       <img
-        src={resolvedUrl}
+        src={mediaUrl || ""}
         alt={`Evidence photo ${index + 1}`}
         className="lei-evidence-img"
         loading="lazy"
-        onError={() => setHasError(true)}
       />
     </button>
   );
 }
 
 function EvidenceVideo({ videoUrl, onOpen }) {
+  const resolvedUrl = resolveReportPhotoUrl(videoUrl);
+  const { mediaUrl, hasError } = useProtectedMediaUrl(resolvedUrl);
+
   if (!videoUrl) return null;
 
-  const resolvedUrl = resolveReportPhotoUrl(videoUrl);
+  if (hasError) {
+    return (
+      <div className="lei-evidence-unavailable">
+        Evidence video unavailable
+      </div>
+    );
+  }
 
   return (
     <div className="lei-evidence-video">
-      <video src={resolvedUrl} controls className="lei-evidence-video-player" />
+      <video src={mediaUrl || ""} controls className="lei-evidence-video-player" />
       <button
         type="button"
         className="lei-evidence-video-action"
+        disabled={!mediaUrl}
         onClick={() =>
           onOpen({
-            src: resolvedUrl,
+            src: mediaUrl,
             alt: "Evidence video",
             type: "video",
           })

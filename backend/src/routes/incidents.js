@@ -9,7 +9,7 @@ const { body, validationResult, param, query } = require('express-validator');
 const authenticateToken = require('../middleware/auth');
 const optionalAuth = require('../middleware/optionalAuth');
 const requireRole = require('../middleware/roles');
-const { incidentUpload } = require('../middleware/incidentUpload');
+const { cleanupUploadedFiles, incidentUpload } = require('../middleware/incidentUpload');
 const incidentService = require('../services/incidentService');
 const commentService = require('../services/commentService');
 const ServiceError = require('../utils/ServiceError');
@@ -94,6 +94,32 @@ function getIdempotencyKey(req) {
   return req.get('Idempotency-Key') || req.body.idempotencyKey;
 }
 
+function rejectValidationErrors(req, res) {
+  if (!handleValidationErrors(req, res)) return false;
+  cleanupUploadedFiles(req);
+  return true;
+}
+
+function handleIncidentWriteError(error, req, res, message) {
+  cleanupUploadedFiles(req);
+  handleServiceError(error, res, message);
+}
+
+function cleanupUnusedIdempotentUploads(req, incident) {
+  const uploadedPhotos = req.body.photoUrls || [];
+  const uploadedVideo = req.body.videoUrl || null;
+  const storedPhotos = incident.photo_urls || [];
+
+  const photosWereReused =
+    uploadedPhotos.length > 0 &&
+    uploadedPhotos.every((url) => storedPhotos.includes(url));
+  const videoWasReused = uploadedVideo && incident.video_url === uploadedVideo;
+
+  if ((uploadedPhotos.length > 0 && !photosWereReused) || (uploadedVideo && !videoWasReused)) {
+    cleanupUploadedFiles(req);
+  }
+}
+
 /**
  * @route   POST /api/incidents/submit
  * @desc    Create a new incident report (alias for POST /)
@@ -105,7 +131,7 @@ router.post(
   incidentUpload,
   createIncidentValidation,
   async (req, res) => {
-    if (handleValidationErrors(req, res)) return;
+    if (rejectValidationErrors(req, res)) return;
 
     try {
       const incident = await incidentService.createIncident(
@@ -113,6 +139,7 @@ router.post(
         req.user.userId,
         { idempotencyKey: getIdempotencyKey(req) }
       );
+      cleanupUnusedIdempotentUploads(req, incident);
 
       res.status(201).json({
         status: 'OK',
@@ -120,7 +147,7 @@ router.post(
         data: incident,
       });
     } catch (error) {
-      handleServiceError(error, res, 'Failed to create incident');
+      handleIncidentWriteError(error, req, res, 'Failed to create incident');
     }
   }
 );
@@ -136,7 +163,7 @@ router.post(
   incidentUpload,
   createIncidentValidation,
   async (req, res) => {
-    if (handleValidationErrors(req, res)) return;
+    if (rejectValidationErrors(req, res)) return;
 
     try {
       const incident = await incidentService.createIncident(
@@ -144,6 +171,7 @@ router.post(
         req.user.userId,
         { idempotencyKey: getIdempotencyKey(req) }
       );
+      cleanupUnusedIdempotentUploads(req, incident);
 
       res.status(201).json({
         status: 'OK',
@@ -151,7 +179,7 @@ router.post(
         data: incident,
       });
     } catch (error) {
-      handleServiceError(error, res, 'Failed to create incident');
+      handleIncidentWriteError(error, req, res, 'Failed to create incident');
     }
   }
 );
@@ -488,13 +516,7 @@ router.put(
   incidentUpload,
   [param('id').isInt(), ...videoDurationValidation],
   async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        status: 'ERROR',
-        message: 'Invalid incident ID',
-      });
-    }
+    if (rejectValidationErrors(req, res)) return;
 
     try {
       const updatedIncident = await incidentService.updateIncident(
@@ -511,7 +533,7 @@ router.put(
         },
       });
     } catch (error) {
-      handleServiceError(error, res, 'Failed to update incident');
+      handleIncidentWriteError(error, req, res, 'Failed to update incident');
     }
   }
 );

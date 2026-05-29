@@ -355,6 +355,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
             setSelectedMapLocation(null);
             setMapRegion(null);
             setPhotos([]);
+            setVideo(null);
             setDraftId(null);
             setEnableMlClassification(true);
             setEnableMlRisk(true);
@@ -424,10 +425,12 @@ const ReportIncidentScreen = ({ navigation, route }) => {
       setMapRegion,
       setPhotos,
       setSelectedMapLocation,
+      setVideo,
       title,
       validateForm,
       incidentDate,
       showToast,
+      video,
     ],
   );
 
