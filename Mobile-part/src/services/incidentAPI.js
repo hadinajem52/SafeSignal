@@ -1,5 +1,8 @@
 import api from './apiClient';
 import { createUploadFile } from '../utils/mediaUtils';
+import limits from '../../../constants/limits';
+
+const { LIMITS } = limits;
 
 const appendValue = (formData, key, value) => {
   if (value === undefined || value === null) return;
@@ -35,6 +38,43 @@ const multipartConfig = {
   },
 };
 
+const getMediaSize = (media) => Number(media?.fileSize || media?.size || 0);
+
+const getIncidentMediaSummary = (incidentData) => {
+  const photos = incidentData.photos || incidentData.photoUrls || [];
+  return {
+    photoCount: Array.isArray(photos) ? photos.length : 0,
+    photoBytes: Array.isArray(photos)
+      ? photos.reduce((sum, photo) => sum + getMediaSize(photo), 0)
+      : 0,
+    hasVideo: Boolean(incidentData.video),
+    videoBytes: getMediaSize(incidentData.video),
+    videoDurationMs: Number(incidentData.video?.duration || 0),
+    isDraft: Boolean(incidentData.isDraft),
+  };
+};
+
+const formatMegabytes = (bytes) => `${Math.ceil(bytes / (1024 * 1024))} MB`;
+
+const getKnownUploadBytes = (summary) => summary.photoBytes + summary.videoBytes;
+
+const validateKnownUploadSize = (summary) => {
+  if (summary.videoBytes > LIMITS.MAX_VIDEO_BYTES) {
+    return `Video must be ${formatMegabytes(LIMITS.MAX_VIDEO_BYTES)} or smaller.`;
+  }
+
+  if (summary.photoBytes > LIMITS.MAX_UPLOAD_BYTES) {
+    return `Photos exceed the ${formatMegabytes(LIMITS.MAX_UPLOAD_BYTES)} upload limit.`;
+  }
+
+  const knownBytes = getKnownUploadBytes(summary);
+  if (knownBytes > LIMITS.MAX_UPLOAD_BYTES) {
+    return `Total upload must be ${formatMegabytes(LIMITS.MAX_UPLOAD_BYTES)} or smaller.`;
+  }
+
+  return null;
+};
+
 export const incidentAPI = {
   async submitIncident(incidentData) {
     try {
@@ -42,6 +82,15 @@ export const incidentAPI = {
       const idempotencyKey =
         providedIdempotencyKey ||
         `incident_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+
+      const mediaSummary = getIncidentMediaSummary(payload);
+      const mediaSizeError = validateKnownUploadSize(mediaSummary);
+
+      console.log('Submitting incident media:', mediaSummary);
+
+      if (mediaSizeError) {
+        return { success: false, error: mediaSizeError };
+      }
 
       const response = await api.post('/incidents/submit', buildIncidentFormData(payload), {
         headers: {
@@ -60,6 +109,14 @@ export const incidentAPI = {
 
       return { success: false, error: response.data.message };
     } catch (error) {
+      console.log('Submit incident failed:', {
+        message: error.message,
+        status: error.response?.status,
+        responseMessage: error.response?.data?.message,
+        responseCode: error.response?.data?.code,
+        validationErrors: error.response?.data?.errors,
+        media: getIncidentMediaSummary(incidentData),
+      });
       const message = error.response?.data?.message || 'Failed to submit incident';
       const errors = error.response?.data?.errors;
       return { success: false, error: message, validationErrors: errors };
@@ -68,6 +125,18 @@ export const incidentAPI = {
 
   async updateIncident(incidentId, incidentData) {
     try {
+      const mediaSummary = getIncidentMediaSummary(incidentData);
+      const mediaSizeError = validateKnownUploadSize(mediaSummary);
+
+      console.log('Updating incident media:', {
+        incidentId,
+        ...mediaSummary,
+      });
+
+      if (mediaSizeError) {
+        return { success: false, error: mediaSizeError };
+      }
+
       const response = await api.put(
         `/incidents/${incidentId}`,
         buildIncidentFormData(incidentData),
@@ -84,6 +153,15 @@ export const incidentAPI = {
 
       return { success: false, error: response.data.message };
     } catch (error) {
+      console.log('Update incident failed:', {
+        incidentId,
+        message: error.message,
+        status: error.response?.status,
+        responseMessage: error.response?.data?.message,
+        responseCode: error.response?.data?.code,
+        validationErrors: error.response?.data?.errors,
+        media: getIncidentMediaSummary(incidentData),
+      });
       const message = error.response?.data?.message || 'Failed to update incident';
       const errors = error.response?.data?.errors;
       return { success: false, error: message, validationErrors: errors };

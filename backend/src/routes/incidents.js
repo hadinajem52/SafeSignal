@@ -13,6 +13,7 @@ const { cleanupUploadedFiles, incidentUpload } = require('../middleware/incident
 const incidentService = require('../services/incidentService');
 const commentService = require('../services/commentService');
 const ServiceError = require('../utils/ServiceError');
+const logger = require('../utils/logger');
 const {
   VALID_CATEGORIES,
   VALID_SEVERITIES,
@@ -96,11 +97,17 @@ function getIdempotencyKey(req) {
 
 function rejectValidationErrors(req, res) {
   if (!handleValidationErrors(req, res)) return false;
+  logger.warn(
+    `Incident request validation failed: path=${req.originalUrl} photoUrls=${req.body.photoUrls?.length || 0} hasVideoUrl=${Boolean(req.body.videoUrl)}`
+  );
   cleanupUploadedFiles(req);
   return true;
 }
 
 function handleIncidentWriteError(error, req, res, message) {
+  logger.error(
+    `Incident write failed: path=${req.originalUrl} userId=${req.user?.userId || 'unknown'} photoUrls=${req.body.photoUrls?.length || 0} hasVideoUrl=${Boolean(req.body.videoUrl)} error=${error.message}`
+  );
   cleanupUploadedFiles(req);
   handleServiceError(error, res, message);
 }
@@ -116,6 +123,9 @@ function cleanupUnusedIdempotentUploads(req, incident) {
   const videoWasReused = uploadedVideo && incident.video_url === uploadedVideo;
 
   if ((uploadedPhotos.length > 0 && !photosWereReused) || (uploadedVideo && !videoWasReused)) {
+    logger.warn(
+      `Cleaning up unused idempotent media: incidentId=${incident.incident_id} uploadedPhotos=${uploadedPhotos.length} uploadedVideo=${Boolean(uploadedVideo)} storedPhotos=${storedPhotos.length} storedVideo=${Boolean(incident.video_url)}`
+    );
     cleanupUploadedFiles(req);
   }
 }
@@ -134,12 +144,18 @@ router.post(
     if (rejectValidationErrors(req, res)) return;
 
     try {
+      logger.info(
+        `Incident submit route entering service: userId=${req.user.userId} photoUrls=${req.body.photoUrls?.length || 0} hasVideoUrl=${Boolean(req.body.videoUrl)} isDraft=${req.body.isDraft}`
+      );
       const incident = await incidentService.createIncident(
         req.body,
         req.user.userId,
         { idempotencyKey: getIdempotencyKey(req) }
       );
       cleanupUnusedIdempotentUploads(req, incident);
+      logger.info(
+        `Incident submit route succeeded: incidentId=${incident.incident_id} status=${incident.status} hasVideoUrl=${Boolean(incident.video_url)}`
+      );
 
       res.status(201).json({
         status: 'OK',
@@ -166,12 +182,18 @@ router.post(
     if (rejectValidationErrors(req, res)) return;
 
     try {
+      logger.info(
+        `Incident create route entering service: userId=${req.user.userId} photoUrls=${req.body.photoUrls?.length || 0} hasVideoUrl=${Boolean(req.body.videoUrl)} isDraft=${req.body.isDraft}`
+      );
       const incident = await incidentService.createIncident(
         req.body,
         req.user.userId,
         { idempotencyKey: getIdempotencyKey(req) }
       );
       cleanupUnusedIdempotentUploads(req, incident);
+      logger.info(
+        `Incident create route succeeded: incidentId=${incident.incident_id} status=${incident.status} hasVideoUrl=${Boolean(incident.video_url)}`
+      );
 
       res.status(201).json({
         status: 'OK',
@@ -519,10 +541,16 @@ router.put(
     if (rejectValidationErrors(req, res)) return;
 
     try {
+      logger.info(
+        `Incident update route entering service: incidentId=${req.params.id} userId=${req.user.userId} photoUrls=${req.body.photoUrls?.length || 0} hasVideoUrl=${Boolean(req.body.videoUrl)} isDraft=${req.body.isDraft}`
+      );
       const updatedIncident = await incidentService.updateIncident(
         req.params.id,
         req.body,
         req.user
+      );
+      logger.info(
+        `Incident update route succeeded: incidentId=${updatedIncident.incident_id} status=${updatedIncident.status} hasVideoUrl=${Boolean(updatedIncident.video_url)}`
       );
 
       res.json({
