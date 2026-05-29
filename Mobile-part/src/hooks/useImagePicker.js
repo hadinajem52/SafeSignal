@@ -5,7 +5,11 @@ import limits from '../../../constants/limits';
 import { useToast } from '../context/ToastContext';
 
 const { LIMITS } = limits;
-const { MAX_PHOTOS, MAX_VIDEO_MINUTES } = LIMITS;
+const { MAX_PHOTOS, MAX_PHOTO_BYTES, MAX_VIDEO_BYTES, MAX_VIDEO_MINUTES } = LIMITS;
+const VIDEO_QUALITY = ImagePicker.UIImagePickerControllerQualityType?.Low ?? 2;
+const VIDEO_EXPORT_PRESET = ImagePicker.VideoExportPreset?.MediumQuality;
+
+const formatMegabytes = (bytes) => `${Math.ceil(bytes / (1024 * 1024))} MB`;
 
 const createMedia = (asset, fallbackType) => {
   if (!asset?.uri) return null;
@@ -14,6 +18,7 @@ const createMedia = (asset, fallbackType) => {
     name: asset.fileName || asset.uri.split('/').pop() || `incident-media-${Date.now()}`,
     mimeType: asset.mimeType || fallbackType,
     duration: asset.duration || null,
+    fileSize: Number(asset.fileSize || asset.size || 0) || null,
   };
 };
 
@@ -48,6 +53,17 @@ const useImagePicker = () => {
     return () => subscription.remove();
   }, []);
 
+  const validatePhoto = useCallback((asset) => {
+    const fileSize = Number(asset?.fileSize || asset?.size || 0);
+
+    if (fileSize > MAX_PHOTO_BYTES) {
+      showToast(`Each photo must be ${formatMegabytes(MAX_PHOTO_BYTES)} or smaller.`, 'warning');
+      return false;
+    }
+
+    return true;
+  }, [showToast]);
+
   const pickImage = useCallback(async () => {
     if (photos.length >= MAX_PHOTOS) {
       showToast(`You can only attach up to ${MAX_PHOTOS} photos.`, 'warning');
@@ -68,7 +84,7 @@ const useImagePicker = () => {
         quality: 0.7,
       });
 
-      if (!result.canceled && result.assets[0]) {
+      if (!result.canceled && result.assets[0] && validatePhoto(result.assets[0])) {
         const photo = createMedia(result.assets[0], 'image/jpeg');
         if (photo) {
           setPhotos((prev) => [...prev, photo]);
@@ -78,7 +94,7 @@ const useImagePicker = () => {
       console.error('Error picking image:', error);
       showToast('Failed to pick image. Please try again.', 'error');
     }
-  }, [photos.length, showToast]);
+  }, [photos.length, showToast, validatePhoto]);
 
   const takePhoto = useCallback(async () => {
     if (photos.length >= MAX_PHOTOS) {
@@ -109,7 +125,7 @@ const useImagePicker = () => {
         cameraActiveRef.current = false;
       }
 
-      if (!result.canceled && result.assets?.[0]) {
+      if (!result.canceled && result.assets?.[0] && validatePhoto(result.assets[0])) {
         const photo = createMedia(result.assets[0], 'image/jpeg');
         if (photo) {
           setPhotos((prev) => [...prev, photo]);
@@ -120,7 +136,7 @@ const useImagePicker = () => {
       console.error('Error taking photo:', error);
       showToast('Failed to take photo. Please try again.', 'error');
     }
-  }, [photos.length, showToast]);
+  }, [photos.length, showToast, validatePhoto]);
 
   const removePhoto = useCallback((index) => {
     setPhotos((prev) => {
@@ -132,10 +148,16 @@ const useImagePicker = () => {
 
   const validateVideo = useCallback((asset) => {
     const durationMs = Number(asset?.duration || 0);
+    const fileSize = Number(asset?.fileSize || asset?.size || 0);
     const maxDurationMs = MAX_VIDEO_MINUTES * 60 * 1000;
 
     if (durationMs > maxDurationMs) {
       showToast(`Video must be ${MAX_VIDEO_MINUTES} minutes or shorter.`, 'warning');
+      return false;
+    }
+
+    if (fileSize > MAX_VIDEO_BYTES) {
+      showToast(`Video must be ${formatMegabytes(MAX_VIDEO_BYTES)} or smaller.`, 'warning');
       return false;
     }
 
@@ -154,6 +176,7 @@ const useImagePicker = () => {
         mediaTypes: ['videos'],
         allowsEditing: false,
         videoMaxDuration: MAX_VIDEO_MINUTES * 60,
+        videoExportPreset: VIDEO_EXPORT_PRESET,
       });
 
       if (!result.canceled && result.assets?.[0] && validateVideo(result.assets[0])) {
@@ -176,6 +199,7 @@ const useImagePicker = () => {
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ['videos'],
         videoMaxDuration: MAX_VIDEO_MINUTES * 60,
+        videoQuality: VIDEO_QUALITY,
         quality: 0.7,
       });
 

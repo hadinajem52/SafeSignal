@@ -562,6 +562,11 @@ async function applyAutoVerificationIfEligible(incident, context = {}) {
  * @returns {Promise<Object>} The created incident
  */
 async function createIncident(incidentData, reporterId, options = {}) {
+  const startedAt = Date.now();
+  logger.info(
+    `Create incident started: reporterId=${reporterId} photoUrls=${Array.isArray(incidentData.photoUrls) ? incidentData.photoUrls.length : 0} hasVideoUrl=${Boolean(incidentData.videoUrl)} isDraft=${incidentData.isDraft} hasIdempotencyKey=${Boolean(options.idempotencyKey || incidentData.idempotencyKey)}`
+  );
+
   // Check if user is suspended
   const user = await db.oneOrNone('SELECT is_suspended FROM users WHERE user_id = $1', [reporterId]);
   
@@ -602,6 +607,11 @@ async function createIncident(incidentData, reporterId, options = {}) {
   const idempotencyPayloadHash = normalizedIdempotencyKey
     ? buildIncidentPayloadHash(incidentData, reporterId)
     : null;
+
+  logger.info(
+    `Create incident normalized: reporterId=${reporterId} isDraft=${normalizedIsDraft} enableMlClassification=${normalizedEnableMlClassification} enableMlRisk=${normalizedEnableMlRisk} photoUrls=${Array.isArray(photoUrls) ? photoUrls.length : 0} hasVideoUrl=${Boolean(videoUrl)}`
+  );
+
   const insertParams = [
     reporterId,
     title,
@@ -622,6 +632,7 @@ async function createIncident(incidentData, reporterId, options = {}) {
   let incident;
 
   if (normalizedIdempotencyKey) {
+    logger.info(`Create incident inserting with idempotency: reporterId=${reporterId}`);
     incident = await db.oneOrNone(
       `INSERT INTO incidents (
         reporter_id, title, description, category, latitude, longitude,
@@ -656,9 +667,13 @@ async function createIncident(incidentData, reporterId, options = {}) {
         throw ServiceError.conflict('Idempotency key was already used for a different incident payload');
       }
 
+      logger.info(
+        `Create incident reused idempotent result: incidentId=${existingIncident.incident_id} elapsedMs=${Date.now() - startedAt}`
+      );
       return stripIncidentIdempotencyFields(existingIncident);
     }
   } else {
+    logger.info(`Create incident inserting without idempotency: reporterId=${reporterId}`);
     incident = await db.one(
       `INSERT INTO incidents (
         reporter_id, title, description, category, latitude, longitude,
@@ -673,6 +688,10 @@ async function createIncident(incidentData, reporterId, options = {}) {
     );
   }
 
+  logger.info(
+    `Create incident inserted: incidentId=${incident.incident_id} status=${incident.status} photoCount=${incident.photo_urls?.length || 0} hasVideoUrl=${Boolean(incident.video_url)} elapsedMs=${Date.now() - startedAt}`
+  );
+
   const autoVerificationContext = {
     confidencePercent: null,
     highConfidenceDuplicates: 0,
@@ -680,7 +699,10 @@ async function createIncident(incidentData, reporterId, options = {}) {
   };
 
   if (!incident.is_draft) {
+    logger.info(`Create incident scheduling post-processing: incidentId=${incident.incident_id}`);
     (async () => {
+    const postProcessStartedAt = Date.now();
+    logger.info(`Incident post-processing started: incidentId=${incident.incident_id}`);
     try {
       const latitudeValue = parseFloat(incident.latitude);
       const longitudeValue = parseFloat(incident.longitude);
@@ -825,6 +847,10 @@ async function createIncident(incidentData, reporterId, options = {}) {
               ? null
               : Number(categoryConfidence.toFixed(2)),
           ]
+        );
+
+        logger.info(
+          `Incident report row created: incidentId=${incident.incident_id} reportId=${report.report_id} hasVideoUrl=${Boolean(incident.video_url)}`
         );
 
         // Use ML-predicted category for dedup matching instead of the
@@ -1232,11 +1258,18 @@ async function createIncident(incidentData, reporterId, options = {}) {
       .catch((error) => {
         logger.error(`Constellation creation failed for incident ${incident.incident_id}: ${error.message}`);
       });
+
+    logger.info(
+      `Incident post-processing finished main steps: incidentId=${incident.incident_id} elapsedMs=${Date.now() - postProcessStartedAt}`
+    );
     })().catch((error) => {
       logger.error(`Post-processing failed for incident ${incident.incident_id}: ${error.message}`);
     });
   }
 
+  logger.info(
+    `Create incident returning response: incidentId=${incident.incident_id} elapsedMs=${Date.now() - startedAt}`
+  );
   return stripIncidentIdempotencyFields(incident);
 }
 
