@@ -91,6 +91,10 @@ const ReportItem = ({ item, onPress, onLongPress }) => {
   const isRejected = item.status === 'rejected';
   const progressColor = isRejected ? theme.error : theme.primary;
   const constellationLabel = getConstellationLabel(item.constellation);
+  const duplicateOfTitle = item.duplicateOfTitle ? `: ${item.duplicateOfTitle}` : '';
+  const duplicateOfText = item.duplicateOfIncidentId
+    ? `Marked as duplicate of report #${item.duplicateOfIncidentId}${duplicateOfTitle}`
+    : null;
 
   return (
     <Pressable onPress={() => onPress(item)} onLongPress={() => onLongPress && onLongPress(item)} style={styles.incidentCard}>
@@ -133,6 +137,20 @@ const ReportItem = ({ item, onPress, onLongPress }) => {
               <Ionicons name="radio-outline" size={14} color={theme.primary} />
               <AppText variant="caption" style={[styles.constellationText, { color: theme.primary }]}>
                 {constellationLabel}
+              </AppText>
+            </View>
+          ) : null}
+
+          {duplicateOfText ? (
+            <View
+              style={[
+                styles.duplicateNotice,
+                { backgroundColor: `${theme.accentBlue}12`, borderColor: `${theme.accentBlue}33` },
+              ]}
+            >
+              <Ionicons name="git-merge-outline" size={14} color={theme.accentBlue} />
+              <AppText variant="caption" style={[styles.duplicateNoticeText, { color: theme.accentBlue }]} numberOfLines={2}>
+                {duplicateOfText}
               </AppText>
             </View>
           ) : null}

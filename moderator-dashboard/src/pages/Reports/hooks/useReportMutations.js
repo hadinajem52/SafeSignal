@@ -94,9 +94,15 @@ export function useReportMutations({
       queryClient.invalidateQueries({
         queryKey: ["report-dedup", selectedReport?.id],
       });
+      if (Number(result.data?.duplicateIncidentId) === Number(selectedReport.id)) {
+        const parentResult = await reportsAPI.getById(result.data.canonicalIncidentId);
+        setSelectedReport(parentResult.success && parentResult.data
+          ? normalizeReport(parentResult.data)
+          : null);
+      }
       pushToast("Duplicate linked successfully.");
     },
-    [linkDuplicateMutation, pushToast, queryClient, selectedReport?.id],
+    [linkDuplicateMutation, normalizeReport, pushToast, queryClient, reportsAPI, selectedReport?.id, setSelectedReport],
   );
 
   const onApplySuggestedCategory = useCallback(

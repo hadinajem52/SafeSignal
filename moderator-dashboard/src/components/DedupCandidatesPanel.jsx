@@ -138,7 +138,7 @@ function DedupCandidatesPanel({ dedup, isLoading, onMerge, isMerging, sourceInci
                   disabled={isMerging}
                   className="text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 border border-primary/15 px-3 py-1 disabled:opacity-40 transition-colors"
                 >
-                  {isMerging ? 'Linking…' : 'Mark as Duplicate'}
+                  {isMerging ? 'Linking…' : 'Confirm Duplicate'}
                 </button>
               </div>
             </div>
