@@ -18,6 +18,8 @@ const IncidentPhotoUploader = ({
   onPickImage,
   onRemovePhoto,
   video,
+  isVideoProcessing,
+  videoProcessingProgress,
   onRecordVideo,
   onPickVideo,
   onRemoveVideo,
@@ -74,7 +76,28 @@ const IncidentPhotoUploader = ({
       <AppText variant="small" style={[styles.subLabel, { color: theme.textSecondary }]}>
         Optional video evidence: 1 clip, up to 10 minutes
       </AppText>
-      {videoUri ? (
+      {isVideoProcessing ? (
+        <View style={[styles.videoProcessing, { borderColor: theme.inputBorder, backgroundColor: theme.surface }]}>
+          <Ionicons name="sync-outline" size={18} color={theme.primary} />
+          <View style={styles.videoProcessingContent}>
+            <AppText variant="small" style={[styles.videoText, { color: theme.text }]}>Preparing video for upload</AppText>
+            <View style={[styles.progressTrack, { backgroundColor: theme.inputBorder }]}>
+              <View
+                style={[
+                  styles.progressFill,
+                  {
+                    backgroundColor: theme.primary,
+                    width: `${Math.max(4, videoProcessingProgress || 1)}%`,
+                  },
+                ]}
+              />
+            </View>
+            <AppText variant="caption" style={{ color: theme.textSecondary }}>
+              {videoProcessingProgress || 1}% compressed
+            </AppText>
+          </View>
+        </View>
+      ) : videoUri ? (
         <View style={[styles.videoPreview, { borderColor: theme.inputBorder, backgroundColor: theme.surface }]}>
           <Ionicons name="videocam-outline" size={18} color={theme.primary} />
           <AppText variant="small" style={[styles.videoText, { color: theme.text }]} numberOfLines={1}>
@@ -87,8 +110,13 @@ const IncidentPhotoUploader = ({
       ) : (
         <View style={styles.actionRow}>
           <TouchableOpacity
-            style={[styles.actionBtn, { borderColor: theme.inputBorder, backgroundColor: theme.surface }]}
+            style={[
+              styles.actionBtn,
+              { borderColor: theme.inputBorder, backgroundColor: theme.surface },
+              isVideoProcessing && styles.disabledAction,
+            ]}
             onPress={onRecordVideo}
+            disabled={isVideoProcessing}
             activeOpacity={0.75}
           >
             <Ionicons name="videocam-outline" size={18} color={theme.primary} style={styles.actionIcon} />
@@ -96,8 +124,13 @@ const IncidentPhotoUploader = ({
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.actionBtn, { borderColor: theme.inputBorder, backgroundColor: theme.surface }]}
+            style={[
+              styles.actionBtn,
+              { borderColor: theme.inputBorder, backgroundColor: theme.surface },
+              isVideoProcessing && styles.disabledAction,
+            ]}
             onPress={onPickVideo}
+            disabled={isVideoProcessing}
             activeOpacity={0.75}
           >
             <Ionicons name="film-outline" size={18} color={theme.primary} style={styles.actionIcon} />
@@ -178,6 +211,33 @@ const styles = StyleSheet.create({
   },
   videoText: {
     flex: 1,
+  },
+  videoProcessing: {
+    minHeight: 72,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  videoProcessingContent: {
+    flex: 1,
+  },
+  progressTrack: {
+    height: 6,
+    borderRadius: 999,
+    overflow: 'hidden',
+    marginTop: 6,
+    marginBottom: 4,
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 999,
+  },
+  disabledAction: {
+    opacity: 0.5,
   },
   removeVideoButton: {
     backgroundColor: 'rgba(0,0,0,0.5)',
