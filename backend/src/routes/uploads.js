@@ -48,6 +48,7 @@ router.get('/incidents/:filename', optionalAuth, async (req, res, next) => {
       throw ServiceError.forbidden('Not authorized to access this media');
     }
 
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     res.sendFile(path.join(UPLOAD_ROOT, 'incidents', filename));
   } catch (error) {
     next(error);
