@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system/legacy';
+import { Video } from 'react-native-compressor';
 import limits from '../../../constants/limits';
 import { useToast } from '../context/ToastContext';
 
@@ -8,8 +10,26 @@ const { LIMITS } = limits;
 const { MAX_PHOTOS, MAX_PHOTO_BYTES, MAX_VIDEO_BYTES, MAX_VIDEO_MINUTES } = LIMITS;
 const VIDEO_QUALITY = ImagePicker.UIImagePickerControllerQualityType?.Low ?? 2;
 const VIDEO_EXPORT_PRESET = ImagePicker.VideoExportPreset?.MediumQuality;
+const VIDEO_COMPRESSION_MAX_SIZE = 1280;
+const VIDEO_COMPRESSION_BITRATE = 2_000_000;
 
 const formatMegabytes = (bytes) => `${Math.ceil(bytes / (1024 * 1024))} MB`;
+
+const normalizeProgress = (progress) => {
+  const value = Number(progress || 0);
+  return Math.max(0, Math.min(100, Math.round(value > 1 ? value : value * 100)));
+};
+
+const getFileSize = async (uri) => {
+  if (!uri) return 0;
+
+  try {
+    const fileInfo = await FileSystem.getInfoAsync(uri, { size: true });
+    return fileInfo.exists ? Number(fileInfo.size || 0) : 0;
+  } catch (_error) {
+    return 0;
+  }
+};
 
 const createMedia = (asset, fallbackType) => {
   if (!asset?.uri) return null;
@@ -26,6 +46,8 @@ const useImagePicker = () => {
   const { showToast } = useToast();
   const [photos, setPhotos] = useState([]);
   const [video, setVideo] = useState(null);
+  const [isVideoProcessing, setIsVideoProcessing] = useState(false);
+  const [videoProcessingProgress, setVideoProcessingProgress] = useState(0);
   // Tracks whether we launched the camera so the AppState listener knows
   // to call getPendingResultAsync on Android (MainActivity can be destroyed
   // while the camera is open, which causes launchCameraAsync to never resolve).
@@ -146,15 +168,20 @@ const useImagePicker = () => {
     });
   }, []);
 
-  const validateVideo = useCallback((asset) => {
+  const validateVideoDuration = useCallback((asset) => {
     const durationMs = Number(asset?.duration || 0);
-    const fileSize = Number(asset?.fileSize || asset?.size || 0);
     const maxDurationMs = MAX_VIDEO_MINUTES * 60 * 1000;
 
     if (durationMs > maxDurationMs) {
       showToast(`Video must be ${MAX_VIDEO_MINUTES} minutes or shorter.`, 'warning');
       return false;
     }
+
+    return true;
+  }, [showToast]);
+
+  const validatePreparedVideo = useCallback((media) => {
+    const fileSize = Number(media?.fileSize || 0);
 
     if (fileSize > MAX_VIDEO_BYTES) {
       showToast(`Video must be ${formatMegabytes(MAX_VIDEO_BYTES)} or smaller.`, 'warning');
@@ -163,6 +190,56 @@ const useImagePicker = () => {
 
     return true;
   }, [showToast]);
+
+  const prepareVideo = useCallback(async (asset) => {
+    if (!asset?.uri || !validateVideoDuration(asset)) return null;
+
+    setIsVideoProcessing(true);
+    setVideoProcessingProgress(1);
+
+    try {
+      const originalSize = Number(asset.fileSize || asset.size || 0) || await getFileSize(asset.uri);
+      const compressedUri = await Video.compress(
+        asset.uri,
+        {
+          compressionMethod: 'manual',
+          bitrate: VIDEO_COMPRESSION_BITRATE,
+          maxSize: VIDEO_COMPRESSION_MAX_SIZE,
+          minimumFileSizeForCompress: 0,
+        },
+        (progress) => setVideoProcessingProgress(normalizeProgress(progress)),
+      );
+      const compressedSize = await getFileSize(compressedUri);
+      const preparedVideo = createMedia(
+        {
+          ...asset,
+          uri: compressedUri,
+          fileName: asset.fileName || `incident-video-${Date.now()}.mp4`,
+          fileSize: compressedSize || originalSize,
+        },
+        'video/mp4',
+      );
+
+      setVideoProcessingProgress(100);
+
+      if (!validatePreparedVideo(preparedVideo)) return null;
+
+      console.log('Video prepared for upload:', {
+        originalBytes: originalSize,
+        compressedBytes: preparedVideo.fileSize,
+        durationMs: preparedVideo.duration,
+      });
+
+      return preparedVideo;
+    } catch (error) {
+      console.error('Video compression error:', error);
+      showToast('Could not prepare video for upload. Please try a shorter clip.', 'error');
+      return null;
+    } finally {
+      setIsVideoProcessing(false);
+      setVideoProcessingProgress(0);
+    }
+  }, [showToast, validatePreparedVideo, validateVideoDuration]);
 
   const pickVideo = useCallback(async () => {
     try {
@@ -179,14 +256,16 @@ const useImagePicker = () => {
         videoExportPreset: VIDEO_EXPORT_PRESET,
       });
 
-      if (!result.canceled && result.assets?.[0] && validateVideo(result.assets[0])) {
-        setVideo(createMedia(result.assets[0], 'video/mp4'));
+      if (!result.canceled && result.assets?.[0]) {
+        setVideo(null);
+        const preparedVideo = await prepareVideo(result.assets[0]);
+        if (preparedVideo) setVideo(preparedVideo);
       }
     } catch (error) {
       console.error('Error picking video:', error);
       showToast('Failed to pick video. Please try again.', 'error');
     }
-  }, [showToast, validateVideo]);
+  }, [showToast, prepareVideo]);
 
   const recordVideo = useCallback(async () => {
     try {
@@ -203,20 +282,24 @@ const useImagePicker = () => {
         quality: 0.7,
       });
 
-      if (!result.canceled && result.assets?.[0] && validateVideo(result.assets[0])) {
-        setVideo(createMedia(result.assets[0], 'video/mp4'));
+      if (!result.canceled && result.assets?.[0]) {
+        setVideo(null);
+        const preparedVideo = await prepareVideo(result.assets[0]);
+        if (preparedVideo) setVideo(preparedVideo);
       }
     } catch (error) {
       console.error('Error recording video:', error);
       showToast('Failed to record video. Please try again.', 'error');
     }
-  }, [showToast, validateVideo]);
+  }, [showToast, prepareVideo]);
 
   return {
     photos,
     setPhotos,
     video,
     setVideo,
+    isVideoProcessing,
+    videoProcessingProgress,
     pickImage,
     takePhoto,
     pickVideo,

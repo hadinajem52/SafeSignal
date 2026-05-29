@@ -113,6 +113,8 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     setPhotos,
     video,
     setVideo,
+    isVideoProcessing,
+    videoProcessingProgress,
     removePhoto,
     removeVideo,
     pickImage,
@@ -291,6 +293,11 @@ const ReportIncidentScreen = ({ navigation, route }) => {
         return;
       }
 
+      if (isVideoProcessing) {
+        showToast('Please wait while the video is prepared for upload.', 'warning');
+        return;
+      }
+
       if (!asDraft && !validateForm(location)) {
         // Inline errors are shown on each field — scroll to top to see them
         showToast('Please fill in all required fields correctly.', 'warning');
@@ -410,6 +417,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
       enableMlRisk,
       isAnonymous,
       isSubmitting,
+      isVideoProcessing,
       location,
       locationName,
       navigation,
@@ -572,6 +580,8 @@ const ReportIncidentScreen = ({ navigation, route }) => {
         <IncidentPhotoUploader
           photos={photos}
           video={video}
+          isVideoProcessing={isVideoProcessing}
+          videoProcessingProgress={videoProcessingProgress}
           onTakePhoto={takePhoto}
           onPickImage={pickImage}
           onRemovePhoto={removePhoto}
@@ -599,7 +609,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
             title="Save Draft"
             onPress={handleSaveDraftPress}
             loading={isSavingDraft}
-            disabled={isSavingDraft}
+            disabled={isSavingDraft || isVideoProcessing}
             variant="secondary"
             style={styles.draftButton}
           />
@@ -608,8 +618,8 @@ const ReportIncidentScreen = ({ navigation, route }) => {
           <Button
             title="Submit Report"
             onPress={handleSubmitPress}
-            loading={isSubmitting}
-            disabled={isSubmitting}
+            loading={isSubmitting || isVideoProcessing}
+            disabled={isSubmitting || isVideoProcessing}
             style={[
               styles.submitButton,
               { backgroundColor: theme.primary },
