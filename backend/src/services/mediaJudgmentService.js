@@ -46,30 +46,53 @@ function getMediaUrls(incident) {
 
 function resolveStoredMedia(url, role, index) {
   if (typeof url !== 'string' || !url.startsWith(INCIDENT_MEDIA_PREFIX)) {
-    return null;
+    return { error: `Unsupported media URL for analysis: ${url || '(empty)'}` };
   }
 
   const originalName = path.basename(url);
   const absolutePath = path.resolve(INCIDENT_MEDIA_DIR, originalName);
-  if (!absolutePath.startsWith(`${INCIDENT_MEDIA_DIR}${path.sep}`) || !fs.existsSync(absolutePath)) {
-    return null;
+  if (!absolutePath.startsWith(`${INCIDENT_MEDIA_DIR}${path.sep}`)) {
+    return { error: `Unsafe media path for analysis: ${url}` };
+  }
+
+  let stats;
+  try {
+    stats = fs.statSync(absolutePath);
+  } catch (_error) {
+    return { error: `Stored media file is missing: ${url}` };
+  }
+
+  if (!stats.isFile()) {
+    return { error: `Stored media path is not a file: ${url}` };
   }
 
   const mimeType = getMimeType(originalName);
   return {
-    role,
-    url,
-    path: absolutePath,
-    filename: `${role}-${index + 1}-${originalName}`,
-    mimeType,
-    kind: mimeType.startsWith('video/') ? 'video' : 'photo',
+    mediaFile: {
+      role,
+      url,
+      path: absolutePath,
+      filename: `${role}-${index + 1}-${originalName}`,
+      mimeType,
+      kind: mimeType.startsWith('video/') ? 'video' : 'photo',
+      size: stats.size,
+    },
   };
 }
 
-function getStoredMediaFiles(incident, role) {
-  return getMediaUrls(incident)
-    .map((url, index) => resolveStoredMedia(url, role, index))
-    .filter(Boolean);
+function getStoredMediaResolution(incident, role) {
+  return getMediaUrls(incident).reduce(
+    (result, url, index) => {
+      const resolved = resolveStoredMedia(url, role, index);
+      if (resolved.error) {
+        result.errors.push(resolved.error);
+      } else {
+        result.files.push(resolved.mediaFile);
+      }
+      return result;
+    },
+    { files: [], errors: [] }
+  );
 }
 
 function toMediaManifest(mediaFiles) {
@@ -235,12 +258,17 @@ async function analyzeIncidentMedia(incidentId, { force = false } = {}) {
   }
 
   const canonicalIncident = await getCanonicalIncidentForReport(context.report_id);
-  const reportMedia = getStoredMediaFiles(context, 'report');
-  const canonicalMedia = canonicalIncident
-    ? getStoredMediaFiles(canonicalIncident, 'duplicate_original')
-    : [];
+  const reportMediaResolution = getStoredMediaResolution(context, 'report');
+  const canonicalMediaResolution = canonicalIncident
+    ? getStoredMediaResolution(canonicalIncident, 'duplicate_original')
+    : { files: [], errors: [] };
+  const reportMedia = reportMediaResolution.files;
+  const canonicalMedia = canonicalMediaResolution.files;
+  const mediaErrors = reportMedia.length > 0
+    ? [...reportMediaResolution.errors, ...canonicalMediaResolution.errors]
+    : reportMediaResolution.errors;
   const metadata = buildAnalysisPayload(context, reportMedia, canonicalIncident, canonicalMedia);
-  const inputHash = buildInputHash(metadata);
+  const inputHash = buildInputHash({ ...metadata, mediaErrors });
 
   if (
     !force
@@ -257,7 +285,15 @@ async function analyzeIncidentMedia(incidentId, { force = false } = {}) {
 
   if (reportMedia.length === 0) {
     await markPending(context.ml_id, inputHash);
+    if (reportMediaResolution.errors.length > 0) {
+      return markTerminal(context.ml_id, 'failed', null, reportMediaResolution.errors.join('; '));
+    }
     return markTerminal(context.ml_id, 'skipped', buildInsufficientMediaJudgment());
+  }
+
+  if (mediaErrors.length > 0) {
+    await markPending(context.ml_id, inputHash);
+    return markTerminal(context.ml_id, 'failed', null, mediaErrors.join('; '));
   }
 
   await markPending(context.ml_id, inputHash);

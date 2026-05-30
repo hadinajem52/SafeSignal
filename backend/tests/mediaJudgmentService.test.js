@@ -46,17 +46,20 @@ function mockTerminalUpdate() {
 }
 
 describe('mediaJudgmentService', () => {
-  let existsSpy;
+  let statSpy;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    existsSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(true);
+    statSpy = jest.spyOn(fs, 'statSync').mockReturnValue({
+      isFile: () => true,
+      size: 1234,
+    });
     db.none.mockResolvedValue();
     mockTerminalUpdate();
   });
 
   afterEach(() => {
-    existsSpy.mockRestore();
+    statSpy.mockRestore();
   });
 
   it('records skipped judgment when the report has no stored media', async () => {
@@ -132,5 +135,25 @@ describe('mediaJudgmentService', () => {
 
     expect(result.status).toBe('failed');
     expect(result.error).toBe('ML media analysis unavailable');
+  });
+
+  it('records failed when the incident references missing stored media', async () => {
+    statSpy.mockImplementation(() => {
+      const error = new Error('ENOENT');
+      error.code = 'ENOENT';
+      throw error;
+    });
+    db.oneOrNone
+      .mockResolvedValueOnce({
+        ...baseContext,
+        photo_urls: ['/uploads/incidents/missing.jpg'],
+      })
+      .mockResolvedValueOnce(null);
+
+    const result = await mediaJudgmentService.analyzeIncidentMedia(12);
+
+    expect(result.status).toBe('failed');
+    expect(result.error).toContain('Stored media file is missing');
+    expect(mlClient.analyzeReportMedia).not.toHaveBeenCalled();
   });
 });

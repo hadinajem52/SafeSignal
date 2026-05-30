@@ -5,19 +5,27 @@
  */
 
 const axios = require('axios');
-const fs = require('fs/promises');
-const { Blob } = require('buffer');
+const fs = require('fs');
+const FormData = require('form-data');
 const logger = require('./logger');
+const { LIMITS } = require('../../../constants/limits');
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:5001';
 // Gemini 2.5-flash regularly takes 8–17 s per call; 10 s caused silent fallback to heuristics.
 const ML_TIMEOUT_MS = parseInt(process.env.ML_TIMEOUT_MS, 10) || 35000;
 const ML_MEDIA_TIMEOUT_MS = parseInt(process.env.ML_MEDIA_TIMEOUT_MS, 10) || 120000;
+const ML_MEDIA_MAX_PAYLOAD_BYTES =
+  parseInt(process.env.ML_MEDIA_MAX_PAYLOAD_BYTES, 10) || LIMITS.MAX_UPLOAD_BYTES * 2;
 
 const mlClient = axios.create({
   baseURL: ML_SERVICE_URL,
   timeout: ML_TIMEOUT_MS,
   headers: { 'Content-Type': 'application/json' },
+});
+
+const mlMediaClient = axios.create({
+  baseURL: ML_SERVICE_URL,
+  timeout: ML_MEDIA_TIMEOUT_MS,
 });
 
 /**
@@ -291,20 +299,34 @@ async function analyzeReportMedia({ metadata, mediaFiles }) {
   try {
     const form = new FormData();
     form.append('metadata', JSON.stringify(metadata));
+    const totalBytes = (mediaFiles || []).reduce(
+      (sum, mediaFile) => sum + Number(mediaFile.size || 0),
+      0
+    );
 
-    for (const mediaFile of mediaFiles || []) {
-      const bytes = await fs.readFile(mediaFile.path);
-      form.append(
-        'files',
-        new Blob([bytes], { type: mediaFile.mimeType || 'application/octet-stream' }),
-        mediaFile.filename
+    if (totalBytes > ML_MEDIA_MAX_PAYLOAD_BYTES) {
+      throw new Error(
+        `Media analysis payload exceeds ${ML_MEDIA_MAX_PAYLOAD_BYTES} bytes`
       );
     }
 
-    const response = await mlClient.post('/media/analyze-report', form, {
+    for (const mediaFile of mediaFiles || []) {
+      form.append(
+        'files',
+        fs.createReadStream(mediaFile.path),
+        {
+          filename: mediaFile.filename,
+          contentType: mediaFile.mimeType || 'application/octet-stream',
+          knownLength: Number(mediaFile.size || 0) || undefined,
+        }
+      );
+    }
+
+    const response = await mlMediaClient.post('/media/analyze-report', form, {
       timeout: ML_MEDIA_TIMEOUT_MS,
-      maxBodyLength: Infinity,
-      maxContentLength: Infinity,
+      headers: form.getHeaders(),
+      maxBodyLength: ML_MEDIA_MAX_PAYLOAD_BYTES,
+      maxContentLength: ML_MEDIA_MAX_PAYLOAD_BYTES,
     });
 
     const data = response.data || {};
