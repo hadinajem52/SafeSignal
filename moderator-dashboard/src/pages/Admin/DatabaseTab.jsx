@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { AlertTriangle, ChevronDown, ChevronRight, RefreshCw, Trash2 } from 'lucide-react'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import DangerActionPanel from './DangerActionPanel'

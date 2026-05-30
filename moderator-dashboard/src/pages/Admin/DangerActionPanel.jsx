@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { AlertTriangle, ShieldAlert } from 'lucide-react'
 import ConfirmDialog from '../../components/ConfirmDialog'
 

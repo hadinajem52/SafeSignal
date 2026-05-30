@@ -1,4 +1,3 @@
-import React from 'react'
 import GoogleMapPanel from './GoogleMapPanel'
 
 function DedupCandidatesPanel({ dedup, isLoading, onMerge, isMerging, sourceIncident, onOpenCandidate }) {
