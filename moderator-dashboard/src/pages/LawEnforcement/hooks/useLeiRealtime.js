@@ -66,11 +66,16 @@ export default function useLeiRealtime({
     socket.on("incident:update", (payload) => {
       const incidentId = payload?.incidentId;
       const nextStatus = payload?.status;
-      if (!incidentId || nextStatus === "verified") return;
-      setLeiAlerts((prev) =>
-        prev.filter((a) => String(a.incidentId) !== String(incidentId)),
-      );
+      if (incidentId && nextStatus !== "verified") {
+        setLeiAlerts((prev) =>
+          prev.filter((a) => String(a.incidentId) !== String(incidentId)),
+        );
+      }
+      queryClient.invalidateQueries({ queryKey: ["lei-incidents"] });
       queryClient.invalidateQueries({ queryKey: ["lei-incidents-snapshot"] });
+      if (incidentId) {
+        queryClient.invalidateQueries({ queryKey: ["lei-incident", incidentId] });
+      }
     });
 
     return () => socket.disconnect();
