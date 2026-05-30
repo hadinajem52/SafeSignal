@@ -387,6 +387,10 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_CHAT_MODEL = os.getenv("GEMINI_CHAT_MODEL", "gemini-2.5-flash")
 GEMINI_EMBEDDING_MODEL = os.getenv("GEMINI_EMBEDDING_MODEL", "models/gemini-embedding-001")
 GEMINI_TIMEOUT_SECONDS = float(os.getenv("GEMINI_TIMEOUT_SECONDS", "30.0"))
+GEMINI_MEDIA_TIMEOUT_SECONDS = float(os.getenv("GEMINI_MEDIA_TIMEOUT_SECONDS", "120.0"))
+GEMINI_INLINE_MEDIA_LIMIT_BYTES = int(
+    os.getenv("GEMINI_INLINE_MEDIA_LIMIT_BYTES", str(18 * 1024 * 1024))
+)
 GEMINI_MAX_RETRIES = int(os.getenv("GEMINI_MAX_RETRIES", "2"))
 # I/O-bound API calls can safely run at higher concurrency than local GPU inference.
 GEMINI_MAX_CONCURRENCY = int(os.getenv("GEMINI_MAX_CONCURRENCY", "20"))

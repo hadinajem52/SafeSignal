@@ -145,12 +145,14 @@ function Reports() {
     rejectMutation,
     linkDuplicateMutation,
     updateCategoryMutation,
+    retryMediaJudgmentMutation,
     executeBulkAction,
     handleEscalateRequest,
     handleRejectRequest,
     executeSingleAction,
     onMerge,
     onApplySuggestedCategory,
+    onRetryMediaJudgment,
     onOpenDuplicateCandidate,
   } = useReportActions({
     queryClient,
@@ -274,10 +276,12 @@ function Reports() {
               updateCategoryPending={updateCategoryMutation.isPending}
               verifyPending={verifyMutation.isPending}
               rejectPending={rejectMutation.isPending}
+              retryMediaJudgmentPending={retryMediaJudgmentMutation.isPending}
               canVerify={canEscalateReport(selectedReport)}
               canReject={canRejectReport(selectedReport)}
               onMerge={onMerge}
               onApplySuggestedCategory={onApplySuggestedCategory}
+              onRetryMediaJudgment={onRetryMediaJudgment}
               onVerify={handleEscalateRequest}
               onReject={handleRejectRequest}
               onNext={handleSelectNextReport}

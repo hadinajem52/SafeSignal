@@ -23,6 +23,7 @@ const { emitToRoles } = require('../utils/socketService');
 const settingsService = require('./settingsService');
 const notificationService = require('./notificationService');
 const constellationService = require('./constellationService');
+const mediaJudgmentService = require('./mediaJudgmentService');
 
 const LEI_STATUSES = ['verified', 'dispatched', 'on_scene', 'investigating', 'police_closed'];
 const STAFF_ROLES = new Set(['admin', 'moderator', 'law_enforcement']);
@@ -1132,6 +1133,8 @@ async function createIncident(incidentData, reporterId, options = {}) {
           ]
         );
 
+        mediaJudgmentService.queueIncidentMediaAnalysis(incident.incident_id);
+
         // ── Apply ML predictions back to the incident ──────────────────
         // When ML classification/risk is enabled, the frontend sends placeholder
         // defaults (category='other', severity='medium') since those pickers are
@@ -1856,7 +1859,18 @@ async function getIncidentMlSummary(incidentId) {
   }
 
   const ml = await db.oneOrNone(
-    `SELECT rm.predicted_category, rm.confidence, rm.risk_score, rm.toxicity_score, rm.is_toxic, rm.created_at
+    `SELECT
+       rm.predicted_category,
+       rm.confidence,
+       rm.risk_score,
+       rm.toxicity_score,
+       rm.is_toxic,
+       rm.media_judgment_status,
+       rm.media_judgment,
+       rm.media_judgment_error,
+       rm.media_judgment_input_hash,
+       rm.media_judgment_generated_at,
+       rm.created_at
      FROM reports r
      JOIN report_ml rm ON rm.report_id = r.report_id
      WHERE r.incident_id = $1
@@ -1875,8 +1889,17 @@ async function getIncidentMlSummary(incidentId) {
     riskScore: ml?.risk_score ? Number(ml.risk_score) : 0,
     toxicityScore: ml?.toxicity_score ? Number(ml.toxicity_score) : 0,
     isToxic: Boolean(ml?.is_toxic),
+    mediaJudgmentStatus: ml?.media_judgment_status || null,
+    mediaJudgment: ml?.media_judgment || null,
+    mediaJudgmentError: ml?.media_judgment_error || null,
+    mediaJudgmentInputHash: ml?.media_judgment_input_hash || null,
+    mediaJudgmentGeneratedAt: ml?.media_judgment_generated_at || null,
     generatedAt: ml?.created_at || null,
   };
+}
+
+async function retryIncidentMediaJudgment(incidentId) {
+  return mediaJudgmentService.analyzeIncidentMedia(incidentId, { force: true });
 }
 
 /**
@@ -2029,6 +2052,8 @@ async function linkDuplicateIncident(incidentId, duplicateIncidentId, requesting
   } catch (verdictError) {
     logger.warn(`Failed to record dedup verdict for incident ${duplicate.incident_id}: ${verdictError.message}`);
   }
+
+  mediaJudgmentService.queueIncidentMediaAnalysis(duplicate.incident_id, { force: true });
 
   emitToRoles(['moderator', 'admin'], 'incident:update', {
     incidentId: updatedDuplicate.incident_id,
@@ -2860,6 +2885,7 @@ module.exports = {
   getIncidentById,
   getIncidentDedupCandidates,
   getIncidentMlSummary,
+  retryIncidentMediaJudgment,
   getIncidentsByUserId,
   updateIncident,
   patchIncident,

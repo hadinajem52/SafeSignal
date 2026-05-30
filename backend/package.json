@@ -14,7 +14,8 @@
     "db:migrate:witness-constellation": "node src/database/migrations/add_witness_constellation.js",
     "db:migrate:incident-lifecycle": "node src/database/migrations/add_incident_lifecycle_timestamps.js",
     "db:migrate:incident-idempotency": "node src/database/migrations/add_incident_idempotency.js",
-    "db:migrate:incident-video": "node src/database/migrations/add_incident_video_url.js"
+    "db:migrate:incident-video": "node src/database/migrations/add_incident_video_url.js",
+    "db:migrate:media-judgment": "node src/database/migrations/add_report_media_judgment.js"
   },
   "jest": {
     "testEnvironment": "node",

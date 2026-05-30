@@ -158,6 +158,12 @@ class LocalProvider(BaseProvider):
         """Local provider has no LLM — constellation synthesis is not available."""
         return None
 
+    async def analyze_report_media(
+        self, metadata: Dict, media_files: List[Dict]
+    ) -> Optional[Dict]:
+        """Local provider has no multimodal LLM — media judgment is unavailable."""
+        return None
+
     async def is_ready(self) -> bool:
         return all(
             [

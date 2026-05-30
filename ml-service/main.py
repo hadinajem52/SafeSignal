@@ -4,13 +4,15 @@ FastAPI service providing ML capabilities for incident analysis.
 """
 
 import asyncio
+import json
 import logging
 import os
+import tempfile
 import time
 from contextlib import asynccontextmanager
 from typing import Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, ValidationError
 
@@ -323,6 +325,76 @@ class FullAnalysisResponse(BaseModel):
     dispatch_suggestion: Optional[str] = None
 
 
+class MediaAnalysisResponse(BaseModel):
+    supported: bool
+    status: str
+    judgment: Optional[dict] = None
+    error: Optional[str] = None
+
+
+def build_insufficient_media_judgment() -> dict:
+    return {
+        "overallVerdict": "insufficient_media",
+        "validityRecommendation": "needs_review",
+        "confidence": 0,
+        "descriptionAlignment": {
+            "matchedDetails": [],
+            "missingDetails": [],
+            "contradictions": [],
+            "reasoning": "No submitted photos or video were attached.",
+        },
+        "duplicateMediaAlignment": {
+            "alignment": "not_applicable",
+            "confidence": 0,
+            "reasoning": "No duplicate media comparison was run.",
+        },
+        "evidenceSummary": {
+            "photoCount": 0,
+            "videoPresent": False,
+            "observedScene": None,
+            "limitations": ["No submitted media."],
+        },
+    }
+
+
+async def save_upload_to_temp(upload: UploadFile) -> dict:
+    suffix = os.path.splitext(upload.filename or "")[1] or ".bin"
+    fd, temp_path = tempfile.mkstemp(suffix=suffix)
+    size = 0
+    try:
+        with os.fdopen(fd, "wb") as output:
+            while True:
+                chunk = await upload.read(1024 * 1024)
+                if not chunk:
+                    break
+                size += len(chunk)
+                output.write(chunk)
+        return {
+            "path": temp_path,
+            "filename": upload.filename or os.path.basename(temp_path),
+            "mime_type": upload.content_type or "application/octet-stream",
+            "size": size,
+        }
+    except Exception:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+        try:
+            os.remove(temp_path)
+        except OSError:
+            pass
+        raise
+
+
+def remove_temp_files(media_files: List[dict]) -> None:
+    for item in media_files:
+        try:
+            os.remove(item["path"])
+        except OSError:
+            pass
+
+
 # ============== Endpoints ==============
 
 
@@ -578,6 +650,62 @@ async def synthesize_constellation(request: ConstellationSynthesisRequest):
 
     log_inference_event("/constellations/synthesize", "constellation_synthesis", started_at)
     return ConstellationSynthesisResponse(**result)
+
+
+@app.post("/media/analyze-report", response_model=MediaAnalysisResponse)
+async def analyze_report_media(
+    metadata: str = Form(...),
+    files: List[UploadFile] = File(default_factory=list),
+):
+    if active_provider is None:
+        raise HTTPException(status_code=503, detail="ML provider not initialised")
+
+    try:
+        metadata_payload = json.loads(metadata)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid media metadata JSON")
+
+    if not files:
+        return MediaAnalysisResponse(
+            supported=True,
+            status="completed",
+            judgment=build_insufficient_media_judgment(),
+        )
+
+    if not isinstance(active_provider, GeminiProvider):
+        return MediaAnalysisResponse(
+            supported=False,
+            status="unsupported",
+            error="Current ML provider does not support media analysis",
+        )
+
+    started_at = time.perf_counter()
+    media_files = []
+    try:
+        for upload in files:
+            media_files.append(await save_upload_to_temp(upload))
+
+        async with _get_semaphore():
+            judgment = await active_provider.analyze_report_media(
+                metadata_payload,
+                media_files,
+            )
+
+        log_inference_event("/media/analyze-report", "media_judgment", started_at)
+        return MediaAnalysisResponse(
+            supported=True,
+            status="completed",
+            judgment=judgment,
+        )
+    except Exception as exc:
+        logger.warning("Media analysis failed: %s", exc)
+        return MediaAnalysisResponse(
+            supported=True,
+            status="failed",
+            error="Failed to analyze report media",
+        )
+    finally:
+        remove_temp_files(media_files)
 
 
 @app.post("/classify", response_model=ClassificationResponse)

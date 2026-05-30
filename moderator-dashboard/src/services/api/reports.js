@@ -17,6 +17,12 @@ export const reportsAPI = {
   getMlSummary: async (id) =>
     requestData(() => api.get(`/incidents/${id}/ml`), "Failed to fetch ML summary"),
 
+  retryMediaJudgment: async (id) =>
+    requestData(
+      () => api.post(`/incidents/${id}/ml/media/retry`),
+      "Failed to retry media judgment",
+    ),
+
   updateCategory: async (id, category) =>
     requestData(
       () => api.patch(`/incidents/${id}/category`, { category }),
