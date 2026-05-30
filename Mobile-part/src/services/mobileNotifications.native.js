@@ -20,7 +20,7 @@ const getUserPreferenceStorageKey = async () => {
     const user = await tokenStorage.getUser();
     const userIdentity = user?.user_id || user?.userId || user?.email || 'guest';
     return `${DEFAULT_STORAGE_KEY}_${normalizeStorageSegment(userIdentity)}`;
-  } catch (error) {
+  } catch {
     return `${DEFAULT_STORAGE_KEY}_guest`;
   }
 };
