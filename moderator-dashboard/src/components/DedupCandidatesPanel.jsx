@@ -72,7 +72,11 @@ function DedupCandidatesPanel({ dedup, isLoading, onMerge, isMerging, sourceInci
         <div className="text-sm text-muted">No duplicate candidates detected.</div>
       ) : (
         <div className="space-y-2.5">
-          {candidates.map((candidate) => (
+          {candidates.map((candidate) => {
+            const parentIncidentId = candidate.canonicalIncidentId || candidate.incidentId
+            const parentTitle = candidate.canonicalTitle || candidate.title
+
+            return (
             <div key={candidate.incidentId} className="bg-card border border-border p-3">
               <div className="flex items-center justify-between">
                 <button
@@ -102,6 +106,14 @@ function DedupCandidatesPanel({ dedup, isLoading, onMerge, isMerging, sourceInci
 
               {candidate.description && (
                 <div className="mt-1.5 text-xs text-muted line-clamp-2">{candidate.description}</div>
+              )}
+
+              {candidate.matchedViaMergedDuplicate && (
+                <div className="mt-2 border border-primary/15 bg-primary/5 p-2 text-[11px] text-muted">
+                  <span className="font-semibold text-primary">Suggested parent:</span>{' '}
+                  Report #{parentIncidentId}{parentTitle ? ` · ${parentTitle}` : ''}
+                  <div className="mt-0.5">Matched through already-merged report #{candidate.incidentId}.</div>
+                </div>
               )}
 
               <div className="mt-2 text-[11px] text-muted grid grid-cols-2 gap-1.5">
@@ -138,11 +150,12 @@ function DedupCandidatesPanel({ dedup, isLoading, onMerge, isMerging, sourceInci
                   disabled={isMerging}
                   className="text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 border border-primary/15 px-3 py-1 disabled:opacity-40 transition-colors"
                 >
-                  {isMerging ? 'Linking…' : 'Confirm Duplicate'}
+                  {isMerging ? 'Linking…' : `Merge into Parent #${parentIncidentId}`}
                 </button>
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

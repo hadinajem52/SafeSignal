@@ -49,6 +49,31 @@ const shouldIncludeStaffConstellation = (includeConstellation, userRole) =>
   Boolean(includeConstellation && STAFF_ROLES.has(userRole));
 const profanityFilter = new Filter();
 
+async function getDuplicateParentForReport(reportId) {
+  return db.oneOrNone(
+    `WITH RECURSIVE parent_chain(report_id, depth, path) AS (
+       SELECT rl.canonical_report_id, 1, ARRAY[$1, rl.canonical_report_id]
+       FROM report_links rl
+       WHERE rl.duplicate_report_id = $1
+         AND rl.link_type = 'duplicate'
+       UNION ALL
+       SELECT rl.canonical_report_id, pc.depth + 1, pc.path || rl.canonical_report_id
+       FROM parent_chain pc
+       JOIN report_links rl ON rl.duplicate_report_id = pc.report_id
+         AND rl.link_type = 'duplicate'
+       WHERE pc.depth < 20
+         AND NOT rl.canonical_report_id = ANY(pc.path)
+     )
+     SELECT ci.*, cr.report_id AS report_id
+     FROM parent_chain pc
+     JOIN reports cr ON cr.report_id = pc.report_id
+     JOIN incidents ci ON ci.incident_id = cr.incident_id
+     ORDER BY pc.depth DESC
+     LIMIT 1`,
+    [reportId]
+  );
+}
+
 function normalizeIdempotencyKey(value) {
   if (value === null || value === undefined) {
     return null;
@@ -458,6 +483,8 @@ const buildDedupCandidates = (incident, candidates) => {
       const categoryMatch = incident.category === candidate.category;
       const bothCategoriesOther = categoryMatch && incident.category === 'other';
       const sameReporter = incident.reporter_id === candidate.reporter_id;
+      const canonicalIncidentId = candidate.canonical_incident_id || candidate.incident_id;
+      const canonicalTitle = candidate.canonical_title || candidate.title;
       const score = computeDedupScore({
         textSimilarity,
         entitySimilarity,
@@ -472,6 +499,11 @@ const buildDedupCandidates = (incident, candidates) => {
         incidentId: candidate.incident_id,
         title: candidate.title,
         description: candidate.description,
+        canonicalIncidentId,
+        canonicalTitle,
+        canonicalReportId: candidate.canonical_report_id || null,
+        matchedIncidentId: candidate.incident_id,
+        matchedViaMergedDuplicate: Boolean(candidate.canonical_incident_id),
         latitude: Number.isFinite(Number(candidate.latitude)) ? Number(candidate.latitude) : null,
         longitude: Number.isFinite(Number(candidate.longitude)) ? Number(candidate.longitude) : null,
         score: Number(score.toFixed(3)),
@@ -726,11 +758,36 @@ async function createIncident(incidentData, reporterId, options = {}) {
             i.incident_date,
             i.reporter_id,
             i.text_embedding,
+            duplicate_parent.incident_id AS canonical_incident_id,
+            duplicate_parent.title AS canonical_title,
+            duplicate_parent.report_id AS canonical_report_id,
             ST_Distance(
               i.location,
               ST_SetSRID(ST_MakePoint($1::float, $2::float), 4326)::geography
             ) AS distance_meters
           FROM incidents i
+          LEFT JOIN LATERAL (
+            WITH RECURSIVE parent_chain(report_id, depth, path) AS (
+              SELECT rl.canonical_report_id, 1, ARRAY[dr.report_id, rl.canonical_report_id]
+              FROM reports dr
+              JOIN report_links rl ON rl.duplicate_report_id = dr.report_id
+                AND rl.link_type = 'duplicate'
+              WHERE dr.incident_id = i.incident_id
+              UNION ALL
+              SELECT rl.canonical_report_id, pc.depth + 1, pc.path || rl.canonical_report_id
+              FROM parent_chain pc
+              JOIN report_links rl ON rl.duplicate_report_id = pc.report_id
+                AND rl.link_type = 'duplicate'
+              WHERE pc.depth < 20
+                AND NOT rl.canonical_report_id = ANY(pc.path)
+            )
+            SELECT ci.incident_id, ci.title, cr.report_id
+            FROM parent_chain pc
+            JOIN reports cr ON cr.report_id = pc.report_id
+            JOIN incidents ci ON ci.incident_id = cr.incident_id
+            ORDER BY pc.depth DESC
+            LIMIT 1
+          ) duplicate_parent ON TRUE
           WHERE i.is_draft = FALSE
             AND i.incident_id <> $3
             AND i.location IS NOT NULL
@@ -1110,11 +1167,26 @@ async function createIncident(incidentData, reporterId, options = {}) {
         // ── Link high-confidence duplicates ────────────────────────────
         if (highConfidenceDuplicates > 0) {
           const topCandidate = scoredCandidates[0];
+          const canonicalIncidentId = topCandidate.canonicalIncidentId || topCandidate.incidentId;
           const canonicalReport = await db.oneOrNone(
             'SELECT report_id FROM reports WHERE incident_id = $1 ORDER BY created_at DESC LIMIT 1',
-            [topCandidate.incidentId]
+            [canonicalIncidentId]
           );
           if (canonicalReport) {
+            await db.none(
+              `DELETE FROM report_links
+               WHERE link_type = 'duplicate'
+                 AND canonical_report_id = $1
+                 AND duplicate_report_id = $2`,
+              [report.report_id, canonicalReport.report_id]
+            );
+            await db.none(
+              `DELETE FROM report_links
+               WHERE link_type = 'duplicate'
+                 AND duplicate_report_id = $1
+                 AND canonical_report_id <> $2`,
+              [report.report_id, canonicalReport.report_id]
+            );
             await db.none(
               `INSERT INTO report_links (canonical_report_id, duplicate_report_id, link_type)
                VALUES ($1, $2, 'duplicate')
@@ -1123,7 +1195,7 @@ async function createIncident(incidentData, reporterId, options = {}) {
             );
             logger.info(
               `Duplicate link created: incident ${incident.incident_id} → ` +
-              `incident ${topCandidate.incidentId} (score: ${topCandidate.score})`
+              `incident ${canonicalIncidentId} (score: ${topCandidate.score})`
             );
           }
 
@@ -1146,12 +1218,12 @@ async function createIncident(incidentData, reporterId, options = {}) {
             incident.incident_id,
             null,
             'merged',
-            `Auto-detected as potential duplicate of incident #${topCandidate.incidentId} (score: ${topCandidate.score})`
+            `Auto-detected as potential duplicate of incident #${canonicalIncidentId} (score: ${topCandidate.score})`
           );
 
           emitToRoles(['moderator', 'admin'], 'incident:duplicate', {
             incidentId: incident.incident_id,
-            duplicateOf: topCandidate.incidentId,
+            duplicateOf: canonicalIncidentId,
             score: topCandidate.score,
             candidates: highConfidenceDuplicates,
           });
@@ -1421,14 +1493,25 @@ async function getUserIncidents(userId, filters = {}) {
     FROM incidents i
     JOIN users u ON i.reporter_id = u.user_id
     LEFT JOIN LATERAL (
+      WITH RECURSIVE parent_chain(report_id, depth, path) AS (
+        SELECT rl.canonical_report_id, 1, ARRAY[dr.report_id, rl.canonical_report_id]
+        FROM reports dr
+        JOIN report_links rl ON rl.duplicate_report_id = dr.report_id
+          AND rl.link_type = 'duplicate'
+        WHERE dr.incident_id = i.incident_id
+        UNION ALL
+        SELECT rl.canonical_report_id, pc.depth + 1, pc.path || rl.canonical_report_id
+        FROM parent_chain pc
+        JOIN report_links rl ON rl.duplicate_report_id = pc.report_id
+          AND rl.link_type = 'duplicate'
+        WHERE pc.depth < 20
+          AND NOT rl.canonical_report_id = ANY(pc.path)
+      )
       SELECT ci.incident_id, ci.title
-      FROM reports dr
-      JOIN report_links rl ON rl.duplicate_report_id = dr.report_id
-        AND rl.link_type = 'duplicate'
-      JOIN reports cr ON cr.report_id = rl.canonical_report_id
+      FROM parent_chain pc
+      JOIN reports cr ON cr.report_id = pc.report_id
       JOIN incidents ci ON ci.incident_id = cr.incident_id
-      WHERE dr.incident_id = i.incident_id
-      ORDER BY rl.created_at DESC
+      ORDER BY pc.depth DESC
       LIMIT 1
     ) duplicate_parent ON TRUE
     LEFT JOIN LATERAL (
@@ -1835,6 +1918,11 @@ async function linkDuplicateIncident(incidentId, duplicateIncidentId, requesting
     ensureReport(requestedDuplicate),
   ]);
 
+  const [requestedCanonicalParent, requestedDuplicateParent] = await Promise.all([
+    getDuplicateParentForReport(requestedCanonicalReportId),
+    getDuplicateParentForReport(requestedDuplicateReportId),
+  ]);
+
   const existingLinks = await db.manyOrNone(
     `SELECT canonical_report_id, duplicate_report_id
      FROM report_links
@@ -1863,11 +1951,45 @@ async function linkDuplicateIncident(incidentId, duplicateIncidentId, requesting
     duplicateReportId = requestedCanonicalReportId;
   }
 
+  if (requestedDuplicateParent) {
+    canonical = requestedDuplicateParent;
+    canonicalReportId = requestedDuplicateParent.report_id;
+    if (Number(requestedDuplicateParent.incident_id) === Number(requestedCanonical.incident_id)) {
+      duplicate = requestedDuplicate;
+      duplicateReportId = requestedDuplicateReportId;
+    } else {
+      duplicate = requestedCanonical;
+      duplicateReportId = requestedCanonicalReportId;
+    }
+  } else if (requestedCanonicalParent) {
+    canonical = requestedCanonicalParent;
+    canonicalReportId = requestedCanonicalParent.report_id;
+    if (Number(requestedCanonicalParent.incident_id) === Number(requestedDuplicate.incident_id)) {
+      duplicate = requestedCanonical;
+      duplicateReportId = requestedCanonicalReportId;
+    } else {
+      duplicate = requestedDuplicate;
+      duplicateReportId = requestedDuplicateReportId;
+    }
+  }
+
+  if (Number(canonical.incident_id) === Number(duplicate.incident_id)) {
+    throw ServiceError.badRequest('Canonical and duplicate incidents resolved to the same report');
+  }
+
   await db.none(
     `DELETE FROM report_links
      WHERE link_type = 'duplicate'
        AND canonical_report_id = $1
        AND duplicate_report_id = $2`,
+    [duplicateReportId, canonicalReportId]
+  );
+
+  await db.none(
+    `DELETE FROM report_links
+     WHERE link_type = 'duplicate'
+       AND duplicate_report_id = $1
+       AND canonical_report_id <> $2`,
     [duplicateReportId, canonicalReportId]
   );
 
