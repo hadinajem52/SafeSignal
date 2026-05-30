@@ -1,21 +1,3 @@
-export function getPeriodMs(period) {
-  const day = 86400000;
-  return (
-    { "7d": 7 * day, "30d": 30 * day, "90d": 90 * day, "1y": 365 * day }[
-      period
-    ] ?? 30 * day
-  );
-}
-
-export function filterByPeriod(items, period) {
-  const cutoff = Date.now() - getPeriodMs(period);
-  return items.filter((i) => new Date(i.created_at).getTime() >= cutoff);
-}
-
-export function diffMinutes(a, b) {
-  return (new Date(b) - new Date(a)) / 60000;
-}
-
 export function heatColor(val, max) {
   if (val === 0) return "var(--dac-surface2)";
   const t = val / max;

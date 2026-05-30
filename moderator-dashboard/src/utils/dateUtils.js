@@ -20,14 +20,3 @@ export function formatDate(date) {
     day: "numeric",
   });
 }
-
-export function formatTimeframeLabel(timeframe) {
-  const MAP = {
-    all: "All time",
-    "24h": "Last 24 Hours",
-    "7d": "Last 7 Days",
-    "30d": "Last 30 Days",
-    ytd: "Year to Date",
-  };
-  return MAP[timeframe] ?? timeframe;
-}

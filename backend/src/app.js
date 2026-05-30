@@ -86,10 +86,6 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-app.get('/api/debug-sentry', function mainHandler(req, res) {
-  throw new Error('My first Sentry error!');
-});
-
 app.use('/api/auth', authRoutes);
 app.use('/api/incidents', incidentsRoutes);
 app.use('/api/constellations', constellationsRoutes);
