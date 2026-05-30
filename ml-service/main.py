@@ -209,6 +209,10 @@ class FullAnalysisRequest(BaseModel):
 class DedupCompareRequest(BaseModel):
     base_text: str = Field(..., min_length=1, max_length=10000)
     candidate_text: str = Field(..., min_length=1, max_length=10000)
+    base_category: Optional[str] = None
+    candidate_category: Optional[str] = None
+    time_hours: Optional[float] = Field(default=None, ge=0)
+    distance_meters: Optional[float] = Field(default=None, ge=0)
 
 
 class DedupCompareResponse(BaseModel):
@@ -583,7 +587,12 @@ async def dedup_compare(request: DedupCompareRequest):
     started_at = time.perf_counter()
     async with _get_semaphore():
         result = await active_provider.pairwise_compare(
-            request.base_text, request.candidate_text
+            request.base_text,
+            request.candidate_text,
+            base_category=request.base_category,
+            candidate_category=request.candidate_category,
+            time_hours=request.time_hours,
+            distance_meters=request.distance_meters,
         )
 
     log_inference_event("/dedup/compare", "pairwise", started_at)

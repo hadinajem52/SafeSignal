@@ -500,6 +500,7 @@ const buildDedupCandidates = (incident, candidates) => {
         incidentId: candidate.incident_id,
         title: candidate.title,
         description: candidate.description,
+        category: candidate.category || null,
         canonicalIncidentId,
         canonicalTitle,
         canonicalReportId: candidate.canonical_report_id || null,
@@ -1005,12 +1006,17 @@ async function createIncident(incidentData, reporterId, options = {}) {
         // When LLM is uncertain (< 0.70) the stage-1 score is preserved.
 
         const STAGE2_GATE = 0.35;
+        // Minimum Jaccard text similarity required to enter stage-2.
+        // Purely location/time-driven pairs (near-zero text overlap) are not
+        // sent to the LLM — it only sees text and would have no signal to
+        // distinguish two unrelated nearby incidents.
+        const STAGE2_MIN_TEXT_SIM = 0.08;
         const STAGE2_CONFIDENCE_FLOOR = 0.70;
         const STAGE2_MAX_CALLS = 3; // cap LLM calls per submission
 
         const stage2Candidates = useExternalMl
           ? scoredCandidates
-              .filter((c) => c.score >= STAGE2_GATE)
+              .filter((c) => c.score >= STAGE2_GATE && c.textSimilarity >= STAGE2_MIN_TEXT_SIM)
               .slice(0, STAGE2_MAX_CALLS) // already sorted by score desc
           : [];
 
@@ -1018,7 +1024,12 @@ async function createIncident(incidentData, reporterId, options = {}) {
           try {
             const verdictResults = await Promise.allSettled(
               stage2Candidates.map((c) =>
-                mlClient.dedupCompare(mlText, `${c.title} ${c.description}`)
+                mlClient.dedupCompare(mlText, `${c.title} ${c.description}`, {
+                  baseCategory: incident.category,
+                  candidateCategory: c.category,
+                  timeHours: c.timeHours,
+                  distanceMeters: c.distanceMeters,
+                })
               )
             );
 
