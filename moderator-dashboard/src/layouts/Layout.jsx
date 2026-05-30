@@ -14,7 +14,7 @@ function Layout({ children }) {
   const location = useLocation();
   const isFullBleed = FULL_BLEED_ROUTES.has(location.pathname);
   const { user } = useAuth();
-  const userId = user?.user_id;
+  const userId = user?.userId ?? user?.user_id;
   const queryClient = useQueryClient();
   const { notifications, pushNotification } = useToastQueue();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
