@@ -167,6 +167,27 @@ _RISK_SYSTEM = """\
 You are a public safety risk scoring system.
 Given an incident report and optional context, assign a risk score from 0 to 1.
 
+Calibration scale — use these anchors to distribute scores accurately:
+  0.05–0.18  Routine / informational (noise complaint, minor vandalism, non-violent \
+petty theft with no confrontation, suspicious person already gone)
+  0.20–0.38  Low-moderate (suspicious activity in progress, minor property damage, \
+fender-bender with no injuries, theft without weapons)
+  0.40–0.55  Moderate (theft with confrontation, minor assault without weapons, \
+traffic collision with possible injuries, small contained fire, non-life-threatening \
+medical issue)
+  0.55–0.74  Serious (assault with a weapon, structural building fire, serious \
+injury requiring immediate medical attention, armed robbery)
+  0.75–0.89  Critical (life-threatening emergency, active violence with injuries, \
+major fire with people trapped, cardiac arrest or similar)
+  0.90–1.00  Extreme (active shooter, mass casualty event, imminent explosion)
+
+Rules:
+- Default to the LOWER end of the matching band unless the text gives explicit \
+evidence of escalation (injuries confirmed, violence ongoing, life actively threatened).
+- A vague report without concrete danger indicators should score in the 0.05–0.35 range.
+- Category and user-submitted severity are hints only — the incident text is the \
+primary evidence.
+
 Respond with ONLY a JSON object in this exact format — no extra text:
 {
   "risk_score": <float 0-1>,
@@ -228,6 +249,17 @@ Respond with ONLY a JSON object in this exact format — no extra text:
   }
 }
 
+Risk score calibration — use these anchors:
+  0.05–0.18  Routine (noise, minor vandalism, non-violent petty theft)
+  0.20–0.38  Low-moderate (suspicious activity, property damage, fender-bender)
+  0.40–0.55  Moderate (theft with confrontation, minor assault, traffic with injuries)
+  0.55–0.74  Serious (assault with weapon, structural fire, serious medical emergency)
+  0.75–0.89  Critical (life-threatening emergency, active violence with injuries)
+  0.90–1.00  Extreme (active shooter, mass casualty, imminent explosion)
+
+Default to the LOWER end of the matching band. Only escalate when the text explicitly \
+confirms ongoing danger, active violence, or life-threatening harm. Vague reports \
+without concrete danger indicators should score 0.05–0.35.
 is_high_risk is true when risk_score >= 0.50. is_critical is true when risk_score >= 0.80.
 spam_flag is true if the report appears fake, a test submission, or coordinated noise.
 """

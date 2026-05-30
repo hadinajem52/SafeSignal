@@ -235,9 +235,14 @@ function getLifecycleTimestampUpdate(statusExpression, guardExpression = 'TRUE')
  * (category_risk * 0.35 + sev_mult * 0.35 + keywords * 0.20 + boosters).
  */
 const mapRiskToSeverity = (riskScore) => {
-  if (riskScore >= 0.60) return 'critical';
-  if (riskScore >= 0.40) return 'high';
-  if (riskScore >= 0.25) return 'medium';
+  // Thresholds aligned with the risk model's own definitions:
+  //   is_critical >= 0.80, is_high_risk >= 0.50
+  // Previously 0.60 = critical caused Gemini scores of 0.60-0.79
+  // (which the model considers "high risk, not critical") to all map
+  // to "critical", producing systematic overclassification.
+  if (riskScore >= 0.78) return 'critical';
+  if (riskScore >= 0.50) return 'high';
+  if (riskScore >= 0.28) return 'medium';
   return 'low';
 };
 
