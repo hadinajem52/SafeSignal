@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Shield, Wifi } from "lucide-react";
 import ConfirmDialog from "../../components/ConfirmDialog";

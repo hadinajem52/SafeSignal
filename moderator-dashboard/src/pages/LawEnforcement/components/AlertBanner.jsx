@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
 import { SEVERITY_COLOR } from "../constants";
 import { openMapsUrl } from "../../../utils/incidentUtils";

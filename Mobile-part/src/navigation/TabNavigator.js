@@ -114,7 +114,6 @@ const TabNavigator = () => {
               // Already on MyReports root — just switch tabs without resetting
               // so no skeleton/fade-in is triggered
               if (!isDeep) {
-                const index = state.routes.findIndex((r) => r.name === 'Reports');
                 return CommonActions.navigate({ name: 'Reports' });
               }
 

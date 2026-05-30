@@ -842,8 +842,6 @@ async def full_analysis(request: FullAnalysisRequest):
 
     started_at = time.perf_counter()
     response = FullAnalysisResponse()
-    pv = config.PROMPT_VERSION_ANALYZE
-
     # ── Gemini single-call path ───────────────────────────────────────────────
     if config.ML_PROVIDER == "gemini":
         try:

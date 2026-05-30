@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 import { applyDarkMode, readStoredDarkMode } from "../utils/theme";
 import { STORAGE_KEYS } from "../constants/storageKeys";
 import { authAPI } from "../services/api";

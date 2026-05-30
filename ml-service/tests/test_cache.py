@@ -1,4 +1,3 @@
-import json
 import os
 import sys
 
@@ -29,7 +28,7 @@ print(f"   ✅ Cached: {test_data['predicted_category']} ({test_data['confidence
 print("\n2️⃣  RETRIEVING: From Redis cache")
 cached_result = cache.get("classify", "incident text here", cats="violence,harassment")
 print(f"   ✅ Retrieved: {cached_result['predicted_category']}")
-print(f"   ✅ Cache hit! Latency saved: ~95%")
+print("   ✅ Cache hit! Latency saved: ~95%")
 
 # Test 3: Cache stats
 print("\n3️⃣  CACHE STATISTICS:")

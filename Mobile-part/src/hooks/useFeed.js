@@ -63,7 +63,7 @@ export default function useFeed(filters = {}) {
           offset === 0 ? result.incidents : [...prev, ...result.incidents],
         );
         setTotal(result.total);
-      } catch (e) {
+      } catch {
         if (activeRequest.current === reqId) setError('Failed to load feed');
       } finally {
         if (activeRequest.current === reqId) {

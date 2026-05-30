@@ -1,4 +1,3 @@
-import React from 'react'
 import { AlertTriangle } from 'lucide-react'
 import EmptyState from '../../components/EmptyState'
 import LoadingState from '../../components/LoadingState'

@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   View,
-  Platform,
 } from 'react-native';
 import { AppText } from '../../components';
 import { useTheme } from '../../context/ThemeContext';

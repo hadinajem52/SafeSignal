@@ -1,5 +1,3 @@
-import React from 'react'
-
 function EmptyState({ icon: Icon, message }) {
   return (
     <div className="flex flex-col items-center justify-center h-full py-16 px-6 text-center select-none">
