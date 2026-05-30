@@ -702,7 +702,7 @@ async def analyze_report_media(
         return MediaAnalysisResponse(
             supported=True,
             status="failed",
-            error="Failed to analyze report media",
+            error=str(exc),
         )
     finally:
         remove_temp_files(media_files)

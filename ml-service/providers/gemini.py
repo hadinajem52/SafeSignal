@@ -872,6 +872,11 @@ class GeminiProvider(BaseProvider):
                 ),
                 timeout=config.GEMINI_MEDIA_TIMEOUT_SECONDS,
             )
+            finish_reason = _get_finish_reason_name(response)
+            if finish_reason and finish_reason.upper() not in ("STOP", ""):
+                raise ValueError(
+                    f"Gemini blocked media analysis: finish_reason={finish_reason}"
+                )
             return _normalise_media_judgment(_extract_json(response.text))
         finally:
             if uploaded_files:

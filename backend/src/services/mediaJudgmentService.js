@@ -208,7 +208,8 @@ async function markPending(mlId, inputHash) {
          media_judgment = NULL,
          media_judgment_error = NULL,
          media_judgment_input_hash = $2,
-         media_judgment_generated_at = NULL
+         media_judgment_generated_at = NULL,
+         media_judgment_pending_at = CURRENT_TIMESTAMP
      WHERE ml_id = $1`,
     [mlId, inputHash]
   );
