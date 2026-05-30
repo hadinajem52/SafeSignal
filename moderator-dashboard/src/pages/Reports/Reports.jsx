@@ -133,6 +133,8 @@ function Reports() {
       return result.success ? result.data : null;
     },
     enabled: Boolean(selectedReport?.id),
+    refetchInterval: (query) =>
+      query.state.data?.mediaJudgmentStatus === "pending" ? 3000 : false,
   });
 
   const {
