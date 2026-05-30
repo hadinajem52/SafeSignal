@@ -288,16 +288,20 @@ RISK_DEESCALATION_PHRASES = tuple(
 RISK_CATEGORY_BASE_SCORES = _load_json_env(
     "RISK_CATEGORY_BASE_SCORES_JSON",
     {
-        "fire": 0.72,
-        "medical_emergency": 0.70,
-        "assault": 0.65,
-        "hazard": 0.52,
-        "traffic_incident": 0.48,
-        "theft": 0.40,
-        "suspicious_activity": 0.36,
-        "vandalism": 0.30,
-        "noise_complaint": 0.22,
-        "other": 0.25,
+        # Lowered to reflect the baseline risk of the category alone, without any
+        # keyword or urgency evidence. Text analysis must supply the escalation.
+        # Previously scores were so high that routine incidents in serious categories
+        # (a noise complaint near a fire station) scored 0.40+ before any keywords.
+        "fire": 0.68,               # was 0.72
+        "medical_emergency": 0.65,  # was 0.70
+        "assault": 0.52,            # was 0.65
+        "hazard": 0.40,             # was 0.52
+        "traffic_incident": 0.30,   # was 0.48 — most are minor collisions
+        "theft": 0.30,              # was 0.40
+        "suspicious_activity": 0.22,  # was 0.36
+        "vandalism": 0.18,          # was 0.30
+        "noise_complaint": 0.10,    # was 0.22
+        "other": 0.20,              # was 0.25
     },
 )
 
@@ -314,9 +318,11 @@ RISK_SEVERITY_MULTIPLIER = _load_json_env(
 RISK_COMPONENT_WEIGHTS = _load_json_env(
     "RISK_COMPONENT_WEIGHTS_JSON",
     {
-        "category": 0.28,
-        "severity": 0.26,
-        "keyword": 0.28,
+        # severity weight reduced: user-submitted severity is a hint, not ground truth.
+        # Redistributed to category and keyword so the incident text drives the score.
+        "category": 0.30,  # was 0.28
+        "severity": 0.18,  # was 0.26 — less influence from user-submitted severity
+        "keyword": 0.32,   # was 0.28 — text evidence is the strongest signal
         "urgency": 0.10,
         "duplicate": 0.05,
         "toxicity": 0.05,

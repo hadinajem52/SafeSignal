@@ -55,18 +55,19 @@ DEESCALATION_PHRASES = (
     "resolved",
 )
 
-# Category base risk scores
+# Category base risk scores — baseline for the category alone, before text analysis.
+# Kept lower so keyword/urgency evidence drives escalation rather than the category label.
 CATEGORY_RISK = {
-    "fire": 0.72,
-    "medical_emergency": 0.70,
-    "assault": 0.65,
-    "hazard": 0.52,
-    "traffic_incident": 0.48,
-    "theft": 0.40,
-    "suspicious_activity": 0.36,
-    "vandalism": 0.30,
-    "noise_complaint": 0.22,
-    "other": 0.25,
+    "fire": 0.68,
+    "medical_emergency": 0.65,
+    "assault": 0.52,
+    "hazard": 0.40,
+    "traffic_incident": 0.30,
+    "theft": 0.30,
+    "suspicious_activity": 0.22,
+    "vandalism": 0.18,
+    "noise_complaint": 0.10,
+    "other": 0.20,
 }
 
 # Severity multipliers
@@ -186,10 +187,12 @@ class RiskScorer:
             max(0.0, toxicity_score) * self.toxicity_multiplier,
         )
 
-        # Consistency boost: urgent categories with explicit risk language
+        # Consistency boost: urgent categories with strong explicit risk language.
+        # Threshold raised from 0.12 → 0.20 so a single vague keyword ("fire", "blood")
+        # doesn't trigger the boost — requires two or more concrete risk indicators.
         synergy_boost = 0.0
         if category in {"fire", "assault", "medical_emergency"}:
-            if keyword_score >= 0.12 or urgency_score >= 0.12:
+            if keyword_score >= 0.20 or urgency_score >= 0.20:
                 synergy_boost = self.synergy_boost_value
 
         # Weighted combination tuned for incident triage.
