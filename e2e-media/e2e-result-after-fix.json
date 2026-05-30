@@ -1,0 +1,79 @@
+{
+  "createdAt": "2026-05-30T12:30:32.090Z",
+  "retriedIncidentIds": {
+    "matching_fire_media": 906,
+    "duplicate_after_link": 907,
+    "contradictory_park_media": 908
+  },
+  "summaries": [
+    {
+      "label": "matching_fire_media",
+      "incidentId": 906,
+      "mediaJudgmentStatus": "completed",
+      "overallVerdict": "supports_report",
+      "validityRecommendation": "likely_valid",
+      "confidence": 0.95,
+      "duplicateAlignment": "not_applicable",
+      "duplicateConfidence": 0,
+      "reasoning": "The provided image and video are animated graphics that visually represent all elements mentioned in the report description, including flames, smoke, a building, and a warning sign.",
+      "duplicateReasoning": "No duplicate report media was provided for comparison.",
+      "evidenceSummary": {
+        "photoCount": 1,
+        "limitations": [
+          "The media consists of animated graphics/illustrations rather than real-world photographic or video evidence of an actual incident."
+        ],
+        "videoPresent": true,
+        "observedScene": "An animated graphic depicting a warehouse building with visible flames and dark smoke rising, accompanied by text 'Warehouse fire near Harbor Road' and a 'SMOKE / FIRE' warning sign."
+      },
+      "error": null
+    },
+    {
+      "label": "duplicate_after_link",
+      "incidentId": 907,
+      "mediaJudgmentStatus": "completed",
+      "overallVerdict": "supports_report",
+      "validityRecommendation": "likely_valid",
+      "confidence": 0.9,
+      "duplicateAlignment": "same_incident",
+      "duplicateConfidence": 1,
+      "reasoning": "The video and photo clearly depict a warehouse fire with visible flames, dark smoke, a building, and a 'SMOKE / FIRE' warning sign, aligning perfectly with the report description.",
+      "duplicateReasoning": "The media provided for both the main report and the duplicate report is identical, showing the exact same animated scene of a warehouse fire.",
+      "evidenceSummary": {
+        "photoCount": 1,
+        "limitations": [
+          "Media is an animation, not a real-world photo/video."
+        ],
+        "videoPresent": true,
+        "observedScene": "An animated depiction of a grey warehouse building with visible orange and red flames, dark smoke rising above it, and a red 'SMOKE / FIRE' warning sign."
+      },
+      "error": null
+    },
+    {
+      "label": "contradictory_park_media",
+      "incidentId": 908,
+      "mediaJudgmentStatus": "completed",
+      "overallVerdict": "contradicts_report",
+      "validityRecommendation": "likely_invalid",
+      "confidence": 1,
+      "duplicateAlignment": "different_incident",
+      "duplicateConfidence": 1,
+      "reasoning": "The submitted media depicts a peaceful park scene with no indication of a fire or a warehouse, directly contradicting the report's description.",
+      "duplicateReasoning": "The original report media shows a park, while the duplicate report media shows a stylized warehouse fire, indicating two distinct scenes.",
+      "evidenceSummary": {
+        "photoCount": 1,
+        "limitations": [],
+        "videoPresent": true,
+        "observedScene": "A stylized park scene with green grass, a blue sky, a yellow sun, and a brown rectangular object. A small white circle appears and disappears in the video."
+      },
+      "error": null
+    }
+  ],
+  "assertions": {
+    "matchingCompleted": true,
+    "matchingSupports": true,
+    "duplicateCompleted": true,
+    "duplicateSameIncident": true,
+    "contradictoryCompleted": true,
+    "contradictoryNotValid": true
+  }
+}

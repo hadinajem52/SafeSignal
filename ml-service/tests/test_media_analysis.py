@@ -61,6 +61,7 @@ cache_module.InMemoryLRUCache = DummyCache
 sys.modules["cache_manager"] = cache_module
 
 import main
+import providers.gemini as gemini_module
 from providers.gemini import GeminiProvider
 
 
@@ -173,6 +174,43 @@ class GeminiMediaJudgmentTests(unittest.IsolatedAsyncioTestCase):
                 {"report": {"title": "Smoke", "description": "Smoke in alley"}},
                 [{"path": "unused", "mime_type": "image/jpeg", "size": 10}],
             )
+
+    async def test_file_api_upload_waits_until_file_is_active(self):
+        provider = GeminiProvider.__new__(GeminiProvider)
+        get_calls = []
+        uploaded = types.SimpleNamespace(
+            name="files/test-media",
+            state=types.SimpleNamespace(name="PROCESSING"),
+        )
+        active = types.SimpleNamespace(
+            name="files/test-media",
+            state=types.SimpleNamespace(name="ACTIVE"),
+        )
+
+        def get_file(**kwargs):
+            get_calls.append(kwargs)
+            return active
+
+        provider._client = types.SimpleNamespace(
+            files=types.SimpleNamespace(
+                upload=lambda file: uploaded,
+                get=get_file,
+                delete=lambda name: None,
+            ),
+        )
+
+        previous_interval = gemini_module.GEMINI_FILE_POLL_INTERVAL_SECONDS
+        gemini_module.GEMINI_FILE_POLL_INTERVAL_SECONDS = 0
+        try:
+            parts, uploaded_files = await provider._build_media_parts(
+                [{"path": "unused.mp4", "mime_type": "video/mp4", "size": 10}]
+            )
+        finally:
+            gemini_module.GEMINI_FILE_POLL_INTERVAL_SECONDS = previous_interval
+
+        self.assertEqual(parts, [active])
+        self.assertEqual(uploaded_files, [uploaded])
+        self.assertEqual(get_calls, [{"name": "files/test-media"}])
 
 
 if __name__ == "__main__":
