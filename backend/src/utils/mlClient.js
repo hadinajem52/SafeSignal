@@ -163,11 +163,15 @@ async function computeRisk({ text, category, severity, duplicateCount = 0, toxic
  * @param {string} candidateText - Text of the candidate duplicate incident
  * @returns {Promise<{isDuplicate: boolean, confidence: number, reasoning: string}|null>}
  */
-async function dedupCompare(baseText, candidateText) {
+async function dedupCompare(baseText, candidateText, metadata = {}) {
   try {
     const response = await mlClient.post('/dedup/compare', {
       base_text: baseText,
       candidate_text: candidateText,
+      base_category: metadata.baseCategory ?? null,
+      candidate_category: metadata.candidateCategory ?? null,
+      time_hours: metadata.timeHours ?? null,
+      distance_meters: metadata.distanceMeters ?? null,
     });
     const data = response.data || {};
     // When local provider: provider_supported=false, confidence=0 — treat as null.

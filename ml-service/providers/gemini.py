@@ -237,10 +237,19 @@ You are a duplicate-incident detection system for a public safety platform.
 You will receive two citizen-submitted incident reports and must decide whether
 they are describing the same real-world event.
 
+Each report is accompanied by structured metadata: category, approximate time \
+difference (hours), and distance between reported locations (metres). Use this \
+data as hard evidence alongside the text.
+
 Reasoning guidelines:
-- Same location does NOT automatically mean same event. Two separate crimes on the same street are NOT duplicates.
-- Paraphrased descriptions of the same event ARE duplicates even if wording differs entirely.
-- Consider: overlapping time window, same incident type, consistent narrative details, same landmarks or vehicle mentioned.
+- Different categories (e.g. "theft" vs "assault") are strong evidence against \
+duplication — two different crime types at the same location are NOT the same event.
+- Same location does NOT automatically mean same event. Two separate incidents on \
+the same street are NOT duplicates.
+- Large time gaps (> 2 hours) make duplication unlikely even with similar text.
+- Paraphrased descriptions of the same event ARE duplicates even if wording differs.
+- Consistent narrative details (same vehicle, same suspect description, same landmark) \
+are strong evidence for duplication.
 - A vague report and a detailed report about the same event ARE duplicates.
 - When uncertain, prefer 'is_duplicate: false' and lower your confidence.
 
@@ -899,7 +908,13 @@ class GeminiProvider(BaseProvider):
             return False
 
     async def pairwise_compare(
-        self, base_text: str, candidate_text: str
+        self,
+        base_text: str,
+        candidate_text: str,
+        base_category: Optional[str] = None,
+        candidate_category: Optional[str] = None,
+        time_hours: Optional[float] = None,
+        distance_meters: Optional[float] = None,
     ) -> Optional[Dict]:
         """
         Stage-2 contextual duplicate detection.
@@ -908,7 +923,22 @@ class GeminiProvider(BaseProvider):
         """
         safe_base = redact(base_text)
         safe_candidate = redact(candidate_text)
-        user_content = f"Report A:\n{safe_base}\n\nReport B:\n{safe_candidate}"
+
+        meta_lines = []
+        if base_category:
+            meta_lines.append(f"Report A category: {base_category}")
+        if candidate_category:
+            meta_lines.append(f"Report B category: {candidate_category}")
+        if time_hours is not None:
+            meta_lines.append(f"Time between reports: {time_hours:.1f} hours")
+        if distance_meters is not None:
+            meta_lines.append(f"Distance between locations: {int(distance_meters)} metres")
+
+        meta_block = ("\n".join(meta_lines) + "\n\n") if meta_lines else ""
+        user_content = (
+            f"{meta_block}"
+            f"Report A:\n{safe_base}\n\nReport B:\n{safe_candidate}"
+        )
         result = await self._call(
             self._build_prompt(_DEDUP_COMPARE_SYSTEM, user_content)
         )

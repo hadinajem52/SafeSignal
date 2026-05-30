@@ -95,8 +95,11 @@ EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM
 CROSS_ENCODER_MODEL = os.getenv("CROSS_ENCODER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2")
 # Keep cross-encoder on CPU by default to avoid GPU memory pressure.
 CROSS_ENCODER_DEVICE = os.getenv("CROSS_ENCODER_DEVICE", "cpu")
-# Bi-encoder scores in [RERANK_LOW, RERANK_HIGH] are re-scored by cross-encoder
-RERANK_LOW = float(os.getenv("RERANK_LOW", 0.10))
+# Bi-encoder scores in [RERANK_LOW, RERANK_HIGH] are re-scored by cross-encoder.
+# Lower bound raised from 0.10 → 0.35 to avoid re-ranking pairs that are
+# clearly below the similarity threshold — the MS-MARCO cross-encoder is a
+# retrieval model and can uprank unrelated-but-topically-similar pairs.
+RERANK_LOW = float(os.getenv("RERANK_LOW", 0.35))
 RERANK_HIGH = float(os.getenv("RERANK_HIGH", 0.80))
 # Blend ratio for cross-encoder re-ranking in uncertain zone.
 CROSS_ENCODER_BLEND = float(os.getenv("CROSS_ENCODER_BLEND", 0.85))

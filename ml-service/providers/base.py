@@ -60,7 +60,13 @@ class BaseProvider(ABC):
 
     @abstractmethod
     async def pairwise_compare(
-        self, base_text: str, candidate_text: str
+        self,
+        base_text: str,
+        candidate_text: str,
+        base_category: Optional[str] = None,
+        candidate_category: Optional[str] = None,
+        time_hours: Optional[float] = None,
+        distance_meters: Optional[float] = None,
     ) -> Optional[Dict]:
         """
         Stage-2 contextual duplicate detection.
