@@ -63,12 +63,12 @@ function Layout({ children }) {
           {notifications.slice(0, 4).map((notification) => (
             <div
               key={notification.id}
-              className={`min-w-[280px] max-w-[420px] rounded-lg border px-4 py-3 shadow-lg ${
+              className={`min-w-[280px] max-w-[420px] rounded-lg border border-l-4 bg-card px-4 py-3 shadow-lg ${
                 notification.type === "alert"
-                  ? "border-error/30 bg-error/10 text-error"
+                  ? "border-error/40 border-l-error text-error"
                   : notification.type === "digest"
-                    ? "border-primary/30 bg-primary/10 text-primary"
-                    : "border-border bg-card text-text"
+                    ? "border-primary/40 border-l-primary text-primary"
+                    : "border-border border-l-border text-text"
               }`}
             >
               {notification.message}
