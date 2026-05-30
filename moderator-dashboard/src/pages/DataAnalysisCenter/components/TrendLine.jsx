@@ -1,11 +1,21 @@
 import { useState } from "react";
 import { trendPath, trendArea } from "./helpers";
 
+const DAY_MS = 86400000;
+
+const BUCKET_CONFIG = {
+  "7d": { ms: DAY_MS, unit: "Day" },
+  "30d": { ms: DAY_MS, unit: "Day" },
+  "90d": { ms: 3 * DAY_MS, unit: "Window" },
+  "1y": { ms: 7 * DAY_MS, unit: "Week" },
+};
+
 export default function TrendLine({
   data,
   color,
   maxVal,
   height = 96,
+  period = "30d",
   showTip,
   moveTip,
   hideTip,
@@ -16,6 +26,8 @@ export default function TrendLine({
   const [hoverIdx, setHoverIdx] = useState(null);
   const getY = (v) => H - (v / (maxVal || 1)) * H * 0.92;
   const lastVal = data[data.length - 1] ?? 0;
+  const { ms: bucketMs, unit: bucketUnit } =
+    BUCKET_CONFIG[period] || BUCKET_CONFIG["30d"];
   return (
     <div style={{ padding: "12px 16px 0" }}>
       <svg
@@ -36,7 +48,7 @@ export default function TrendLine({
             strokeDasharray="4 4"
           />
         ))}
-        <path d={trendArea(data, W, H, maxVal)} fill={`${color}10`} />
+        <path d={trendArea(data, W, H, maxVal)} fill={color} fillOpacity="0.07" />
         <path
           d={trendPath(data, W, H, maxVal)}
           fill="none"
@@ -80,13 +92,14 @@ export default function TrendLine({
             const sliceW =
               i === 0 ? step / 2 : i === data.length - 1 ? step / 2 : step;
             const date = new Date(
-              Date.now() - (data.length - 1 - i) * 86400000,
+              Date.now() - (data.length - 1 - i) * bucketMs,
             );
-            const dateLabel = date.toLocaleDateString("en-US", {
-              weekday: "short",
-              month: "short",
-              day: "numeric",
-            });
+            const dateLabel = date.toLocaleDateString(
+              "en-US",
+              bucketMs <= DAY_MS
+                ? { weekday: "short", month: "short", day: "numeric" }
+                : { month: "short", day: "numeric" },
+            );
             return (
               <rect
                 key={i}
@@ -100,7 +113,10 @@ export default function TrendLine({
                   setHoverIdx(i);
                   showTip(e, dateLabel, [
                     { dot: color, label: "Incidents", value: v },
-                    { label: "Day", value: `Day ${i + 1} of 30` },
+                    {
+                      label: bucketUnit,
+                      value: `${bucketUnit} ${i + 1} of ${data.length}`,
+                    },
                     {
                       label: "% of peak",
                       value:

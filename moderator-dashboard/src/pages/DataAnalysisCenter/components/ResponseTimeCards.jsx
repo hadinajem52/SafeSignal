@@ -137,6 +137,7 @@ export default function ResponseTimeCards({
             color="var(--dac-blue)"
             maxVal={trendMax}
             height={96}
+            period={period}
             showTip={showTip}
             moveTip={moveTip}
             hideTip={hideTip}
