@@ -121,6 +121,22 @@ class BaseProvider(ABC):
         """
 
     @abstractmethod
+    async def analyze_report_media(
+        self, metadata: Dict, media_files: List[Dict]
+    ) -> Optional[Dict]:
+        """
+        Multimodal incident evidence judgment.
+
+        Args:
+            metadata: report text and media manifest
+            media_files: local temporary file descriptors with path, mime_type,
+                         filename, and size
+
+        Returns:
+            Structured media judgment dict, or None when unsupported.
+        """
+
+    @abstractmethod
     async def is_ready(self) -> bool:
         """
         Lightweight readiness probe called by /health.

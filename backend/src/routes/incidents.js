@@ -728,6 +728,34 @@ router.get(
 );
 
 /**
+ * @route   POST /api/incidents/:id/ml/media/retry
+ * @desc    Retry advisory media evidence judgment for an incident
+ * @access  Private (Moderator/Admin)
+ */
+router.post(
+  '/:id/ml/media/retry',
+  authenticateToken,
+  requireRole(['moderator', 'admin']),
+  [param('id').isInt()],
+  async (req, res) => {
+    if (handleValidationErrors(req, res)) return;
+
+    try {
+      const result = await incidentService.retryIncidentMediaJudgment(
+        parseInt(req.params.id, 10)
+      );
+      res.json({
+        status: 'OK',
+        message: 'Media judgment refreshed',
+        data: result,
+      });
+    } catch (error) {
+      handleServiceError(error, res, 'Failed to retry media judgment');
+    }
+  }
+);
+
+/**
  * @route   PATCH /api/incidents/:id/category
  * @desc    Update incident category (moderation feedback)
  * @access  Private (Moderator/Admin)

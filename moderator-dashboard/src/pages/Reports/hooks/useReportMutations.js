@@ -29,6 +29,10 @@ export function useReportMutations({
       reportsAPI.updateCategory(reportId, category),
   });
 
+  const retryMediaJudgmentMutation = useMutation({
+    mutationFn: (reportId) => reportsAPI.retryMediaJudgment(reportId),
+  });
+
   const invalidateReports = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["reports"] });
   }, [queryClient]);
@@ -125,6 +129,19 @@ export function useReportMutations({
     [pushToast, queryClient, selectedReport?.id, updateCategoryMutation],
   );
 
+  const onRetryMediaJudgment = useCallback(async () => {
+    if (!selectedReport?.id) return;
+    const result = await retryMediaJudgmentMutation.mutateAsync(selectedReport.id);
+    if (!result.success) {
+      pushToast(result.error || "Failed to retry media judgment.", "error");
+      return;
+    }
+    queryClient.invalidateQueries({
+      queryKey: ["report-ml", selectedReport.id],
+    });
+    pushToast("Media judgment refreshed.");
+  }, [pushToast, queryClient, retryMediaJudgmentMutation, selectedReport?.id]);
+
   const onOpenDuplicateCandidate = useCallback(
     async (duplicateIncidentId) => {
       const duplicateId = Number(duplicateIncidentId);
@@ -152,11 +169,13 @@ export function useReportMutations({
     rejectMutation,
     linkDuplicateMutation,
     updateCategoryMutation,
+    retryMediaJudgmentMutation,
     invalidateReports,
     handleVerify,
     handleReject,
     onMerge,
     onApplySuggestedCategory,
+    onRetryMediaJudgment,
     onOpenDuplicateCandidate,
   };
 }

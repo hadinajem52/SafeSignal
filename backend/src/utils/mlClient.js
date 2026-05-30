@@ -5,11 +5,14 @@
  */
 
 const axios = require('axios');
+const fs = require('fs/promises');
+const { Blob } = require('buffer');
 const logger = require('./logger');
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:5001';
 // Gemini 2.5-flash regularly takes 8–17 s per call; 10 s caused silent fallback to heuristics.
 const ML_TIMEOUT_MS = parseInt(process.env.ML_TIMEOUT_MS, 10) || 35000;
+const ML_MEDIA_TIMEOUT_MS = parseInt(process.env.ML_MEDIA_TIMEOUT_MS, 10) || 120000;
 
 const mlClient = axios.create({
   baseURL: ML_SERVICE_URL,
@@ -284,6 +287,39 @@ async function synthesizeConstellation(params) {
   }
 }
 
+async function analyzeReportMedia({ metadata, mediaFiles }) {
+  try {
+    const form = new FormData();
+    form.append('metadata', JSON.stringify(metadata));
+
+    for (const mediaFile of mediaFiles || []) {
+      const bytes = await fs.readFile(mediaFile.path);
+      form.append(
+        'files',
+        new Blob([bytes], { type: mediaFile.mimeType || 'application/octet-stream' }),
+        mediaFile.filename
+      );
+    }
+
+    const response = await mlClient.post('/media/analyze-report', form, {
+      timeout: ML_MEDIA_TIMEOUT_MS,
+      maxBodyLength: Infinity,
+      maxContentLength: Infinity,
+    });
+
+    const data = response.data || {};
+    return {
+      supported: data.supported !== false,
+      status: data.status || null,
+      judgment: data.judgment || null,
+      error: data.error || null,
+    };
+  } catch (error) {
+    logger.warn(`ML media analysis failed: ${error.message}`);
+    return null;
+  }
+}
+
 module.exports = {
   isHealthy,
   getEmbedding,
@@ -295,4 +331,5 @@ module.exports = {
   generateInsights,
   analyzeIncident,
   synthesizeConstellation,
+  analyzeReportMedia,
 };

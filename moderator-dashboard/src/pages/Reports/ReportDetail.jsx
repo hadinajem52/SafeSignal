@@ -1,5 +1,5 @@
 import React from "react";
-import { ChevronRight } from "lucide-react";
+import { AlertTriangle, ChevronRight, RotateCw, ShieldCheck } from "lucide-react";
 import DetailSection from "../../components/DetailSection";
 import DedupCandidatesPanel from "../../components/DedupCandidatesPanel";
 import EvidencePhotoViewer from "../../components/EvidencePhotoViewer";
@@ -196,6 +196,191 @@ function EvidencePanel({ photoUrls, videoUrl, onOpenMedia }) {
   );
 }
 
+const MEDIA_RECOMMENDATION_META = {
+  likely_valid: {
+    label: "Likely valid",
+    className: "border-success/30 bg-success/10 text-success",
+  },
+  needs_review: {
+    label: "Needs review",
+    className: "border-warning/30 bg-warning/10 text-warning",
+  },
+  likely_invalid: {
+    label: "Likely invalid",
+    className: "border-danger/30 bg-danger/10 text-danger",
+  },
+};
+
+const MEDIA_STATUS_LABELS = {
+  pending: "Analyzing",
+  completed: "Ready",
+  failed: "Failed",
+  unsupported: "Unsupported",
+  skipped: "No media",
+};
+
+function formatPercent(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? `${Math.round(number * 100)}%` : "N/A";
+}
+
+function DetailList({ title, items }) {
+  const visibleItems = Array.isArray(items) ? items.filter(Boolean) : [];
+  if (!visibleItems.length) return null;
+
+  return (
+    <div>
+      <p className="mb-1 text-[10px] font-bold uppercase text-muted">{title}</p>
+      <ul className="space-y-1 text-xs leading-relaxed text-muted text-pretty">
+        {visibleItems.map((item) => (
+          <li key={item}>- {item}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function MediaJudgmentCard({
+  mlSummary,
+  isRetrying,
+  onRetry,
+}) {
+  const status = mlSummary?.mediaJudgmentStatus;
+  const judgment = mlSummary?.mediaJudgment;
+
+  if (!status && !judgment) return null;
+
+  const recommendation =
+    MEDIA_RECOMMENDATION_META[judgment?.validityRecommendation] ||
+    MEDIA_RECOMMENDATION_META.needs_review;
+  const duplicate = judgment?.duplicateMediaAlignment;
+  const description = judgment?.descriptionAlignment;
+  const evidence = judgment?.evidenceSummary;
+
+  return (
+    <DetailSection
+      title="Media Judgment"
+      headerRight={
+        <span className="text-[11px] font-semibold text-muted">
+          {MEDIA_STATUS_LABELS[status] || "Unknown"}
+        </span>
+      }
+    >
+      <div className="space-y-3 text-sm">
+        {status === "pending" ? (
+          <p className="text-sm text-muted">Analyzing submitted evidence...</p>
+        ) : null}
+
+        {status === "unsupported" ? (
+          <p className="text-sm text-muted">
+            Media analysis is unavailable for the current ML provider.
+          </p>
+        ) : null}
+
+        {status === "skipped" ? (
+          <p className="text-sm text-muted">
+            No submitted photos or video were available for analysis.
+          </p>
+        ) : null}
+
+        {status === "failed" ? (
+          <div className="space-y-2">
+            <div className="flex items-start gap-2 border border-danger/25 bg-danger/5 p-3 text-danger">
+              <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+              <p className="text-xs leading-relaxed text-pretty">
+                {mlSummary?.mediaJudgmentError || "Media judgment failed."}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onRetry}
+              disabled={isRetrying}
+              className="inline-flex items-center gap-2 border border-border bg-surface px-3 py-2 text-xs font-bold uppercase text-text hover:bg-surface/80 disabled:opacity-50"
+            >
+              <RotateCw size={14} />
+              {isRetrying ? "Retrying..." : "Retry analysis"}
+            </button>
+          </div>
+        ) : null}
+
+        {judgment ? (
+          <>
+            <div className={`border p-3 ${recommendation.className}`}>
+              <div className="flex items-center justify-between gap-3">
+                <span className="inline-flex items-center gap-2 text-xs font-bold">
+                  <ShieldCheck size={15} />
+                  {recommendation.label}
+                </span>
+                <span className="text-xs font-semibold tabular-nums">
+                  {formatPercent(judgment.confidence)}
+                </span>
+              </div>
+              {description?.reasoning ? (
+                <p className="mt-2 text-xs leading-relaxed text-pretty">
+                  {description.reasoning}
+                </p>
+              ) : null}
+            </div>
+
+            {evidence ? (
+              <div className="grid grid-cols-2 border border-border">
+                <div className="border-r border-border p-2.5">
+                  <p className="text-[10px] font-bold uppercase text-muted">
+                    Photos
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-text tabular-nums">
+                    {evidence.photoCount ?? 0}
+                  </p>
+                </div>
+                <div className="p-2.5">
+                  <p className="text-[10px] font-bold uppercase text-muted">
+                    Video
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-text">
+                    {evidence.videoPresent ? "Present" : "None"}
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
+            {evidence?.observedScene ? (
+              <p className="text-xs leading-relaxed text-muted text-pretty">
+                {evidence.observedScene}
+              </p>
+            ) : null}
+
+            {duplicate && duplicate.alignment !== "not_applicable" ? (
+              <div className="border border-border bg-surface/50 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[10px] font-bold uppercase text-muted">
+                    Duplicate media
+                  </p>
+                  <span className="text-xs font-semibold text-text tabular-nums">
+                    {formatPercent(duplicate.confidence)}
+                  </span>
+                </div>
+                <p className="mt-1.5 text-xs capitalize text-text">
+                  {duplicate.alignment.replace(/_/g, " ")}
+                </p>
+                {duplicate.reasoning ? (
+                  <p className="mt-1 text-xs leading-relaxed text-muted text-pretty">
+                    {duplicate.reasoning}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+
+            <DetailList title="Matched details" items={description?.matchedDetails} />
+            <DetailList title="Missing details" items={description?.missingDetails} />
+            <DetailList title="Contradictions" items={description?.contradictions} />
+            <DetailList title="Limitations" items={evidence?.limitations} />
+          </>
+        ) : null}
+      </div>
+    </DetailSection>
+  );
+}
+
 function ReportDetail({
   report,
   mlSummary,
@@ -206,10 +391,12 @@ function ReportDetail({
   updateCategoryPending,
   verifyPending,
   rejectPending,
+  retryMediaJudgmentPending,
   canVerify = true,
   canReject = true,
   onMerge,
   onApplySuggestedCategory,
+  onRetryMediaJudgment,
   onVerify,
   onReject,
   onNext,
@@ -432,6 +619,12 @@ function ReportDetail({
             </div>
           ) : null}
         </DetailSection>
+
+        <MediaJudgmentCard
+          mlSummary={mlSummary}
+          isRetrying={retryMediaJudgmentPending}
+          onRetry={onRetryMediaJudgment}
+        />
 
         {/* Dedup candidates */}
         <DedupCandidatesPanel

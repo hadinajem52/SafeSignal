@@ -280,6 +280,24 @@ const initDatabase = async () => {
       ADD COLUMN IF NOT EXISTS is_toxic BOOLEAN DEFAULT FALSE;
     `);
 
+    await db.none(`
+      ALTER TABLE report_ml
+      ADD COLUMN IF NOT EXISTS media_judgment_status VARCHAR(30)
+        CHECK (
+          media_judgment_status IS NULL OR media_judgment_status IN (
+            'pending',
+            'completed',
+            'failed',
+            'unsupported',
+            'skipped'
+          )
+        ),
+      ADD COLUMN IF NOT EXISTS media_judgment JSONB,
+      ADD COLUMN IF NOT EXISTS media_judgment_error TEXT,
+      ADD COLUMN IF NOT EXISTS media_judgment_input_hash VARCHAR(64),
+      ADD COLUMN IF NOT EXISTS media_judgment_generated_at TIMESTAMP;
+    `);
+
     // Moderator dedup verdict columns — ground-truth labels for ML predictions
     await db.none(`
       ALTER TABLE report_ml
@@ -356,6 +374,7 @@ const initDatabase = async () => {
       CREATE INDEX IF NOT EXISTS idx_report_ml_risk ON report_ml (risk_score DESC);
       CREATE INDEX IF NOT EXISTS idx_report_ml_toxic ON report_ml (is_toxic, created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_report_ml_dedup_verdict ON report_ml (dedup_verdict) WHERE dedup_verdict IS NOT NULL;
+      CREATE INDEX IF NOT EXISTS idx_report_ml_media_judgment_status ON report_ml (media_judgment_status) WHERE media_judgment_status IS NOT NULL;
       CREATE INDEX IF NOT EXISTS idx_incidents_has_embedding ON incidents (incident_id) WHERE text_embedding IS NOT NULL;
       CREATE INDEX IF NOT EXISTS idx_incident_comments_incident_id ON incident_comments (incident_id, created_at ASC);
       CREATE INDEX IF NOT EXISTS idx_incident_comments_user_id ON incident_comments (user_id);

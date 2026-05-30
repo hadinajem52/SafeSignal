@@ -1,17 +1,64 @@
-import types
 import unittest
 import sys
+import types
 
 from fastapi import HTTPException
 from pydantic import ValidationError
 
-if "google.genai" not in sys.modules:
-    google_module = sys.modules.setdefault("google", types.ModuleType("google"))
+try:
+    import google  # type: ignore
+    import google.genai  # type: ignore
+except Exception:
+    google_module = sys.modules.get("google") or types.ModuleType("google")
+    if not hasattr(google_module, "__path__"):
+        google_module.__path__ = []
     genai_module = types.ModuleType("google.genai")
     genai_module.Client = object
     genai_module.types = types.SimpleNamespace()
     google_module.genai = genai_module
+    sys.modules["google"] = google_module
     sys.modules["google.genai"] = genai_module
+
+models = {
+    "models.embeddings": ("EmbeddingModel",),
+    "models.classifier": ("CategoryClassifier",),
+    "models.toxicity": ("ToxicityDetector",),
+    "models.risk": ("RiskScorer",),
+}
+for module_name, class_names in models.items():
+    module = types.ModuleType(module_name)
+    for class_name in class_names:
+        setattr(module, class_name, object)
+    sys.modules.setdefault(module_name, module)
+
+cache_module = types.ModuleType("cache_manager")
+
+
+class DummyCache:
+    stats = {"backend": "test"}
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def get(self, *args, **kwargs):
+        return None
+
+    def set(self, *args, **kwargs):
+        return None
+
+    def clear_prefix(self, *args, **kwargs):
+        return 0
+
+    def invalidate_on_model_update(self, *args, **kwargs):
+        return 0
+
+    def reconnect(self):
+        return False
+
+
+cache_module.RedisCacheManager = DummyCache
+cache_module.InMemoryLRUCache = DummyCache
+sys.modules.setdefault("cache_manager", cache_module)
 
 import main
 from providers.gemini import (

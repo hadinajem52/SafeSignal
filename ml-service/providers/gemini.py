@@ -290,6 +290,146 @@ Hard rules:
 - Do not use markdown, code fences, bullet points, or introductory phrases
 """
 
+_MEDIA_JUDGMENT_SYSTEM = """\
+You are an advisory media evidence reviewer for SafeSignal, a public safety
+incident reporting platform. You will receive report metadata plus attached
+photos and/or videos. Decide whether the submitted media supports the report
+description, contradicts it, or is inconclusive.
+
+This is advisory only for a human moderator. Do not recommend automatic
+approval, rejection, dispatch, or enforcement action.
+
+If duplicate metadata and media are provided, also judge whether the duplicate
+report media and the original/canonical report media appear to show the same
+real-world incident.
+
+Return ONLY this JSON shape:
+{
+  "overallVerdict": "supports_report|contradicts_report|uncertain|insufficient_media",
+  "validityRecommendation": "likely_valid|needs_review|likely_invalid",
+  "confidence": <float 0-1>,
+  "descriptionAlignment": {
+    "matchedDetails": ["..."],
+    "missingDetails": ["..."],
+    "contradictions": ["..."],
+    "reasoning": "one or two clear moderator-facing sentences"
+  },
+  "duplicateMediaAlignment": {
+    "alignment": "same_incident|different_incident|uncertain|not_applicable",
+    "confidence": <float 0-1>,
+    "reasoning": "one clear sentence"
+  },
+  "evidenceSummary": {
+    "photoCount": <integer>,
+    "videoPresent": <bool>,
+    "observedScene": "concise visible-media summary or null",
+    "limitations": ["..."]
+  }
+}
+
+Rules:
+- Base conclusions only on visible/audible media evidence and provided report text.
+- Use "uncertain" when media quality, angle, time, or context prevents a clear judgment.
+- Use "insufficient_media" only when no usable report media is attached.
+- Treat missing expected details as weaker evidence than direct contradictions.
+- Keep all arrays short and specific.
+"""
+
+
+def _as_string_list(value) -> List[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item).strip() for item in value if str(item).strip()][:6]
+
+
+def _clamp_confidence(value) -> float:
+    try:
+        return round(max(0.0, min(1.0, float(value))), 4)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _normalise_media_judgment(result: Dict) -> Dict:
+    _require_keys(
+        result,
+        [
+            "overallVerdict",
+            "validityRecommendation",
+            "confidence",
+            "descriptionAlignment",
+            "duplicateMediaAlignment",
+            "evidenceSummary",
+        ],
+        "media_judgment",
+    )
+
+    valid_overall = {
+        "supports_report",
+        "contradicts_report",
+        "uncertain",
+        "insufficient_media",
+    }
+    valid_recommendations = {"likely_valid", "needs_review", "likely_invalid"}
+    valid_duplicate = {
+        "same_incident",
+        "different_incident",
+        "uncertain",
+        "not_applicable",
+    }
+
+    description = result.get("descriptionAlignment") or {}
+    duplicate = result.get("duplicateMediaAlignment") or {}
+    summary = result.get("evidenceSummary") or {}
+
+    overall = str(result["overallVerdict"])
+    recommendation = str(result["validityRecommendation"])
+    duplicate_alignment = str(duplicate.get("alignment", "not_applicable"))
+
+    if overall not in valid_overall:
+        raise ValueError(f"Invalid media overallVerdict: {overall!r}")
+    if recommendation not in valid_recommendations:
+        raise ValueError(f"Invalid media validityRecommendation: {recommendation!r}")
+    if duplicate_alignment not in valid_duplicate:
+        raise ValueError(f"Invalid duplicate media alignment: {duplicate_alignment!r}")
+
+    return {
+        "overallVerdict": overall,
+        "validityRecommendation": recommendation,
+        "confidence": _clamp_confidence(result["confidence"]),
+        "descriptionAlignment": {
+            "matchedDetails": _as_string_list(description.get("matchedDetails")),
+            "missingDetails": _as_string_list(description.get("missingDetails")),
+            "contradictions": _as_string_list(description.get("contradictions")),
+            "reasoning": str(description.get("reasoning") or "").strip(),
+        },
+        "duplicateMediaAlignment": {
+            "alignment": duplicate_alignment,
+            "confidence": _clamp_confidence(duplicate.get("confidence")),
+            "reasoning": str(duplicate.get("reasoning") or "").strip(),
+        },
+        "evidenceSummary": {
+            "photoCount": max(0, int(summary.get("photoCount") or 0)),
+            "videoPresent": bool(summary.get("videoPresent")),
+            "observedScene": summary.get("observedScene"),
+            "limitations": _as_string_list(summary.get("limitations")),
+        },
+    }
+
+
+def _redact_report_metadata(metadata: Dict) -> Dict:
+    safe = json.loads(json.dumps(metadata))
+    for key in ("report",):
+        if safe.get(key):
+            safe[key]["title"] = redact(str(safe[key].get("title") or ""))
+            safe[key]["description"] = redact(str(safe[key].get("description") or ""))
+    duplicate = safe.get("duplicate")
+    if duplicate and duplicate.get("report"):
+        duplicate["report"]["title"] = redact(str(duplicate["report"].get("title") or ""))
+        duplicate["report"]["description"] = redact(
+            str(duplicate["report"].get("description") or "")
+        )
+    return safe
+
 
 # ── Provider ──────────────────────────────────────────────────────────────────
 
@@ -602,6 +742,98 @@ class GeminiProvider(BaseProvider):
 
     async def synthesize_constellation(self, prompt: str) -> Optional[Dict]:
         return await self._call(prompt)
+
+    async def _build_media_parts(self, media_files: List[Dict]):
+        total_bytes = sum(int(item.get("size") or 0) for item in media_files)
+        use_file_api = total_bytes > config.GEMINI_INLINE_MEDIA_LIMIT_BYTES or any(
+            str(item.get("mime_type") or "").startswith("video/")
+            for item in media_files
+        )
+
+        parts = []
+        uploaded_files = []
+        for item in media_files:
+            mime_type = item.get("mime_type") or "application/octet-stream"
+            if use_file_api:
+                uploaded = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        self._client.files.upload,
+                        file=item["path"],
+                    ),
+                    timeout=config.GEMINI_MEDIA_TIMEOUT_SECONDS,
+                )
+                uploaded_files.append(uploaded)
+                parts.append(uploaded)
+                continue
+
+            with open(item["path"], "rb") as file:
+                parts.append(
+                    types.Part.from_bytes(data=file.read(), mime_type=mime_type)
+                )
+
+        return parts, uploaded_files
+
+    async def _delete_uploaded_files(self, uploaded_files: List[object]) -> None:
+        for uploaded in uploaded_files:
+            name = getattr(uploaded, "name", None)
+            if not name:
+                continue
+            try:
+                await asyncio.to_thread(self._client.files.delete, name=name)
+            except Exception as exc:
+                logger.warning("Failed to delete Gemini uploaded media file: %s", exc)
+
+    async def analyze_report_media(
+        self, metadata: Dict, media_files: List[Dict]
+    ) -> Optional[Dict]:
+        if not media_files:
+            return {
+                "overallVerdict": "insufficient_media",
+                "validityRecommendation": "needs_review",
+                "confidence": 0.0,
+                "descriptionAlignment": {
+                    "matchedDetails": [],
+                    "missingDetails": [],
+                    "contradictions": [],
+                    "reasoning": "No submitted photos or video were attached.",
+                },
+                "duplicateMediaAlignment": {
+                    "alignment": "not_applicable",
+                    "confidence": 0.0,
+                    "reasoning": "No duplicate media comparison was run.",
+                },
+                "evidenceSummary": {
+                    "photoCount": 0,
+                    "videoPresent": False,
+                    "observedScene": None,
+                    "limitations": ["No submitted media."],
+                },
+            }
+
+        safe_metadata = _redact_report_metadata(metadata)
+        prompt = (
+            f"{_MEDIA_JUDGMENT_SYSTEM}\n\n"
+            "Report/media metadata JSON. Attached media files are in the same "
+            "order as the media arrays in this metadata:\n"
+            f"{json.dumps(safe_metadata, separators=(',', ':'))}"
+        )
+
+        uploaded_files: List[object] = []
+        try:
+            media_parts, uploaded_files = await self._build_media_parts(media_files)
+            response = await asyncio.wait_for(
+                asyncio.to_thread(
+                    self._client.models.generate_content,
+                    model=config.GEMINI_CHAT_MODEL,
+                    contents=[*media_parts, prompt],
+                    config=self._gen_config,
+                ),
+                timeout=config.GEMINI_MEDIA_TIMEOUT_SECONDS,
+            )
+            return _normalise_media_judgment(_extract_json(response.text))
+        finally:
+            if uploaded_files:
+                await self._delete_uploaded_files(uploaded_files)
 
     async def is_ready(self) -> bool:
         """

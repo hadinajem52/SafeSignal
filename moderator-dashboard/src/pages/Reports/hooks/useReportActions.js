@@ -23,11 +23,13 @@ export function useReportActions({
     rejectMutation,
     linkDuplicateMutation,
     updateCategoryMutation,
+    retryMediaJudgmentMutation,
     invalidateReports,
     handleVerify,
     handleReject,
     onMerge,
     onApplySuggestedCategory,
+    onRetryMediaJudgment,
     onOpenDuplicateCandidate,
   } = useReportMutations({
     queryClient,
@@ -103,12 +105,14 @@ export function useReportActions({
     rejectMutation,
     linkDuplicateMutation,
     updateCategoryMutation,
+    retryMediaJudgmentMutation,
     executeBulkAction,
     handleEscalateRequest,
     handleRejectRequest,
     executeSingleAction,
     onMerge,
     onApplySuggestedCategory,
+    onRetryMediaJudgment,
     onOpenDuplicateCandidate,
   };
 }
