@@ -132,7 +132,7 @@ const RegisterScreen = ({ navigation }) => {
       } else {
         setErrors({ general: result.error || 'Registration failed. Please try again.' });
       }
-    } catch (error) {
+    } catch {
       showToast('An unexpected error occurred. Please try again.', 'error');
     } finally {
       setIsLoading(false);

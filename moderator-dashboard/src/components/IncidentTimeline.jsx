@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Lock, Send, Loader2 } from 'lucide-react'
 import { timelineAPI } from '../services/api'
 import { SOCKET_URL } from '../utils/network'

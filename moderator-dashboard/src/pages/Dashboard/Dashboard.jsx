@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { reportsAPI, statsAPI } from "../../services/api";
 import { getTimeAgo } from "../../utils/dateUtils";

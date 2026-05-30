@@ -26,7 +26,7 @@ const getFileSize = async (uri) => {
   try {
     const fileInfo = await FileSystem.getInfoAsync(uri, { size: true });
     return fileInfo.exists ? Number(fileInfo.size || 0) : 0;
-  } catch (_error) {
+  } catch {
     return 0;
   }
 };

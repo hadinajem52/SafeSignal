@@ -1,4 +1,3 @@
-import React from "react";
 import { SEVERITY_VARIANTS } from "../utils/incidentUtils";
 
 // Matches the LEI page SEVERITY_COLOR palette exactly

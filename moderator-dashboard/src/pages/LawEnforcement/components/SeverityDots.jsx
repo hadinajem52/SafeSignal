@@ -1,4 +1,3 @@
-import React from "react";
 import { SEVERITY_COLOR } from "../constants";
 
 function SeverityDots({ severity }) {

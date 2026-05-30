@@ -1,4 +1,3 @@
-import React from "react";
 import { DAYS, IC, SEVERITIES } from "./settingsConstants";
 import { SecHead, SettingRow, SqToggle } from "./settingsComponents";
 

@@ -165,7 +165,7 @@ const AccountScreen = () => {
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
       });
-    } catch (_error) {
+    } catch {
       // Consent is enabled; location will sync on next app foreground if permission remains available.
     }
   };
@@ -240,7 +240,7 @@ const AccountScreen = () => {
               : 'Required to attach photos from your library',
         },
       });
-    } catch (error) {
+    } catch {
       setAccessStatus({
         location: { status: 'unknown', detail: 'Could not read location permission status' },
         notifications: { status: 'unknown', detail: 'Could not read notification permission status' },

@@ -1,4 +1,3 @@
-import React from "react";
 import GoogleMapPanel from "../../../components/GoogleMapPanel";
 import { getConstellationMarkerStyle } from "../../../utils/constellationUtils";
 

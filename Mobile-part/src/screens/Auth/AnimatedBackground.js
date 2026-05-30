@@ -322,7 +322,6 @@ const AnimatedBackground = () => {
   const scanOpacity  = isDark ? 0.07  : 0.06;
 
   // Ring colors — primary for main focal, accent for secondary
-  const ringColorA = primaryColor;
   const ringColorB = isDark ? theme.accentBlue : theme.primaryDark;
 
   return (

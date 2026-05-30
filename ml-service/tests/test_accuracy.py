@@ -3,7 +3,6 @@ SafeSignal ML Accuracy Test Suite
 Tests classifier, toxicity, and risk models against realistic incident reports.
 """
 import requests
-import json
 import time
 
 BASE = "http://127.0.0.1:5001"
