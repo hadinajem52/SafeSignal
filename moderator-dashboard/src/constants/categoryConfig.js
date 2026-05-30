@@ -1,4 +1,12 @@
 export const CAT_DISPLAY = {
+  // Primary taxonomy (current incident categories)
+  security: { label: 'Security', color: 'var(--dac-red)' },
+  health: { label: 'Health', color: 'var(--dac-green)' },
+  utility: { label: 'Utility', color: 'var(--dac-blue)' },
+  environment: { label: 'Environment', color: '#2DD4BF' },
+  infrastructure: { label: 'Infrastructure', color: 'var(--dac-amber)' },
+  transportation: { label: 'Transportation', color: '#8B6FBF' },
+  // Legacy taxonomy
   theft: { label: 'Theft', color: 'var(--dac-red)' },
   assault: { label: 'Assault', color: '#C87533' },
   vandalism: { label: 'Vandalism', color: 'var(--dac-amber)' },
