@@ -8,6 +8,7 @@ import asyncio
 import json
 import logging
 import re
+import time
 from typing import Dict, List, Optional
 
 import numpy as np
@@ -20,6 +21,8 @@ from providers.base import BaseProvider
 from utils.pii_redactor import redact
 
 logger = logging.getLogger(__name__)
+
+GEMINI_FILE_POLL_INTERVAL_SECONDS = 1.0
 
 
 # ── JSON extraction ───────────────────────────────────────────────────────────
@@ -80,6 +83,14 @@ def _get_finish_reason_name(response) -> Optional[str]:
     if finish_reason is None:
         return None
     return getattr(finish_reason, "name", str(finish_reason))
+
+
+def _get_file_state_name(file_obj: object) -> str:
+    state = getattr(file_obj, "state", None)
+    if state is None:
+        return ""
+    state_name = str(getattr(state, "name", state)).upper().rsplit(".", 1)[-1]
+    return state_name.removeprefix("FILE_STATE_")
 
 
 def _require_keys(data: dict, keys: List[str], context: str) -> None:
@@ -752,26 +763,57 @@ class GeminiProvider(BaseProvider):
 
         parts = []
         uploaded_files = []
-        for item in media_files:
-            mime_type = item.get("mime_type") or "application/octet-stream"
-            if use_file_api:
-                uploaded = await asyncio.wait_for(
-                    asyncio.to_thread(
-                        self._client.files.upload,
-                        file=item["path"],
-                    ),
-                    timeout=config.GEMINI_MEDIA_TIMEOUT_SECONDS,
-                )
-                uploaded_files.append(uploaded)
-                parts.append(uploaded)
-                continue
+        try:
+            for item in media_files:
+                mime_type = item.get("mime_type") or "application/octet-stream"
+                if use_file_api:
+                    uploaded = await asyncio.wait_for(
+                        asyncio.to_thread(
+                            self._client.files.upload,
+                            file=item["path"],
+                        ),
+                        timeout=config.GEMINI_MEDIA_TIMEOUT_SECONDS,
+                    )
+                    uploaded_files.append(uploaded)
+                    active_file = await self._wait_for_uploaded_file_active(uploaded)
+                    parts.append(active_file)
+                    continue
 
-            with open(item["path"], "rb") as file:
-                parts.append(
-                    types.Part.from_bytes(data=file.read(), mime_type=mime_type)
-                )
+                with open(item["path"], "rb") as file:
+                    parts.append(
+                        types.Part.from_bytes(data=file.read(), mime_type=mime_type)
+                    )
+        except Exception:
+            if uploaded_files:
+                await self._delete_uploaded_files(uploaded_files)
+            raise
 
         return parts, uploaded_files
+
+    async def _wait_for_uploaded_file_active(self, uploaded: object) -> object:
+        name = getattr(uploaded, "name", None)
+        if not name:
+            return uploaded
+
+        current = uploaded
+        deadline = time.monotonic() + config.GEMINI_MEDIA_TIMEOUT_SECONDS
+
+        while True:
+            state_name = _get_file_state_name(current)
+            if state_name in ("", "ACTIVE"):
+                return current
+            if state_name == "FAILED":
+                raise ValueError(f"Gemini uploaded media file failed processing: {name}")
+
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError(f"Timed out waiting for Gemini media file to become ACTIVE: {name}")
+
+            await asyncio.sleep(min(GEMINI_FILE_POLL_INTERVAL_SECONDS, remaining))
+            current = await asyncio.wait_for(
+                asyncio.to_thread(self._client.files.get, name=name),
+                timeout=min(10.0, max(1.0, remaining)),
+            )
 
     async def _delete_uploaded_files(self, uploaded_files: List[object]) -> None:
         for uploaded in uploaded_files:

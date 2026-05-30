@@ -1,0 +1,51 @@
+{
+  "createdAt": "2026-05-30T12:39:29.828Z",
+  "retriedIncidentIds": {
+    "matching_fire_media": 906,
+    "duplicate_after_link": 907,
+    "contradictory_park_media": 908
+  },
+  "summaries": [
+    {
+      "label": "matching_fire_media",
+      "incidentId": 906,
+      "mediaJudgmentStatus": "completed",
+      "overallVerdict": "supports_report",
+      "validityRecommendation": "likely_valid",
+      "confidence": 0.95,
+      "duplicateAlignment": "not_applicable",
+      "duplicateConfidence": 0,
+      "error": null
+    },
+    {
+      "label": "duplicate_after_link",
+      "incidentId": 907,
+      "mediaJudgmentStatus": "completed",
+      "overallVerdict": "supports_report",
+      "validityRecommendation": "likely_valid",
+      "confidence": 0.9,
+      "duplicateAlignment": "same_incident",
+      "duplicateConfidence": 1,
+      "error": null
+    },
+    {
+      "label": "contradictory_park_media",
+      "incidentId": 908,
+      "mediaJudgmentStatus": "completed",
+      "overallVerdict": "contradicts_report",
+      "validityRecommendation": "likely_invalid",
+      "confidence": 0.95,
+      "duplicateAlignment": "different_incident",
+      "duplicateConfidence": 1,
+      "error": null
+    }
+  ],
+  "assertions": {
+    "matchingCompleted": true,
+    "matchingSupports": true,
+    "duplicateCompleted": true,
+    "duplicateSameIncident": true,
+    "contradictoryCompleted": true,
+    "contradictoryNotValid": true
+  }
+}
