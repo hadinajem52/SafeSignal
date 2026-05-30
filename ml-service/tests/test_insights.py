@@ -1,3 +1,4 @@
+import importlib.util
 import unittest
 import sys
 import types
@@ -6,8 +7,10 @@ from fastapi import HTTPException
 from pydantic import ValidationError
 
 try:
-    import google  # type: ignore
-    import google.genai  # type: ignore
+    has_google = importlib.util.find_spec("google") is not None
+    has_genai = importlib.util.find_spec("google.genai") is not None
+    if not has_google or not has_genai:
+        raise ImportError
 except Exception:
     google_module = sys.modules.get("google") or types.ModuleType("google")
     if not hasattr(google_module, "__path__"):

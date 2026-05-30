@@ -1,4 +1,3 @@
-import React from 'react'
 import { Clock, Search, Zap } from 'lucide-react'
 
 // Simplified tabs matching the moderator workflow screenshot.

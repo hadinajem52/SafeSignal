@@ -1,5 +1,3 @@
-import React from 'react'
-
 function LoadingState({ message = '' }) {
   return (
     <div className="flex flex-col items-center justify-center h-full py-16 gap-3">

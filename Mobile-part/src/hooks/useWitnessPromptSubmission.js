@@ -17,7 +17,7 @@ const getOptionalDeviceLocation = async () => {
       deviceLatitude: position.coords.latitude,
       deviceLongitude: position.coords.longitude,
     };
-  } catch (_error) {
+  } catch {
     return {};
   }
 };

@@ -99,7 +99,7 @@ const LoginScreen = ({ navigation }) => {
           setErrors({ general: result.error || 'Please check your credentials' });
         }
       }
-    } catch (error) {
+    } catch {
       showToast('An unexpected error occurred. Please try again.', 'error');
     } finally {
       setIsLoading(false);
