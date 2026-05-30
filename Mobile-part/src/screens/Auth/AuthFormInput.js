@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, TextInput, View } from 'react-native';
+import { Animated, StyleSheet, TextInput } from 'react-native';
 import { fontFamilies } from '../../../../constants/typography';
 import { AppText } from '../../components';
 import { useTheme } from '../../context/ThemeContext';

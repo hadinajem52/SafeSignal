@@ -1,4 +1,3 @@
-import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import SeverityBadge from "../../../components/SeverityBadge";
 import { SEVERITY_VARIANTS } from "../../../utils/incidentUtils";

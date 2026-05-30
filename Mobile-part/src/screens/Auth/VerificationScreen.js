@@ -12,7 +12,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
-import { fontFamilies } from '../../../../constants/typography';
 import { AppText, Button } from '../../components';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -79,7 +78,7 @@ const VerificationScreen = ({ navigation, route }) => {
         setCode(['', '', '', '', '', '']);
         inputRefs.current[0]?.focus();
       }
-    } catch (error) {
+    } catch {
       showToast('An unexpected error occurred', 'error');
     } finally {
       setIsLoading(false);
@@ -159,7 +158,7 @@ const VerificationScreen = ({ navigation, route }) => {
       if (nextEmpty !== -1) {
         inputRefs.current[nextEmpty]?.focus();
       }
-    } catch (error) {
+    } catch {
       showToast('Failed to read clipboard', 'error');
     }
   };
@@ -186,7 +185,7 @@ const VerificationScreen = ({ navigation, route }) => {
       } else {
         showToast(result.error || 'Failed to resend code', 'error');
       }
-    } catch (error) {
+    } catch {
       showToast('An unexpected error occurred', 'error');
     } finally {
       setIsResending(false);

@@ -186,7 +186,3 @@ export const darkTheme = {
   tabBarActive: '#2DD4BF',
   tabBarInactive: '#64748B',
 };
-
-export const getTheme = (isDark) => {
-  return isDark ? darkTheme : lightTheme;
-};

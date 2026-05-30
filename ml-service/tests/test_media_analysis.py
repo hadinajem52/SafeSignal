@@ -1,4 +1,5 @@
 import json
+import importlib.util
 import sys
 import types
 import unittest
@@ -6,8 +7,10 @@ import unittest
 from fastapi import HTTPException
 
 try:
-    import google  # type: ignore
-    import google.genai  # type: ignore
+    has_google = importlib.util.find_spec("google") is not None
+    has_genai = importlib.util.find_spec("google.genai") is not None
+    if not has_google or not has_genai:
+        raise ImportError
 except Exception:
     google_module = sys.modules.get("google") or types.ModuleType("google")
     if not hasattr(google_module, "__path__"):

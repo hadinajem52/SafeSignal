@@ -1,5 +1,3 @@
-import React from 'react'
-
 function DetailSection({ title, headerRight, className = '', children }) {
   return (
     <div className={`bg-surface/40 border border-border p-4 ${className}`.trim()}>

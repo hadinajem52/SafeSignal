@@ -1,8 +1,6 @@
 """Quick latency benchmark for ML service endpoints."""
 import requests
 import time
-import random
-import string
 
 BASE = "http://127.0.0.1:5001"
 

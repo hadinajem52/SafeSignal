@@ -1,4 +1,3 @@
-import React from "react";
 import { Clock, Zap } from "lucide-react";
 import { LEI_STATUS_FILTERS } from "../../../constants/incident";
 import { getTimeAgo } from "../../../utils/dateUtils";

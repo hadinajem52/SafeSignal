@@ -1,4 +1,3 @@
-import React from "react";
 import { NAV, IC } from "./settingsConstants";
 
 export function SqToggle({ checked, onChange, disabled, id, ariaLabel }) {
