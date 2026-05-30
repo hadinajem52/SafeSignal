@@ -59,7 +59,7 @@ export default function HeatmapCard({
                           value: val,
                         },
                         {
-                          label: "% of daily peak",
+                          label: "% of peak hour",
                           value:
                             heatMax > 0
                               ? `${((val / heatMax) * 100).toFixed(0)}%`
