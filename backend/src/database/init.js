@@ -295,7 +295,8 @@ const initDatabase = async () => {
       ADD COLUMN IF NOT EXISTS media_judgment JSONB,
       ADD COLUMN IF NOT EXISTS media_judgment_error TEXT,
       ADD COLUMN IF NOT EXISTS media_judgment_input_hash VARCHAR(64),
-      ADD COLUMN IF NOT EXISTS media_judgment_generated_at TIMESTAMP;
+      ADD COLUMN IF NOT EXISTS media_judgment_generated_at TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS media_judgment_pending_at TIMESTAMP;
     `);
 
     // Moderator dedup verdict columns — ground-truth labels for ML predictions

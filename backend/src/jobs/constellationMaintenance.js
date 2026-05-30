@@ -5,6 +5,8 @@ const constellationSynthesis = require('../services/constellationSynthesis');
 const SYNTHESIS_SWEEP_LIMIT = 100;
 const SYNTHESIS_INTERVAL_MS = 5 * 60 * 1000;
 const LOCATION_CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const MEDIA_STALE_SWEEP_INTERVAL_MS = 5 * 60 * 1000;
+const MEDIA_JUDGMENT_STALE_MINUTES = 10;
 
 let started = false;
 
@@ -52,6 +54,18 @@ async function runPendingConstellationSynthesis(limit = SYNTHESIS_SWEEP_LIMIT) {
   };
 }
 
+async function clearStaleMediaJudgments() {
+  const result = await db.result(
+    `UPDATE report_ml
+     SET media_judgment_status = 'failed',
+         media_judgment_error = 'Media analysis timed out',
+         media_judgment_generated_at = NOW()
+     WHERE media_judgment_status = 'pending'
+       AND media_judgment_pending_at < NOW() - INTERVAL '${MEDIA_JUDGMENT_STALE_MINUTES} minutes'`
+  );
+  return result.rowCount;
+}
+
 async function clearStaleUserLocations() {
   const result = await db.result(
     `UPDATE users
@@ -91,6 +105,7 @@ function startConstellationMaintenance() {
   // Assumes a single backend instance. Add database locking before horizontal scale.
   runSafely('Constellation maintenance', runConstellationMaintenance);
   runSafely('Stale user location cleanup', clearStaleUserLocations);
+  runSafely('Stale media judgment cleanup', clearStaleMediaJudgments);
 
   const synthesisInterval = setInterval(() => {
     runSafely('Constellation maintenance', runConstellationMaintenance);
@@ -100,12 +115,20 @@ function startConstellationMaintenance() {
     runSafely('Stale user location cleanup', clearStaleUserLocations);
   }, LOCATION_CLEANUP_INTERVAL_MS);
 
+  const mediaStaleInterval = setInterval(() => {
+    runSafely('Stale media judgment cleanup', clearStaleMediaJudgments);
+  }, MEDIA_STALE_SWEEP_INTERVAL_MS);
+
   if (typeof synthesisInterval.unref === 'function') {
     synthesisInterval.unref();
   }
 
   if (typeof cleanupInterval.unref === 'function') {
     cleanupInterval.unref();
+  }
+
+  if (typeof mediaStaleInterval.unref === 'function') {
+    mediaStaleInterval.unref();
   }
 
   logger.info('Constellation maintenance scheduler started');
@@ -116,6 +139,7 @@ module.exports = {
   markExpiredConstellations,
   runPendingConstellationSynthesis,
   clearStaleUserLocations,
+  clearStaleMediaJudgments,
   runConstellationMaintenance,
   startConstellationMaintenance,
 };
