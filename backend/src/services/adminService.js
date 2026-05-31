@@ -256,5 +256,4 @@ module.exports = {
   clearTable,
   clearAllManagedTables,
   resetAllReports,
-  MANAGED_TABLES,
 };

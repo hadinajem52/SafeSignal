@@ -36,7 +36,7 @@ export function AuthProvider({ children }) {
         localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
         setUser(userData);
         setIsAuthenticated(true);
-      } catch (_error) {
+      } catch {
         if (controller.signal.aborted) return;
 
         localStorage.removeItem(STORAGE_KEYS.USER);

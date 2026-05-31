@@ -8,7 +8,7 @@ let nodeProfilingIntegration = null;
 
 try {
   ({ nodeProfilingIntegration } = require('@sentry/profiling-node'));
-} catch (_e) {
+} catch {
   // Native binary not available for this Node.js version - profiling disabled.
 }
 

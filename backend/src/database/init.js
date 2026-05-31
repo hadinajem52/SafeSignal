@@ -1,6 +1,5 @@
 const db = require('../config/database');
 const seedDatabase = require('./seed');
-const pgp = require('pg-promise')({ capSQL: true });
 
 const initDatabase = async () => {
   try {

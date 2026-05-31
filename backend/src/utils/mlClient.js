@@ -29,20 +29,6 @@ const mlMediaClient = axios.create({
 });
 
 /**
- * Check if ML service is healthy
- * @returns {Promise<boolean>}
- */
-async function isHealthy() {
-  try {
-    const response = await mlClient.get('/health');
-    return response.data?.status === 'healthy';
-  } catch (error) {
-    logger.warn('ML service health check failed');
-    return false;
-  }
-}
-
-/**
  * Get text embedding
  * @param {string} text
  * @returns {Promise<number[]|null>}
@@ -53,56 +39,6 @@ async function getEmbedding(text) {
     return response.data?.embedding || null;
   } catch (error) {
     logger.warn(`ML embedding failed: ${error.message}`);
-    return null;
-  }
-}
-
-/**
- * Compute semantic similarity between query and candidates
- * @param {string} queryText
- * @param {string[]} candidateTexts
- * @param {number} threshold
- * @returns {Promise<Array|null>}
- */
-async function computeSimilarity(queryText, candidateTexts, threshold = 0.7) {
-  if (!candidateTexts || candidateTexts.length === 0) {
-    return [];
-  }
-
-  try {
-    const response = await mlClient.post('/similarity', {
-      query_text: queryText,
-      candidate_texts: candidateTexts,
-      threshold,
-    });
-    return response.data?.similarities || [];
-  } catch (error) {
-    logger.warn(`ML similarity failed: ${error.message}`);
-    return null;
-  }
-}
-
-/**
- * Classify text into incident category
- * @param {string} text
- * @param {string[]} categories
- * @returns {Promise<Object|null>}
- */
-async function classifyText(text, categories = null) {
-  try {
-    const payload = { text };
-    if (categories) {
-      payload.categories = categories;
-    }
-
-    const response = await mlClient.post('/classify', payload);
-    return {
-      predictedCategory: response.data?.predicted_category || null,
-      confidence: response.data?.confidence || 0,
-      allScores: response.data?.all_scores || {},
-    };
-  } catch (error) {
-    logger.warn(`ML classification failed: ${error.message}`);
     return null;
   }
 }
@@ -123,32 +59,6 @@ async function detectToxicity(text) {
     };
   } catch (error) {
     logger.warn(`ML toxicity detection failed: ${error.message}`);
-    return null;
-  }
-}
-
-/**
- * Compute risk score
- * @param {Object} params
- * @returns {Promise<Object|null>}
- */
-async function computeRisk({ text, category, severity, duplicateCount = 0, toxicityScore = 0 }) {
-  try {
-    const response = await mlClient.post('/risk', {
-      text,
-      category,
-      severity,
-      duplicate_count: duplicateCount,
-      toxicity_score: toxicityScore,
-    });
-    return {
-      riskScore: response.data?.risk_score || 0,
-      isHighRisk: response.data?.is_high_risk || false,
-      isCritical: response.data?.is_critical || false,
-      breakdown: response.data?.breakdown || {},
-    };
-  } catch (error) {
-    logger.warn(`ML risk scoring failed: ${error.message}`);
     return null;
   }
 }
@@ -347,13 +257,9 @@ async function analyzeReportMedia({ metadata, mediaFiles }) {
 }
 
 module.exports = {
-  isHealthy,
   getEmbedding,
-  computeSimilarity,
   dedupCompare,
-  classifyText,
   detectToxicity,
-  computeRisk,
   generateInsights,
   analyzeIncident,
   synthesizeConstellation,

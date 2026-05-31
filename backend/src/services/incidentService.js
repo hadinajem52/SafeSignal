@@ -1565,7 +1565,7 @@ async function getUserIncidents(userId, filters = {}) {
 
   const incidents = await db.manyOrNone(query, params);
   const total = incidents.length > 0 ? parseInt(incidents[0].total_count || 0) : 0;
-  const normalizedIncidents = incidents.map(({ total_count, ...incident }) => {
+  const normalizedIncidents = incidents.map(({ total_count: _totalCount, ...incident }) => {
     const constellation = incident.constellation_id
       ? {
           constellationId: incident.constellation_id,
@@ -1815,10 +1815,6 @@ async function getIncidentForRequest(incidentId, user) {
     return getStaffIncidentById(incidentId);
   }
 
-  return getPublicIncidentById(incidentId);
-}
-
-async function getIncidentById(incidentId) {
   return getPublicIncidentById(incidentId);
 }
 
@@ -2898,7 +2894,6 @@ module.exports = {
   getPublicIncidentById,
   getStaffIncidentById,
   getIncidentForRequest,
-  getIncidentById,
   getIncidentDedupCandidates,
   getIncidentMlSummary,
   retryIncidentMediaJudgment,
