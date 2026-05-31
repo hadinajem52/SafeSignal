@@ -255,7 +255,6 @@ async function getAutoVerificationPolicy() {
 }
 
 module.exports = {
-  DEFAULT_SETTINGS,
   getSettingsForUser,
   saveSettingsForUser,
   resetSettingsForUser,

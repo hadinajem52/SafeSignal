@@ -46,7 +46,7 @@ io.use(async (socket, next) => {
       role: dbUser.role,
     };
     return next();
-  } catch (error) {
+  } catch {
     return next(new Error('Unauthorized'));
   }
 });

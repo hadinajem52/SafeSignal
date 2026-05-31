@@ -1,4 +1,3 @@
-import { api } from "./api/client";
 import { authAPI } from "./api/auth";
 import { reportsAPI } from "./api/reports";
 import { usersAPI } from "./api/users";
@@ -18,5 +17,3 @@ export {
   adminAPI,
   timelineAPI,
 };
-
-export default api;

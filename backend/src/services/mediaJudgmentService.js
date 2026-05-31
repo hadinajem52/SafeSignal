@@ -58,7 +58,7 @@ function resolveStoredMedia(url, role, index) {
   let stats;
   try {
     stats = fs.statSync(absolutePath);
-  } catch (_error) {
+  } catch {
     return { error: `Stored media file is missing: ${url}` };
   }
 

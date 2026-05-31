@@ -139,7 +139,5 @@ module.exports = {
   markExpiredConstellations,
   runPendingConstellationSynthesis,
   clearStaleUserLocations,
-  clearStaleMediaJudgments,
-  runConstellationMaintenance,
   startConstellationMaintenance,
 };

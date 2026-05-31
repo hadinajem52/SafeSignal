@@ -1,4 +1,4 @@
-export const CONSTELLATION_STATE_META = {
+const CONSTELLATION_STATE_META = {
   corroborated: {
     label: "Corroborated",
     tone: "success",

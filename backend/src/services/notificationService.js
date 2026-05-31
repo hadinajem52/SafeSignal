@@ -323,7 +323,6 @@ function startWeeklyDigestScheduler() {
 
 module.exports = {
   notifyStaffIncidentEvent,
-  sendWeeklyDigestToEligibleStaff,
   sendWeeklyDigestForUser,
   startWeeklyDigestScheduler,
 };

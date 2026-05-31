@@ -1,4 +1,9 @@
-const { SEVERITY_COLORS, STATUS_COLORS, STATUS_COLORS_HEX } = require('./colors');
+const SEVERITY_COLORS = {
+  low: '#28a745',
+  medium: '#ffc107',
+  high: '#fd7e14',
+  critical: '#dc3545',
+};
 
 const INCIDENT_CATEGORIES = [
   { value: 'theft', label: 'Theft', icon: '💰' },
@@ -128,15 +133,6 @@ const STATUS_LABELS = INCIDENT_STATUSES.reduce((acc, status) => {
   return acc;
 }, {});
 
-
-const MODERATOR_STATUS_FILTERS = [
-  { value: 'all', label: 'All Reports' },
-  { value: 'submitted', label: 'Pending' },
-  { value: 'in_review', label: 'In Review' },
-  { value: 'verified', label: 'Verified' },
-  { value: 'rejected', label: 'Rejected' },
-];
-
 const LEI_STATUS_FILTERS = [
   { value: 'all', label: 'All Active' },
   { value: 'verified', label: 'Pending Action' },
@@ -147,32 +143,17 @@ const LEI_STATUS_FILTERS = [
 ];
 
 const VALID_CLOSURE_OUTCOMES = CLOSURE_OUTCOMES.map((outcome) => outcome.value);
-const PUBLIC_INCIDENT_STATUSES = [
-  'verified',
-  'published',
-  'dispatched',
-  'on_scene',
-  'investigating',
-  'police_closed',
-];
-
 module.exports = {
   INCIDENT_CATEGORIES,
   CATEGORY_DISPLAY,
   SEVERITY_LEVELS,
-  INCIDENT_STATUSES,
   VALID_CATEGORIES,
   VALID_SEVERITIES,
   VALID_STATUSES,
   STATUS_LABELS,
-  STATUS_COLORS,
-  STATUS_COLORS_HEX,
-  MODERATOR_STATUS_FILTERS,
   LEI_STATUS_FILTERS,
   CLOSURE_OUTCOMES,
   VALID_CLOSURE_OUTCOMES,
-  PUBLIC_INCIDENT_STATUSES,
-  SEVERITY_COLORS,
 };
 
 module.exports.default = module.exports;

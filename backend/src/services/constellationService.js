@@ -546,10 +546,8 @@ module.exports = {
   STAFF_ROLES,
   VALID_SIGNAL_TYPES,
   evaluateEligibility,
-  createConstellation,
   openConstellationForIncident,
   notifyNearbyUsers,
-  isUserInRadius,
   getConstellationForUser,
   submitCorroboration,
 };

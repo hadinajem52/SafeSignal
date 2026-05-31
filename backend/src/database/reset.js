@@ -1,5 +1,4 @@
 const db = require('../config/database');
-const pgp = require('pg-promise')({ capSQL: true });
 
 const resetDatabase = async () => {
   try {
