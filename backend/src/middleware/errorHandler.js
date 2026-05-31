@@ -1,11 +1,10 @@
 const logger = require('../utils/logger');
-const ServiceError = require('../utils/ServiceError');
 
 /**
  * Global standardized error handler
  * Captures, logs, and formats errors for client response
  */
-const errorHandler = (err, req, res, next) => {
+const errorHandler = (err, req, res, _next) => {
   const statusCode = err.statusCode || err.status || 500;
   const errorCode = err.code || 'INTERNAL_ERROR';
   const isProduction = process.env.NODE_ENV === 'production';

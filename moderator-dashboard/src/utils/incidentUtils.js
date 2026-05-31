@@ -35,24 +35,6 @@ export const formatCategoryLabel = (category) => {
   return category.replace(/_/g, " ").toUpperCase();
 };
 
-export const getSeverityColor = (
-  severity,
-  _variant = SEVERITY_VARIANTS.REPORTS,
-) => {
-  switch (severity) {
-    case "critical":
-      return "text-purple-400";
-    case "high":
-      return "text-error";
-    case "medium":
-      return "text-warning";
-    case "low":
-      return "text-success";
-    default:
-      return "text-muted";
-  }
-};
-
 export const openMapsUrl = (latitude, longitude) =>
   Number.isFinite(Number(latitude)) && Number.isFinite(Number(longitude))
     ? `https://www.google.com/maps?q=${latitude},${longitude}`

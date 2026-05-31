@@ -1,13 +1,6 @@
 // ES Module wrapper for shared incident constants
 // This avoids CommonJS/ESM interop issues in the Vite build
 
-export const SEVERITY_COLORS = {
-  low: '#28a745',
-  medium: '#ffc107',
-  high: '#fd7e14',
-  critical: '#dc3545',
-};
-
 // Badge token name → CSS variable prefix (--color-badge-{name}-bg / text / border)
 // Light-mode fallback colors inline; dark-mode picks up the CSS variables automatically.
 export const STATUS_COLORS = {
@@ -64,9 +57,7 @@ export const STATUS_COLORS_HEX = {
   default: '#6c757d',
 };
 
-export const STATUS_BADGE_COLORS = STATUS_COLORS_HEX;
-
-export const INCIDENT_STATUSES = [
+const INCIDENT_STATUSES = [
   { value: 'draft', label: 'Draft' },
   { value: 'submitted', label: 'Pending' },
   { value: 'auto_processed', label: 'Auto Processed' },
@@ -89,17 +80,6 @@ export const STATUS_LABELS = INCIDENT_STATUSES.reduce((acc, status) => {
   acc[status.value] = status.label;
   return acc;
 }, {});
-
-export const MODERATOR_STATUS_FILTERS = [
-  { value: 'all', label: 'All Reports' },
-  { value: 'submitted,auto_flagged,auto_processed', label: 'Needs Review' },
-  { value: 'submitted', label: 'Pending' },
-  { value: 'auto_flagged', label: 'Auto Flagged' },
-  { value: 'auto_processed', label: 'Auto Processed' },
-  { value: 'in_review', label: 'In Review' },
-  { value: 'verified', label: 'Verified' },
-  { value: 'rejected', label: 'Rejected' },
-];
 
 export const LEI_STATUS_FILTERS = [
   { value: 'all', label: 'All Active' },

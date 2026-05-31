@@ -5,7 +5,6 @@
  */
 
 const db = require('../config/database');
-const ServiceError = require('../utils/ServiceError');
 
 const DEFAULT_SAFETY_RADIUS_KM = 1;
 const MAX_SAFETY_RADIUS_KM = 1;
@@ -1004,5 +1003,4 @@ module.exports = {
     getUserDashboardStats,
     getNearbyConstellationsForUser,
     getAreaSafetyStats,
-    calculateSafetyScore, // Exposed for testing
 };

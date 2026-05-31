@@ -40,7 +40,7 @@ const authenticateToken = async (req, res, next) => {
       role: dbUser.role,
     };
     next();
-  } catch (_error) {
+  } catch {
     return res.status(403).json({
       status: 'ERROR',
       message: 'Invalid or expired token',
