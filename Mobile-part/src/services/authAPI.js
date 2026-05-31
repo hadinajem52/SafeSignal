@@ -103,30 +103,6 @@ export const authAPI = {
     }
   },
 
-  async refreshToken() {
-    try {
-      const response = await api.post('/auth/refresh');
-      if (response.data.status === 'OK') {
-        const { token } = response.data.data;
-        await tokenStorage.setToken(token);
-        return { success: true, token };
-      }
-      return { success: false, error: response.data.message };
-    } catch (error) {
-      const message = error.response?.data?.message || 'Failed to refresh token';
-      return { success: false, error: message };
-    }
-  },
-
-  async isAuthenticated() {
-    const token = await tokenStorage.getToken();
-    return !!token;
-  },
-
-  async getStoredUser() {
-    return await tokenStorage.getUser();
-  },
-
   async googleSignIn(idToken, email, name) {
     try {
       const response = await api.post('/auth/google', {
