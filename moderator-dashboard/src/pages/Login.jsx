@@ -83,7 +83,7 @@ function Login() {
       } else {
         setError(result.error || 'Invalid credentials')
       }
-    } catch (_error) {
+    } catch {
       setError('Unable to login right now. Please try again.')
     } finally {
       setLoading(false)
@@ -112,7 +112,7 @@ function Login() {
       } else {
         setError(result.error || 'Registration failed')
       }
-    } catch (_error) {
+    } catch {
       setError('Unable to submit application right now. Please try again.')
     } finally {
       setLoading(false)

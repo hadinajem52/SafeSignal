@@ -231,6 +231,4 @@ module.exports = {
   register,
   googleLogin,
   getCurrentUser,
-  // Expose for testing purposes
-  generateToken,
 };

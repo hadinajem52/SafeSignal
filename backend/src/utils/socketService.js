@@ -4,11 +4,6 @@ const setSocketServer = (io) => {
   ioInstance = io;
 };
 
-const emitEvent = (event, payload) => {
-  if (!ioInstance) return;
-  ioInstance.emit(event, payload);
-};
-
 const emitToRoles = (roles, event, payload) => {
   if (!ioInstance) return;
   const roleList = Array.isArray(roles) ? roles : [roles];
@@ -18,11 +13,6 @@ const emitToRoles = (roles, event, payload) => {
 const emitToUser = (userId, event, payload) => {
   if (!ioInstance || !userId) return;
   ioInstance.to(`user_${userId}`).emit(event, payload);
-};
-
-const emitToUsers = (userIds, event, payload) => {
-  if (!ioInstance || !Array.isArray(userIds)) return;
-  userIds.forEach((userId) => emitToUser(userId, event, payload));
 };
 
 /**
@@ -69,11 +59,7 @@ const emitComment = (incidentId, comment) => {
 
 module.exports = {
   setSocketServer,
-  emitEvent,
   emitToRoles,
   emitToUser,
-  emitToUsers,
-  emitToIncident,
-  emitToIncidentInternal,
   emitComment,
 };

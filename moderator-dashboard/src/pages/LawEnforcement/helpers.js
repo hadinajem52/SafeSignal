@@ -3,7 +3,7 @@ import {
   UNACTIONED_AGE_THRESHOLD_MINUTES,
 } from "./constants";
 
-export function getIncidentAgeMinutes(incident) {
+function getIncidentAgeMinutes(incident) {
   const ts =
     incident?.reportedAt || incident?.incident_date || incident?.created_at;
   if (!ts) return 0;

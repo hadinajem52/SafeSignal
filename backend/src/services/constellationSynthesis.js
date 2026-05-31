@@ -341,5 +341,4 @@ async function triggerSynthesis(constellationId) {
 module.exports = {
   computeFallbackState,
   triggerSynthesis,
-  detectVelocityCap,
 };

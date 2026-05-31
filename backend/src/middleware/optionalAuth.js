@@ -23,7 +23,7 @@ const optionalAuth = async (req, _res, next) => {
         role: dbUser.role,
       };
     }
-  } catch (_error) {
+  } catch {
     // Public routes should stay public even when an optional token is stale.
   }
 
