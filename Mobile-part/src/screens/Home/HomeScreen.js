@@ -132,7 +132,6 @@ const HomeScreen = ({ navigation }) => {
         </Card>
       ) : null}
     </>
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   ), [user, theme, activeNearbyCount, safetyScore, location, safetyScoreUnavailableReason, showEnableLocationCta, dashboardData, error, onRefresh, navigation, refreshing, witnessPromptCount, firstNearbyConstellationId, witnessPrompts]);
 
   if (loading) {

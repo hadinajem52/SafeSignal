@@ -258,76 +258,6 @@ const homeStyles = StyleSheet.create({
     marginTop: 4,
   },
 
-  suggestionCard: {
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 14,
-  },
-  suggestionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  suggestionIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  suggestionTitle: {
-    flex: 1,
-  },
-  suggestionDescription: {},
-  suggestionFooter: {
-    marginTop: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-
-  activityContainer: {
-    borderRadius: 16,
-    paddingVertical: 6,
-  },
-  activityItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-  },
-  activityTimelineColumn: {
-    width: 14,
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  activityDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 999,
-    marginTop: 5,
-  },
-  activityConnector: {
-    width: 2,
-    height: 26,
-    marginTop: 3,
-    borderRadius: 999,
-  },
-  activityContent: {
-    flex: 1,
-  },
-  activityTitle: {},
-  activityType: {
-    marginTop: 2,
-    textTransform: 'capitalize',
-  },
-  activityTime: {
-    marginLeft: 8,
-    marginTop: 2,
-  },
-
   errorContainer: {
     borderRadius: 12,
     padding: 16,
@@ -354,9 +284,6 @@ const homeStyles = StyleSheet.create({
   alertBannerText: {
     marginLeft: 8,
     flex: 1,
-  },
-  bottomSpacing: {
-    height: 14,
   },
 });
 
