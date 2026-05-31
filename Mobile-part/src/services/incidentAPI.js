@@ -242,25 +242,6 @@ export const incidentAPI = {
     }
   },
 
-  async getDrafts() {
-    try {
-      const response = await api.get('/incidents/list?isDraft=true');
-
-      if (response.data.status === 'SUCCESS') {
-        return {
-          success: true,
-          drafts: response.data.data.incidents,
-          pagination: response.data.data.pagination,
-        };
-      }
-
-      return { success: false, error: response.data.message };
-    } catch (error) {
-      const message = error.response?.data?.message || 'Failed to fetch drafts';
-      return { success: false, error: message };
-    }
-  },
-
   async getIncidentById(incidentId) {
     try {
       const response = await api.get(`/incidents/${incidentId}`);
@@ -275,28 +256,6 @@ export const incidentAPI = {
       return { success: false, error: response.data.message };
     } catch (error) {
       const message = error.response?.data?.message || 'Failed to fetch incident';
-      return { success: false, error: message };
-    }
-  },
-
-  async updateIncidentStatus(incidentId, status, notes = '') {
-    try {
-      const response = await api.put(`/incidents/${incidentId}/status`, {
-        status,
-        notes,
-      });
-
-      if (response.data.status === 'SUCCESS') {
-        return {
-          success: true,
-          incident: response.data.data.incident,
-          message: response.data.message,
-        };
-      }
-
-      return { success: false, error: response.data.message };
-    } catch (error) {
-      const message = error.response?.data?.message || 'Failed to update incident status';
       return { success: false, error: message };
     }
   },
