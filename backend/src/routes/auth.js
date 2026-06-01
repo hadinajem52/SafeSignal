@@ -7,6 +7,7 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const authenticateToken = require('../middleware/auth');
+const db = require('../config/database');
 const authService = require('../services/authService');
 const ServiceError = require('../utils/ServiceError');
 
@@ -32,7 +33,16 @@ function handleValidationErrors(req, res) {
  * Handle service errors
  */
 function handleServiceError(error, res, defaultMessage) {
-  console.error(`${defaultMessage}:`, error);
+  if (db.isConnectionError(error)) {
+    console.error(`${defaultMessage}: database unavailable (${db.formatDatabaseError(error)})`);
+    return res.status(503).json({
+      status: 'ERROR',
+      message: 'Database is unavailable. Please try again later.',
+      code: 'DATABASE_UNAVAILABLE',
+    });
+  }
+
+  console.error(`${defaultMessage}: ${error?.message || error}`);
 
   if (error instanceof ServiceError) {
     return res.status(error.statusCode).json({

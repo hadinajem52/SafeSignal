@@ -40,7 +40,15 @@ const authenticateToken = async (req, res, next) => {
       role: dbUser.role,
     };
     next();
-  } catch {
+  } catch (error) {
+    if (db.isConnectionError(error)) {
+      return res.status(503).json({
+        status: 'ERROR',
+        message: 'Database is unavailable. Please try again later.',
+        code: 'DATABASE_UNAVAILABLE',
+      });
+    }
+
     return res.status(403).json({
       status: 'ERROR',
       message: 'Invalid or expired token',
