@@ -24,7 +24,7 @@ const hexToRgba = (hexColor, alpha) => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
-const Badge = ({ label, color, style, textStyle }) => {
+const Badge = ({ label, color, style }) => {
   const { theme } = useTheme();
   const tintBackground = hexToRgba(color, 0.16);
   const tintBorder = hexToRgba(color, 0.34);
@@ -44,7 +44,7 @@ const Badge = ({ label, color, style, textStyle }) => {
         style,
       ]}
     >
-      <ThemedText variant="caption" style={[styles.text, { color: textColor }, textStyle]}>
+      <ThemedText variant="caption" style={[styles.text, { color: textColor }]}>
         {label}
       </ThemedText>
     </Box>

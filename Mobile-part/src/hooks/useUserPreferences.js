@@ -67,22 +67,10 @@ const useUserPreferences = () => {
     [persistPreferences, storageKey]
   );
 
-  const updatePreferences = useCallback(
-    async (updates) => {
-      setPreferences((prev) => {
-        const next = { ...prev, ...updates };
-        persistPreferences(storageKey, next);
-        return next;
-      });
-    },
-    [persistPreferences, storageKey]
-  );
-
   return {
     preferences,
     isLoading,
     updatePreference,
-    updatePreferences,
     reloadPreferences: loadPreferences,
   };
 };

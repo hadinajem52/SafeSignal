@@ -20,12 +20,12 @@ const getSeverityColor = (severity, theme) => {
   }
 };
 
-const SeverityBadge = ({ severity, style, textStyle }) => {
+const SeverityBadge = ({ severity, style }) => {
   const { theme } = useTheme();
   const label = SEVERITY_LEVELS.find((level) => level.value === severity)?.label || severity;
   const color = getSeverityColor(severity, theme);
 
-  return <Badge label={label} color={color} style={style} textStyle={[{ color }, textStyle]} />;
+  return <Badge label={label} color={color} style={style} />;
 };
 
 export default SeverityBadge;

@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
-export const getSocketUrl = () => {
+const getSocketUrl = () => {
   if (!__DEV__) {
     return 'https://your-production-api.com';
   }
