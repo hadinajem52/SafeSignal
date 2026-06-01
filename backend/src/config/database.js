@@ -8,7 +8,7 @@ const pgp = pgPromise(initOptions);
 
 // Database connection string
 const connectionString = process.env.DATABASE_URL || 
-  'postgresql://safesignal_user:safesignal_password@localhost:5432/safesignal_db';
+  'postgresql://safesignal_user:safesignal_password@localhost:6432/safesignal_db';
 
 const db = pgp({
   connectionString,
@@ -17,15 +17,53 @@ const db = pgp({
   connectionTimeoutMillis: 5000,
 });
 
-if (process.env.NODE_ENV !== 'test') {
-  db.connect()
-    .then((obj) => {
-      console.log('✓ Database connection successful');
-      obj.done();
-    })
-    .catch((error) => {
-      console.log('✗ Database connection failed:', error.message);
-    });
+const CONNECTION_ERROR_CODES = new Set([
+  'ECONNREFUSED',
+  'ECONNRESET',
+  'ETIMEDOUT',
+  'EHOSTUNREACH',
+  'ENOTFOUND',
+  'EAI_AGAIN',
+]);
+
+function formatDatabaseError(error) {
+  if (error?.message) {
+    return error.message;
+  }
+
+  if (Array.isArray(error?.errors) && error.errors.length > 0) {
+    return error.errors
+      .map((innerError) => innerError.message)
+      .filter(Boolean)
+      .join('; ');
+  }
+
+  return String(error);
 }
+
+function isConnectionError(error) {
+  if (!error) {
+    return false;
+  }
+
+  if (CONNECTION_ERROR_CODES.has(error.code)) {
+    return true;
+  }
+
+  if (Array.isArray(error.errors)) {
+    return error.errors.some(isConnectionError);
+  }
+
+  return false;
+}
+
+async function verifyDatabaseConnection() {
+  const connection = await db.connect();
+  connection.done();
+}
+
+db.formatDatabaseError = formatDatabaseError;
+db.isConnectionError = isConnectionError;
+db.verifyDatabaseConnection = verifyDatabaseConnection;
 
 module.exports = db;

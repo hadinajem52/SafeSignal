@@ -121,10 +121,33 @@ io.on('connection', (socket) => {
   });
 });
 
-server.listen(PORT, () => {
+function startBackgroundSchedulers(isDatabaseAvailable) {
+  if (!isDatabaseAvailable) {
+    logger.warn('Database-backed background schedulers skipped because the database is unavailable');
+    return;
+  }
+
   startWeeklyDigestScheduler();
   startConstellationMaintenance();
-  logger.info(`SafeSignal Backend running on http://localhost:${PORT}`);
-  logger.info(`API Docs: http://localhost:${PORT}/api/docs`);
-  logger.info(`Health Check: http://localhost:${PORT}/api/health`);
-});
+}
+
+async function startServer() {
+  let isDatabaseAvailable = true;
+
+  try {
+    await db.verifyDatabaseConnection();
+    logger.info('Database connection successful');
+  } catch (error) {
+    isDatabaseAvailable = false;
+    logger.warn(`Database connection unavailable at startup: ${db.formatDatabaseError(error)}`);
+  }
+
+  server.listen(PORT, () => {
+    startBackgroundSchedulers(isDatabaseAvailable);
+    logger.info(`SafeSignal Backend running on http://localhost:${PORT}`);
+    logger.info(`API Docs: http://localhost:${PORT}/api/docs`);
+    logger.info(`Health Check: http://localhost:${PORT}/api/health`);
+  });
+}
+
+startServer();
