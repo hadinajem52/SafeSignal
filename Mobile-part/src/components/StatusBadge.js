@@ -44,19 +44,12 @@ const getStatusColor = (status, theme) => {
   }
 };
 
-const StatusBadge = ({ status, style, textStyle }) => {
+const StatusBadge = ({ status, style }) => {
   const { theme } = useTheme();
   const label = STATUS_LABELS[status] || status;
   const badgeColor = getStatusColor(status, theme);
 
-  return (
-    <Badge
-      label={label}
-      color={badgeColor}
-      style={style}
-      textStyle={[{ color: badgeColor }, textStyle]}
-    />
-  );
+  return <Badge label={label} color={badgeColor} style={style} />;
 };
 
 export default StatusBadge;

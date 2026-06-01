@@ -16,9 +16,7 @@ const Modal = ({
   onRequestClose,
   children,
   animationType = 'fade',
-  transparent = true,
   closeOnOverlayPress = true,
-  overlayStyle,
   contentStyle,
 }) => {
   const { theme } = useTheme();
@@ -91,10 +89,10 @@ const Modal = ({
     <NativeModal
       visible={isMounted}
       animationType={animationType}
-      transparent={transparent}
+      transparent
       onRequestClose={handleClose}
     >
-      <Animated.View style={[styles.overlay, { backgroundColor: theme.overlay, opacity: fadeAnim }, overlayStyle]}>
+      <Animated.View style={[styles.overlay, { backgroundColor: theme.overlay, opacity: fadeAnim }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={closeOnOverlayPress ? handleClose : undefined} />
         <TouchableWithoutFeedback>
           <Animated.View

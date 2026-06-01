@@ -39,7 +39,6 @@ const fetchCoords = async () => {
 const useMapRegion = ({ defaultRegion, mapRef, locationServicesEnabled = true }) => {
   const { showToast } = useToast();
   const [region, setRegion] = useState(defaultRegion);
-  const [userLocation, setUserLocation] = useState(null);
   const [locationLoading, setLocationLoading] = useState(false);
 
   const centerMapToCoords = useCallback(
@@ -51,7 +50,6 @@ const useMapRegion = ({ defaultRegion, mapRef, locationServicesEnabled = true })
         longitudeDelta: 0.01,
       };
 
-      setUserLocation({ latitude, longitude });
       setRegion(nextRegion);
       mapRef?.current?.animateToRegion(nextRegion, 1000);
     },
@@ -133,7 +131,6 @@ const useMapRegion = ({ defaultRegion, mapRef, locationServicesEnabled = true })
   return {
     region,
     setRegion,
-    userLocation,
     locationLoading,
     goToMyLocation,
     resetToDefaultRegion,
