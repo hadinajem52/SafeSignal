@@ -1818,6 +1818,95 @@ async function getIncidentForRequest(incidentId, user) {
   return getPublicIncidentById(incidentId);
 }
 
+function formatLinkedDuplicateIncident(row) {
+  return {
+    incidentId: row.incident_id,
+    reportId: row.report_id,
+    title: row.title,
+    description: row.description,
+    category: row.category,
+    severity: row.severity,
+    status: row.status,
+    reporter: row.username || 'Anonymous',
+    locationName: row.location_name,
+    latitude: row.latitude === null || row.latitude === undefined
+      ? null
+      : Number(row.latitude),
+    longitude: row.longitude === null || row.longitude === undefined
+      ? null
+      : Number(row.longitude),
+    incidentDate: row.incident_date,
+    createdAt: row.created_at,
+    linkedAt: row.linked_at,
+    linkedDepth: Number(row.linked_depth || 1),
+    photoUrls: row.photo_urls || [],
+    videoUrl: row.video_url || null,
+  };
+}
+
+async function getLinkedDuplicateIncidentSummaries(incidentId) {
+  const rows = await db.manyOrNone(
+    `WITH RECURSIVE duplicate_tree AS (
+       SELECT
+         rl.duplicate_report_id,
+         rl.created_at AS linked_at,
+         1 AS linked_depth,
+         ARRAY[rl.canonical_report_id, rl.duplicate_report_id] AS path
+       FROM reports canonical_report
+       JOIN report_links rl ON rl.canonical_report_id = canonical_report.report_id
+        AND rl.link_type = 'duplicate'
+       WHERE canonical_report.incident_id = $1
+
+       UNION ALL
+
+       SELECT
+         child_link.duplicate_report_id,
+         child_link.created_at,
+         duplicate_tree.linked_depth + 1,
+         duplicate_tree.path || child_link.duplicate_report_id
+       FROM duplicate_tree
+       JOIN report_links child_link ON child_link.canonical_report_id = duplicate_tree.duplicate_report_id
+        AND child_link.link_type = 'duplicate'
+       WHERE duplicate_tree.linked_depth < 20
+         AND NOT child_link.duplicate_report_id = ANY(duplicate_tree.path)
+     ),
+     ranked_duplicates AS (
+       SELECT
+         duplicate_tree.*,
+         ROW_NUMBER() OVER (
+           PARTITION BY duplicate_report.incident_id
+           ORDER BY duplicate_tree.linked_depth ASC, duplicate_tree.linked_at DESC
+         ) AS duplicate_rank,
+         duplicate_report.report_id,
+         duplicate.incident_id,
+         duplicate.title,
+         duplicate.description,
+         duplicate.category,
+         duplicate.severity,
+         duplicate.status,
+         duplicate.latitude,
+         duplicate.longitude,
+         duplicate.location_name,
+         duplicate.incident_date,
+         duplicate.created_at,
+         duplicate.photo_urls,
+         duplicate.video_url,
+         reporter.username
+       FROM duplicate_tree
+       JOIN reports duplicate_report ON duplicate_report.report_id = duplicate_tree.duplicate_report_id
+       JOIN incidents duplicate ON duplicate.incident_id = duplicate_report.incident_id
+       JOIN users reporter ON reporter.user_id = duplicate.reporter_id
+     )
+     SELECT *
+     FROM ranked_duplicates
+     WHERE duplicate_rank = 1
+     ORDER BY linked_at DESC, incident_date DESC`,
+    [incidentId]
+  );
+
+  return rows.map(formatLinkedDuplicateIncident);
+}
+
 /**
  * Get latest dedup candidates for an incident
  * @param {number} incidentId - The incident ID
@@ -1833,19 +1922,23 @@ async function getIncidentDedupCandidates(incidentId) {
     throw ServiceError.notFound('Incident');
   }
 
-  const dedup = await db.oneOrNone(
-    `SELECT rm.dedup_candidates, rm.confidence, rm.created_at, r.report_id
-     FROM reports r
-     JOIN report_ml rm ON rm.report_id = r.report_id
-     WHERE r.incident_id = $1
-     ORDER BY rm.created_at DESC
-     LIMIT 1`,
-    [incidentId]
-  );
+  const [dedup, linkedDuplicates] = await Promise.all([
+    db.oneOrNone(
+      `SELECT rm.dedup_candidates, rm.confidence, rm.created_at, r.report_id
+       FROM reports r
+       JOIN report_ml rm ON rm.report_id = r.report_id
+       WHERE r.incident_id = $1
+       ORDER BY rm.created_at DESC
+       LIMIT 1`,
+      [incidentId]
+    ),
+    getLinkedDuplicateIncidentSummaries(incidentId),
+  ]);
 
   return {
     reportId: dedup?.report_id || null,
     confidence: dedup?.confidence ? Number(dedup.confidence) : 0,
+    linkedDuplicates,
     dedupCandidates: dedup?.dedup_candidates || {
       generatedAt: null,
       radiusMeters: LIMITS.DEDUP.RADIUS_METERS,

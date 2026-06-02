@@ -4,13 +4,6 @@ export function useReportSelection(filteredReports) {
   const [selectedReport, setSelectedReport] = useState(null);
   const [selectedReportIds, setSelectedReportIds] = useState([]);
 
-  // Auto-select first report when list loads so the right panel isn't blank
-  useEffect(() => {
-    if (!selectedReport && filteredReports.length > 0) {
-      setSelectedReport(filteredReports[0]);
-    }
-  }, [filteredReports, selectedReport]);
-
   // Keep selection valid if filters remove the currently selected report
   useEffect(() => {
     setSelectedReport((current) => {
@@ -20,9 +13,10 @@ export function useReportSelection(filteredReports) {
         : filteredReports[0] ?? null;
     });
 
-    setSelectedReportIds((prev) =>
-      prev.filter((id) => filteredReports.some((r) => r.id === id)),
-    );
+    setSelectedReportIds((prev) => {
+      const next = prev.filter((id) => filteredReports.some((r) => r.id === id));
+      return next.length === prev.length ? prev : next;
+    });
   }, [filteredReports]);
 
   const handleToggleSelection = useCallback((reportId) => {
