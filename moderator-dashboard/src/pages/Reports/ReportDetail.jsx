@@ -250,6 +250,10 @@ function MediaJudgmentCard({
 
   if (!status && !judgment) return null;
 
+  const generatedAt = mlSummary?.mediaJudgmentGeneratedAt
+    ? new Date(mlSummary.mediaJudgmentGeneratedAt).toLocaleString()
+    : null;
+  const canRetry = status && status !== "pending" && status !== "failed";
   const recommendation =
     MEDIA_RECOMMENDATION_META[judgment?.validityRecommendation] ||
     MEDIA_RECOMMENDATION_META.needs_review;
@@ -261,9 +265,16 @@ function MediaJudgmentCard({
     <DetailSection
       title="Media Judgment"
       headerRight={
-        <span className="text-[11px] font-semibold text-muted">
-          {MEDIA_STATUS_LABELS[status] || "Unknown"}
-        </span>
+        <div className="text-right">
+          <span className="block text-[11px] font-semibold text-muted">
+            {MEDIA_STATUS_LABELS[status] || "Unknown"}
+          </span>
+          {generatedAt ? (
+            <span className="mt-0.5 block text-[10px] text-muted tabular-nums">
+              Analyzed {generatedAt}
+            </span>
+          ) : null}
+        </div>
       }
     >
       <div className="space-y-3 text-sm">
@@ -375,6 +386,18 @@ function MediaJudgmentCard({
             <DetailList title="Contradictions" items={description?.contradictions} />
             <DetailList title="Limitations" items={evidence?.limitations} />
           </>
+        ) : null}
+
+        {canRetry ? (
+          <button
+            type="button"
+            onClick={onRetry}
+            disabled={isRetrying}
+            className="inline-flex items-center gap-2 border border-border bg-surface px-3 py-2 text-xs font-bold uppercase text-text hover:bg-surface/80 disabled:opacity-50"
+          >
+            <RotateCw size={14} />
+            {isRetrying ? "Retrying..." : "Retry analysis"}
+          </button>
         ) : null}
       </div>
     </DetailSection>

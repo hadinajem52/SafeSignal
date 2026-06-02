@@ -10,6 +10,7 @@ export function ProfileSection({
   editingProfile,
   startProfileEdit,
   saveProfileDraft,
+  profileSaving,
   setProfileDraftName,
   setProfileDraftEmail,
   memberSince,
@@ -35,8 +36,9 @@ export function ProfileSection({
               <button
                 className="st-btn st-btn-primary"
                 onClick={saveProfileDraft}
+                disabled={profileSaving}
               >
-                {IC.check} Save
+                {IC.check} {profileSaving ? "Saving..." : "Save"}
               </button>
             ) : (
               <button className="st-btn st-btn-ghost" onClick={startProfileEdit}>
@@ -391,9 +393,7 @@ export function SecuritySection({
   confirmPw,
   setConfirmPw,
   handleChangePassword,
-  twoFaEnabled,
-  setTwoFaEnabled,
-  showToast,
+  passwordSaving,
 }) {
   return (
     <>
@@ -457,33 +457,17 @@ export function SecuritySection({
             </div>
           </div>
           <div className="st-row" style={{ justifyContent: "flex-end" }}>
-            <button className="st-btn st-btn-primary" onClick={handleChangePassword}>
-              {IC.lock} Update Password
+            <button
+              className="st-btn st-btn-primary"
+              onClick={handleChangePassword}
+              disabled={passwordSaving}
+            >
+              {IC.lock} {passwordSaving ? "Updating..." : "Update Password"}
             </button>
           </div>
         </div>
       </div>
 
-      <div className="st-section">
-        <SecHead title="Two-Factor Authentication" />
-        <div className="st-block">
-          <SettingRow
-            label="Enable 2FA"
-            desc="Require a one-time code from your authenticator app at login"
-            noBorderTop
-          >
-            <SqToggle
-              id="sec-2fa"
-              checked={twoFaEnabled}
-              ariaLabel="Enable two-factor authentication"
-              onChange={(enabled) => {
-                setTwoFaEnabled(enabled);
-                showToast("Two-factor authentication is not available in this build.", "warn");
-              }}
-            />
-          </SettingRow>
-        </div>
-      </div>
     </>
   );
 }

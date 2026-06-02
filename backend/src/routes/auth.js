@@ -157,4 +157,68 @@ router.get('/me', authenticateToken, async (req, res) => {
   }
 });
 
+/**
+ * @route   PATCH /api/auth/me
+ * @desc    Update current user profile
+ * @access  Private
+ */
+router.patch(
+  '/me',
+  authenticateToken,
+  [
+    body('username').trim().isLength({ min: 3, max: 50 }),
+    body('email').isEmail().normalizeEmail(),
+  ],
+  async (req, res) => {
+    if (handleValidationErrors(req, res)) return;
+
+    try {
+      const user = await authService.updateCurrentUserProfile(req.user.userId, {
+        username: req.body.username,
+        email: req.body.email,
+      });
+
+      res.json({
+        status: 'OK',
+        message: 'Profile updated successfully',
+        data: { user },
+      });
+    } catch (error) {
+      handleServiceError(error, res, 'Failed to update profile');
+    }
+  }
+);
+
+/**
+ * @route   PATCH /api/auth/me/password
+ * @desc    Change current user's password
+ * @access  Private
+ */
+router.patch(
+  '/me/password',
+  authenticateToken,
+  [
+    body('currentPassword').isString().notEmpty(),
+    body('newPassword').isString().isLength({ min: 8 }),
+  ],
+  async (req, res) => {
+    if (handleValidationErrors(req, res)) return;
+
+    try {
+      await authService.changeCurrentUserPassword(
+        req.user.userId,
+        req.body.currentPassword,
+        req.body.newPassword
+      );
+
+      res.json({
+        status: 'OK',
+        message: 'Password updated successfully',
+      });
+    } catch (error) {
+      handleServiceError(error, res, 'Failed to update password');
+    }
+  }
+);
+
 module.exports = router;
