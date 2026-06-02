@@ -17,7 +17,7 @@ import {
   resolveReportPhotoUrl,
 } from "../../../utils/reportPhotos";
 import { STATUS_ACTION_CONFIG, WORKFLOW_STEPS } from "../constants";
-import { getNextWorkflowStatus } from "../helpers";
+import { canTransitionTo, getNextWorkflowStatus } from "../helpers";
 
 function EvidenceLink({ url, index, onOpen }) {
   const resolvedUrl = resolveReportPhotoUrl(url);
@@ -127,7 +127,7 @@ function IncidentDetailPane({
   const photoUrls = getReportPhotoUrls(incident);
   const videoUrl = getReportVideoUrl(incident);
   const hasMedia = photoUrls.length > 0 || Boolean(videoUrl);
-  const showCloseCaseOptions = statusKey === "investigating" || isComplete;
+  const showCloseCaseOptions = canTransitionTo(incident, "police_closed") || isComplete;
   const mediaDisclosureLabel = [
     photoUrls.length ? `${photoUrls.length} photo${photoUrls.length === 1 ? "" : "s"}` : null,
     videoUrl ? "1 video" : null,
