@@ -98,8 +98,17 @@ export function useReportMutations({
       queryClient.invalidateQueries({
         queryKey: ["report-dedup", selectedReport?.id],
       });
-      if (Number(result.data?.duplicateIncidentId) === Number(selectedReport.id)) {
-        const parentResult = await reportsAPI.getById(result.data.canonicalIncidentId);
+      const canonicalIncidentId = result.data?.canonicalIncidentId;
+      if (canonicalIncidentId) {
+        queryClient.invalidateQueries({
+          queryKey: ["report-dedup", canonicalIncidentId],
+        });
+      }
+      if (
+        canonicalIncidentId
+        && Number(result.data?.duplicateIncidentId) === Number(selectedReport.id)
+      ) {
+        const parentResult = await reportsAPI.getById(canonicalIncidentId);
         setSelectedReport(parentResult.success && parentResult.data
           ? normalizeReport(parentResult.data)
           : null);

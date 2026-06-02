@@ -2,6 +2,7 @@ import GoogleMapPanel from './GoogleMapPanel'
 
 function DedupCandidatesPanel({ dedup, isLoading, onMerge, isMerging, sourceIncident, onOpenCandidate }) {
   const candidates = dedup?.dedupCandidates?.candidates || []
+  const linkedDuplicates = dedup?.linkedDuplicates || []
   const meta = dedup?.dedupCandidates || {}
   const source = sourceIncident || meta.sourceIncident || {}
   const hasSourceCoords = Number.isFinite(Number(source.latitude)) && Number.isFinite(Number(source.longitude))
@@ -65,10 +66,69 @@ function DedupCandidatesPanel({ dedup, isLoading, onMerge, isMerging, sourceInci
         </div>
       )}
 
+      {!isLoading && linkedDuplicates.length > 0 && (
+        <div className="mb-4 border border-border bg-card">
+          <div className="flex items-center justify-between gap-3 border-b border-border px-3 py-2">
+            <h5 className="text-xs font-bold text-text">Merged Duplicates</h5>
+            <span className="text-[11px] font-semibold text-muted tabular-nums">
+              {linkedDuplicates.length} stored
+            </span>
+          </div>
+          <div className="divide-y divide-border">
+            {linkedDuplicates.map((duplicate) => {
+              const evidenceCount = (duplicate.photoUrls || duplicate.photo_urls || []).length
+                + (duplicate.videoUrl || duplicate.video_url ? 1 : 0)
+              const linkedAt = duplicate.linkedAt || duplicate.linked_at
+
+              return (
+                <div key={duplicate.incidentId} className="p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <button
+                        type="button"
+                        onClick={() => onOpenCandidate?.(duplicate.incidentId)}
+                        className="text-left text-sm font-semibold text-text hover:text-primary hover:underline transition-colors"
+                      >
+                        Report #{duplicate.incidentId}
+                        {duplicate.title ? ` · ${duplicate.title}` : ''}
+                      </button>
+                      {duplicate.description && (
+                        <p className="mt-1 text-xs leading-relaxed text-muted line-clamp-2">
+                          {duplicate.description}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onOpenCandidate?.(duplicate.incidentId)}
+                      className="flex-shrink-0 border border-border px-2.5 py-1 text-[10px] font-bold uppercase text-muted hover:text-primary hover:border-primary/40 transition-colors"
+                    >
+                      Open
+                    </button>
+                  </div>
+                  <div className="mt-2 grid grid-cols-2 gap-1.5 text-[11px] text-muted">
+                    <span>Status: {duplicate.status || 'merged'}</span>
+                    <span>Evidence: {evidenceCount}</span>
+                    <span>Reporter: {duplicate.reporter || 'Anonymous'}</span>
+                    <span>
+                      Linked: {linkedAt ? new Date(linkedAt).toLocaleString() : 'N/A'}
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {isLoading ? (
         <div className="text-sm text-muted animate-pulse">Loading candidates…</div>
       ) : candidates.length === 0 ? (
-        <div className="text-sm text-muted">No duplicate candidates detected.</div>
+        <div className="text-sm text-muted">
+          {linkedDuplicates.length > 0
+            ? 'No new duplicate candidates detected.'
+            : 'No duplicate candidates detected.'}
+        </div>
       ) : (
         <div className="space-y-2.5">
           {candidates.map((candidate) => {

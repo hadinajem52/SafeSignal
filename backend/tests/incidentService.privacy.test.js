@@ -132,4 +132,69 @@ describe('incident detail privacy', () => {
     });
     expect(detail.incident.constellation).not.toHaveProperty('clusterLinks');
   });
+
+  it('returns linked duplicates with dedup candidates for parent reports', async () => {
+    const generatedAt = new Date('2026-01-01T01:00:00Z');
+    const linkedAt = new Date('2026-01-01T01:30:00Z');
+
+    db.oneOrNone
+      .mockResolvedValueOnce({ incident_id: 10 })
+      .mockResolvedValueOnce({
+        report_id: 20,
+        confidence: '0.82',
+        created_at: generatedAt,
+        dedup_candidates: {
+          generatedAt,
+          radiusMeters: 500,
+          timeHours: 1,
+          candidates: [{ incidentId: 11, score: 0.91 }],
+        },
+      });
+    db.manyOrNone.mockResolvedValueOnce([
+      {
+        incident_id: 12,
+        report_id: 22,
+        title: 'Duplicate report',
+        description: 'Same incident from another reporter',
+        category: 'theft',
+        severity: 'medium',
+        status: 'merged',
+        username: 'second-reporter',
+        location_name: 'Main St',
+        latitude: '12.34',
+        longitude: '56.78',
+        incident_date: generatedAt,
+        created_at: generatedAt,
+        linked_at: linkedAt,
+        linked_depth: 1,
+        photo_urls: ['evidence.jpg'],
+        video_url: null,
+      },
+    ]);
+
+    const dedup = await incidentService.getIncidentDedupCandidates(10);
+
+    expect(dedup).toMatchObject({
+      reportId: 20,
+      confidence: 0.82,
+      dedupCandidates: {
+        candidates: [{ incidentId: 11, score: 0.91 }],
+      },
+      linkedDuplicates: [
+        {
+          incidentId: 12,
+          reportId: 22,
+          title: 'Duplicate report',
+          status: 'merged',
+          reporter: 'second-reporter',
+          latitude: 12.34,
+          longitude: 56.78,
+          linkedAt,
+          photoUrls: ['evidence.jpg'],
+          videoUrl: null,
+        },
+      ],
+    });
+    expect(db.manyOrNone.mock.calls[0][0]).toContain('report_links');
+  });
 });
