@@ -122,6 +122,97 @@ describe('mediaJudgmentService', () => {
     expect(queries).not.toMatch(/UPDATE incidents/i);
   });
 
+  it('sends canonical duplicate media when the opened report is marked as duplicate', async () => {
+    const judgment = {
+      overallVerdict: 'supports_report',
+      validityRecommendation: 'likely_valid',
+      confidence: 0.86,
+    };
+    db.oneOrNone
+      .mockResolvedValueOnce({
+        ...baseContext,
+        photo_urls: ['/uploads/incidents/current.jpg'],
+      })
+      .mockResolvedValueOnce({
+        incident_id: 8,
+        title: 'Original crash',
+        description: 'Original report of the north gate crash',
+        category: 'traffic_incident',
+        severity: 'high',
+        photo_urls: ['/uploads/incidents/original.jpg'],
+        video_url: '/uploads/incidents/original.mp4',
+        comparison_role: 'canonical_original',
+      });
+    mlClient.analyzeReportMedia.mockResolvedValue({
+      supported: true,
+      status: 'completed',
+      judgment,
+    });
+
+    const result = await mediaJudgmentService.analyzeIncidentMedia(12);
+
+    const payload = mlClient.analyzeReportMedia.mock.calls[0][0];
+    expect(result.status).toBe('completed');
+    expect(payload.metadata.duplicate).toMatchObject({
+      relationship: 'canonical_original',
+      report: {
+        incidentId: 8,
+        title: 'Original crash',
+      },
+    });
+    expect(payload.metadata.duplicate.media).toHaveLength(2);
+    expect(payload.mediaFiles.map((file) => file.role)).toEqual([
+      'report',
+      'canonical_original',
+      'canonical_original',
+    ]);
+  });
+
+  it('sends linked duplicate media when the opened report is canonical', async () => {
+    const judgment = {
+      overallVerdict: 'supports_report',
+      validityRecommendation: 'needs_review',
+      confidence: 0.64,
+    };
+    db.oneOrNone
+      .mockResolvedValueOnce({
+        ...baseContext,
+        photo_urls: ['/uploads/incidents/canonical.jpg'],
+      })
+      .mockResolvedValueOnce({
+        incident_id: 15,
+        title: 'Duplicate crash',
+        description: 'Second report of the north gate crash',
+        category: 'traffic_incident',
+        severity: 'high',
+        photo_urls: ['/uploads/incidents/duplicate.jpg'],
+        video_url: null,
+        comparison_role: 'linked_duplicate',
+      });
+    mlClient.analyzeReportMedia.mockResolvedValue({
+      supported: true,
+      status: 'completed',
+      judgment,
+    });
+
+    const result = await mediaJudgmentService.analyzeIncidentMedia(12);
+
+    const payload = mlClient.analyzeReportMedia.mock.calls[0][0];
+    expect(result.status).toBe('completed');
+    expect(payload.metadata.duplicate).toMatchObject({
+      relationship: 'linked_duplicate',
+      report: {
+        incidentId: 15,
+        title: 'Duplicate crash',
+      },
+    });
+    expect(payload.metadata.duplicate.media).toHaveLength(1);
+    expect(payload.mediaFiles.map((file) => file.role)).toEqual([
+      'report',
+      'linked_duplicate',
+    ]);
+  });
+
   it('records failed when the ML client returns no result', async () => {
     db.oneOrNone
       .mockResolvedValueOnce({

@@ -633,6 +633,7 @@ function ReportDetail({
           isMerging={isMerging}
           sourceIncident={{
             incidentId: report.id,
+            status: report.status,
             title: report.title,
             description: report.description,
             latitude: report.latitude,

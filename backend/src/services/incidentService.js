@@ -1149,8 +1149,6 @@ async function createIncident(incidentData, reporterId, options = {}) {
           ]
         );
 
-        mediaJudgmentService.queueIncidentMediaAnalysis(incident.incident_id);
-
         // ── Apply ML predictions back to the incident ──────────────────
         // When ML classification/risk is enabled, the frontend sends placeholder
         // defaults (category='other', severity='medium') since those pickers are
@@ -1247,6 +1245,8 @@ async function createIncident(incidentData, reporterId, options = {}) {
             candidates: highConfidenceDuplicates,
           });
         }
+
+        mediaJudgmentService.queueIncidentMediaAnalysis(incident.incident_id);
 
         // ── Auto-flag for toxicity / extreme risk ──────────────────────
         const shouldAutoFlag =

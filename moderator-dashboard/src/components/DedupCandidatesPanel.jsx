@@ -5,6 +5,7 @@ function DedupCandidatesPanel({ dedup, isLoading, onMerge, isMerging, sourceInci
   const linkedDuplicates = dedup?.linkedDuplicates || []
   const meta = dedup?.dedupCandidates || {}
   const source = sourceIncident || meta.sourceIncident || {}
+  const isSourceMerged = source.status === 'merged'
   const hasSourceCoords = Number.isFinite(Number(source.latitude)) && Number.isFinite(Number(source.longitude))
   const plottedCandidates = candidates.filter((candidate) => (
     Number.isFinite(Number(candidate.latitude)) && Number.isFinite(Number(candidate.longitude))
@@ -203,15 +204,17 @@ function DedupCandidatesPanel({ dedup, isLoading, onMerge, isMerging, sourceInci
                 )}
               </div>
 
-              <div className="mt-2.5">
-                <button
-                  onClick={() => onMerge?.(candidate.incidentId)}
-                  disabled={isMerging}
-                  className="text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 border border-primary/15 px-3 py-1 disabled:opacity-40 transition-colors"
-                >
-                  {isMerging ? 'Linking…' : `Merge into Parent #${parentIncidentId}`}
-                </button>
-              </div>
+              {!isSourceMerged && (
+                <div className="mt-2.5">
+                  <button
+                    onClick={() => onMerge?.(candidate.incidentId)}
+                    disabled={isMerging}
+                    className="text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 border border-primary/15 px-3 py-1 disabled:opacity-40 transition-colors"
+                  >
+                    {isMerging ? 'Linking…' : `Merge into Parent #${parentIncidentId}`}
+                  </button>
+                </div>
+              )}
             </div>
             )
           })}

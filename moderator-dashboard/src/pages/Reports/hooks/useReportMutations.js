@@ -86,6 +86,10 @@ export function useReportMutations({
   const onMerge = useCallback(
     async (duplicateIncidentId) => {
       if (!selectedReport?.id) return;
+      if (selectedReport.status === "merged") {
+        pushToast("This report is already merged.", "warning");
+        return;
+      }
       const result = await linkDuplicateMutation.mutateAsync({
         reportId: selectedReport.id,
         duplicateIncidentId,
@@ -115,7 +119,7 @@ export function useReportMutations({
       }
       pushToast("Duplicate linked successfully.");
     },
-    [linkDuplicateMutation, normalizeReport, pushToast, queryClient, reportsAPI, selectedReport?.id, setSelectedReport],
+    [linkDuplicateMutation, normalizeReport, pushToast, queryClient, reportsAPI, selectedReport?.id, selectedReport?.status, setSelectedReport],
   );
 
   const onApplySuggestedCategory = useCallback(
