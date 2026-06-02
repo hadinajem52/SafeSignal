@@ -8,7 +8,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import LoadingState from "../../components/LoadingState";
 import { useAuth } from "../../context/AuthContext";
-import { settingsAPI } from "../../services/api";
+import { authAPI, settingsAPI } from "../../services/api";
 import { applyDarkMode, persistDarkMode } from "../../utils/theme";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import { SETTINGS_CSS } from "./settingsStyles";
@@ -24,7 +24,7 @@ import {
 } from "./settingsSections";
 
 function SettingsPage() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const isAdmin = user?.role === "admin";
   const queryClient = useQueryClient();
 
@@ -69,8 +69,6 @@ function SettingsPage() {
   const [newPw, setNewPw] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
   const [showPw, setShowPw] = useState(false);
-  const [twoFaEnabled, setTwoFaEnabled] = useState(false);
-
   const [confirmReset, setConfirmReset] = useState(false);
 
   useEffect(() => {
@@ -90,10 +88,15 @@ function SettingsPage() {
   }
 
   function saveProfileDraft() {
-    setDisplayName(profileDraftName.trim() || user?.username || "");
-    setEmailAddress(profileDraftEmail.trim() || user?.email || "");
-    setEditingProfile(false);
-    showToast("Profile display updated.");
+    const username = profileDraftName.trim();
+    const email = profileDraftEmail.trim();
+
+    if (!username || !email) {
+      showToast("Display name and email are required.", "warn");
+      return;
+    }
+
+    profileMutation.mutate({ username, email });
   }
 
   useEffect(() => {
@@ -146,6 +149,49 @@ function SettingsPage() {
     },
     onError: (err) =>
       showToast(err.message || "Failed to save settings.", "error"),
+  });
+
+  const profileMutation = useMutation({
+    mutationFn: async (profile) => {
+      const result = await authAPI.updateProfile(profile);
+      if (result.success) return result.data?.user;
+      throw new Error(result.error);
+    },
+    onSuccess: (updatedUser) => {
+      if (!updatedUser) {
+        showToast("Invalid profile response.", "error");
+        return;
+      }
+
+      updateUser(updatedUser);
+      setDisplayName(updatedUser.username ?? "");
+      setEmailAddress(updatedUser.email ?? "");
+      setProfileDraftName(updatedUser.username ?? "");
+      setProfileDraftEmail(updatedUser.email ?? "");
+      setEditingProfile(false);
+      showToast("Profile updated.");
+    },
+    onError: (err) =>
+      showToast(err.message || "Failed to update profile.", "error"),
+  });
+
+  const passwordMutation = useMutation({
+    mutationFn: async ({ currentPassword, newPassword }) => {
+      const result = await authAPI.changePassword({
+        currentPassword,
+        newPassword,
+      });
+      if (result.success) return result.data;
+      throw new Error(result.error);
+    },
+    onSuccess: () => {
+      setCurrentPw("");
+      setNewPw("");
+      setConfirmPw("");
+      showToast("Password updated.");
+    },
+    onError: (err) =>
+      showToast(err.message || "Failed to update password.", "error"),
   });
 
   const resetMutation = useMutation({
@@ -220,9 +266,31 @@ function SettingsPage() {
     saveMutation.isPending ||
     resetMutation.isPending ||
     digestMutation.isPending ||
-    darkModeMutation.isPending;
+    darkModeMutation.isPending ||
+    profileMutation.isPending ||
+    passwordMutation.isPending;
 
-  function updateApiSetting(key, value) {
+  async function updateApiSetting(key, value) {
+    if (key === "browserNotifications" && value) {
+      if (!("Notification" in window)) {
+        showToast("Browser notifications are not supported.", "warn");
+        return;
+      }
+
+      if (Notification.permission === "denied") {
+        showToast("Browser notifications are blocked by the browser.", "warn");
+        return;
+      }
+
+      if (Notification.permission === "default") {
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") {
+          showToast("Browser notification permission was not granted.", "warn");
+          return;
+        }
+      }
+    }
+
     setSettings((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -287,7 +355,10 @@ function SettingsPage() {
       showToast("Password must be at least 8 characters.", "warn");
       return;
     }
-    showToast("Password change is not available in this build.", "warn");
+    passwordMutation.mutate({
+      currentPassword: currentPw,
+      newPassword: newPw,
+    });
   }
 
   const memberSince = useMemo(() => {
@@ -334,6 +405,7 @@ function SettingsPage() {
         editingProfile={editingProfile}
         startProfileEdit={startProfileEdit}
         saveProfileDraft={saveProfileDraft}
+        profileSaving={profileMutation.isPending}
         setProfileDraftName={setProfileDraftName}
         setProfileDraftEmail={setProfileDraftEmail}
         memberSince={memberSince}
@@ -389,9 +461,7 @@ function SettingsPage() {
         confirmPw={confirmPw}
         setConfirmPw={setConfirmPw}
         handleChangePassword={handleChangePassword}
-        twoFaEnabled={twoFaEnabled}
-        setTwoFaEnabled={setTwoFaEnabled}
-        showToast={showToast}
+        passwordSaving={passwordMutation.isPending}
       />
     ),
     system: (

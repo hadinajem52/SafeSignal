@@ -26,4 +26,16 @@ export const authAPI = {
         }),
       "Session expired",
     ),
+
+  updateProfile: async ({ username, email }) =>
+    requestData(
+      () => api.patch("/auth/me", { username, email }),
+      "Failed to update profile",
+    ),
+
+  changePassword: async ({ currentPassword, newPassword }) =>
+    requestData(
+      () => api.patch("/auth/me/password", { currentPassword, newPassword }),
+      "Failed to update password",
+    ),
 };

@@ -226,9 +226,98 @@ async function getCurrentUser(userId) {
   };
 }
 
+async function updateCurrentUserProfile(userId, profile) {
+  const username = typeof profile?.username === 'string' ? profile.username.trim() : '';
+  const email = typeof profile?.email === 'string' ? profile.email.trim().toLowerCase() : '';
+
+  if (username.length < 3 || username.length > 50) {
+    throw ServiceError.badRequest('Username must be between 3 and 50 characters');
+  }
+
+  if (!email) {
+    throw ServiceError.badRequest('Email is required');
+  }
+
+  const duplicate = await db.oneOrNone(
+    `SELECT user_id
+     FROM users
+     WHERE (LOWER(email) = LOWER($2) OR username = $3)
+       AND user_id <> $1`,
+    [userId, email, username]
+  );
+
+  if (duplicate) {
+    throw ServiceError.conflict('Username or email is already in use');
+  }
+
+  const updatedUser = await db.oneOrNone(
+    `UPDATE users
+     SET username = $2,
+         email = $3,
+         updated_at = NOW()
+     WHERE user_id = $1
+     RETURNING user_id, username, email, role, is_verified, created_at`,
+    [userId, username, email]
+  );
+
+  if (!updatedUser) {
+    throw ServiceError.notFound('User');
+  }
+
+  return {
+    userId: updatedUser.user_id,
+    username: updatedUser.username,
+    email: updatedUser.email,
+    role: updatedUser.role,
+    isVerified: updatedUser.is_verified,
+    createdAt: updatedUser.created_at,
+  };
+}
+
+async function changeCurrentUserPassword(userId, currentPassword, newPassword) {
+  if (!currentPassword || !newPassword) {
+    throw ServiceError.badRequest('Current password and new password are required');
+  }
+
+  if (newPassword.length < 8) {
+    throw ServiceError.badRequest('Password must be at least 8 characters');
+  }
+
+  const user = await db.oneOrNone(
+    'SELECT user_id, password_hash FROM users WHERE user_id = $1',
+    [userId]
+  );
+
+  if (!user) {
+    throw ServiceError.notFound('User');
+  }
+
+  if (!user.password_hash) {
+    throw ServiceError.badRequest('Password changes are not available for this account');
+  }
+
+  const isPasswordValid = await bcrypt.compare(currentPassword, user.password_hash);
+  if (!isPasswordValid) {
+    throw ServiceError.unauthorized('Current password is incorrect');
+  }
+
+  const salt = await bcrypt.genSalt(BCRYPT_SALT_ROUNDS);
+  const passwordHash = await bcrypt.hash(newPassword, salt);
+
+  await db.none(
+    `UPDATE users
+     SET password_hash = $2,
+         updated_at = NOW()
+     WHERE user_id = $1`,
+    [userId, passwordHash]
+  );
+}
+
 module.exports = {
   login,
   register,
   googleLogin,
   getCurrentUser,
+  updateCurrentUserProfile,
+  changeCurrentUserPassword,
 };
