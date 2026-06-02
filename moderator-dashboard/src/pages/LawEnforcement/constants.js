@@ -43,7 +43,8 @@ export const STATUS_ACTION_CONFIG = {
     confirmTitle: "Move to investigating?",
     confirmMessage:
       "This marks active scene handling as complete and starts investigation.",
-    confirmClassName: "bg-warning/70 hover:bg-warning/90 text-bg",
+    confirmClassName:
+      "border border-warning/50 bg-warning/20 text-warning hover:bg-warning/30",
   },
   police_closed: {
     label: "Close Case",

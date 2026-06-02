@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 const LEFT_PANEL_WIDTH = { min: 280, max: 620, default: 380 };
 const RIGHT_PANEL_WIDTH = { min: 260, max: 520, default: 300 };
-const SPLITTER_WIDTH = 8;
+const SPLITTER_WIDTH = 1;
 const IDEAL_MIN_DETAIL_WIDTH = 440;
 
 export function useReportPanelResize() {
