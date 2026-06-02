@@ -57,6 +57,36 @@ describe('incident detail privacy', () => {
     expect(incident.email).toBe('reporter@example.com');
   });
 
+  it('redacts media from disclosed closed public incidents unless media disclosure is enabled', async () => {
+    db.oneOrNone.mockResolvedValue(incidentRow({
+      status: 'police_closed',
+      is_disclosed: true,
+      is_media_disclosed: false,
+      photo_urls: ['evidence.jpg'],
+      video_url: 'evidence.mp4',
+    }));
+
+    const incident = await incidentService.getPublicIncidentById(10);
+
+    expect(incident.photo_urls).toEqual([]);
+    expect(incident.video_url).toBeNull();
+  });
+
+  it('keeps media on disclosed closed public incidents when media disclosure is enabled', async () => {
+    db.oneOrNone.mockResolvedValue(incidentRow({
+      status: 'police_closed',
+      is_disclosed: true,
+      is_media_disclosed: true,
+      photo_urls: ['evidence.jpg'],
+      video_url: 'evidence.mp4',
+    }));
+
+    const incident = await incidentService.getPublicIncidentById(10);
+
+    expect(incident.photo_urls).toEqual(['evidence.jpg']);
+    expect(incident.video_url).toBe('evidence.mp4');
+  });
+
   it('strips confidence and summary from flagged public constellation detail', async () => {
     db.oneOrNone.mockResolvedValue(incidentRow({ constellation_status: 'flagged' }));
 

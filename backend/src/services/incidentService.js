@@ -1742,6 +1742,10 @@ const formatIncidentDetail = (row, includeStaffDetails) => {
   if (!includeStaffDetails) {
     incident.username = null;
     incident.email = null;
+    if (incident.status === 'police_closed' && incident.is_disclosed && !incident.is_media_disclosed) {
+      incident.photo_urls = [];
+      incident.video_url = null;
+    }
   }
 
   incident.constellation = formatIncidentConstellation({
@@ -2620,7 +2624,11 @@ async function getLEIIncidentById(incidentId) {
   };
 }
 
-async function updateLEIStatus(incidentId, status, closureOutcome, closureDetails, requestingUser, { isDisclosed, isLocationFuzzed } = {}) {
+function incidentHasMedia(incident) {
+  return Boolean((incident.photo_urls || []).length || incident.video_url);
+}
+
+async function updateLEIStatus(incidentId, status, closureOutcome, closureDetails, requestingUser, { isDisclosed, isLocationFuzzed, isMediaDisclosed } = {}) {
   const incident = await db.oneOrNone(
     'SELECT * FROM incidents WHERE incident_id = $1',
     [incidentId]
@@ -2655,6 +2663,11 @@ async function updateLEIStatus(incidentId, status, closureOutcome, closureDetail
         responding_officer_id: requestingUser.userId,
       }
     : null;
+  const hasDisclosureInput = isDisclosed !== undefined && isDisclosed !== null;
+  const normalizedLocationFuzzed = hasDisclosureInput && isDisclosed ? isLocationFuzzed : false;
+  const normalizedMediaDisclosed = hasDisclosureInput && isDisclosed && incidentHasMedia(incident)
+    ? Boolean(isMediaDisclosed)
+    : false;
 
   const updatedIncident = await db.one(
     `UPDATE incidents
@@ -2662,6 +2675,7 @@ async function updateLEIStatus(incidentId, status, closureOutcome, closureDetail
          ${getLifecycleTimestampUpdate('$2')}
          is_disclosed = COALESCE($5, is_disclosed),
          is_location_fuzzed = COALESCE($6, is_location_fuzzed),
+         is_media_disclosed = COALESCE($7, is_media_disclosed),
          closure_outcome = $3,
          closure_details = $4,
          updated_at = CURRENT_TIMESTAMP
@@ -2673,7 +2687,8 @@ async function updateLEIStatus(incidentId, status, closureOutcome, closureDetail
       status === 'police_closed' ? closureOutcome : null,
       status === 'police_closed' ? safeClosureDetails : null,
       isDisclosed ?? null,
-      isLocationFuzzed ?? null,
+      status === 'police_closed' && hasDisclosureInput ? normalizedLocationFuzzed : null,
+      status === 'police_closed' && hasDisclosureInput ? normalizedMediaDisclosed : null,
     ]
   );
 
@@ -2705,7 +2720,7 @@ async function updateLEIStatus(incidentId, status, closureOutcome, closureDetail
   return updatedIncident;
 }
 
-async function updateLEIDisclosureSettings(incidentId, requestingUser, { isDisclosed, isLocationFuzzed }) {
+async function updateLEIDisclosureSettings(incidentId, requestingUser, { isDisclosed, isLocationFuzzed, isMediaDisclosed }) {
   const incident = await db.oneOrNone(
     'SELECT * FROM incidents WHERE incident_id = $1',
     [incidentId]
@@ -2720,21 +2735,25 @@ async function updateLEIDisclosureSettings(incidentId, requestingUser, { isDiscl
   }
 
   const normalizedLocationFuzzed = isDisclosed ? isLocationFuzzed : false;
+  const normalizedMediaDisclosed = isDisclosed && incidentHasMedia(incident)
+    ? Boolean(isMediaDisclosed)
+    : false;
 
   const updatedIncident = await db.one(
     `UPDATE incidents
      SET is_disclosed = $2,
-         is_location_fuzzed = $3
+         is_location_fuzzed = $3,
+         is_media_disclosed = $4
      WHERE incident_id = $1
      RETURNING *`,
-    [incidentId, isDisclosed, normalizedLocationFuzzed]
+    [incidentId, isDisclosed, normalizedLocationFuzzed, normalizedMediaDisclosed]
   );
 
   await logAction(
     incidentId,
     requestingUser.userId,
     'status_changed',
-    `Updated community feed settings: disclosed=${updatedIncident.is_disclosed}, fuzzed=${updatedIncident.is_location_fuzzed}`
+    `Updated community feed settings: disclosed=${updatedIncident.is_disclosed}, fuzzed=${updatedIncident.is_location_fuzzed}, media=${updatedIncident.is_media_disclosed}`
   );
 
   emitToRoles(['moderator', 'admin', 'law_enforcement'], 'incident:update', {
@@ -2833,6 +2852,7 @@ async function rejectIncident(incidentId, requestingUser) {
          ${getLifecycleTimestampUpdate("'rejected'")}
          is_disclosed = FALSE,
          is_location_fuzzed = FALSE,
+         is_media_disclosed = FALSE,
          updated_at = CURRENT_TIMESTAMP 
      WHERE incident_id = $1 
      RETURNING *`,
@@ -2947,7 +2967,9 @@ async function getPublicFeed({ category, closure_outcome, severity, lat, lng, ra
     `SELECT
        i.incident_id, i.title, i.description, i.category, i.severity, i.status,
        i.closure_outcome, i.closure_details,
-       i.location_name, i.photo_urls, i.video_url,
+       i.location_name,
+       CASE WHEN i.is_media_disclosed THEN i.photo_urls ELSE NULL END AS photo_urls,
+       CASE WHEN i.is_media_disclosed THEN i.video_url ELSE NULL END AS video_url,
        i.incident_date, i.created_at, COALESCE(i.closed_at, i.updated_at) AS closed_at,
        CASE WHEN i.is_location_fuzzed
          THEN i.latitude  + (random() - 0.5) * 0.0027

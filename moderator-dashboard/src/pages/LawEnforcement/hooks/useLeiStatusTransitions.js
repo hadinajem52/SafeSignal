@@ -28,6 +28,7 @@ export default function useLeiStatusTransitions({
   const [pendingTransition, setPendingTransition] = useState(null);
   const [isDisclosed, setIsDisclosed] = useState(false);
   const [isLocationFuzzed, setIsLocationFuzzed] = useState(false);
+  const [isMediaDisclosed, setIsMediaDisclosed] = useState(false);
   const [closureOutcome, setClosureOutcome] = useState(DEFAULT_CLOSURE_OUTCOME);
   const [caseId, setCaseId] = useState("");
   const [officerNotes, setOfficerNotes] = useState("");
@@ -36,6 +37,7 @@ export default function useLeiStatusTransitions({
     const closureDetails = getClosureDetailsFields(incident?.closure_details);
     setIsDisclosed(Boolean(incident?.is_disclosed));
     setIsLocationFuzzed(Boolean(incident?.is_location_fuzzed));
+    setIsMediaDisclosed(Boolean(incident?.is_media_disclosed));
     setClosureOutcome(incident?.closure_outcome || DEFAULT_CLOSURE_OUTCOME);
     setCaseId(closureDetails.caseId);
     setOfficerNotes(closureDetails.officerNotes);
@@ -77,6 +79,7 @@ export default function useLeiStatusTransitions({
             },
             is_disclosed: isDisclosed,
             is_location_fuzzed: isLocationFuzzed,
+            is_media_disclosed: isMediaDisclosed,
           }
         : { status };
 
@@ -126,6 +129,7 @@ export default function useLeiStatusTransitions({
       payload: {
         is_disclosed: isDisclosed,
         is_location_fuzzed: isLocationFuzzed,
+        is_media_disclosed: isMediaDisclosed,
       },
     });
 
@@ -198,6 +202,8 @@ export default function useLeiStatusTransitions({
     setIsDisclosed,
     isLocationFuzzed,
     setIsLocationFuzzed,
+    isMediaDisclosed,
+    setIsMediaDisclosed,
     closureOutcome,
     setClosureOutcome,
     caseId,

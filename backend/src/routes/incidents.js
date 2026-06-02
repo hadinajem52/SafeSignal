@@ -325,6 +325,7 @@ router.patch(
     body('closure_details').optional().isObject(),
     body('is_disclosed').optional().isBoolean(),
     body('is_location_fuzzed').optional().isBoolean(),
+    body('is_media_disclosed').optional().isBoolean(),
   ],
   async (req, res) => {
     if (handleValidationErrors(req, res)) return;
@@ -339,6 +340,7 @@ router.patch(
         {
           isDisclosed: req.body.is_disclosed,
           isLocationFuzzed: req.body.is_location_fuzzed,
+          isMediaDisclosed: req.body.is_media_disclosed,
         }
       );
 
@@ -361,6 +363,7 @@ router.patch(
     param('id').isInt(),
     body('is_disclosed').isBoolean(),
     body('is_location_fuzzed').isBoolean(),
+    body('is_media_disclosed').optional().isBoolean(),
   ],
   async (req, res) => {
     if (handleValidationErrors(req, res)) return;
@@ -372,6 +375,7 @@ router.patch(
         {
           isDisclosed: req.body.is_disclosed,
           isLocationFuzzed: req.body.is_location_fuzzed,
+          isMediaDisclosed: req.body.is_media_disclosed,
         }
       );
 
