@@ -220,53 +220,18 @@ function IncidentDetailPane({
             ) : null}
             {showCloseCaseOptions ? (
               <>
-                <div
-                  style={{
-                    width: "100%",
-                    background: "rgba(59,158,255,0.06)",
-                    border: "1px solid rgba(59,158,255,0.18)",
-                    borderRadius: 6,
-                    padding: "10px 12px",
-                    marginBottom: 10,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 8,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: 10,
-                      color: "var(--le-blue)",
-                      fontWeight: 700,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.08em",
-                      marginBottom: 2,
-                    }}
-                  >
+                <div className="lei-close-options">
+                  <div className="lei-close-options-title">
                     {isComplete ? "Community Feed Settings" : "Close Case Options"}
                   </div>
 
-                  <label
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 4,
-                      fontSize: 11,
-                      color: "var(--le-text)",
-                    }}
-                  >
+                  <label className="lei-close-field">
                     <span>Closure Outcome</span>
                     <select
                       value={closureOutcome}
                       onChange={(e) => onClosureOutcomeChange(e.target.value)}
                       disabled={isComplete}
-                      style={{
-                        background: "var(--le-surface)",
-                        border: "1px solid rgba(59,158,255,0.18)",
-                        color: "var(--le-text)",
-                        padding: "8px 10px",
-                        borderRadius: 6,
-                      }}
+                      className="lei-close-control"
                     >
                       {CLOSURE_OUTCOMES.map((outcome) => (
                         <option key={outcome.value} value={outcome.value}>
@@ -277,15 +242,7 @@ function IncidentDetailPane({
                   </label>
 
                   {closureOutcome === "report_filed" ? (
-                    <label
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 4,
-                        fontSize: 11,
-                        color: "var(--le-text)",
-                      }}
-                    >
+                    <label className="lei-close-field">
                       <span>Case ID</span>
                       <input
                         type="text"
@@ -293,26 +250,12 @@ function IncidentDetailPane({
                         onChange={(e) => onCaseIdChange(e.target.value)}
                         placeholder="Enter filed case ID"
                         disabled={isComplete}
-                        style={{
-                          background: "var(--le-surface)",
-                          border: "1px solid rgba(59,158,255,0.18)",
-                          color: "var(--le-text)",
-                          padding: "8px 10px",
-                          borderRadius: 6,
-                        }}
+                        className="lei-close-control"
                       />
                     </label>
                   ) : null}
 
-                  <label
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 4,
-                      fontSize: 11,
-                      color: "var(--le-text)",
-                    }}
-                  >
+                  <label className="lei-close-field">
                     <span>Closure Notes</span>
                     <textarea
                       value={officerNotes}
@@ -320,24 +263,12 @@ function IncidentDetailPane({
                       placeholder="Optional notes for the closure record"
                       rows={3}
                       disabled={isComplete}
-                      style={{
-                        background: "var(--le-surface)",
-                        border: "1px solid rgba(59,158,255,0.18)",
-                        color: "var(--le-text)",
-                        padding: "8px 10px",
-                        borderRadius: 6,
-                        resize: "vertical",
-                      }}
+                      className="lei-close-control lei-close-textarea"
                     />
                   </label>
 
                   <label
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      cursor: "pointer",
-                    }}
+                    className="lei-close-check"
                   >
                     <input
                       type="checkbox"
@@ -346,18 +277,14 @@ function IncidentDetailPane({
                         onDisclosedChange(e.target.checked);
                         if (!e.target.checked) onLocationFuzzedChange(false);
                       }}
-                      style={{ accentColor: "var(--le-blue)", width: 14, height: 14 }}
+                      className="lei-close-checkbox"
                     />
-                    <span style={{ fontSize: 11, color: "var(--le-text)" }}>
-                      Publish to Community Feed
-                    </span>
+                    <span>Publish to Community Feed</span>
                   </label>
 
                   <label
+                    className="lei-close-check"
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
                       cursor: isDisclosed ? "pointer" : "not-allowed",
                       opacity: isDisclosed ? 1 : 0.4,
                     }}
@@ -367,21 +294,12 @@ function IncidentDetailPane({
                       checked={isLocationFuzzed}
                       disabled={!isDisclosed}
                       onChange={(e) => onLocationFuzzedChange(e.target.checked)}
-                      style={{ accentColor: "var(--le-blue)", width: 14, height: 14 }}
+                      className="lei-close-checkbox"
                     />
-                    <span style={{ fontSize: 11, color: "var(--le-text)" }}>
-                      Fuzz Location for Privacy
-                    </span>
+                    <span>Fuzz Location for Privacy</span>
                   </label>
 
-                  <div
-                    style={{
-                      fontSize: 10,
-                      color: "var(--le-muted)",
-                      marginTop: 2,
-                      lineHeight: 1.5,
-                    }}
-                  >
+                  <div className="lei-close-help">
                     Once published, this report will appear in the mobile Community Feed visible to all citizens.
                     {isComplete
                       ? " You can still update feed visibility and location fuzzing after closure."
