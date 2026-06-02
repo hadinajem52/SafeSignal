@@ -27,6 +27,7 @@ const mediaJudgmentService = require('./mediaJudgmentService');
 
 const LEI_STATUSES = ['verified', 'dispatched', 'on_scene', 'investigating', 'police_closed'];
 const STAFF_ROLES = new Set(['admin', 'moderator', 'law_enforcement']);
+const PUBLIC_DETAIL_MEDIA_STATUSES = new Set(['police_closed', 'resolved', 'published']);
 const ACTIONABLE_MODERATION_STATUSES = new Set(['submitted', 'auto_processed', 'auto_flagged', 'in_review', 'needs_info']);
 const FIRST_ACTION_STATUSES = new Set([
   'auto_processed',
@@ -1742,7 +1743,7 @@ const formatIncidentDetail = (row, includeStaffDetails) => {
   if (!includeStaffDetails) {
     incident.username = null;
     incident.email = null;
-    if (incident.status === 'police_closed' && incident.is_disclosed && !incident.is_media_disclosed) {
+    if (PUBLIC_DETAIL_MEDIA_STATUSES.has(incident.status) && incident.is_disclosed && !incident.is_media_disclosed) {
       incident.photo_urls = [];
       incident.video_url = null;
     }

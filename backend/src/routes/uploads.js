@@ -12,6 +12,7 @@ const router = express.Router();
 function canReadIncidentMedia(incident, user) {
   if (
     incident.is_disclosed &&
+    incident.is_media_disclosed &&
     incident.closure_outcome &&
     PUBLIC_MEDIA_STATUSES.has(incident.status)
   ) {
@@ -25,7 +26,7 @@ function canReadIncidentMedia(incident, user) {
 
 async function getIncidentForMedia(mediaPath) {
   return db.oneOrNone(
-    `SELECT incident_id, reporter_id, status, is_disclosed, closure_outcome
+    `SELECT incident_id, reporter_id, status, is_disclosed, is_media_disclosed, closure_outcome
      FROM incidents
      WHERE video_url = $1
         OR $1 = ANY(COALESCE(photo_urls, ARRAY[]::text[]))
