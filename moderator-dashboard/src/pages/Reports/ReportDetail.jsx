@@ -1,5 +1,5 @@
 import React from "react";
-import { AlertTriangle, ChevronRight, RotateCw, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ChevronRight, RotateCw, ShieldCheck } from "lucide-react";
 import DetailSection from "../../components/DetailSection";
 import DedupCandidatesPanel from "../../components/DedupCandidatesPanel";
 import EvidencePhotoViewer from "../../components/EvidencePhotoViewer";
@@ -401,6 +401,8 @@ function ReportDetail({
   onReject,
   onNext,
   onOpenDuplicateCandidate,
+  parentReport,
+  onReturnToParent,
 }) {
   const [fullscreenPhoto, setFullscreenPhoto] = React.useState(null);
 
@@ -432,6 +434,20 @@ function ReportDetail({
           {report.title}
         </h2>
         <div className="flex flex-wrap justify-end items-center gap-1.5">
+          {parentReport ? (
+            <button
+              type="button"
+              onClick={onReturnToParent}
+              aria-label={`Back to parent report ${parentReport.id}`}
+              title={parentReport.title || `Parent report #${parentReport.id}`}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.04em]
+                border border-primary/30 text-primary bg-primary/10 transition-colors hover:bg-primary/15"
+            >
+              <ArrowLeft size={13} />
+              Parent #{parentReport.id}
+            </button>
+          ) : null}
+
           {/* Escalate — hover → success */}
           <button
             onClick={onVerify}

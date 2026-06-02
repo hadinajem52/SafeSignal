@@ -49,6 +49,7 @@ function Reports() {
   const [sortMode, setSortMode] = useState("urgency"); // 'urgency' | 'time'
   const [toasts, setToasts] = useState([]);
   const [isTimelineCollapsed, setIsTimelineCollapsed] = useState(false);
+  const [parentReportReturn, setParentReportReturn] = useState(null);
 
   const queryClient = useQueryClient();
 
@@ -116,6 +117,11 @@ function Reports() {
     handleSelectNextReport,
   } = useReportSelection(filteredReports);
 
+  const handleSelectNextReportFromHeader = useCallback(() => {
+    setParentReportReturn(null);
+    handleSelectNextReport();
+  }, [handleSelectNextReport]);
+
   const { data: dedupData, isLoading: isDedupLoading } = useQuery({
     queryKey: ["report-dedup", selectedReport?.id],
     queryFn: async () => {
@@ -165,7 +171,7 @@ function Reports() {
     setSelectedReport,
     selectedReportIds,
     setSelectedReportIds,
-    handleSelectNextReport,
+    handleSelectNextReport: handleSelectNextReportFromHeader,
     pushToast,
     normalizeReport,
   });
@@ -176,6 +182,38 @@ function Reports() {
   const escalatableSelectedCount = selectedReportIds.filter((id) =>
     canEscalateReport(filteredReports.find((report) => report.id === id)),
   ).length;
+
+  const handleSelectReport = useCallback(
+    (report) => {
+      setParentReportReturn(null);
+      setSelectedReport(report);
+    },
+    [setSelectedReport],
+  );
+
+  const handleOpenDuplicateFromDetail = useCallback(
+    async (duplicateIncidentId) => {
+      const sourceReport = parentReportReturn || selectedReport;
+      const opened = await onOpenDuplicateCandidate(duplicateIncidentId);
+      if (
+        opened
+        && sourceReport?.id
+        && Number(sourceReport.id) !== Number(duplicateIncidentId)
+      ) {
+        setParentReportReturn({
+          id: sourceReport.id,
+          title: sourceReport.title,
+        });
+      }
+    },
+    [onOpenDuplicateCandidate, parentReportReturn, selectedReport],
+  );
+
+  const handleReturnToParentReport = useCallback(async () => {
+    if (!parentReportReturn?.id) return;
+    const opened = await onOpenDuplicateCandidate(parentReportReturn.id);
+    if (opened) setParentReportReturn(null);
+  }, [onOpenDuplicateCandidate, parentReportReturn]);
 
   return (
     <div className="flex flex-col h-dvh overflow-hidden bg-bg">
@@ -248,7 +286,7 @@ function Reports() {
               reports={filteredReports}
               isLoading={isLoading}
               selectedReportId={selectedReport?.id ?? null}
-              onSelectReport={setSelectedReport}
+              onSelectReport={handleSelectReport}
               selectedReportIds={selectedReportIds}
               onToggleSelection={handleToggleSelection}
               onToggleSelectAll={handleToggleSelectAll}
@@ -287,8 +325,10 @@ function Reports() {
               onRetryMediaJudgment={onRetryMediaJudgment}
               onVerify={handleEscalateRequest}
               onReject={handleRejectRequest}
-              onNext={handleSelectNextReport}
-              onOpenDuplicateCandidate={onOpenDuplicateCandidate}
+              onNext={handleSelectNextReportFromHeader}
+              onOpenDuplicateCandidate={handleOpenDuplicateFromDetail}
+              parentReport={parentReportReturn}
+              onReturnToParent={handleReturnToParentReport}
             />
           </div>
 

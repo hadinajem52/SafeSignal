@@ -160,19 +160,20 @@ export function useReportMutations({
       const duplicateId = Number(duplicateIncidentId);
       if (!Number.isFinite(duplicateId)) {
         pushToast("Unable to open duplicate incident: invalid incident id.", "error");
-        return;
+        return false;
       }
       const inQueue = filteredReports.find((r) => Number(r.id) === duplicateId);
       if (inQueue) {
         setSelectedReport(inQueue);
-        return;
+        return true;
       }
       const result = await reportsAPI.getById(duplicateId);
       if (!result.success || !result.data) {
         pushToast(result.error || "Failed to open duplicate incident.", "error");
-        return;
+        return false;
       }
       setSelectedReport(normalizeReport(result.data));
+      return true;
     },
     [filteredReports, normalizeReport, pushToast, reportsAPI, setSelectedReport],
   );
