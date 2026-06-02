@@ -14,6 +14,7 @@ const { emitToRoles } = require('../utils/socketService');
 const JWT_SECRET = process.env.JWT_SECRET || 'safesignal-jwt-secret-change-in-production';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 const BCRYPT_SALT_ROUNDS = 12;
+const UNIQUE_VIOLATION_CODE = '23505';
 
 /**
  * Generate a JWT token for a user
@@ -226,6 +227,10 @@ async function getCurrentUser(userId) {
   };
 }
 
+function isUniqueViolation(error) {
+  return error?.code === UNIQUE_VIOLATION_CODE || error?.message?.includes('duplicate key');
+}
+
 async function updateCurrentUserProfile(userId, profile) {
   const username = typeof profile?.username === 'string' ? profile.username.trim() : '';
   const email = typeof profile?.email === 'string' ? profile.email.trim().toLowerCase() : '';
@@ -250,15 +255,24 @@ async function updateCurrentUserProfile(userId, profile) {
     throw ServiceError.conflict('Username or email is already in use');
   }
 
-  const updatedUser = await db.oneOrNone(
-    `UPDATE users
-     SET username = $2,
-         email = $3,
-         updated_at = NOW()
-     WHERE user_id = $1
-     RETURNING user_id, username, email, role, is_verified, created_at`,
-    [userId, username, email]
-  );
+  let updatedUser;
+  try {
+    updatedUser = await db.oneOrNone(
+      `UPDATE users
+       SET username = $2,
+           email = $3,
+           updated_at = NOW()
+       WHERE user_id = $1
+       RETURNING user_id, username, email, role, is_verified, created_at`,
+      [userId, username, email]
+    );
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      throw ServiceError.conflict('Username or email is already in use');
+    }
+
+    throw error;
+  }
 
   if (!updatedUser) {
     throw ServiceError.notFound('User');
@@ -298,7 +312,7 @@ async function changeCurrentUserPassword(userId, currentPassword, newPassword) {
 
   const isPasswordValid = await bcrypt.compare(currentPassword, user.password_hash);
   if (!isPasswordValid) {
-    throw ServiceError.unauthorized('Current password is incorrect');
+    throw ServiceError.badRequest('Current password is incorrect');
   }
 
   const salt = await bcrypt.genSalt(BCRYPT_SALT_ROUNDS);

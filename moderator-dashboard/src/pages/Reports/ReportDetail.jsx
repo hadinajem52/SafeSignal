@@ -253,7 +253,7 @@ function MediaJudgmentCard({
   const generatedAt = mlSummary?.mediaJudgmentGeneratedAt
     ? new Date(mlSummary.mediaJudgmentGeneratedAt).toLocaleString()
     : null;
-  const canRetry = status && status !== "pending" && status !== "failed";
+  const canRetry = status === "completed";
   const recommendation =
     MEDIA_RECOMMENDATION_META[judgment?.validityRecommendation] ||
     MEDIA_RECOMMENDATION_META.needs_review;
