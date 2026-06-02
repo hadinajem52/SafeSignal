@@ -174,7 +174,7 @@ async function getLatestMlContext(incidentId) {
   );
 }
 
-async function getCanonicalIncidentForReport(reportId) {
+async function getDuplicateComparisonIncidentForReport(reportId) {
   if (!reportId) return null;
 
   return db.oneOrNone(
@@ -190,12 +190,23 @@ async function getCanonicalIncidentForReport(reportId) {
          AND rl.link_type = 'duplicate'
        WHERE pc.depth < 20
          AND NOT rl.canonical_report_id = ANY(pc.path)
+     ),
+     comparison_incidents AS (
+       SELECT ci.*, 'canonical_original' AS comparison_role, 0 AS comparison_priority, pc.depth, cr.created_at AS linked_at
+       FROM parent_chain pc
+       JOIN reports cr ON cr.report_id = pc.report_id
+       JOIN incidents ci ON ci.incident_id = cr.incident_id
+       UNION ALL
+       SELECT di.*, 'linked_duplicate' AS comparison_role, 1 AS comparison_priority, 1 AS depth, dr.created_at AS linked_at
+       FROM report_links rl
+       JOIN reports dr ON dr.report_id = rl.duplicate_report_id
+       JOIN incidents di ON di.incident_id = dr.incident_id
+       WHERE rl.canonical_report_id = $1
+         AND rl.link_type = 'duplicate'
      )
-     SELECT ci.*
-     FROM parent_chain pc
-     JOIN reports cr ON cr.report_id = pc.report_id
-     JOIN incidents ci ON ci.incident_id = cr.incident_id
-     ORDER BY pc.depth DESC
+     SELECT *
+     FROM comparison_incidents
+     ORDER BY comparison_priority ASC, depth DESC, linked_at DESC
      LIMIT 1`,
     [reportId]
   );
@@ -235,14 +246,15 @@ async function markTerminal(mlId, status, judgment, error = null) {
   };
 }
 
-function buildAnalysisPayload(incident, reportMedia, canonicalIncident, canonicalMedia) {
+function buildAnalysisPayload(incident, reportMedia, duplicateIncident, duplicateMedia) {
   return {
     report: toIncidentPayload(incident),
     media: toMediaManifest(reportMedia),
-    duplicate: canonicalIncident
+    duplicate: duplicateIncident
       ? {
-          report: toIncidentPayload(canonicalIncident),
-          media: toMediaManifest(canonicalMedia),
+          relationship: duplicateIncident.comparison_role || 'linked_duplicate',
+          report: toIncidentPayload(duplicateIncident),
+          media: toMediaManifest(duplicateMedia),
         }
       : null,
   };
@@ -258,17 +270,18 @@ async function analyzeIncidentMedia(incidentId, { force = false } = {}) {
     throw ServiceError.notFound('No ML record found for this incident');
   }
 
-  const canonicalIncident = await getCanonicalIncidentForReport(context.report_id);
+  const duplicateIncident = await getDuplicateComparisonIncidentForReport(context.report_id);
   const reportMediaResolution = getStoredMediaResolution(context, 'report');
-  const canonicalMediaResolution = canonicalIncident
-    ? getStoredMediaResolution(canonicalIncident, 'duplicate_original')
+  const duplicateMediaRole = duplicateIncident?.comparison_role || 'linked_duplicate';
+  const duplicateMediaResolution = duplicateIncident
+    ? getStoredMediaResolution(duplicateIncident, duplicateMediaRole)
     : { files: [], errors: [] };
   const reportMedia = reportMediaResolution.files;
-  const canonicalMedia = canonicalMediaResolution.files;
+  const duplicateMedia = duplicateMediaResolution.files;
   const mediaErrors = reportMedia.length > 0
-    ? [...reportMediaResolution.errors, ...canonicalMediaResolution.errors]
+    ? [...reportMediaResolution.errors, ...duplicateMediaResolution.errors]
     : reportMediaResolution.errors;
-  const metadata = buildAnalysisPayload(context, reportMedia, canonicalIncident, canonicalMedia);
+  const metadata = buildAnalysisPayload(context, reportMedia, duplicateIncident, duplicateMedia);
   const inputHash = buildInputHash({ ...metadata, mediaErrors });
 
   if (
@@ -301,7 +314,7 @@ async function analyzeIncidentMedia(incidentId, { force = false } = {}) {
 
   const mlResult = await mlClient.analyzeReportMedia({
     metadata,
-    mediaFiles: [...reportMedia, ...canonicalMedia],
+    mediaFiles: [...reportMedia, ...duplicateMedia],
   });
 
   if (!mlResult) {
