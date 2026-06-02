@@ -2,13 +2,13 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CircleF,
   GoogleMap,
-  HeatmapLayerF,
   MarkerClustererF,
   MarkerF,
   useJsApiLoader,
 } from "@react-google-maps/api";
+import { HeatmapLayer } from "@deck.gl/aggregation-layers";
+import { GoogleMapsOverlay } from "@deck.gl/google-maps";
 
-const GOOGLE_MAPS_LIBRARIES = ["visualization"];
 const FALLBACK_CENTER = { lat: 37.0902, lng: -95.7129 };
 const DARK_MAP_STYLES = [
   { elementType: "geometry", stylers: [{ color: "#1f2937" }] },
@@ -121,6 +121,7 @@ function GoogleMapPanelContent({
   emptyMessage = "No location data available.",
 }) {
   const [activeMarkerId, setActiveMarkerId] = useState(null);
+  const [mapInstance, setMapInstance] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(() =>
     Boolean(
       typeof document !== "undefined" &&
@@ -131,7 +132,6 @@ function GoogleMapPanelContent({
   const { isLoaded, loadError } = useJsApiLoader({
     id: "safesignal-google-maps-script",
     googleMapsApiKey,
-    libraries: GOOGLE_MAPS_LIBRARIES,
   });
 
   useEffect(() => {
@@ -181,16 +181,6 @@ function GoogleMapPanelContent({
     return FALLBACK_CENTER;
   }, [center, validMarkers]);
 
-  const canRenderHeatmap = useMemo(
-    () =>
-      Boolean(
-        isLoaded &&
-        typeof window !== "undefined" &&
-        window.google?.maps?.visualization?.HeatmapLayer,
-      ),
-    [isLoaded],
-  );
-
   const renderClusteredMarkers = useCallback(
     (clusterer) => (
       <>
@@ -220,14 +210,37 @@ function GoogleMapPanelContent({
   );
 
   const heatmapData = useMemo(() => {
-    if (!showHeatmap || !canRenderHeatmap || validMarkers.length === 0) {
+    if (!showHeatmap || validMarkers.length === 0) {
       return [];
     }
     return validMarkers.map((marker) => ({
-      location: new window.google.maps.LatLng(marker.lat, marker.lng),
+      position: [marker.lng, marker.lat],
       weight: marker.weight,
     }));
-  }, [canRenderHeatmap, showHeatmap, validMarkers]);
+  }, [showHeatmap, validMarkers]);
+
+  useEffect(() => {
+    if (!mapInstance || heatmapData.length === 0) {
+      return undefined;
+    }
+
+    const overlay = new GoogleMapsOverlay({
+      layers: [
+        new HeatmapLayer({
+          id: "incident-heatmap",
+          data: heatmapData,
+          getPosition: (point) => point.position,
+          getWeight: (point) => point.weight,
+          radiusPixels: 48,
+          intensity: 1.2,
+          threshold: 0.04,
+        }),
+      ],
+    });
+
+    overlay.setMap(mapInstance);
+    return () => overlay.setMap(null);
+  }, [heatmapData, mapInstance]);
 
   const panelStyle = useMemo(
     () => ({
@@ -305,6 +318,8 @@ function GoogleMapPanelContent({
   };
 
   const onMapLoad = (map) => {
+    setMapInstance(map);
+
     if (!autoFit) {
       return;
     }
@@ -362,16 +377,6 @@ function GoogleMapPanelContent({
               }}
             />
           ))}
-
-        {showHeatmap && canRenderHeatmap && heatmapData.length > 0 && (
-          <HeatmapLayerF
-            data={heatmapData}
-            options={{
-              radius: 40,
-              opacity: 0.7,
-            }}
-          />
-        )}
 
         {showClusters ? (
           <MarkerClustererF>
