@@ -298,12 +298,8 @@ function Reports() {
             aria-orientation="vertical"
             aria-label="Resize report list and detail panels"
             onPointerDown={(event) => handleSplitterPointerDown("left", event)}
-            className={`group flex-shrink-0 w-2 cursor-col-resize touch-none bg-surface/20 hover:bg-surface/40 ${activeSplitter === "left" ? "bg-surface/50" : ""}`}
-          >
-            <span
-              className={`mx-auto h-full w-px ${activeSplitter === "left" ? "bg-primary" : "bg-border group-hover:bg-border/70"}`}
-            />
-          </div>
+            className={`flex-shrink-0 w-px cursor-col-resize touch-none ${activeSplitter === "left" ? "bg-primary" : "bg-border hover:bg-border/70"}`}
+          />
 
           {/* Panel 2: report detail */}
           <div className="flex-1 overflow-hidden min-w-0">
@@ -338,12 +334,8 @@ function Reports() {
               aria-orientation="vertical"
               aria-label="Resize report detail and timeline panels"
               onPointerDown={(event) => handleSplitterPointerDown("right", event)}
-              className={`group flex-shrink-0 w-2 cursor-col-resize touch-none bg-surface/20 hover:bg-surface/40 ${activeSplitter === "right" ? "bg-surface/50" : ""}`}
-            >
-              <span
-                className={`mx-auto h-full w-px ${activeSplitter === "right" ? "bg-primary" : "bg-border group-hover:bg-border/70"}`}
-              />
-            </div>
+              className={`flex-shrink-0 w-px cursor-col-resize touch-none ${activeSplitter === "right" ? "bg-primary" : "bg-border hover:bg-border/70"}`}
+            />
           ) : null}
 
           {/* Panel 3: timeline */}
