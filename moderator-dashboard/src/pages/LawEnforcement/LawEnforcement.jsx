@@ -108,6 +108,8 @@ function LawEnforcement() {
     setIsDisclosed,
     isLocationFuzzed,
     setIsLocationFuzzed,
+    isMediaDisclosed,
+    setIsMediaDisclosed,
     closureOutcome,
     setClosureOutcome,
     caseId,
@@ -303,9 +305,14 @@ function LawEnforcement() {
                     statusMutationPending={statusMutation.isPending}
                     onRequestAction={requestStatusUpdate}
                     isDisclosed={isDisclosed}
-                    onDisclosedChange={setIsDisclosed}
+                    onDisclosedChange={(value) => {
+                      setIsDisclosed(value);
+                      if (!value) setIsMediaDisclosed(false);
+                    }}
                     isLocationFuzzed={isLocationFuzzed}
                     onLocationFuzzedChange={setIsLocationFuzzed}
+                    isMediaDisclosed={isMediaDisclosed}
+                    onMediaDisclosedChange={setIsMediaDisclosed}
                     closureOutcome={closureOutcome}
                     onClosureOutcomeChange={setClosureOutcome}
                     caseId={caseId}

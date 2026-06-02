@@ -55,6 +55,7 @@ const initDatabase = async () => {
         is_draft BOOLEAN DEFAULT FALSE,
         is_disclosed BOOLEAN DEFAULT FALSE,
         is_location_fuzzed BOOLEAN DEFAULT FALSE,
+        is_media_disclosed BOOLEAN DEFAULT FALSE,
         photo_urls TEXT[],
         video_url TEXT,
         idempotency_key VARCHAR(128),
@@ -163,7 +164,8 @@ const initDatabase = async () => {
     await db.none(`
       ALTER TABLE incidents
       ADD COLUMN IF NOT EXISTS is_disclosed BOOLEAN DEFAULT FALSE,
-      ADD COLUMN IF NOT EXISTS is_location_fuzzed BOOLEAN DEFAULT FALSE;
+      ADD COLUMN IF NOT EXISTS is_location_fuzzed BOOLEAN DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS is_media_disclosed BOOLEAN DEFAULT FALSE;
     `);
 
     await db.none(`

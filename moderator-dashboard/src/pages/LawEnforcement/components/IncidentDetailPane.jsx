@@ -93,6 +93,8 @@ function IncidentDetailPane({
   onDisclosedChange,
   isLocationFuzzed,
   onLocationFuzzedChange,
+  isMediaDisclosed,
+  onMediaDisclosedChange,
   closureOutcome,
   onClosureOutcomeChange,
   caseId,
@@ -120,11 +122,16 @@ function IncidentDetailPane({
   const nextAction = nextStatus ? STATUS_ACTION_CONFIG[nextStatus] : null;
   const isComplete = incident.status === "police_closed";
   const statusKey = incident.status || "pending";
-  const showCloseCaseOptions = !isComplete || incident.status === "police_closed";
   const constellationMeta = getConstellationMeta(incident.constellation);
   const constellationMarker = getConstellationMarkerStyle(incident.constellation);
   const photoUrls = getReportPhotoUrls(incident);
   const videoUrl = getReportVideoUrl(incident);
+  const hasMedia = photoUrls.length > 0 || Boolean(videoUrl);
+  const showCloseCaseOptions = statusKey === "investigating" || isComplete;
+  const mediaDisclosureLabel = [
+    photoUrls.length ? `${photoUrls.length} photo${photoUrls.length === 1 ? "" : "s"}` : null,
+    videoUrl ? "1 video" : null,
+  ].filter(Boolean).join(" and ");
 
   return (
     <div className="lei-detail-panel">
@@ -281,6 +288,21 @@ function IncidentDetailPane({
                     />
                     <span>Publish to Community Feed</span>
                   </label>
+
+                  {isDisclosed && hasMedia ? (
+                    <label className="lei-close-check">
+                      <input
+                        type="checkbox"
+                        checked={isMediaDisclosed}
+                        onChange={(e) => onMediaDisclosedChange(e.target.checked)}
+                        className="lei-close-checkbox"
+                      />
+                      <span>
+                        Include attached media
+                        {mediaDisclosureLabel ? ` (${mediaDisclosureLabel})` : ""}
+                      </span>
+                    </label>
+                  ) : null}
 
                   <label
                     className="lei-close-check"
