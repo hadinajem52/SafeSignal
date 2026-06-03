@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import useNotificationForegroundHandler from '../hooks/useNotificationForegroundHandler';
 import useRealtimeNotifications from '../hooks/useRealtimeNotifications';
 import useWitnessPromptNotifications from '../hooks/useWitnessPromptNotifications';
 
@@ -63,6 +64,7 @@ const AppNavigator = () => {
   const { theme, isDark } = useTheme();
   const navigationRef = useRef(null);
   const [isNavigationReady, setIsNavigationReady] = useState(false);
+  useNotificationForegroundHandler();
   useRealtimeNotifications();
   useWitnessPromptNotifications({ navigationRef, isNavigationReady });
 

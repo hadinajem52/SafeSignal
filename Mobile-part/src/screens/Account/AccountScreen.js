@@ -24,6 +24,34 @@ import SupportSection from './SupportSection';
 import styles from './accountStyles';
 import ThemeSection from './ThemeSection';
 
+const getNotificationAccessStatus = (notificationPermission, pushNotificationsEnabled) => {
+  if (notificationPermission.granted) {
+    return {
+      status: 'granted',
+      detail: 'System permission is granted',
+    };
+  }
+
+  const status = notificationPermission.status || 'unknown';
+  if (!pushNotificationsEnabled || status === 'disabled') {
+    return { status, detail: 'App notifications are disabled' };
+  }
+
+  if (status === 'unsupported') {
+    return { status, detail: 'Notifications are not supported on this platform' };
+  }
+
+  if (status === 'undetermined') {
+    return { status, detail: 'System notification permission has not been requested' };
+  }
+
+  if (status === 'denied') {
+    return { status, detail: 'System notification permission is blocked' };
+  }
+
+  return { status, detail: 'Could not read notification permission status' };
+};
+
 const AccountScreen = () => {
   const { logout, user } = useAuth();
   const { theme, isDark, mode, setThemeMode } = useTheme();
@@ -137,7 +165,6 @@ const AccountScreen = () => {
     if (!value) {
       updatePreference('locationServices', false);
       await userAPI.setLocationConsent(false);
-      await pushTokenService.clearDevicePushToken();
       setInlinePreferenceFeedback('Witness location sharing disabled');
       setTimeout(() => setInlinePreferenceFeedback(''), 1800);
       return;
@@ -204,12 +231,10 @@ const AccountScreen = () => {
       ]);
 
       const notificationPermission = await getMobileNotificationStatus();
-      const notificationsStatus = notificationPermission.granted ? 'granted' : notificationPermission.status;
-      const notificationsDetail = notificationPermission.granted
-        ? 'System permission is granted'
-        : preferences.pushNotifications
-          ? 'System notification permission is blocked'
-          : 'App notifications are disabled';
+      const notificationsAccess = getNotificationAccessStatus(
+        notificationPermission,
+        preferences.pushNotifications
+      );
 
       setAccessStatus({
         location: {
@@ -220,8 +245,8 @@ const AccountScreen = () => {
               : 'Required for nearby safety score and map context',
         },
         notifications: {
-          status: notificationsStatus,
-          detail: notificationsDetail,
+          status: notificationsAccess.status,
+          detail: notificationsAccess.detail,
         },
         camera: {
           status: cameraPermission.status || 'unknown',

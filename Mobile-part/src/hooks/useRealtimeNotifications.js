@@ -9,6 +9,8 @@ import {
   displayMobileNotification,
 } from '../services/mobileNotifications';
 
+const MAX_DISPLAYED_EVENT_IDS = 100;
+
 const titleFromPayload = (eventName, payload) => {
   if (eventName === 'notification:report_alert') {
     return `High Priority Incident #${payload?.incidentId || ''}`.trim();
@@ -68,6 +70,7 @@ const useRealtimeNotifications = () => {
         socketRef.current.disconnect();
         socketRef.current = null;
       }
+      displayedEventsRef.current.clear();
     };
 
     if (
@@ -116,6 +119,9 @@ const useRealtimeNotifications = () => {
             return;
           }
           displayedEventsRef.current.add(eventId);
+          if (displayedEventsRef.current.size > MAX_DISPLAYED_EVENT_IDS) {
+            displayedEventsRef.current.delete(displayedEventsRef.current.values().next().value);
+          }
 
           await displayMobileNotification({
             title: titleFromPayload(eventName, payload),
