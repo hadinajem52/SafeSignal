@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import api from './apiClient';
+import { initializeMobileNotifications } from './mobileNotifications';
 
 const isAndroid = Platform.OS === 'android';
 
@@ -18,9 +19,9 @@ export const pushTokenService = {
     }
 
     try {
-      const permission = await Notifications.requestPermissionsAsync();
-      const status = permission.status || permission.granted;
-      if (status !== 'granted' && permission.granted !== true) {
+      const hasPermission = await initializeMobileNotifications({ requireStoredPreference: false });
+      if (!hasPermission) {
+        await this.clearDevicePushToken();
         return { success: false, skipped: true };
       }
 
@@ -57,6 +58,18 @@ export const pushTokenService = {
       return {
         success: false,
         error: error.response?.data?.message || error.message || 'Failed to update push token',
+      };
+    }
+  },
+
+  async clearDevicePushToken() {
+    try {
+      await api.delete('/users/me/push-token');
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || error.message || 'Failed to clear push token',
       };
     }
   },

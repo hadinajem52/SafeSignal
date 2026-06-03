@@ -36,8 +36,7 @@ const getResponseId = (response) => {
   return notification?.request?.identifier || notification?.date || JSON.stringify(notification?.request?.content?.data || {});
 };
 
-const parseWitnessPromptResponse = (response) => {
-  const data = response?.notification?.request?.content?.data || {};
+const parseWitnessPromptData = (data = {}) => {
   if (data.type !== 'witness_prompt') {
     return null;
   }
@@ -59,9 +58,13 @@ const parseWitnessPromptResponse = (response) => {
   return params;
 };
 
+const parseWitnessPromptResponse = (response) => {
+  return parseWitnessPromptData(response?.notification?.request?.content?.data || {});
+};
+
 const useWitnessPromptNotifications = ({ navigationRef, isNavigationReady }) => {
   const { isAuthenticated, user } = useAuth();
-  const { preferences } = useUserPreferences();
+  const { preferences, isLoading: preferencesLoading } = useUserPreferences();
   const pendingPromptRef = useRef(null);
   const lastResponseIdRef = useRef(null);
   const hasLocationConsent = Boolean(preferences.locationServices);
@@ -81,6 +84,10 @@ const useWitnessPromptNotifications = ({ navigationRef, isNavigationReady }) => 
   }, [isAuthenticated, isNavigationReady, navigationRef]);
 
   const processResponse = useCallback((response) => {
+    if (preferencesLoading || !preferences.pushNotifications || !hasLocationConsent) {
+      return;
+    }
+
     const responseId = getResponseId(response);
     if (responseId && responseId === lastResponseIdRef.current) {
       return;
@@ -93,10 +100,37 @@ const useWitnessPromptNotifications = ({ navigationRef, isNavigationReady }) => 
 
     lastResponseIdRef.current = responseId;
     navigateIfReady(params);
-  }, [navigateIfReady]);
+  }, [hasLocationConsent, navigateIfReady, preferences.pushNotifications, preferencesLoading]);
 
   useEffect(() => {
-    if (!isAuthenticated || !hasLocationConsent || !preferences.pushNotifications) {
+    Notifications.setNotificationHandler({
+      handleNotification: async (notification) => {
+        const isWitnessPrompt = Boolean(
+          parseWitnessPromptData(notification?.request?.content?.data || {})
+        );
+        const shouldShow = Boolean(
+          !preferencesLoading
+          && preferences.pushNotifications
+          && (!isWitnessPrompt || hasLocationConsent)
+        );
+
+        return {
+          shouldShowBanner: shouldShow,
+          shouldShowList: shouldShow,
+          shouldPlaySound: shouldShow,
+          shouldSetBadge: false,
+        };
+      },
+    });
+  }, [hasLocationConsent, preferences.pushNotifications, preferencesLoading]);
+
+  useEffect(() => {
+    if (!isAuthenticated || preferencesLoading) {
+      return undefined;
+    }
+
+    if (!hasLocationConsent || !preferences.pushNotifications) {
+      pushTokenService.clearDevicePushToken();
       return undefined;
     }
 
@@ -107,7 +141,7 @@ const useWitnessPromptNotifications = ({ navigationRef, isNavigationReady }) => 
     });
 
     return () => subscription.remove();
-  }, [hasLocationConsent, isAuthenticated, preferences.pushNotifications, user?.user_id, user?.userId]);
+  }, [hasLocationConsent, isAuthenticated, preferences.pushNotifications, preferencesLoading, user?.user_id, user?.userId]);
 
   useEffect(() => {
     const subscription = Notifications.addNotificationResponseReceivedListener(processResponse);

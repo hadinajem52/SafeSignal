@@ -11,6 +11,7 @@ const settingsService = require('./settingsService');
 
 const STAFF_ROLES = ['moderator', 'admin', 'law_enforcement'];
 const ALERT_SEVERITIES = new Set(['high', 'critical']);
+const REPORTER_STATUS_NOTIFICATIONS = new Set(['verified', 'rejected', 'needs_info', 'merged', 'police_closed']);
 const WEEKLY_DIGEST_INTERVAL_MS = 15 * 60 * 1000;
 const DIGEST_SEND_DAY_UTC = 1; // Monday
 const DIGEST_SEND_HOUR_UTC = 9; // 09:00 UTC
@@ -55,6 +56,65 @@ function buildIncidentEmailContent(eventType, incident, metadata = {}) {
   };
 }
 
+function formatStatusLabel(status) {
+  if (!status) {
+    return 'updated';
+  }
+
+  if (status === 'police_closed') {
+    return 'closed by law enforcement';
+  }
+
+  return String(status).replace(/_/g, ' ');
+}
+
+function buildReporterStatusContent(incident, metadata = {}) {
+  const nextStatus = metadata.nextStatus || incident.status;
+  const statusLabel = formatStatusLabel(nextStatus);
+  const incidentRef = `#${incident.incident_id}`;
+  const title = incident.title || 'your report';
+
+  if (nextStatus === 'verified') {
+    return {
+      title: `Report ${incidentRef} verified`,
+      message: `"${title}" has been verified and moved forward for review.`,
+    };
+  }
+
+  if (nextStatus === 'rejected') {
+    return {
+      title: `Report ${incidentRef} rejected`,
+      message: `"${title}" did not meet the requirements for verification.`,
+    };
+  }
+
+  if (nextStatus === 'needs_info') {
+    return {
+      title: `Report ${incidentRef} needs more information`,
+      message: `Please review "${title}" and add the requested details.`,
+    };
+  }
+
+  if (nextStatus === 'merged') {
+    return {
+      title: `Report ${incidentRef} merged`,
+      message: `"${title}" was linked to an existing report about the same incident.`,
+    };
+  }
+
+  if (nextStatus === 'police_closed') {
+    return {
+      title: `Report ${incidentRef} closed`,
+      message: `Law enforcement closed "${title}". Open the report for the outcome.`,
+    };
+  }
+
+  return {
+    title: `Report ${incidentRef} updated`,
+    message: `"${title}" is now ${statusLabel}.`,
+  };
+}
+
 async function getStaffRecipients() {
   await settingsService.ensureSettingsStorage();
 
@@ -74,6 +134,32 @@ async function getStaffRecipients() {
       AND COALESCE(u.is_suspended, FALSE) = FALSE`,
     [STAFF_ROLES]
   );
+}
+
+async function notifyReporterIncidentEvent(eventType, incident, metadata = {}) {
+  if (eventType !== 'incident:status_update' || !incident?.incident_id || !incident?.reporter_id) {
+    return { sent: false, skipped: true };
+  }
+
+  const nextStatus = metadata.nextStatus || incident.status;
+  const actorIsReporter = metadata.actorUserId
+    && Number(metadata.actorUserId) === Number(incident.reporter_id);
+
+  if (actorIsReporter || !REPORTER_STATUS_NOTIFICATIONS.has(nextStatus) || metadata.previousStatus === nextStatus) {
+    return { sent: false, skipped: true };
+  }
+
+  const content = buildReporterStatusContent(incident, metadata);
+  emitToUser(incident.reporter_id, 'notification:report_update', {
+    incidentId: incident.incident_id,
+    title: incident.title,
+    status: nextStatus,
+    notificationTitle: content.title,
+    message: content.message,
+    timestamp: new Date().toISOString(),
+  });
+
+  return { sent: true, skipped: false };
 }
 
 async function notifyStaffIncidentEvent(eventType, incident, metadata = {}) {
@@ -322,6 +408,7 @@ function startWeeklyDigestScheduler() {
 }
 
 module.exports = {
+  notifyReporterIncidentEvent,
   notifyStaffIncidentEvent,
   sendWeeklyDigestForUser,
   startWeeklyDigestScheduler,

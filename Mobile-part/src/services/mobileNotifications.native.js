@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import notifee, { AndroidImportance, AuthorizationStatus } from '@notifee/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import preferenceConstants from '../../../constants/preferences';
-import { tokenStorage } from './api';
+import { tokenStorage } from './tokenStorage';
 
 const DEFAULT_CHANNEL_ID = 'safesignal-default';
 let notificationsInitialized = false;
@@ -59,21 +59,65 @@ const ensureAndroidChannel = async () => {
   });
 };
 
-export const initializeMobileNotifications = async () => {
-  const pushEnabled = await getPushNotificationPreference();
-  if (!pushEnabled) {
-    return false;
+const isAuthorized = (settings) => {
+  return settings?.authorizationStatus >= AuthorizationStatus.AUTHORIZED;
+};
+
+const statusFromAuthorization = (authorizationStatus) => {
+  if (authorizationStatus >= AuthorizationStatus.AUTHORIZED) {
+    return 'granted';
   }
 
-  if (notificationsInitialized) {
-    return true;
+  if (authorizationStatus === AuthorizationStatus.DENIED) {
+    return 'denied';
+  }
+
+  return 'undetermined';
+};
+
+export const getMobileNotificationStatus = async () => {
+  const pushEnabled = await getPushNotificationPreference();
+  if (!pushEnabled) {
+    notificationsInitialized = false;
+    return { granted: false, status: 'disabled' };
   }
 
   try {
+    const settings = await notifee.getNotificationSettings();
+    const granted = isAuthorized(settings);
+    if (!granted) {
+      notificationsInitialized = false;
+    }
+
+    return {
+      granted,
+      status: statusFromAuthorization(settings.authorizationStatus),
+    };
+  } catch (error) {
+    console.error('Failed to read notification permission:', error);
+    notificationsInitialized = false;
+    return { granted: false, status: 'unknown' };
+  }
+};
+
+export const initializeMobileNotifications = async ({ requireStoredPreference = true } = {}) => {
+  if (notificationsInitialized) {
+    const currentStatus = await getMobileNotificationStatus();
+    if (currentStatus.granted) {
+      return true;
+    }
+  }
+
+  try {
+    if (requireStoredPreference && !(await getPushNotificationPreference())) {
+      return false;
+    }
+
     const settings = await notifee.requestPermission();
-    const hasPermission = settings.authorizationStatus >= AuthorizationStatus.AUTHORIZED;
+    const hasPermission = isAuthorized(settings);
 
     if (!hasPermission) {
+      notificationsInitialized = false;
       return false;
     }
 
@@ -138,5 +182,6 @@ export const sendTestNotification = async () => {
 export default {
   initializeMobileNotifications,
   displayMobileNotification,
+  getMobileNotificationStatus,
   sendTestNotification,
 };

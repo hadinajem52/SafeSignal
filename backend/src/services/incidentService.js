@@ -588,6 +588,11 @@ async function applyAutoVerificationIfEligible(incident, context = {}) {
     threshold: policy.minConfidenceScore,
   });
 
+  await notifyReporterStatusUpdate(updated, {
+    previousStatus: 'submitted',
+    nextStatus: updated.status,
+  }, 'auto verification');
+
   return {
     autoVerified: true,
     confidencePercent,
@@ -2181,6 +2186,12 @@ async function linkDuplicateIncident(incidentId, duplicateIncidentId, requesting
     logger.warn(`Failed to notify staff for duplicate merge on incident ${duplicate.incident_id}: ${error.message}`);
   }
 
+  await notifyReporterStatusUpdate(updatedDuplicate, {
+    previousStatus: duplicate.status,
+    nextStatus: updatedDuplicate.status,
+    actorUserId: requestingUser.userId,
+  }, 'duplicate merge');
+
   return {
     canonicalIncidentId: canonical.incident_id,
     duplicateIncidentId: duplicate.incident_id,
@@ -2396,6 +2407,12 @@ async function updateIncident(incidentId, updateData, requestingUser) {
     logger.warn(`Failed to notify staff for incident update ${incidentId}: ${error.message}`);
   }
 
+  await notifyReporterStatusUpdate(updatedIncident, {
+    previousStatus: incident.status,
+    nextStatus: updatedIncident.status,
+    actorUserId: requestingUser.userId,
+  }, 'incident update');
+
   if (normalizedIsDraft === false && incident.is_draft === true) {
     await ensureReportMediaRecord(updatedIncident);
   }
@@ -2484,6 +2501,12 @@ async function patchIncident(incidentId, updateData, requestingUser) {
     logger.warn(`Failed to notify staff for patch update on incident ${incidentId}: ${error.message}`);
   }
 
+  await notifyReporterStatusUpdate(updatedIncident, {
+    previousStatus: incident.status,
+    nextStatus: updatedIncident.status,
+    actorUserId: requestingUser.userId,
+  }, 'patch update');
+
   return updatedIncident;
 }
 
@@ -2531,6 +2554,14 @@ async function logAction(incidentId, moderatorId, actionType, notes = null) {
      VALUES ($1, $2, $3, $4)`,
     [incidentId, moderatorId, safeActionType, notes]
   );
+}
+
+async function notifyReporterStatusUpdate(incident, metadata, context) {
+  try {
+    await notificationService.notifyReporterIncidentEvent('incident:status_update', incident, metadata);
+  } catch (error) {
+    logger.warn(`Failed to notify reporter for ${context} on incident ${incident.incident_id}: ${error.message}`);
+  }
 }
 
 function validateLEIStatusTransition(currentStatus, nextStatus) {
@@ -2718,6 +2749,12 @@ async function updateLEIStatus(incidentId, status, closureOutcome, closureDetail
     logger.warn(`Failed to notify staff for LEI status update on incident ${incidentId}: ${error.message}`);
   }
 
+  await notifyReporterStatusUpdate(updatedIncident, {
+    previousStatus: incident.status,
+    nextStatus: updatedIncident.status,
+    actorUserId: requestingUser.userId,
+  }, 'LEI status update');
+
   return updatedIncident;
 }
 
@@ -2825,6 +2862,12 @@ async function verifyIncident(incidentId, requestingUser) {
     logger.warn(`Failed to notify staff for verify action on incident ${incidentId}: ${error.message}`);
   }
 
+  await notifyReporterStatusUpdate(updated, {
+    previousStatus: incident.status,
+    nextStatus: updated.status,
+    actorUserId: requestingUser.userId,
+  }, 'verify action');
+
   return updated;
 }
 
@@ -2877,6 +2920,12 @@ async function rejectIncident(incidentId, requestingUser) {
   } catch (error) {
     logger.warn(`Failed to notify staff for rejection on incident ${incidentId}: ${error.message}`);
   }
+
+  await notifyReporterStatusUpdate(updated, {
+    previousStatus: incident.status,
+    nextStatus: updated.status,
+    actorUserId: requestingUser.userId,
+  }, 'rejection');
 
   return updated;
 }

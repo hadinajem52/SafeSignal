@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Linking, PermissionsAndroid, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, Linking, ScrollView, TouchableOpacity } from 'react-native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -11,7 +11,8 @@ import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
 import useUserPreferences from '../../hooks/useUserPreferences';
 import useUserStats from '../../hooks/useUserStats';
-import { sendTestNotification } from '../../services/mobileNotifications';
+import { getMobileNotificationStatus, sendTestNotification } from '../../services/mobileNotifications';
+import { pushTokenService } from '../../services/pushTokenService';
 import { userAPI } from '../../services/userAPI';
 import ContributionsGrid from '../Home/ContributionsGrid';
 import AccessStatusSection from './AccessStatusSection';
@@ -136,6 +137,7 @@ const AccountScreen = () => {
     if (!value) {
       updatePreference('locationServices', false);
       await userAPI.setLocationConsent(false);
+      await pushTokenService.clearDevicePushToken();
       setInlinePreferenceFeedback('Witness location sharing disabled');
       setTimeout(() => setInlinePreferenceFeedback(''), 1800);
       return;
@@ -170,8 +172,13 @@ const AccountScreen = () => {
     }
   };
 
-  const handleNotificationsToggle = (value) => {
+  const handleNotificationsToggle = async (value) => {
     updatePreference('pushNotifications', value);
+    if (!value) {
+      await pushTokenService.clearDevicePushToken();
+    } else if (preferences.locationServices) {
+      await pushTokenService.registerDevicePushToken({ locationConsent: true });
+    }
     setInlinePreferenceFeedback(value ? 'Notifications enabled' : 'Notifications disabled');
     setTimeout(() => setInlinePreferenceFeedback(''), 1800);
   };
@@ -196,22 +203,13 @@ const AccountScreen = () => {
         ImagePicker.getMediaLibraryPermissionsAsync(),
       ]);
 
-      let notificationsStatus = 'unknown';
-      let notificationsDetail = preferences.pushNotifications
-        ? 'App notifications are enabled'
-        : 'App notifications are disabled';
-
-      if (Platform.OS === 'android' && Platform.Version >= 33) {
-        const granted = await PermissionsAndroid.check(
-          PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
-        );
-        notificationsStatus = granted ? 'granted' : 'denied';
-        notificationsDetail = granted
-          ? 'System permission is granted'
-          : 'System notification permission is blocked';
-      } else {
-        notificationsStatus = preferences.pushNotifications ? 'enabled' : 'disabled';
-      }
+      const notificationPermission = await getMobileNotificationStatus();
+      const notificationsStatus = notificationPermission.granted ? 'granted' : notificationPermission.status;
+      const notificationsDetail = notificationPermission.granted
+        ? 'System permission is granted'
+        : preferences.pushNotifications
+          ? 'System notification permission is blocked'
+          : 'App notifications are disabled';
 
       setAccessStatus({
         location: {

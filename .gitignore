@@ -5,6 +5,7 @@ node_modules/
 .pnp
 .pnp.js
 .opencode
+.ai-cache/
 # Build and dist
 dist/
 build/
