@@ -42,6 +42,15 @@ router.patch('/me/push-token', authenticateToken, async (req, res) => {
   }
 });
 
+router.delete('/me/push-token', authenticateToken, async (req, res) => {
+  try {
+    await userService.clearPushToken(req.user.userId);
+    res.json({ status: 'OK' });
+  } catch (error) {
+    handleServiceError(error, res, 'Failed to clear push token');
+  }
+});
+
 router.patch('/me/location-consent', authenticateToken, async (req, res) => {
   try {
     await userService.setLocationConsent(req.user.userId, req.body.consent);

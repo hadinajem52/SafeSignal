@@ -14,6 +14,10 @@ const titleFromPayload = (eventName, payload) => {
     return `High Priority Incident #${payload?.incidentId || ''}`.trim();
   }
 
+  if (eventName === 'notification:report_update') {
+    return payload?.notificationTitle || `Report #${payload?.incidentId || ''} updated`.trim();
+  }
+
   if (eventName === 'notification:weekly_digest') {
     return 'Weekly Digest Ready';
   }
@@ -39,6 +43,10 @@ const bodyFromPayload = (eventName, payload) => {
     return `${total} total reports this week, ${highPriority} high-priority.`;
   }
 
+  if (eventName === 'notification:report_update') {
+    return payload?.message || 'One of your reports was updated.';
+  }
+
   if (eventName === 'notification:email') {
     return payload?.message || 'You have a new update.';
   }
@@ -48,8 +56,9 @@ const bodyFromPayload = (eventName, payload) => {
 
 const useRealtimeNotifications = () => {
   const { isAuthenticated, user } = useAuth();
-  const { preferences } = useUserPreferences();
+  const { preferences, isLoading: preferencesLoading } = useUserPreferences();
   const socketRef = useRef(null);
+  const displayedEventsRef = useRef(new Set());
 
   useEffect(() => {
     let isMounted = true;
@@ -61,7 +70,11 @@ const useRealtimeNotifications = () => {
       }
     };
 
-    if (!isAuthenticated || !preferences.pushNotifications) {
+    if (
+      !isAuthenticated
+      || preferencesLoading
+      || !preferences.pushNotifications
+    ) {
       disconnectSocket();
       return undefined;
     }
@@ -83,10 +96,26 @@ const useRealtimeNotifications = () => {
           transports: ['websocket'],
         });
 
+        if (!isMounted) {
+          socket.disconnect();
+          return;
+        }
+
         const handleEvent = async (eventName, payload) => {
           if (!preferences.pushNotifications) {
             return;
           }
+
+          const eventId = [
+            eventName,
+            payload?.incidentId || '',
+            payload?.generatedAt || payload?.timestamp || '',
+          ].join(':');
+
+          if (displayedEventsRef.current.has(eventId)) {
+            return;
+          }
+          displayedEventsRef.current.add(eventId);
 
           await displayMobileNotification({
             title: titleFromPayload(eventName, payload),
@@ -100,6 +129,9 @@ const useRealtimeNotifications = () => {
 
         socket.on('notification:report_alert', (payload) => {
           handleEvent('notification:report_alert', payload);
+        });
+        socket.on('notification:report_update', (payload) => {
+          handleEvent('notification:report_update', payload);
         });
         socket.on('notification:weekly_digest', (payload) => {
           handleEvent('notification:weekly_digest', payload);
@@ -120,7 +152,7 @@ const useRealtimeNotifications = () => {
       isMounted = false;
       disconnectSocket();
     };
-  }, [isAuthenticated, preferences.pushNotifications, user?.user_id, user?.userId]);
+  }, [isAuthenticated, preferences.pushNotifications, preferencesLoading, user?.user_id, user?.userId]);
 };
 
 export default useRealtimeNotifications;

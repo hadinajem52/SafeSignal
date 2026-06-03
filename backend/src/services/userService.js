@@ -222,6 +222,21 @@ async function updatePushToken(userId, token) {
   );
 }
 
+async function clearPushToken(userId) {
+  const result = await db.result(
+    `UPDATE users
+     SET push_token = NULL,
+         push_token_updated_at = NULL,
+         updated_at = NOW()
+     WHERE user_id = $1`,
+    [userId]
+  );
+
+  if (result.rowCount === 0) {
+    throw ServiceError.notFound('User');
+  }
+}
+
 async function setLocationConsent(userId, consent) {
   if (typeof consent !== 'boolean') {
     throw ServiceError.badRequest('Consent must be a boolean');
@@ -242,6 +257,8 @@ async function setLocationConsent(userId, consent) {
              last_known_latitude = NULL,
              last_known_longitude = NULL,
              location_updated_at = NULL,
+             push_token = NULL,
+             push_token_updated_at = NULL,
              updated_at = NOW()
          WHERE user_id = $1`,
         [userId]
@@ -284,6 +301,7 @@ module.exports = {
   updateUserSuspension,
   updateUserRole,
   updatePushToken,
+  clearPushToken,
   setLocationConsent,
   updateUserLocation,
 };
