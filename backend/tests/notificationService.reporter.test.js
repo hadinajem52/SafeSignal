@@ -21,22 +21,28 @@ describe('notificationService reporter updates', () => {
     jest.clearAllMocks();
   });
 
-  it('notifies the reporter when a report is verified', async () => {
+  it.each([
+    ['verified', 'Report #12 verified'],
+    ['rejected', 'Report #12 rejected'],
+    ['needs_info', 'Report #12 needs more information'],
+    ['merged', 'Report #12 merged'],
+    ['police_closed', 'Report #12 closed'],
+  ])('notifies the reporter when a report becomes %s', async (nextStatus, notificationTitle) => {
     const result = await notificationService.notifyReporterIncidentEvent('incident:status_update', {
       incident_id: 12,
       reporter_id: 7,
       title: 'Broken streetlight',
-      status: 'verified',
+      status: nextStatus,
     }, {
       previousStatus: 'submitted',
-      nextStatus: 'verified',
+      nextStatus,
     });
 
     expect(result).toEqual({ sent: true, skipped: false });
     expect(emitToUser).toHaveBeenCalledWith(7, 'notification:report_update', expect.objectContaining({
       incidentId: 12,
-      status: 'verified',
-      notificationTitle: 'Report #12 verified',
+      status: nextStatus,
+      notificationTitle,
     }));
   });
 
@@ -49,6 +55,21 @@ describe('notificationService reporter updates', () => {
     }, {
       previousStatus: 'submitted',
       nextStatus: 'in_review',
+    });
+
+    expect(result).toEqual({ sent: false, skipped: true });
+    expect(emitToUser).not.toHaveBeenCalled();
+  });
+
+  it('skips reporter notifications when the status did not change', async () => {
+    const result = await notificationService.notifyReporterIncidentEvent('incident:status_update', {
+      incident_id: 12,
+      reporter_id: 7,
+      title: 'Broken streetlight',
+      status: 'verified',
+    }, {
+      previousStatus: 'verified',
+      nextStatus: 'verified',
     });
 
     expect(result).toEqual({ sent: false, skipped: true });

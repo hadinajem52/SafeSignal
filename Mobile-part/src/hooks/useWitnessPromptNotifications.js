@@ -36,7 +36,7 @@ const getResponseId = (response) => {
   return notification?.request?.identifier || notification?.date || JSON.stringify(notification?.request?.content?.data || {});
 };
 
-const parseWitnessPromptData = (data = {}) => {
+export const parseWitnessPromptData = (data = {}) => {
   if (data.type !== 'witness_prompt') {
     return null;
   }
@@ -101,28 +101,6 @@ const useWitnessPromptNotifications = ({ navigationRef, isNavigationReady }) => 
     lastResponseIdRef.current = responseId;
     navigateIfReady(params);
   }, [hasLocationConsent, navigateIfReady, preferences.pushNotifications, preferencesLoading]);
-
-  useEffect(() => {
-    Notifications.setNotificationHandler({
-      handleNotification: async (notification) => {
-        const isWitnessPrompt = Boolean(
-          parseWitnessPromptData(notification?.request?.content?.data || {})
-        );
-        const shouldShow = Boolean(
-          !preferencesLoading
-          && preferences.pushNotifications
-          && (!isWitnessPrompt || hasLocationConsent)
-        );
-
-        return {
-          shouldShowBanner: shouldShow,
-          shouldShowList: shouldShow,
-          shouldPlaySound: shouldShow,
-          shouldSetBadge: false,
-        };
-      },
-    });
-  }, [hasLocationConsent, preferences.pushNotifications, preferencesLoading]);
 
   useEffect(() => {
     if (!isAuthenticated || preferencesLoading) {
