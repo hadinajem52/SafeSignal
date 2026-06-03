@@ -15,6 +15,7 @@ jest.mock('../src/services/userService', () => ({
   updateUserSuspension: jest.fn(),
   updateUserRole: jest.fn(),
   updatePushToken: jest.fn(),
+  clearPushToken: jest.fn(),
   setLocationConsent: jest.fn(),
   updateUserLocation: jest.fn(),
 }));
@@ -47,6 +48,17 @@ describe('users privacy routes', () => {
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ status: 'OK' });
     expect(userService.updatePushToken).toHaveBeenCalledWith(42, 'device-token');
+  });
+
+  it('clears push token through /me without requiring location consent', async () => {
+    userService.clearPushToken.mockResolvedValue();
+
+    const response = await request(app)
+      .delete('/api/users/me/push-token');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ status: 'OK' });
+    expect(userService.clearPushToken).toHaveBeenCalledWith(42);
   });
 
   it('updates location consent through /me before dynamic id routes', async () => {

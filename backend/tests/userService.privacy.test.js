@@ -39,6 +39,15 @@ describe('userService privacy fields', () => {
     expect(db.oneOrNone).not.toHaveBeenCalled();
   });
 
+  it('clears stored push tokens', async () => {
+    db.result.mockResolvedValue({ rowCount: 1 });
+
+    await userService.clearPushToken(7);
+
+    expect(db.result).toHaveBeenCalledWith(expect.stringContaining('push_token = NULL'), [7]);
+    expect(db.result.mock.calls[0][0]).toContain('push_token_updated_at = NULL');
+  });
+
   it('stores rounded 2-decimal coordinates when consent exists', async () => {
     db.oneOrNone.mockResolvedValue({ location_consent: true });
     db.none.mockResolvedValue();
@@ -79,6 +88,8 @@ describe('userService privacy fields', () => {
     );
     expect(db.result.mock.calls[0][0]).toContain('last_known_longitude = NULL');
     expect(db.result.mock.calls[0][0]).toContain('location_updated_at = NULL');
+    expect(db.result.mock.calls[0][0]).toContain('push_token = NULL');
+    expect(db.result.mock.calls[0][0]).toContain('push_token_updated_at = NULL');
   });
 
   it('does not expose token or location columns from single-user responses', async () => {

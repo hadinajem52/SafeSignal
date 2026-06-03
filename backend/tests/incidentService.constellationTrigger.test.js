@@ -8,6 +8,7 @@ jest.mock('../src/config/database', () => ({
 jest.mock('../src/utils/socketService', () => ({ emitToRoles: jest.fn() }));
 jest.mock('../src/services/settingsService', () => ({}));
 jest.mock('../src/services/notificationService', () => ({
+  notifyReporterIncidentEvent: jest.fn().mockResolvedValue(),
   notifyStaffIncidentEvent: jest.fn().mockResolvedValue(),
 }));
 jest.mock('../src/utils/mlClient', () => ({}));
