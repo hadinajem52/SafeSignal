@@ -62,6 +62,7 @@ const AccountScreen = () => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const [inlinePreferenceFeedback, setInlinePreferenceFeedback] = useState('');
+  const [isSendingFcmTest, setIsSendingFcmTest] = useState(false);
   const [pendingName, setPendingName] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
@@ -222,6 +223,39 @@ const AccountScreen = () => {
     }
   };
 
+  const handleSendFcmTestNotification = async () => {
+    if (!preferences.pushNotifications) {
+      showToast('Enable Push Notifications first.', 'warning');
+      return;
+    }
+
+    if (!preferences.locationServices) {
+      showToast('Enable Witness Location Sharing first so this device can register for FCM.', 'warning');
+      return;
+    }
+
+    setIsSendingFcmTest(true);
+    try {
+      const registration = await pushTokenService.registerDevicePushToken({ locationConsent: true });
+      if (!registration.success) {
+        showToast(registration.error || 'Unable to register this device for FCM.', 'error');
+        return;
+      }
+
+      const result = await pushTokenService.sendFcmTestNotification();
+      if (!result.success) {
+        showToast(result.error, 'error');
+        return;
+      }
+
+      showToast('FCM test sent. Check this device for a notification.', 'success');
+      setInlinePreferenceFeedback('FCM test notification sent');
+      setTimeout(() => setInlinePreferenceFeedback(''), 1800);
+    } finally {
+      setIsSendingFcmTest(false);
+    }
+  };
+
   const refreshAccessStatus = useCallback(async () => {
     try {
       const [locationPermission, cameraPermission, mediaPermission] = await Promise.all([
@@ -319,6 +353,8 @@ const AccountScreen = () => {
         onNotificationsToggle={handleNotificationsToggle}
         onDefaultAnonymousToggle={(value) => updatePreference('defaultAnonymous', value)}
         onSendTestNotification={handleSendTestNotification}
+        onSendFcmTestNotification={handleSendFcmTestNotification}
+        isSendingFcmTest={isSendingFcmTest}
         feedbackMessage={inlinePreferenceFeedback}
       />
 

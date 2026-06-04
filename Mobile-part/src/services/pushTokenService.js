@@ -73,4 +73,19 @@ export const pushTokenService = {
       };
     }
   },
+
+  async sendFcmTestNotification() {
+    try {
+      const response = await api.post('/users/me/push-token/test-fcm');
+      return {
+        success: true,
+        message: response.data?.message || 'FCM test notification sent',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || error.message || 'Failed to send FCM test notification',
+      };
+    }
+  },
 };

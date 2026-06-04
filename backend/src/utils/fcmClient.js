@@ -83,6 +83,34 @@ async function sendWitnessPromptNotification(token, data) {
   }
 }
 
+async function sendFcmTestNotification(token) {
+  const app = getAdminApp();
+  if (!app) {
+    logger.info(`Skipping FCM test; Firebase credentials absent for token ${tokenPrefix(token)}`);
+    return { sent: false, skipped: true };
+  }
+
+  try {
+    await admin.messaging().send({
+      token,
+      notification: {
+        title: 'SafeSignal FCM Test',
+        body: 'Firebase Cloud Messaging delivery is working for this device.',
+      },
+      data: {
+        type: 'fcm_test',
+        sent_at: new Date().toISOString(),
+      },
+    });
+    logger.info(`FCM test sent to token ${tokenPrefix(token)}`);
+    return { sent: true, skipped: false };
+  } catch (error) {
+    logger.warn(`FCM test failed for token ${tokenPrefix(token)}: ${error.message}`);
+    return { sent: false, skipped: false, error };
+  }
+}
+
 module.exports = {
+  sendFcmTestNotification,
   sendWitnessPromptNotification,
 };

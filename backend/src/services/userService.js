@@ -6,6 +6,7 @@
 
 const db = require('../config/database');
 const ServiceError = require('../utils/ServiceError');
+const fcmClient = require('../utils/fcmClient');
 const { LIMITS } = require('../../../constants/limits');
 
 const roundCoordinate = (value) => Number(Number(value).toFixed(2));
@@ -237,6 +238,32 @@ async function clearPushToken(userId) {
   }
 }
 
+async function sendFcmTestNotification(userId) {
+  const user = await db.oneOrNone(
+    'SELECT push_token FROM users WHERE user_id = $1',
+    [userId]
+  );
+
+  if (!user) {
+    throw ServiceError.notFound('User');
+  }
+
+  if (!user.push_token) {
+    throw ServiceError.badRequest('No device push token is registered for this user');
+  }
+
+  const result = await fcmClient.sendFcmTestNotification(user.push_token);
+  if (result.skipped) {
+    throw ServiceError.badRequest('Firebase credentials are not configured');
+  }
+
+  if (!result.sent) {
+    throw ServiceError.badRequest(result.error?.message || 'FCM test notification failed');
+  }
+
+  return { sent: true };
+}
+
 async function setLocationConsent(userId, consent) {
   if (typeof consent !== 'boolean') {
     throw ServiceError.badRequest('Consent must be a boolean');
@@ -302,6 +329,7 @@ module.exports = {
   updateUserRole,
   updatePushToken,
   clearPushToken,
+  sendFcmTestNotification,
   setLocationConsent,
   updateUserLocation,
 };
