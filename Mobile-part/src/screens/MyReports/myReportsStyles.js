@@ -10,9 +10,6 @@ const myReportsStyles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingTop: 56,
   },
-  loadingText: {
-    marginTop: 14,
-  },
   skeletonHeader: {
     height: 48,
     borderRadius: 14,
