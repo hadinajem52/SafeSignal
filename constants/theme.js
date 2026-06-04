@@ -12,7 +12,6 @@ export const lightTheme = {
   
   // Text colors
   text: '#0F172A',
-  textMuted: '#334155',
   textSecondary: '#334155',
   textTertiary: '#64748B',
   
@@ -21,8 +20,6 @@ export const lightTheme = {
   accent: '#0D9488',
   primaryLight: 'rgba(29, 78, 216, 0.14)',
   primaryDark: '#1E40AF',
-  gradientStart: '#F8FAFC',
-  gradientEnd: '#E2E8F0',
   success: '#16A34A',
   warning: '#D97706',
   error: '#DC2626',
@@ -44,7 +41,6 @@ export const lightTheme = {
   accentOrange: '#F59E0B',
   accentPurple: '#7C3AED',
   accentTeal: '#0D9488',
-  accentRed: '#DC2626',
   
   // Severity levels
   severityLow: '#10B981',
@@ -69,11 +65,6 @@ export const lightTheme = {
   codeInputBg: '#EFF6FF',
   codeBorder: '#1D4ED8',
 
-  // Neutral grays for legacy styles
-  neutralGray100: '#F1F5F9',
-  neutralGray200: '#E2E8F0',
-  neutralGray300: '#CBD5E1',
-  
   // Input
   input: '#FFFFFF',
   inputBorder: '#CBD5E1',
@@ -104,7 +95,6 @@ export const darkTheme = {
   
   // Text colors
   text: '#F8FAFC',
-  textMuted: '#C7D2E3',
   textSecondary: '#C7D2E3',
   textTertiary: '#94A3B8',
   
@@ -113,8 +103,6 @@ export const darkTheme = {
   accent: '#2DD4BF',
   primaryLight: 'rgba(45, 212, 191, 0.20)',
   primaryDark: '#14B8A6',
-  gradientStart: '#0F1729',
-  gradientEnd: '#1E293B',
   success: '#34D399',
   warning: '#F59E0B',
   error: '#F87171',
@@ -136,7 +124,6 @@ export const darkTheme = {
   accentOrange: '#F59E0B',
   accentPurple: '#A78BFA',
   accentTeal: '#2DD4BF',
-  accentRed: '#FB7185',
   
   // Severity levels
   severityLow: '#4ADE80',
@@ -161,11 +148,6 @@ export const darkTheme = {
   codeInputBg: '#132235',
   codeBorder: '#2DD4BF',
 
-  // Neutral grays for legacy styles
-  neutralGray100: '#1E293B',
-  neutralGray200: '#334155',
-  neutralGray300: '#475569',
-  
   // Input
   input: '#0B1424',
   inputBorder: '#2B3D55',

@@ -9,12 +9,6 @@ export const spacing = {
   xl: 20,
   xxl: 24,
   xxxl: 32,
-
-  // Contextual
-  screenPadding: 16,
-  sectionGap: 20,
-  cardPadding: 16,
-  headerTopPadding: 40,
 };
 
 export const borderRadius = {
@@ -32,12 +26,5 @@ export const shadows = {
     shadowOpacity: 0.06,
     shadowRadius: 10,
     elevation: 4,
-  },
-  elevated: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 8,
   },
 };
