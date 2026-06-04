@@ -53,6 +53,10 @@ const myReportsStyles = StyleSheet.create({
     marginHorizontal: 12,
     borderWidth: 1,
     borderRadius: 14,
+    overflow: 'hidden',
+  },
+  headerBandGradient: {
+    borderRadius: 13,
     paddingHorizontal: 16,
     paddingVertical: 10,
     flexDirection: 'row',
@@ -93,8 +97,7 @@ const myReportsStyles = StyleSheet.create({
     marginBottom: 12,
   },
   incidentCardInner: {
-    borderWidth: 1,
-    borderLeftWidth: 4,
+    borderWidth: 1.5,
   },
   cardHeader: {
     flexDirection: 'row',

@@ -15,21 +15,16 @@ const TimeframeSelector = ({ selectedTimeframe, onSelectTimeframe }) => {
   const { theme } = useTheme();
 
   return (
-    <View style={[styles.timeframeContainer, { backgroundColor: `${theme.card}dd`, borderColor: theme.border }]}> 
+    <View style={[styles.timeframeContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
       {TIMEFRAME_OPTIONS.map((option) => {
         const isActive = selectedTimeframe === option.value;
 
         return (
           <TouchableOpacity
             key={option.value}
-            style={[
-              styles.timeframeButton,
-              {
-                backgroundColor: isActive ? theme.primary : theme.background,
-                borderColor: isActive ? theme.primary : theme.border,
-              },
-            ]}
+            style={[styles.timeframeButton, isActive && { backgroundColor: theme.primary }]}
             onPress={() => onSelectTimeframe(option.value)}
+            activeOpacity={0.85}
           >
             <AppText
               variant="caption"

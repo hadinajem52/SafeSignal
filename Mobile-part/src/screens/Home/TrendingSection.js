@@ -50,10 +50,10 @@ const TrendingSection = ({ trendingCategories }) => {
                 key={`${cat.category}-${cat.count}-${index}`}
                 style={[
                   styles.trendingItem,
-                  { borderColor: theme.border, borderLeftColor: trendColor },
+                  { borderColor: trendColor },
                 ]}
               >
-                <View style={[styles.trendingIcon, { backgroundColor: `${config.trendColor}15` }]}> 
+                <View style={[styles.trendingIcon, { backgroundColor: `${config.trendColor}15` }]}>
                   <Ionicons name={config.mapIcon || 'help-circle-outline'} size={18} color={config.trendColor} />
                 </View>
                 <View style={styles.trendingInfo}>

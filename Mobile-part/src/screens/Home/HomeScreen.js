@@ -54,22 +54,24 @@ const HomeScreen = ({ navigation }) => {
   // useMemo must be declared before any early returns (Rules of Hooks)
   const homeHeader = useMemo(() => (
     <>
-      <LinearGradient
-        colors={[theme.primaryLight || 'rgba(29,78,216,0.14)', 'rgba(255,255,255,0)']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.header, { borderColor: theme.border }]}
-      >
-        <View>
-          <AppText variant="h2" style={[styles.greeting, { color: theme.text }]}>Hello, {user?.username || 'there'}!</AppText>
-          <AppText variant="body" style={[styles.subtitle, { color: theme.textSecondary }]}> 
-            Stay informed. Stay safe.
-          </AppText>
-        </View>
-        <View style={[styles.logoContainer, { backgroundColor: theme.primary }]}> 
-          <Ionicons name="shield-checkmark" size={24} color="#FFFFFF" />
-        </View>
-      </LinearGradient>
+      <View style={[styles.header, { borderColor: theme.border }]}>
+        <LinearGradient
+          colors={[theme.primaryLight || 'rgba(29,78,216,0.14)', 'rgba(255,255,255,0)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.headerGradient}
+        >
+          <View>
+            <AppText variant="h2" style={[styles.greeting, { color: theme.text }]}>Hello, {user?.username || 'there'}!</AppText>
+            <AppText variant="body" style={[styles.subtitle, { color: theme.textSecondary }]}>
+              Stay informed. Stay safe.
+            </AppText>
+          </View>
+          <View style={[styles.logoContainer, { backgroundColor: theme.primary }]}>
+            <Ionicons name="shield-checkmark" size={24} color="#FFFFFF" />
+          </View>
+        </LinearGradient>
+      </View>
 
       {activeNearbyCount > 0 ? (
         <Card style={[styles.alertBanner, { backgroundColor: `${theme.warning}18`, borderColor: `${theme.warning}40` }]}> 
