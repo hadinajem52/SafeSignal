@@ -4,11 +4,6 @@ const homeStyles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  contentContainer: {
-    padding: 16,
-    paddingBottom: 24,
-  },
-
   loadingContainer: {
     flex: 1,
     paddingHorizontal: 16,
