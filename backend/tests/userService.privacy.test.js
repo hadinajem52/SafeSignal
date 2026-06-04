@@ -6,7 +6,12 @@ jest.mock('../src/config/database', () => ({
   result: jest.fn(),
 }));
 
+jest.mock('../src/utils/fcmClient', () => ({
+  sendFcmTestNotification: jest.fn(),
+}));
+
 const db = require('../src/config/database');
+const fcmClient = require('../src/utils/fcmClient');
 const userService = require('../src/services/userService');
 
 describe('userService privacy fields', () => {
@@ -46,6 +51,24 @@ describe('userService privacy fields', () => {
 
     expect(db.result).toHaveBeenCalledWith(expect.stringContaining('push_token = NULL'), [7]);
     expect(db.result.mock.calls[0][0]).toContain('push_token_updated_at = NULL');
+  });
+
+  it('sends FCM test notifications to the stored token', async () => {
+    db.oneOrNone.mockResolvedValue({ push_token: 'device-token' });
+    fcmClient.sendFcmTestNotification.mockResolvedValue({ sent: true, skipped: false });
+
+    await expect(userService.sendFcmTestNotification(7)).resolves.toEqual({ sent: true });
+
+    expect(fcmClient.sendFcmTestNotification).toHaveBeenCalledWith('device-token');
+  });
+
+  it('rejects FCM test notifications when no token is registered', async () => {
+    db.oneOrNone.mockResolvedValue({ push_token: null });
+
+    await expect(userService.sendFcmTestNotification(7)).rejects.toMatchObject({
+      statusCode: 400,
+    });
+    expect(fcmClient.sendFcmTestNotification).not.toHaveBeenCalled();
   });
 
   it('stores rounded 2-decimal coordinates when consent exists', async () => {

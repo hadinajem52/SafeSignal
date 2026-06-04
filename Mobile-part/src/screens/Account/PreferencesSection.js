@@ -11,6 +11,8 @@ const PreferencesSection = ({
   onNotificationsToggle,
   onDefaultAnonymousToggle,
   onSendTestNotification,
+  onSendFcmTestNotification,
+  isSendingFcmTest,
   feedbackMessage,
 }) => {
   const { theme } = useTheme();
@@ -69,6 +71,22 @@ const PreferencesSection = ({
         onPress={onSendTestNotification}
       >
         <AppText variant="label" style={[styles.linkText, { color: theme.text }]}>Send Test Notification</AppText>
+        <AppText variant="h5" style={[styles.linkArrow, { color: theme.textTertiary }]}>›</AppText>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.linkRow, { borderBottomColor: theme.divider, opacity: isSendingFcmTest ? 0.55 : 1 }]}
+        onPress={onSendFcmTestNotification}
+        disabled={isSendingFcmTest}
+      >
+        <View style={styles.settingInfo}>
+          <AppText variant="label" style={[styles.linkText, { color: theme.text }]}>
+            {isSendingFcmTest ? 'Sending FCM Test...' : 'Send FCM Test Notification'}
+          </AppText>
+          <AppText variant="caption" style={[styles.settingHint, { color: theme.textSecondary }]}>
+            Tests Firebase delivery to this device
+          </AppText>
+        </View>
         <AppText variant="h5" style={[styles.linkArrow, { color: theme.textTertiary }]}>›</AppText>
       </TouchableOpacity>
 

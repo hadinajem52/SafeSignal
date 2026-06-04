@@ -51,6 +51,15 @@ router.delete('/me/push-token', authenticateToken, async (req, res) => {
   }
 });
 
+router.post('/me/push-token/test-fcm', authenticateToken, async (req, res) => {
+  try {
+    await userService.sendFcmTestNotification(req.user.userId);
+    res.json({ status: 'OK', message: 'FCM test notification sent' });
+  } catch (error) {
+    handleServiceError(error, res, 'Failed to send FCM test notification');
+  }
+});
+
 router.patch('/me/location-consent', authenticateToken, async (req, res) => {
   try {
     await userService.setLocationConsent(req.user.userId, req.body.consent);

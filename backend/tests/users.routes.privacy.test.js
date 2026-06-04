@@ -16,6 +16,7 @@ jest.mock('../src/services/userService', () => ({
   updateUserRole: jest.fn(),
   updatePushToken: jest.fn(),
   clearPushToken: jest.fn(),
+  sendFcmTestNotification: jest.fn(),
   setLocationConsent: jest.fn(),
   updateUserLocation: jest.fn(),
 }));
@@ -59,6 +60,20 @@ describe('users privacy routes', () => {
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ status: 'OK' });
     expect(userService.clearPushToken).toHaveBeenCalledWith(42);
+  });
+
+  it('sends an FCM test notification through /me', async () => {
+    userService.sendFcmTestNotification.mockResolvedValue({ sent: true });
+
+    const response = await request(app)
+      .post('/api/users/me/push-token/test-fcm');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      status: 'OK',
+      message: 'FCM test notification sent',
+    });
+    expect(userService.sendFcmTestNotification).toHaveBeenCalledWith(42);
   });
 
   it('updates location consent through /me before dynamic id routes', async () => {
