@@ -18,8 +18,13 @@ const accountStyles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 18,
     overflow: 'hidden',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 4,
   },
   profileHeaderGradient: {
+    borderRadius: 17,
     paddingHorizontal: 16,
     paddingVertical: 16,
   },
@@ -86,20 +91,29 @@ const accountStyles = StyleSheet.create({
 
   themePreviewRow: {
     flexDirection: 'row',
-    marginBottom: 12,
   },
   themePreviewCard: {
     flex: 1,
-    borderWidth: 1,
+    borderWidth: 2,
     borderRadius: 12,
     padding: 10,
   },
-  themePreviewDivider: {
-    width: 8,
+  themePreviewCardActive: {
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.45,
+    shadowRadius: 9,
+    elevation: 5,
   },
-  themePreviewTitle: {
+  themePreviewDivider: {
+    width: 10,
+  },
+  themePreviewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 8,
   },
+  themePreviewTitle: {},
   themePreviewBar: {
     height: 8,
     borderRadius: 999,

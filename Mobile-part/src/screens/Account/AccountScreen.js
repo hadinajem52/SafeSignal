@@ -54,7 +54,7 @@ const getNotificationAccessStatus = (notificationPermission, pushNotificationsEn
 
 const AccountScreen = () => {
   const { logout, user } = useAuth();
-  const { theme, isDark, mode, setThemeMode } = useTheme();
+  const { theme, isDark, setThemeMode } = useTheme();
   const { showToast } = useToast();
   const { preferences, updatePreference } = useUserPreferences();
   const { userStats, loading: userStatsLoading, error: userStatsError } = useUserStats();
@@ -343,7 +343,6 @@ const AccountScreen = () => {
 
       <ThemeSection
         isDark={isDark}
-        mode={mode}
         onThemeToggle={(value) => setThemeMode(value ? 'dark' : 'light')}
       />
 

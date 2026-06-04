@@ -46,6 +46,7 @@ const MapScreen = () => {
   const [selectedIncident, setSelectedIncident] = useState(null);
   const [mapMode, setMapMode] = useState(MAP_MODES.ACTIVE);
   const [showMapHint, setShowMapHint] = useState(true);
+  const [headerHeight, setHeaderHeight] = useState(150);
 
   const {
     selectedCategory,
@@ -269,50 +270,72 @@ const MapScreen = () => {
       />
 
       <View
-        style={[
-          mapStyles.filterHeader,
-          {
-            paddingTop: insets.top + 8,
-            backgroundColor: `${theme.card}00`,
-          },
-        ]}
+        style={[mapStyles.filterHeader, { paddingTop: insets.top + 8 }]}
+        onLayout={(event) => setHeaderHeight(event.nativeEvent.layout.height)}
       >
-        <CategoryFilterBar
-          categoryDisplay={CATEGORY_DISPLAY}
-          selectedCategory={selectedCategory}
-          onSelectCategory={setSelectedCategory}
-        />
+        <View
+          style={[
+            mapStyles.controlPanel,
+            { backgroundColor: `${theme.card}f0`, borderColor: theme.border, shadowColor: theme.shadow },
+          ]}
+        >
+          <View style={[mapStyles.segment, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <TouchableOpacity
+              style={[mapStyles.segmentItem, mapMode === MAP_MODES.ACTIVE && { backgroundColor: theme.primary }]}
+              onPress={() => setMapMode(MAP_MODES.ACTIVE)}
+              activeOpacity={0.85}
+            >
+              <Ionicons
+                name="radio-button-on-outline"
+                size={14}
+                color={mapMode === MAP_MODES.ACTIVE ? '#fff' : theme.textSecondary}
+              />
+              <AppText
+                variant="caption"
+                style={[mapStyles.segmentLabel, { color: mapMode === MAP_MODES.ACTIVE ? '#fff' : theme.textSecondary }]}
+              >
+                Active
+              </AppText>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[mapStyles.segmentItem, mapMode === MAP_MODES.RESOLVED && { backgroundColor: theme.primary }]}
+              onPress={() => setMapMode(MAP_MODES.RESOLVED)}
+              activeOpacity={0.85}
+            >
+              <Ionicons
+                name="shield-checkmark-outline"
+                size={14}
+                color={mapMode === MAP_MODES.RESOLVED ? '#fff' : theme.textSecondary}
+              />
+              <AppText
+                variant="caption"
+                style={[mapStyles.segmentLabel, { color: mapMode === MAP_MODES.RESOLVED ? '#fff' : theme.textSecondary }]}
+              >
+                Resolved
+              </AppText>
+            </TouchableOpacity>
+          </View>
 
-        <View style={[mapStyles.modeToggle, { borderColor: theme.border }]}>
-          <TouchableOpacity
-            style={[mapStyles.modeButton, { backgroundColor: mapMode === MAP_MODES.ACTIVE ? theme.primary : 'transparent' }]}
-            onPress={() => setMapMode(MAP_MODES.ACTIVE)}
-          >
-            <Ionicons name="radio-button-on-outline" size={13} color={mapMode === MAP_MODES.ACTIVE ? '#fff' : theme.text} />
-            <AppText variant="caption" style={{ color: mapMode === MAP_MODES.ACTIVE ? '#fff' : theme.text, marginLeft: 4 }}>Active</AppText>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[mapStyles.modeButton, { backgroundColor: mapMode === MAP_MODES.RESOLVED ? theme.primary : 'transparent' }]}
-            onPress={() => setMapMode(MAP_MODES.RESOLVED)}
-          >
-            <Ionicons name="shield-checkmark-outline" size={13} color={mapMode === MAP_MODES.RESOLVED ? '#fff' : theme.text} />
-            <AppText variant="caption" style={{ color: mapMode === MAP_MODES.RESOLVED ? '#fff' : theme.text, marginLeft: 4 }}>Resolved</AppText>
-          </TouchableOpacity>
-        </View>
-
-        {mapMode === MAP_MODES.ACTIVE ? (
-          <TimeframeSelector
-            selectedTimeframe={selectedTimeframe}
-            onSelectTimeframe={setSelectedTimeframe}
+          <CategoryFilterBar
+            categoryDisplay={CATEGORY_DISPLAY}
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
           />
-        ) : null}
+
+          {mapMode === MAP_MODES.ACTIVE ? (
+            <TimeframeSelector
+              selectedTimeframe={selectedTimeframe}
+              onSelectTimeframe={setSelectedTimeframe}
+            />
+          ) : null}
+        </View>
       </View>
 
       {showMapHint ? (
         <View
           style={[
             mapStyles.mapHintWrap,
-            { backgroundColor: `${theme.card}e8`, borderColor: theme.border },
+            { top: headerHeight + 6, backgroundColor: `${theme.card}e8`, borderColor: theme.border },
           ]}
         >
           <Ionicons

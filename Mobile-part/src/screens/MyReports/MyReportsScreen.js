@@ -64,17 +64,19 @@ const MyReportsScreen = ({ navigation }) => {
 
   return (
     <View style={[myReportsStyles.container, { backgroundColor: theme.background }]}> 
-      <LinearGradient
-        colors={[theme.primaryLight || 'rgba(29,78,216,0.14)', 'rgba(255,255,255,0)']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={[myReportsStyles.headerBand, { borderColor: theme.border }]}
-      >
-        <AppText variant="h4" style={[myReportsStyles.headerTitle, { color: theme.text }]}>My reports</AppText>
-        <AppText variant="caption" style={[myReportsStyles.headerCount, { color: theme.textSecondary }]}> 
-          {totalReports} total
-        </AppText>
-      </LinearGradient>
+      <View style={[myReportsStyles.headerBand, { borderColor: theme.border }]}>
+        <LinearGradient
+          colors={[theme.primaryLight || 'rgba(29,78,216,0.14)', 'rgba(255,255,255,0)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={myReportsStyles.headerBandGradient}
+        >
+          <AppText variant="h4" style={[myReportsStyles.headerTitle, { color: theme.text }]}>My reports</AppText>
+          <AppText variant="caption" style={[myReportsStyles.headerCount, { color: theme.textSecondary }]}>
+            {totalReports} total
+          </AppText>
+        </LinearGradient>
+      </View>
 
       <StatusFilterBar selectedFilter={selectedFilter} onSelectFilter={setSelectedFilter} />
 

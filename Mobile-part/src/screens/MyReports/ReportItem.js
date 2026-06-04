@@ -103,8 +103,7 @@ const ReportItem = ({ item, onPress, onLongPress }) => {
           style={[
             styles.incidentCardInner,
             {
-              borderColor: theme.border,
-              borderLeftColor: getSeverityColor(item.severity, theme),
+              borderColor: getSeverityColor(item.severity, theme),
               backgroundColor: theme.card,
               transform: [{ scale: pressed ? 0.985 : 1 }],
             },

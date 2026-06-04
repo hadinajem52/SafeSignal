@@ -2,7 +2,7 @@ import React from 'react';
 import { Image, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { AppText, Card } from '../../components';
+import { AppText } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import styles from './accountStyles';
 
@@ -18,11 +18,12 @@ const ProfileHeader = ({
   const { theme } = useTheme();
 
   return (
-    <Card style={[styles.profileHeader, { backgroundColor: theme.card, borderColor: theme.border }]}> 
+    <View style={[styles.profileHeader, { backgroundColor: theme.card, borderColor: theme.border, shadowColor: theme.shadow }]}>
       <LinearGradient
-        colors={[theme.primaryLight || 'rgba(29,78,216,0.15)', 'rgba(255,255,255,0)']}
+        colors={[`${theme.primary}29`, `${theme.primary}0A`, `${theme.primary}00`]}
+        locations={[0, 0.5, 1]}
         start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+        end={{ x: 1, y: 0.9 }}
         style={styles.profileHeaderGradient}
       >
         <View style={styles.profileRow}>
@@ -57,7 +58,7 @@ const ProfileHeader = ({
           </View>
         </View>
       </LinearGradient>
-    </Card>
+    </View>
   );
 };
 

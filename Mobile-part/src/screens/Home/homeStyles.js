@@ -40,13 +40,17 @@ const homeStyles = StyleSheet.create({
   },
 
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginTop: 34,
     marginBottom: 16,
     borderRadius: 18,
     borderWidth: 1,
+    overflow: 'hidden',
+  },
+  headerGradient: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderRadius: 17,
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
@@ -160,13 +164,7 @@ const homeStyles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 12,
     alignItems: 'center',
-    borderWidth: 1,
-  },
-  activeCard: {
-    borderTopWidth: 3,
-  },
-  resolvedCard: {
-    borderTopWidth: 3,
+    borderWidth: 1.5,
   },
   quickStatIconWrap: {
     width: 38,
@@ -207,8 +205,7 @@ const homeStyles = StyleSheet.create({
     width: 250,
     marginRight: 10,
     padding: 12,
-    borderWidth: 1,
-    borderLeftWidth: 3,
+    borderWidth: 1.5,
     flexDirection: 'row',
     alignItems: 'center',
   },

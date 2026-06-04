@@ -15,11 +15,9 @@ const QuickStatsRow = ({ quickStats, onMapPress }) => {
           <View
             style={[
               styles.quickStatCard,
-              styles.activeCard,
               {
                 backgroundColor: theme.card,
-                borderColor: theme.border,
-                borderTopColor: theme.safetyPoor,
+                borderColor: theme.safetyPoor,
                 transform: [{ scale: pressed ? 0.985 : 1 }],
               },
             ]}
@@ -42,16 +40,14 @@ const QuickStatsRow = ({ quickStats, onMapPress }) => {
           <View
             style={[
               styles.quickStatCard,
-              styles.resolvedCard,
               {
                 backgroundColor: theme.card,
-                borderColor: theme.border,
-                borderTopColor: theme.safetyGood,
+                borderColor: theme.safetyGood,
                 transform: [{ scale: pressed ? 0.985 : 1 }],
               },
             ]}
           >
-            <View style={[styles.quickStatIconWrap, { backgroundColor: `${theme.safetyGood}15` }]}> 
+            <View style={[styles.quickStatIconWrap, { backgroundColor: `${theme.safetyGood}15` }]}>
               <Ionicons name="checkmark-circle-outline" size={20} color={theme.safetyGood} style={styles.quickStatIcon} />
             </View>
             <AppText variant="h1" style={[styles.quickStatNumber, { color: theme.text }]}> 
