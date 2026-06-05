@@ -1,9 +1,5 @@
 import React from 'react';
-import { View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { AppText, Button } from '../../components';
-import { useTheme } from '../../context/ThemeContext';
-import styles from './myReportsStyles';
+import { EmptyState, EMPTY_ART } from '../../components';
 
 const getEmptyMessage = (selectedFilter) => {
   if (selectedFilter === 'all') {
@@ -15,21 +11,15 @@ const getEmptyMessage = (selectedFilter) => {
   return `You have no ${selectedFilter} reports.`;
 };
 
-const EmptyReportsState = ({ selectedFilter, onReportPress }) => {
-  const { theme } = useTheme();
-
-  return (
-    <View style={styles.emptyContainer}>
-      <View style={[styles.emptyIconWrap, { backgroundColor: theme.primaryLight }]}> 
-        <Ionicons name="document-text-outline" size={28} color={theme.primary} />
-      </View>
-      <AppText variant="h4" style={[styles.emptyTitle, { color: theme.text }]}>No reports yet</AppText>
-      <AppText variant="body" style={[styles.emptyText, { color: theme.textSecondary }]}> 
-        {getEmptyMessage(selectedFilter)}
-      </AppText>
-      <Button title="Submit your first report" onPress={onReportPress} style={styles.reportButton} />
-    </View>
-  );
-};
+const EmptyReportsState = ({ selectedFilter, onReportPress }) => (
+  <EmptyState
+    illustration={selectedFilter === 'all' ? EMPTY_ART.reports : EMPTY_ART.search}
+    title="No reports yet"
+    message={getEmptyMessage(selectedFilter)}
+    actionLabel="Submit your first report"
+    onAction={onReportPress}
+    style={{ paddingVertical: 70 }}
+  />
+);
 
 export default EmptyReportsState;

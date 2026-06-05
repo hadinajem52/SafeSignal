@@ -12,6 +12,7 @@ import {
   StatusBadge,
   IncidentTimeline,
   IncidentVideoPlayer,
+  IncidentIllustration,
 } from '../components';
 import { normalizeClosureDetails } from '../utils/incidentUtils';
 import { useTheme } from '../context/ThemeContext';
@@ -128,6 +129,13 @@ const IncidentDetailScreen = ({ route, navigation }) => {
         showsVerticalScrollIndicator={false}
       >
       <Card style={styles.headerCard}>
+        {!videoUrl ? (
+          <IncidentIllustration
+            category={detailIncident.category}
+            size={150}
+            style={{ alignSelf: 'center', marginBottom: 12 }}
+          />
+        ) : null}
         <View style={styles.headerRow}>
           <View style={[styles.categoryBadge, { backgroundColor: theme.surface }]}> 
             <Ionicons name={categoryConfig.mapIcon || 'help-circle-outline'} size={15} color={theme.primary} style={styles.categoryIcon} />

@@ -10,7 +10,7 @@ import useUserPreferences from "../../hooks/useUserPreferences";
 import incidentConstants from "../../../../constants/incident";
 import useIncidentFilters from "../../hooks/useIncidentFilters";
 import useMapRegion from "../../hooks/useMapRegion";
-import { AppText, Button, MapLegend } from "../../components";
+import { AppText, MapLegend, EmptyState, EMPTY_ART } from "../../components";
 import CategoryFilterBar from "./CategoryFilterBar";
 import IncidentMapDetail from "./IncidentMapDetail";
 import MapControls from "./MapControls";
@@ -227,26 +227,13 @@ const MapScreen = () => {
 
   if (error && !loading && incidents.length === 0) {
     return (
-      <View
-        style={[
-          mapStyles.centerContainer,
-          { backgroundColor: theme.background },
-        ]}
-      >
-        <Ionicons name="alert-circle" size={64} color={theme.error} />
-        <AppText
-          variant="body"
-          style={[mapStyles.errorText, { color: theme.textSecondary }]}
-        >
-          {error}
-        </AppText>
-        <Button
-          title="Retry"
-          onPress={() => fetchIncidents()}
-          style={[
-            mapStyles.retryButton,
-            { backgroundColor: theme.mapMarkerDefault },
-          ]}
+      <View style={[mapStyles.centerContainer, { backgroundColor: theme.background }]}>
+        <EmptyState
+          illustration={EMPTY_ART.errorNetwork}
+          title="Connection lost"
+          message={error}
+          actionLabel="Retry"
+          onAction={() => fetchIncidents()}
         />
       </View>
     );
