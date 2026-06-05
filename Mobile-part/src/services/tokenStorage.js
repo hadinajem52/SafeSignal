@@ -24,16 +24,6 @@ export const tokenStorage = {
     }
   },
 
-  async removeToken() {
-    try {
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
-      return true;
-    } catch (error) {
-      logger.error('Error removing token:', error);
-      return false;
-    }
-  },
-
   async setUser(user) {
     try {
       await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
@@ -54,18 +44,17 @@ export const tokenStorage = {
     }
   },
 
-  async removeUser() {
+  async clearAll() {
+    try {
+      await SecureStore.deleteItemAsync(TOKEN_KEY);
+    } catch (error) {
+      logger.error('Error removing token:', error);
+    }
+
     try {
       await SecureStore.deleteItemAsync(USER_KEY);
-      return true;
     } catch (error) {
       logger.error('Error removing user data:', error);
-      return false;
     }
-  },
-
-  async clearAll() {
-    await this.removeToken();
-    await this.removeUser();
   },
 };
