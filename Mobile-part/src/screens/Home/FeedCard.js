@@ -1,10 +1,11 @@
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { AppText, SeverityBadge } from '../../components';
+import { AppText, SeverityBadge, IncidentIllustration } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import incidentConstants from '../../../../constants/incident';
 import { formatTimeAgo } from '../../utils/dateUtils';
+import FeedCardMedia from './FeedCardMedia';
 
 const { CATEGORY_DISPLAY } = incidentConstants;
 
@@ -23,7 +24,17 @@ const FeedCard = ({ incident, onPress }) => {
     colorKey: 'textSecondary',
   };
   const outcomeColor = theme[outcome.colorKey] || theme.textSecondary;
-  const hasVideo = Boolean(incident.video_url || incident.videoUrl);
+  const videoUrl = incident.video_url || incident.videoUrl;
+  const hasVideo = Boolean(videoUrl);
+  const photoUrls = Array.isArray(incident.photo_urls)
+    ? incident.photo_urls
+    : Array.isArray(incident.photoUrls)
+      ? incident.photoUrls
+      : [];
+  const media = [
+    ...photoUrls.filter(Boolean).map((url) => ({ type: 'image', url })),
+    ...(videoUrl ? [{ type: 'video', url: videoUrl }] : []),
+  ];
 
   return (
     <TouchableOpacity
@@ -50,6 +61,15 @@ const FeedCard = ({ incident, onPress }) => {
       >
         {incident.title}
       </AppText>
+
+      {/* Media (Instagram-style) when present, else the category illustration */}
+      {media.length > 0 ? (
+        <FeedCardMedia media={media} />
+      ) : (
+        <View style={styles.illustrationWrap}>
+          <IncidentIllustration category={incident.category} size={150} />
+        </View>
+      )}
 
       {/* Outcome + meta row */}
       <View style={styles.metaRow}>
@@ -121,6 +141,12 @@ const styles = StyleSheet.create({
   title: {
     marginBottom: 10,
     lineHeight: 20,
+  },
+  illustrationWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    paddingVertical: 4,
   },
   metaRow: {
     flexDirection: 'row',

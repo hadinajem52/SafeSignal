@@ -12,7 +12,7 @@ import useIncidentForm from "../hooks/useIncidentForm";
 import useLocationPicker from "../hooks/useLocationPicker";
 import useUserPreferences from "../hooks/useUserPreferences";
 import incidentConstants from "../../../constants/incident";
-import { AppText, Button, ConfirmModal } from "../components";
+import { AppText, Button, ConfirmModal, IncidentIllustration } from "../components";
 import {
   IncidentCategoryPicker,
   IncidentSeverityPicker,
@@ -537,6 +537,12 @@ const ReportIncidentScreen = ({ navigation, route }) => {
             error={errors.category}
           />
         )}
+
+        {showCategoryPicker && selectedCategory ? (
+          <View style={{ alignItems: 'center', marginTop: -8, marginBottom: 20 }}>
+            <IncidentIllustration category={selectedCategory} size={130} />
+          </View>
+        ) : null}
 
         {showSeverityPicker && (
           <IncidentSeverityPicker

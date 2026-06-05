@@ -16,6 +16,7 @@ import { useAuth } from '../context/AuthContext';
 import io from 'socket.io-client';
 import { tokenStorage } from '../services/api';
 import getSocketUrl from '../utils/socketUrl';
+import EmptyState, { EMPTY_ART } from './EmptyState';
 
 const IncidentTimeline = ({ incidentId }) => {
   const { theme } = useTheme();
@@ -230,12 +231,14 @@ const IncidentTimeline = ({ incidentId }) => {
 
   if (error) {
     return (
-      <View style={styles.centerContainer}>
-        <Text style={[styles.errorText, { color: theme.error }]}>{error}</Text>
-        <TouchableOpacity onPress={loadTimeline} style={styles.retryButton}>
-          <Text style={[styles.retryText, { color: theme.primary }]}>Retry</Text>
-        </TouchableOpacity>
-      </View>
+      <EmptyState
+        illustration={EMPTY_ART.errorGeneric}
+        title="Couldn't load updates"
+        message={error}
+        actionLabel="Retry"
+        onAction={loadTimeline}
+        size={150}
+      />
     );
   }
 
@@ -253,11 +256,12 @@ const IncidentTimeline = ({ incidentId }) => {
         showsVerticalScrollIndicator={false}
       >
         {timeline.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-              No messages yet. Start the conversation!
-            </Text>
-          </View>
+          <EmptyState
+            illustration={EMPTY_ART.timeline}
+            title="No messages yet"
+            message="Witness updates and status changes appear here."
+            size={150}
+          />
         ) : (
           timeline.map((item, index) => renderTimelineItem(item, index))
         )}

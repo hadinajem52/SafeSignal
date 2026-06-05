@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { AppText } from '../../components';
+import { AppText, EmptyState, EMPTY_ART } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import useFeed from '../../hooks/useFeed';
 import FeedCard from './FeedCard';
@@ -36,14 +36,6 @@ const FilterChip = ({ item, active, onPress, theme }) => (
   </TouchableOpacity>
 );
 
-const EMPTY_MESSAGES = {
-  default: 'No community reports yet. Check back later.',
-  resolved_handled: 'No resolved reports yet. Check back later.',
-  arrest_made: 'No arrest reports yet. Check back later.',
-  false_alarm: 'No false alarm reports yet. Check back later.',
-  report_filed: 'No filed reports yet. Check back later.',
-};
-
 const CommunityFeed = ({
   navigation,
   ListHeaderComponent = null,
@@ -65,7 +57,6 @@ const CommunityFeed = ({
     refresh,
     loadMore,
   } = useFeed(filters);
-  const emptyMessage = EMPTY_MESSAGES[activeFilter] || EMPTY_MESSAGES.default;
   const isRefreshing = refreshing || externalRefreshing;
 
   const handleCardPress = (incident) => {
@@ -138,22 +129,24 @@ const CommunityFeed = ({
 
     if (error) {
       return (
-        <AppText
-          variant="bodySmall"
-          style={{ color: theme.error, textAlign: 'center', marginTop: 16 }}
-        >
-          {error}
-        </AppText>
+        <EmptyState
+          illustration={EMPTY_ART.errorNetwork}
+          title="Connection lost"
+          message={error}
+          actionLabel="Try again"
+          onAction={refresh}
+          size={160}
+        />
       );
     }
 
     return (
-      <AppText
-        variant="bodySmall"
-        style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 16 }}
-      >
-        {emptyMessage}
-      </AppText>
+      <EmptyState
+        illustration={activeFilter ? EMPTY_ART.search : EMPTY_ART.feed}
+        title={activeFilter ? 'Nothing matches' : 'No community reports yet'}
+        message={activeFilter ? 'Try a different filter.' : 'Check back later.'}
+        size={160}
+      />
     );
   };
 
