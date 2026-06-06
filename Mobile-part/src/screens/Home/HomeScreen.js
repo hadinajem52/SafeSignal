@@ -10,6 +10,7 @@ import { AppText, Card } from '../../components';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import useDashboardData from '../../hooks/useDashboardData';
+import useNotifications from '../../hooks/useNotifications';
 import CommunityFeed from './CommunityFeed';
 import QuickStatsRow from './QuickStatsRow';
 import SafetyScoreCard from './SafetyScoreCard';
@@ -20,6 +21,7 @@ const HomeScreen = ({ navigation }) => {
   const { user } = useAuth();
   const { theme } = useTheme();
   const tabBarHeight = useBottomTabBarHeight();
+  const { unreadCount } = useNotifications();
   const {
     loading,
     refreshing,
@@ -67,9 +69,22 @@ const HomeScreen = ({ navigation }) => {
               Stay informed. Stay safe.
             </AppText>
           </View>
-          <View style={[styles.logoContainer, { backgroundColor: theme.primary }]}>
-            <Ionicons name="shield-checkmark" size={24} color="#FFFFFF" />
-          </View>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('Notifications')}
+            accessibilityRole="button"
+            accessibilityLabel={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
+            style={[styles.logoContainer, { backgroundColor: theme.primary }]}
+          >
+            <Ionicons name="notifications" size={24} color="#FFFFFF" />
+            {unreadCount > 0 ? (
+              <View style={[styles.notifBadge, { backgroundColor: theme.error, borderColor: theme.primary }]}>
+                <AppText variant="caption" style={styles.notifBadgeText}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </AppText>
+              </View>
+            ) : null}
+          </TouchableOpacity>
         </LinearGradient>
       </View>
 
@@ -134,7 +149,7 @@ const HomeScreen = ({ navigation }) => {
         </Card>
       ) : null}
     </>
-  ), [user, theme, activeNearbyCount, safetyScore, location, safetyScoreUnavailableReason, showEnableLocationCta, dashboardData, error, onRefresh, navigation, refreshing, witnessPromptCount, firstNearbyConstellationId, witnessPrompts]);
+  ), [user, theme, activeNearbyCount, safetyScore, location, safetyScoreUnavailableReason, showEnableLocationCta, dashboardData, error, onRefresh, navigation, refreshing, witnessPromptCount, firstNearbyConstellationId, witnessPrompts, unreadCount]);
 
   if (loading) {
     return (

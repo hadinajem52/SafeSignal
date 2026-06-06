@@ -8,6 +8,74 @@ const logger = require('../utils/logger');
 const ServiceError = require('../utils/ServiceError');
 const { emitToUser } = require('../utils/socketService');
 const settingsService = require('./settingsService');
+const notificationInboxService = require('./notificationInboxService');
+
+/** Derive the title/body used for both persisted inbox rows and live payloads. */
+function deriveInboxContent(eventName, payload = {}) {
+  if (eventName === 'notification:report_alert') {
+    const severity = payload.severity ? String(payload.severity).toUpperCase() : 'HIGH';
+    return {
+      title: `High Priority Incident #${payload.incidentId || ''}`.trim(),
+      body: `[${severity}] ${payload.title || 'New incident requires attention'}`,
+    };
+  }
+
+  if (eventName === 'notification:report_update') {
+    return {
+      title: payload.notificationTitle || `Report #${payload.incidentId || ''} updated`.trim(),
+      body: payload.message || 'One of your reports was updated.',
+    };
+  }
+
+  if (eventName === 'notification:weekly_digest') {
+    const summary = payload.summary || {};
+    const total = summary.totalReports ?? 0;
+    const highPriority = summary.highPriorityReports ?? 0;
+    return {
+      title: 'Weekly Digest Ready',
+      body: `${total} total reports this week, ${highPriority} high-priority.`,
+    };
+  }
+
+  if (eventName === 'notification:email') {
+    return {
+      title: payload.subject || 'SafeSignal Update',
+      body: payload.message || 'You have a new update.',
+    };
+  }
+
+  return {
+    title: 'SafeSignal Notification',
+    body: payload.message || 'You have a new notification.',
+  };
+}
+
+/**
+ * Persist a notification to the user's inbox, then deliver it live over the
+ * socket. Persisting first guarantees the row exists before the client reacts
+ * to the live event and refetches. Best-effort persistence (never rejects).
+ */
+async function dispatchToUser(userId, eventName, payload) {
+  const { title, body } = deriveInboxContent(eventName, payload);
+  const payloadWithContent = {
+    ...payload,
+    notificationTitle: payload?.notificationTitle || title,
+    notificationBody: payload?.notificationBody || body,
+  };
+
+  await notificationInboxService.recordNotification(userId, {
+    eventName,
+    title,
+    body,
+    incidentId: payload?.incidentId || null,
+    data: {
+      eventName,
+      incidentId: payload?.incidentId ? String(payload.incidentId) : '',
+    },
+  });
+
+  emitToUser(userId, eventName, payloadWithContent);
+}
 
 const STAFF_ROLES = ['moderator', 'admin', 'law_enforcement'];
 const ALERT_SEVERITIES = new Set(['high', 'critical']);
@@ -150,7 +218,7 @@ async function notifyReporterIncidentEvent(eventType, incident, metadata = {}) {
   }
 
   const content = buildReporterStatusContent(incident, metadata);
-  emitToUser(incident.reporter_id, 'notification:report_update', {
+  await dispatchToUser(incident.reporter_id, 'notification:report_update', {
     incidentId: incident.incident_id,
     title: incident.title,
     status: nextStatus,
@@ -176,18 +244,19 @@ async function notifyStaffIncidentEvent(eventType, incident, metadata = {}) {
   let emailQueued = 0;
   let reportAlertsSent = 0;
   let notifiedUsers = 0;
+  const pendingPersists = [];
 
   recipients.forEach((recipient) => {
     let userNotified = false;
 
     if (recipient.email_notifications) {
-      emitToUser(recipient.user_id, 'notification:email', {
+      pendingPersists.push(dispatchToUser(recipient.user_id, 'notification:email', {
         incidentId: incident.incident_id,
         eventType,
         subject: emailContent.subject,
         message: emailContent.message,
         timestamp: new Date().toISOString(),
-      });
+      }));
       emailQueued += 1;
       userNotified = true;
 
@@ -197,7 +266,7 @@ async function notifyStaffIncidentEvent(eventType, incident, metadata = {}) {
     }
 
     if (eventType === 'incident:new' && ALERT_SEVERITIES.has(incident.severity) && recipient.report_alerts) {
-      emitToUser(recipient.user_id, 'notification:report_alert', {
+      pendingPersists.push(dispatchToUser(recipient.user_id, 'notification:report_alert', {
         incidentId: incident.incident_id,
         title: incident.title,
         severity: incident.severity,
@@ -205,7 +274,7 @@ async function notifyStaffIncidentEvent(eventType, incident, metadata = {}) {
         incidentDate: incident.incident_date,
         locationName: incident.location_name || null,
         timestamp: new Date().toISOString(),
-      });
+      }));
       reportAlertsSent += 1;
       userNotified = true;
     }
@@ -214,6 +283,8 @@ async function notifyStaffIncidentEvent(eventType, incident, metadata = {}) {
       notifiedUsers += 1;
     }
   });
+
+  await Promise.all(pendingPersists);
 
   return {
     notifiedUsers,
@@ -286,9 +357,10 @@ async function sendWeeklyDigestToEligibleStaff({ force = false } = {}) {
 
   const timestamp = new Date().toISOString();
   const recipientIds = [];
+  const pendingPersists = [];
 
   recipients.forEach((recipient) => {
-    emitToUser(recipient.user_id, 'notification:weekly_digest', {
+    pendingPersists.push(dispatchToUser(recipient.user_id, 'notification:weekly_digest', {
       generatedAt: timestamp,
       periodDays: 7,
       summary: {
@@ -298,15 +370,15 @@ async function sendWeeklyDigestToEligibleStaff({ force = false } = {}) {
         rejectedReports: summary.rejected_reports,
         openReports: summary.open_reports,
       },
-    });
+    }));
 
     if (recipient.email_notifications) {
-      emitToUser(recipient.user_id, 'notification:email', {
+      pendingPersists.push(dispatchToUser(recipient.user_id, 'notification:email', {
         eventType: 'weekly_digest',
         subject: 'Weekly moderation digest',
         message: `Weekly summary: ${summary.total_reports} new reports, ${summary.high_priority_reports} high-priority.`,
         timestamp,
-      });
+      }));
 
       logger.info(`Weekly digest email queued for user ${recipient.user_id} (${recipient.email})`);
     }
@@ -314,6 +386,7 @@ async function sendWeeklyDigestToEligibleStaff({ force = false } = {}) {
     recipientIds.push(recipient.user_id);
   });
 
+  await Promise.all(pendingPersists);
   await updateLastDigestSent(recipientIds);
 
   return {
@@ -331,7 +404,7 @@ async function sendWeeklyDigestForUser(userId) {
   const summary = await buildWeeklyDigestSummary();
   const timestamp = new Date().toISOString();
 
-  emitToUser(userId, 'notification:weekly_digest', {
+  await dispatchToUser(userId, 'notification:weekly_digest', {
     generatedAt: timestamp,
     periodDays: 7,
     summary: {
@@ -344,7 +417,7 @@ async function sendWeeklyDigestForUser(userId) {
   });
 
   if (settings.emailNotifications) {
-    emitToUser(userId, 'notification:email', {
+    await dispatchToUser(userId, 'notification:email', {
       eventType: 'weekly_digest',
       subject: 'Weekly moderation digest',
       message: `Weekly summary: ${summary.total_reports} new reports, ${summary.high_priority_reports} high-priority.`,
