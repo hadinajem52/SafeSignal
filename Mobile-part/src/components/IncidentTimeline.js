@@ -4,12 +4,13 @@ import {
   Text,
   TextInput,
   ScrollView,
-  TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { timelineAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -17,6 +18,39 @@ import io from 'socket.io-client';
 import { tokenStorage } from '../services/api';
 import getSocketUrl from '../utils/socketUrl';
 import EmptyState, { EMPTY_ART } from './EmptyState';
+import PressableScale from './PressableScale';
+import { haptics } from '../utils/haptics';
+import { fontFamilies } from '../../../constants/typography';
+
+// Stable, friendly avatar tints for non-staff participants (staff use theme.info).
+const AVATAR_COLORS = ['#2563EB', '#7C3AED', '#0D9488', '#DB2777', '#D97706', '#0EA5E9', '#16A34A'];
+
+const hashStr = (str) => {
+  let h = 0;
+  for (let i = 0; i < str.length; i += 1) {
+    h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  }
+  return h;
+};
+
+const getInitials = (name = '') => {
+  const parts = String(name).trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
+// Pick a readable text color for content sitting on a solid color (own bubble,
+// send button) so it works whether the accent is light (dark teal) or dark (blue).
+const readableOn = (hex) => {
+  const c = typeof hex === 'string' ? hex.replace('#', '') : '';
+  if (c.length < 6) return '#FFFFFF';
+  const r = parseInt(c.slice(0, 2), 16);
+  const g = parseInt(c.slice(2, 4), 16);
+  const b = parseInt(c.slice(4, 6), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.62 ? '#0B1220' : '#FFFFFF';
+};
 
 const IncidentTimeline = ({ incidentId }) => {
   const { theme } = useTheme();
@@ -26,6 +60,8 @@ const IncidentTimeline = ({ incidentId }) => {
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState(null);
+  const [connected, setConnected] = useState(false);
+  const [focused, setFocused] = useState(false);
   const scrollViewRef = useRef(null);
   const socketRef = useRef(null);
 
@@ -44,15 +80,15 @@ const IncidentTimeline = ({ incidentId }) => {
   const loadTimeline = async () => {
     setLoading(true);
     setError(null);
-    
+
     const result = await timelineAPI.getTimeline(incidentId);
-    
+
     if (result.success) {
       setTimeline(result.data);
     } else {
       setError(result.error);
     }
-    
+
     setLoading(false);
   };
 
@@ -67,23 +103,23 @@ const IncidentTimeline = ({ incidentId }) => {
       });
 
       socket.on('connect', () => {
-        console.log('Socket connected for incident timeline');
         socket.emit('join_incident', { incidentId });
+        setConnected(true);
+      });
+
+      socket.on('disconnect', () => {
+        setConnected(false);
       });
 
       socket.on('comment:new', (comment) => {
-        setTimeline((prev) => [...prev, comment].sort((a, b) => 
+        setTimeline((prev) => [...prev, comment].sort((a, b) =>
           new Date(a.created_at) - new Date(b.created_at)
         ));
-        
+
         // Scroll to bottom when new comment arrives
         setTimeout(() => {
           scrollViewRef.current?.scrollToEnd({ animated: true });
         }, 100);
-      });
-
-      socket.on('joined_incident', () => {
-        console.log('Joined incident room:', incidentId);
       });
 
       socket.on('error', (err) => {
@@ -99,6 +135,7 @@ const IncidentTimeline = ({ incidentId }) => {
   const handleSend = async () => {
     if (!message.trim() || sending) return;
 
+    haptics.light();
     setSending(true);
     const messageText = message.trim();
     setMessage('');
@@ -118,16 +155,16 @@ const IncidentTimeline = ({ incidentId }) => {
     const now = new Date();
     const diffMs = now - date;
     const diffMins = Math.floor(diffMs / 60000);
-    
+
     if (diffMins < 1) return 'Just now';
     if (diffMins < 60) return `${diffMins}m ago`;
-    
+
     const diffHours = Math.floor(diffMins / 60);
     if (diffHours < 24) return `${diffHours}h ago`;
-    
+
     const diffDays = Math.floor(diffHours / 24);
     if (diffDays < 7) return `${diffDays}d ago`;
-    
+
     return date.toLocaleDateString();
   };
 
@@ -149,81 +186,97 @@ const IncidentTimeline = ({ incidentId }) => {
     return `Status changed - ${noteText}`;
   };
 
-  const renderTimelineItem = (item, index) => {
-    const isSystemMessage = item.item_type === 'system';
-    const isOwnMessage = item.user_id === user?.userId;
+  // Maps a system event to display copy + an icon/color so the activity stream
+  // reads as a proper timeline rather than a list of italic lines.
+  const getSystemMeta = (item) => {
+    switch (item.action_type) {
+      case 'verified':
+        return { label: 'Report verified by moderator', icon: 'shield-checkmark', color: theme.success };
+      case 'rejected':
+        return { label: `Report rejected${item.notes ? ` · ${item.notes}` : ''}`, icon: 'close-circle', color: theme.error };
+      case 'needs_info':
+        return { label: 'Additional information requested', icon: 'help-circle', color: theme.warning };
+      case 'status_changed': {
+        const label = getStatusChangedMessage(item.notes);
+        const resolved = label === 'Incident resolved by law enforcement';
+        return { label, icon: resolved ? 'shield-checkmark' : 'sync', color: resolved ? theme.success : theme.info };
+      }
+      default:
+        return { label: `Action: ${item.action_type}`, icon: 'ellipse', color: theme.textTertiary };
+    }
+  };
 
-    if (isSystemMessage) {
+  const renderTimelineItem = (item, index) => {
+    const key = item.id || item.comment_id || `${item.created_at}-${index}`;
+
+    if (item.item_type === 'system') {
+      const meta = getSystemMeta(item);
       return (
-        <View key={index} style={styles.systemMessageContainer}>
-          <Text style={[styles.systemMessageText, { color: theme.textSecondary }]}>
-            {getSystemMessage(item)}
-          </Text>
-          <Text style={[styles.timestampText, { color: theme.textSecondary }]}>
-            {formatTime(item.created_at)}
-          </Text>
-        </View>
+        <Animated.View key={key} entering={FadeIn.duration(220)} style={styles.systemRow}>
+          <View style={[styles.systemPill, { backgroundColor: theme.surface2, borderColor: theme.border }]}>
+            <View style={[styles.systemIcon, { backgroundColor: `${meta.color}26` }]}>
+              <Ionicons name={meta.icon} size={12} color={meta.color} />
+            </View>
+            <Text style={[styles.systemText, { color: theme.textSecondary }]} numberOfLines={3}>
+              {meta.label}
+            </Text>
+          </View>
+          <Text style={[styles.systemTime, { color: theme.textTertiary }]}>{formatTime(item.created_at)}</Text>
+        </Animated.View>
       );
     }
 
+    const isOwnMessage = item.user_id === user?.userId;
     const isStaff = ['moderator', 'admin', 'law_enforcement'].includes(item.role);
 
+    if (isOwnMessage) {
+      return (
+        <Animated.View key={key} entering={FadeIn.duration(220)} style={[styles.msgRow, styles.msgRowRight]}>
+          <View style={styles.bubbleColRight}>
+            <View style={[styles.bubble, styles.bubbleRight, { backgroundColor: theme.primary }]}>
+              <Text style={[styles.messageText, { color: readableOn(theme.primary) }]}>{item.content}</Text>
+            </View>
+            <Text style={[styles.timeText, styles.timeRight, { color: theme.textTertiary }]}>
+              {formatTime(item.created_at)}
+            </Text>
+          </View>
+        </Animated.View>
+      );
+    }
+
+    const avatarColor = isStaff
+      ? theme.info
+      : AVATAR_COLORS[hashStr(item.username || '?') % AVATAR_COLORS.length];
+
     return (
-      <View
-        key={index}
-        style={[
-          styles.messageContainer,
-          isOwnMessage ? styles.messageRight : styles.messageLeft,
-        ]}
-      >
-        {!isOwnMessage && (
-          <Text style={[styles.senderName, { color: isStaff ? '#3B82F6' : theme.textSecondary }]}>
-            {item.username} {isStaff && '(Staff)'}
-          </Text>
-        )}
-        <View
-          style={[
-            styles.messageBubble,
-            {
-              backgroundColor: isOwnMessage ? theme.primary : theme.card,
-              borderColor: theme.border,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.messageText,
-              { color: isOwnMessage ? '#FFFFFF' : theme.text },
-            ]}
-          >
-            {item.content}
+      <Animated.View key={key} entering={FadeIn.duration(220)} style={[styles.msgRow, styles.msgRowLeft]}>
+        <View style={[styles.avatar, { backgroundColor: `${avatarColor}26`, borderColor: `${avatarColor}55` }]}>
+          <Text style={[styles.avatarText, { color: avatarColor }]}>{getInitials(item.username)}</Text>
+        </View>
+        <View style={styles.bubbleColLeft}>
+          <View style={styles.nameRow}>
+            <Text style={[styles.senderName, { color: theme.text }]} numberOfLines={1}>{item.username}</Text>
+            {isStaff ? (
+              <View style={[styles.staffChip, { backgroundColor: `${theme.info}1F` }]}>
+                <Ionicons name="shield-checkmark" size={9} color={theme.info} />
+                <Text style={[styles.staffText, { color: theme.info }]}>Staff</Text>
+              </View>
+            ) : null}
+          </View>
+          <View style={[styles.bubble, styles.bubbleLeft, { backgroundColor: theme.surface2, borderColor: theme.border }]}>
+            <Text style={[styles.messageText, { color: theme.text }]}>{item.content}</Text>
+          </View>
+          <Text style={[styles.timeText, styles.timeLeft, { color: theme.textTertiary }]}>
+            {formatTime(item.created_at)}
           </Text>
         </View>
-        <Text style={[styles.timestampText, { color: theme.textSecondary }]}>
-          {formatTime(item.created_at)}
-        </Text>
-      </View>
+      </Animated.View>
     );
-  };
-
-  const getSystemMessage = (item) => {
-    switch (item.action_type) {
-      case 'status_changed':
-        return getStatusChangedMessage(item.notes);
-      case 'verified':
-        return 'Report verified by moderator';
-      case 'rejected':
-        return `Report rejected ${item.notes ? `- ${item.notes}` : ''}`;
-      case 'needs_info':
-        return 'Additional information requested';
-      default:
-        return `Action: ${item.action_type}`;
-    }
   };
 
   if (loading) {
     return (
-      <View style={styles.centerContainer}>
+      <View style={[styles.centerContainer, { backgroundColor: theme.background }]}>
         <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
@@ -231,26 +284,42 @@ const IncidentTimeline = ({ incidentId }) => {
 
   if (error) {
     return (
-      <EmptyState
-        illustration={EMPTY_ART.errorGeneric}
-        title="Couldn't load updates"
-        message={error}
-        actionLabel="Retry"
-        onAction={loadTimeline}
-        size={150}
-      />
+      <View style={[styles.centerContainer, { backgroundColor: theme.background }]}>
+        <EmptyState
+          illustration={EMPTY_ART.errorGeneric}
+          title="Couldn't load updates"
+          message={error}
+          actionLabel="Retry"
+          onAction={loadTimeline}
+          size={140}
+        />
+      </View>
     );
   }
 
+  const canSend = Boolean(message.trim()) && !sending;
+
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
+      <View style={[styles.toolbar, { borderBottomColor: theme.border, backgroundColor: theme.card }]}>
+        <View style={styles.toolbarLeft}>
+          <View style={[styles.liveDot, { backgroundColor: connected ? theme.success : theme.textTertiary }]} />
+          <Text style={[styles.toolbarText, { color: theme.textSecondary }]}>
+            {connected ? 'Live' : 'Connecting…'}
+          </Text>
+        </View>
+        <Text style={[styles.toolbarCount, { color: theme.textTertiary }]}>
+          {timeline.length} {timeline.length === 1 ? 'update' : 'updates'}
+        </Text>
+      </View>
+
       <ScrollView
         ref={scrollViewRef}
-        style={{ backgroundColor: theme.background }}
+        style={styles.scroll}
         contentContainerStyle={styles.timelineContent}
         onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: false })}
         showsVerticalScrollIndicator={false}
@@ -260,37 +329,38 @@ const IncidentTimeline = ({ incidentId }) => {
             illustration={EMPTY_ART.timeline}
             title="No messages yet"
             message="Witness updates and status changes appear here."
-            size={150}
+            size={140}
           />
         ) : (
           timeline.map((item, index) => renderTimelineItem(item, index))
         )}
       </ScrollView>
 
-      <View style={[styles.inputContainer, { backgroundColor: theme.card, borderTopColor: theme.border }]}>
-        <TextInput
-          style={[styles.input, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border }]}
-          placeholder="Add a comment..."
-          placeholderTextColor={theme.textSecondary}
-          value={message}
-          onChangeText={setMessage}
-          multiline
-          maxLength={1000}
-        />
-        <TouchableOpacity
+      <View style={[styles.inputBar, { backgroundColor: theme.card, borderTopColor: theme.border }]}>
+        <View style={[styles.inputWrap, { backgroundColor: theme.background, borderColor: focused ? theme.primary : theme.border }]}>
+          <TextInput
+            style={[styles.input, { color: theme.text }]}
+            placeholder="Add a comment…"
+            placeholderTextColor={theme.inputPlaceholder || theme.textTertiary}
+            value={message}
+            onChangeText={setMessage}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            multiline
+            maxLength={1000}
+          />
+        </View>
+        <PressableScale
           onPress={handleSend}
-          disabled={!message.trim() || sending}
-          style={[
-            styles.sendButton,
-            { backgroundColor: message.trim() && !sending ? theme.primary : theme.border },
-          ]}
+          disabled={!canSend}
+          style={[styles.sendButton, { backgroundColor: canSend ? theme.primary : theme.surface2 }]}
         >
           {sending ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
+            <ActivityIndicator size="small" color={readableOn(theme.primary)} />
           ) : (
-            <Text style={styles.sendButtonText}>Send</Text>
+            <Ionicons name="arrow-up" size={20} color={canSend ? readableOn(theme.primary) : theme.textTertiary} />
           )}
-        </TouchableOpacity>
+        </PressableScale>
       </View>
     </KeyboardAvoidingView>
   );
@@ -300,106 +370,204 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  scroll: {
+    flex: 1,
+  },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
+
+  // Toolbar
+  toolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  toolbarLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  liveDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  toolbarText: {
+    fontFamily: fontFamilies.bodySemiBold,
+    fontSize: 12,
+    letterSpacing: 0.2,
+  },
+  toolbarCount: {
+    fontFamily: fontFamilies.bodyMedium,
+    fontSize: 11,
+  },
+
   timelineContent: {
-    padding: 16,
+    padding: 14,
+    paddingBottom: 18,
     flexGrow: 1,
   },
-  messageContainer: {
-    marginBottom: 16,
-    maxWidth: '80%',
+
+  // System events
+  systemRow: {
+    alignItems: 'center',
+    marginVertical: 10,
   },
-  messageLeft: {
+  systemPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    maxWidth: '92%',
+    paddingVertical: 7,
+    paddingHorizontal: 11,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  systemIcon: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  systemText: {
+    flexShrink: 1,
+    fontFamily: fontFamilies.bodyMedium,
+    fontSize: 12.5,
+    lineHeight: 17,
+    textAlign: 'center',
+  },
+  systemTime: {
+    fontFamily: fontFamilies.body,
+    fontSize: 10.5,
+    marginTop: 4,
+  },
+
+  // Chat rows
+  msgRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 14,
+    maxWidth: '86%',
+  },
+  msgRowLeft: {
     alignSelf: 'flex-start',
   },
-  messageRight: {
+  msgRowRight: {
     alignSelf: 'flex-end',
+    justifyContent: 'flex-end',
   },
-  senderName: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 4,
-    marginLeft: 4,
-  },
-  messageBubble: {
+  avatar: {
+    width: 32,
+    height: 32,
     borderRadius: 16,
-    padding: 12,
-    borderWidth: 1,
-  },
-  messageText: {
-    fontSize: 15,
-    lineHeight: 20,
-  },
-  timestampText: {
-    fontSize: 11,
-    marginTop: 4,
-    marginLeft: 4,
-  },
-  systemMessageContainer: {
     alignItems: 'center',
-    marginVertical: 12,
+    justifyContent: 'center',
+    borderWidth: 1,
+    marginRight: 8,
   },
-  systemMessageText: {
-    fontSize: 13,
-    fontStyle: 'italic',
-    textAlign: 'center',
+  avatarText: {
+    fontFamily: fontFamilies.bodyBold,
+    fontSize: 12,
   },
-  inputContainer: {
-    flexDirection: 'row',
-    padding: 12,
-    borderTopWidth: 1,
+  bubbleColLeft: {
+    flexShrink: 1,
+    alignItems: 'flex-start',
+  },
+  bubbleColRight: {
+    flexShrink: 1,
     alignItems: 'flex-end',
   },
-  input: {
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+    marginLeft: 2,
+  },
+  senderName: {
+    fontFamily: fontFamilies.bodySemiBold,
+    fontSize: 12.5,
+    flexShrink: 1,
+  },
+  staffChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  staffText: {
+    fontFamily: fontFamilies.bodySemiBold,
+    fontSize: 9.5,
+  },
+  bubble: {
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+    borderRadius: 18,
+  },
+  bubbleLeft: {
+    borderTopLeftRadius: 6,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  bubbleRight: {
+    borderTopRightRadius: 6,
+  },
+  messageText: {
+    fontFamily: fontFamilies.body,
+    fontSize: 14.5,
+    lineHeight: 20,
+  },
+  timeText: {
+    fontFamily: fontFamilies.body,
+    fontSize: 10.5,
+    marginTop: 4,
+  },
+  timeLeft: {
+    marginLeft: 4,
+  },
+  timeRight: {
+    marginRight: 4,
+  },
+
+  // Input
+  inputBar: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  inputWrap: {
     flex: 1,
     borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginRight: 8,
-    maxHeight: 100,
+    borderRadius: 22,
+    paddingHorizontal: 14,
+    paddingVertical: Platform.OS === 'ios' ? 8 : 2,
+    maxHeight: 110,
+    justifyContent: 'center',
+  },
+  input: {
+    fontFamily: fontFamilies.body,
     fontSize: 15,
+    maxHeight: 96,
+    padding: 0,
   },
   sendButton: {
-    borderRadius: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    justifyContent: 'center',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
-    minWidth: 60,
-  },
-  sendButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 15,
-  },
-  emptyContainer: {
-    flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  emptyText: {
-    fontSize: 15,
-    textAlign: 'center',
-  },
-  errorText: {
-    fontSize: 15,
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  retryButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-  },
-  retryText: {
-    fontSize: 15,
-    fontWeight: '600',
   },
 });
 
