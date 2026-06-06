@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, InteractionManager, StyleSheet, View } from 'react-native';
-import { VideoView, useVideoPlayer } from 'expo-video';
+import { VideoView, createVideoPlayer } from 'expo-video';
 import AppText from './Text';
 import { useTheme } from '../context/ThemeContext';
 import { resolveMediaUrl } from '../utils/mediaUtils';
@@ -26,8 +26,7 @@ const IncidentVideoPlayer = ({ videoUrl }) => {
       });
 
     // Defer mounting the native player until the screen push transition settles.
-    // Mounting expo-video mid-transition (and React's dev double-invoke) races the
-    // view teardown → "shared object already released" on the first open.
+    // Mounting expo-video mid-transition can race native view attachment.
     const task = InteractionManager.runAfterInteractions(() => {
       if (isActive) setReady(true);
     });
@@ -40,9 +39,8 @@ const IncidentVideoPlayer = ({ videoUrl }) => {
 
   if (!resolvedUrl) return null;
 
-  // Don't mount the player until (a) the auth token is resolved — otherwise the
-  // source flips from a URL string to a { uri, headers } object and releases the
-  // player — and (b) the screen has settled (see above).
+  // Don't mount the player until (a) the auth token is resolved and (b) the
+  // screen has settled (see above).
   if (token === undefined || !ready) {
     return (
       <View style={[styles.container, styles.loading, { borderColor: theme.border, backgroundColor: theme.surface }]}>
@@ -51,12 +49,12 @@ const IncidentVideoPlayer = ({ videoUrl }) => {
     );
   }
 
-  // key forces a clean remount (fresh player) when the video URL changes.
+  // key forces a clean remount when the video URL changes.
   return <VideoEvidenceCard key={resolvedUrl} resolvedUrl={resolvedUrl} theme={theme} token={token} />;
 };
 
 const VideoEvidenceCard = ({ resolvedUrl, theme, token }) => {
-  // Stable source for the player's lifetime — never recreated on re-render.
+  // Stable source for the player's lifetime.
   const source = useMemo(
     () =>
       token
@@ -65,9 +63,20 @@ const VideoEvidenceCard = ({ resolvedUrl, theme, token }) => {
     [resolvedUrl, token],
   );
 
-  const player = useVideoPlayer(source, (instance) => {
+  const player = useMemo(() => {
+    const instance = createVideoPlayer(source);
     instance.loop = false;
-  });
+    return instance;
+  }, [source]);
+
+  useEffect(() => {
+    return () => {
+      player.pause();
+      InteractionManager.runAfterInteractions(() => {
+        player.release();
+      });
+    };
+  }, [player]);
 
   return (
     <View style={[styles.container, { borderColor: theme.border, backgroundColor: theme.surface }]}>
