@@ -11,7 +11,7 @@ import {
   AppText,
   SeverityBadge,
   StatusBadge,
-  IncidentTimeline,
+  IncidentChatFab,
   IncidentVideoPlayer,
   IncidentIllustration,
   IncidentLocationMap,
@@ -153,7 +153,7 @@ const IncidentDetailScreen = ({ route, navigation }) => {
 
       <ScrollView
         style={styles.container}
-        contentContainerStyle={[styles.contentContainer, { paddingBottom: tabBarHeight + 8 }]}
+        contentContainerStyle={[styles.contentContainer, { paddingBottom: tabBarHeight + 96 }]}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={FadeInDown.duration(DURATION.page)}>
@@ -164,11 +164,7 @@ const IncidentDetailScreen = ({ route, navigation }) => {
             style={styles.heroGradient}
           >
             <View style={styles.medallion}>
-              {videoUrl ? (
-                <Ionicons name={categoryConfig.mapIcon || 'help-circle-outline'} size={54} color={accent} />
-              ) : (
-                <IncidentIllustration category={detailIncident.category} size={146} />
-              )}
+              <IncidentIllustration category={detailIncident.category} size={146} />
             </View>
 
             <View style={styles.heroBadgesRow}>
@@ -208,7 +204,8 @@ const IncidentDetailScreen = ({ route, navigation }) => {
           {videoUrl ? (
             <>
               <Divider />
-              <View style={[styles.section, { paddingBottom: 4 }]}>
+              <View style={styles.section}>
+                <SectionHeader icon="videocam-outline" color={theme.accentPurple} title="Video Evidence" />
                 <IncidentVideoPlayer videoUrl={videoUrl} />
               </View>
             </>
@@ -277,25 +274,12 @@ const IncidentDetailScreen = ({ route, navigation }) => {
             )}
           </View>
 
-          {/* ---- Updates & Messages ---- */}
-          {showTimeline ? (
-            <>
-              <Divider />
-              <View style={styles.section}>
-                <SectionHeader
-                  icon="chatbubbles-outline"
-                  color={theme.info}
-                  title="Updates & Messages"
-                  subtitle="Status updates & witness chat"
-                />
-                <View style={[styles.timelineContainer, { borderColor: theme.border, backgroundColor: theme.background }]}>
-                  <IncidentTimeline incidentId={getIncidentId(detailIncident)} />
-                </View>
-              </View>
-            </>
-          ) : null}
         </Animated.View>
       </ScrollView>
+
+      {showTimeline ? (
+        <IncidentChatFab incidentId={getIncidentId(detailIncident)} accent={accent} />
+      ) : null}
     </View>
   );
 };
