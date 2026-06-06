@@ -52,7 +52,7 @@ const readableOn = (hex) => {
   return luminance > 0.62 ? '#0B1220' : '#FFFFFF';
 };
 
-const IncidentTimeline = ({ incidentId }) => {
+const IncidentTimeline = ({ incidentId, onNewActivity }) => {
   const { theme } = useTheme();
   const { user } = useAuth();
   const [timeline, setTimeline] = useState([]);
@@ -115,6 +115,9 @@ const IncidentTimeline = ({ incidentId }) => {
         setTimeline((prev) => [...prev, comment].sort((a, b) =>
           new Date(a.created_at) - new Date(b.created_at)
         ));
+
+        // Let the parent (e.g. the floating chat bubble) flag new activity.
+        onNewActivity?.(comment);
 
         // Scroll to bottom when new comment arrives
         setTimeout(() => {

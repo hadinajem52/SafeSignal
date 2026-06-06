@@ -112,15 +112,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
 
-  // ---- Timeline / Messages ----
-  timelineContainer: {
-    height: 460,
-    marginTop: 2,
-    borderRadius: 16,
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
-
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',

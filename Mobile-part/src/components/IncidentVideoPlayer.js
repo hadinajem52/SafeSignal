@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, InteractionManager, StyleSheet, View } from 'react-native';
-import { VideoView, createVideoPlayer } from 'expo-video';
-import AppText from './Text';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import { useTheme } from '../context/ThemeContext';
 import { resolveMediaUrl } from '../utils/mediaUtils';
 import { tokenStorage } from '../services/tokenStorage';
@@ -43,17 +42,17 @@ const IncidentVideoPlayer = ({ videoUrl }) => {
   // screen has settled (see above).
   if (token === undefined || !ready) {
     return (
-      <View style={[styles.container, styles.loading, { borderColor: theme.border, backgroundColor: theme.surface }]}>
+      <View style={[styles.media, styles.loading, { backgroundColor: theme.surface }]}>
         <ActivityIndicator color={theme.primary} />
       </View>
     );
   }
 
   // key forces a clean remount when the video URL changes.
-  return <VideoEvidenceCard key={resolvedUrl} resolvedUrl={resolvedUrl} theme={theme} token={token} />;
+  return <VideoEvidenceCard key={resolvedUrl} resolvedUrl={resolvedUrl} token={token} />;
 };
 
-const VideoEvidenceCard = ({ resolvedUrl, theme, token }) => {
+const VideoEvidenceCard = ({ resolvedUrl, token }) => {
   // Stable source for the player's lifetime.
   const source = useMemo(
     () =>
@@ -63,27 +62,19 @@ const VideoEvidenceCard = ({ resolvedUrl, theme, token }) => {
     [resolvedUrl, token],
   );
 
-  const player = useMemo(() => {
-    const instance = createVideoPlayer(source);
+  // useVideoPlayer owns the player lifecycle and releases it automatically on
+  // unmount — avoids the "shared object already released" race that manual
+  // createVideoPlayer + release() hits during navigation transitions.
+  const player = useVideoPlayer(source, (instance) => {
     instance.loop = false;
-    return instance;
-  }, [source]);
-
-  useEffect(() => {
-    return () => {
-      player.pause();
-      InteractionManager.runAfterInteractions(() => {
-        player.release();
-      });
-    };
-  }, [player]);
+  });
 
   return (
-    <View style={[styles.container, { borderColor: theme.border, backgroundColor: theme.surface }]}>
-      <AppText variant="label" style={[styles.title, { color: theme.text }]}>Video Evidence</AppText>
+    <View style={[styles.media, styles.videoWrap]}>
       <VideoView
         player={player}
         style={styles.video}
+        contentFit="contain"
         fullscreenOptions={{ enable: true }}
         allowsPictureInPicture
         nativeControls
@@ -93,25 +84,22 @@ const VideoEvidenceCard = ({ resolvedUrl, theme, token }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 10,
-    marginBottom: 12,
+  media: {
+    width: '100%',
+    height: 220,
+    borderRadius: 14,
+    overflow: 'hidden',
   },
   loading: {
-    height: 240,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  title: {
-    marginBottom: 8,
+  videoWrap: {
+    backgroundColor: '#000',
   },
   video: {
     width: '100%',
-    height: 220,
-    borderRadius: 8,
-    overflow: 'hidden',
+    height: '100%',
   },
 });
 
