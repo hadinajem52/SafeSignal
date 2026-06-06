@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, TouchableOpacity, View } from 'react-native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import incidentConstants from '../../../constants/incident';
 import { formatDate } from '../utils/dateUtils';
@@ -18,9 +20,11 @@ import {
 import { normalizeClosureDetails } from '../utils/incidentUtils';
 import { useTheme } from '../context/ThemeContext';
 import { incidentAPI } from '../services/api';
+import { haptics } from '../utils/haptics';
+import { DURATION } from '../theme/motion';
 import styles from './incidentDetailStyles';
 
-const { CATEGORY_DISPLAY, STATUS_LABELS } = incidentConstants;
+const { CATEGORY_DISPLAY } = incidentConstants;
 
 const getIncidentId = (incident) => incident?.incident_id || incident?.id;
 
@@ -79,15 +83,15 @@ const IncidentDetailScreen = ({ route, navigation }) => {
 
   if (!detailIncident) {
     return (
-      <View style={[styles.emptyContainer, { backgroundColor: theme.surface, paddingTop: insets.top }]}> 
+      <View style={[styles.emptyContainer, { backgroundColor: theme.surface, paddingTop: insets.top }]}>
         <AppText variant="body" style={{ color: theme.textSecondary }}>Incident details not available.</AppText>
       </View>
     );
   }
 
   const categoryConfig = CATEGORY_DISPLAY[detailIncident.category] || CATEGORY_DISPLAY.other;
+  const accent = categoryConfig.mapColor || theme.primary;
   const displayStatus = detailIncident.status === 'police_closed' ? 'resolved' : detailIncident.status;
-  const statusLabel = STATUS_LABELS[displayStatus] || displayStatus;
   const latitude = Number(detailIncident?.location?.latitude || detailIncident?.latitude);
   const longitude = Number(detailIncident?.location?.longitude || detailIncident?.longitude);
   const hasValidCoordinates = Number.isFinite(latitude) && Number.isFinite(longitude);
@@ -101,9 +105,6 @@ const IncidentDetailScreen = ({ route, navigation }) => {
   const closureOutcome = closureOutcomeValue
     ? closureOutcomeValue.replace(/_/g, ' ')
     : null;
-  const resolvedLabel = closureOutcome
-    ? `${statusLabel} - ${closureOutcome.replace(/\b\w/g, (char) => char.toUpperCase())}`
-    : statusLabel;
   const rawClosureDetails = detailIncident.closure_details || detailIncident.closureDetails;
   const closureDetails = normalizeClosureDetails(rawClosureDetails);
   const description = detailIncident.description || closureDetails || 'No description available.';
@@ -116,122 +117,183 @@ const IncidentDetailScreen = ({ route, navigation }) => {
   );
   const showTimeline = source !== 'community_feed';
   const constellationCopy = getConstellationCopy(detailIncident.constellation);
+  const isFlagged = detailIncident.constellation?.status === 'flagged';
   const videoUrl = detailIncident.video_url || detailIncident.videoUrl;
+
+  const SectionHeader = ({ icon, color, title, subtitle }) => (
+    <View style={styles.sectionHeader}>
+      <View style={[styles.sectionIconWrap, { backgroundColor: `${color}1A` }]}>
+        <Ionicons name={icon} size={17} color={color} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <AppText variant="label" style={{ color: theme.text }}>{title}</AppText>
+        {subtitle ? (
+          <AppText variant="small" style={{ color: theme.textTertiary, marginTop: 1 }}>{subtitle}</AppText>
+        ) : null}
+      </View>
+    </View>
+  );
 
   return (
     <View style={[styles.screenWrapper, { backgroundColor: theme.surface, paddingTop: insets.top }]}>
       <View style={[styles.backHeader, { borderBottomColor: theme.border }]}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => navigation.goBack()}
+          onPress={() => {
+            haptics.selection();
+            navigation.goBack();
+          }}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name="chevron-back" size={24} color={theme.text} />
           <AppText variant="body" style={{ color: theme.text }}>Back</AppText>
         </TouchableOpacity>
       </View>
+
       <ScrollView
         style={styles.container}
         contentContainerStyle={[styles.contentContainer, { paddingBottom: tabBarHeight + 8 }]}
         showsVerticalScrollIndicator={false}
       >
-      <Card style={styles.headerCard}>
-        {!videoUrl ? (
-          <IncidentIllustration
-            category={detailIncident.category}
-            size={150}
-            style={{ alignSelf: 'center', marginBottom: 12 }}
-          />
-        ) : null}
-        <View style={styles.headerRow}>
-          <View style={[styles.categoryBadge, { backgroundColor: theme.surface }]}> 
-            <Ionicons name={categoryConfig.mapIcon || 'help-circle-outline'} size={15} color={theme.primary} style={styles.categoryIcon} />
-            <AppText variant="caption" style={{ color: theme.text }}>{categoryConfig.label}</AppText>
-          </View>
-          <View style={styles.badgesRow}>
-            {detailIncident.severity ? <SeverityBadge severity={detailIncident.severity} /> : null}
-            <StatusBadge status={displayStatus} />
-          </View>
-        </View>
-        <AppText variant="h3" style={[styles.title, { color: theme.text }]}>{detailIncident.title}</AppText>
-        <AppText variant="bodySmall" style={{ color: theme.textSecondary }}>{resolvedLabel}</AppText>
-        {loadingDetail ? <ActivityIndicator color={theme.primary} style={styles.detailLoader} /> : null}
-        {closureOutcome ? (
-          <AppText variant="caption" style={[styles.outcomeText, { color: theme.success }]}>Outcome: {closureOutcome}</AppText>
-        ) : null}
-      </Card>
+        {/* ---- Hero ---- */}
+        <Animated.View
+          entering={FadeIn.duration(DURATION.page)}
+          style={[styles.hero, { borderColor: theme.border, backgroundColor: theme.card }]}
+        >
+          <LinearGradient
+            colors={[`${accent}2E`, `${accent}0F`, theme.card]}
+            locations={[0, 0.5, 1]}
+            style={styles.heroGradient}
+          >
+            <View style={styles.medallion}>
+              {videoUrl ? (
+                <Ionicons name={categoryConfig.mapIcon || 'help-circle-outline'} size={54} color={accent} />
+              ) : (
+                <IncidentIllustration category={detailIncident.category} size={146} />
+              )}
+            </View>
 
-      <Card style={styles.sectionCard}>
-        <AppText variant="label" style={[styles.sectionTitle, { color: theme.text }]}>Description</AppText>
-        <AppText variant="body" style={[styles.sectionText, { color: theme.textSecondary }]}>{description}</AppText>
-      </Card>
+            <View style={styles.heroBadgesRow}>
+              <View style={[styles.categoryChip, { backgroundColor: `${accent}1F`, borderColor: `${accent}33` }]}>
+                <Ionicons name={categoryConfig.mapIcon || 'help-circle-outline'} size={13} color={accent} />
+                <AppText variant="caption" style={{ color: accent, marginLeft: 5 }}>{categoryConfig.label}</AppText>
+              </View>
+              {detailIncident.severity ? <SeverityBadge severity={detailIncident.severity} /> : null}
+              <StatusBadge status={displayStatus} />
+            </View>
 
-      <IncidentVideoPlayer videoUrl={videoUrl} />
+            <AppText variant="h2" style={[styles.heroTitle, { color: theme.text }]}>{detailIncident.title}</AppText>
 
-      {constellationCopy ? (
-        <Card style={[styles.constellationCard, { borderColor: theme.border, backgroundColor: theme.card }]}> 
-          <View style={styles.constellationHeader}>
-            <Ionicons
-              name={detailIncident.constellation.status === 'flagged' ? 'shield-outline' : 'radio-outline'}
-              size={18}
-              color={detailIncident.constellation.status === 'flagged' ? theme.warning : theme.primary}
-            />
-            <AppText variant="label" style={[styles.constellationTitle, { color: theme.text }]}> 
-              {constellationCopy.title}
-            </AppText>
-          </View>
-          <AppText variant="body" style={[styles.sectionText, { color: theme.textSecondary }]}> 
-            {constellationCopy.body}
-          </AppText>
-        </Card>
-      ) : null}
-
-      {closureDetails ? (
-        <Card style={styles.sectionCard}>
-          <AppText variant="label" style={[styles.sectionTitle, { color: theme.text }]}>Closure Details</AppText>
-          <AppText variant="body" style={[styles.sectionText, { color: theme.textSecondary }]}>{closureDetails}</AppText>
-        </Card>
-      ) : null}
-
-      <Card style={styles.sectionCard}>
-        <AppText variant="label" style={[styles.sectionTitle, { color: theme.text }]}>Location</AppText>
-        {hasValidCoordinates ? (
-          <>
-            <IncidentLocationMap
-              latitude={latitude}
-              longitude={longitude}
-              color={categoryConfig.mapColor}
-              approximate={isApproximateLocation}
-            />
-            {(placeName || isApproximateLocation) ? (
-              <AppText variant="caption" style={[styles.sectionText, { color: theme.textSecondary, marginTop: 8 }]}>
-                {placeName}{placeName && isApproximateLocation ? ' · ' : ''}{isApproximateLocation ? 'Approximate area' : ''}
-              </AppText>
+            {closureOutcome ? (
+              <View style={[styles.outcomePill, { backgroundColor: `${theme.success}1A`, borderColor: `${theme.success}40` }]}>
+                <Ionicons name="checkmark-circle" size={14} color={theme.success} />
+                <AppText variant="caption" style={{ color: theme.success, textTransform: 'capitalize' }}>{closureOutcome}</AppText>
+              </View>
             ) : null}
-          </>
-        ) : (
-          <AppText variant="body" style={[styles.sectionText, { color: theme.textSecondary }]}>
-            {locationLabel}
-          </AppText>
-        )}
-      </Card>
 
-      <Card style={styles.sectionCard}>
-        <AppText variant="label" style={[styles.sectionTitle, { color: theme.text }]}>Reported</AppText>
-        <AppText variant="body" style={[styles.sectionText, { color: theme.textSecondary }]}>{reportedAtLabel}</AppText>
-      </Card>
-      
-      {showTimeline ? (
-        <Card style={styles.timelineCard}>
-          <AppText variant="label" style={[styles.sectionTitle, { color: theme.text }]}>Updates & Messages</AppText>
-          <View style={styles.timelineContainer}>
-            <IncidentTimeline 
-              incidentId={getIncidentId(detailIncident)}
-            />
-          </View>
-        </Card>
-      ) : null}
-    </ScrollView>
+            <View style={[styles.heroMetaRow, { borderTopColor: theme.border }]}>
+              <Ionicons name="time-outline" size={14} color={theme.textTertiary} />
+              <AppText variant="caption" style={{ color: theme.textSecondary }}>{reportedAtLabel}</AppText>
+            </View>
+          </LinearGradient>
+        </Animated.View>
+
+        {loadingDetail ? <ActivityIndicator color={theme.primary} style={styles.detailLoader} /> : null}
+
+        {/* ---- Description ---- */}
+        <Animated.View entering={FadeInDown.duration(DURATION.base).delay(60)}>
+          <Card style={styles.sectionCard}>
+            <SectionHeader icon="document-text-outline" color={theme.primary} title="Description" />
+            <AppText variant="body" style={[styles.sectionText, { color: theme.textSecondary }]}>{description}</AppText>
+          </Card>
+        </Animated.View>
+
+        {/* ---- Video evidence ---- */}
+        {videoUrl ? (
+          <Animated.View entering={FadeInDown.duration(DURATION.base).delay(90)}>
+            <IncidentVideoPlayer videoUrl={videoUrl} />
+          </Animated.View>
+        ) : null}
+
+        {/* ---- Nearby witness signal ---- */}
+        {constellationCopy ? (
+          <Animated.View entering={FadeInDown.duration(DURATION.base).delay(120)}>
+            <Card style={[styles.constellationCard, { borderColor: theme.border, backgroundColor: theme.card }]}>
+              <View style={styles.sectionHeader}>
+                <View style={[styles.sectionIconWrap, { backgroundColor: isFlagged ? `${theme.warning}1A` : `${theme.primary}1A` }]}>
+                  <Ionicons
+                    name={isFlagged ? 'shield-outline' : 'radio-outline'}
+                    size={17}
+                    color={isFlagged ? theme.warning : theme.primary}
+                  />
+                </View>
+                <AppText variant="label" style={{ color: theme.text, flex: 1 }}>{constellationCopy.title}</AppText>
+              </View>
+              <AppText variant="body" style={[styles.sectionText, { color: theme.textSecondary }]}>{constellationCopy.body}</AppText>
+            </Card>
+          </Animated.View>
+        ) : null}
+
+        {/* ---- Closure details ---- */}
+        {closureDetails ? (
+          <Animated.View entering={FadeInDown.duration(DURATION.base).delay(150)}>
+            <Card style={styles.sectionCard}>
+              <SectionHeader icon="checkmark-done-outline" color={theme.success} title="Closure Details" />
+              <AppText variant="body" style={[styles.sectionText, { color: theme.textSecondary }]}>{closureDetails}</AppText>
+            </Card>
+          </Animated.View>
+        ) : null}
+
+        {/* ---- Location ---- */}
+        <Animated.View entering={FadeInDown.duration(DURATION.base).delay(180)}>
+          <Card style={styles.sectionCard}>
+            <SectionHeader icon="location-outline" color={accent} title="Location" />
+            {hasValidCoordinates ? (
+              <>
+                <IncidentLocationMap
+                  latitude={latitude}
+                  longitude={longitude}
+                  color={categoryConfig.mapColor}
+                  approximate={isApproximateLocation}
+                />
+                {(placeName || isApproximateLocation) ? (
+                  <View style={styles.placeChip}>
+                    <Ionicons
+                      name={isApproximateLocation ? 'navigate-circle-outline' : 'pin-outline'}
+                      size={13}
+                      color={theme.textTertiary}
+                    />
+                    <AppText variant="caption" style={{ color: theme.textSecondary, flex: 1 }}>
+                      {placeName}{placeName && isApproximateLocation ? ' · ' : ''}{isApproximateLocation ? 'Approximate area' : ''}
+                    </AppText>
+                  </View>
+                ) : null}
+              </>
+            ) : (
+              <AppText variant="body" style={[styles.sectionText, { color: theme.textSecondary }]}>
+                {locationLabel}
+              </AppText>
+            )}
+          </Card>
+        </Animated.View>
+
+        {/* ---- Updates & Messages ---- */}
+        {showTimeline ? (
+          <Animated.View entering={FadeInDown.duration(DURATION.base).delay(220)}>
+            <Card style={styles.timelineCard}>
+              <SectionHeader
+                icon="chatbubbles-outline"
+                color={theme.info}
+                title="Updates & Messages"
+                subtitle="Status updates & witness chat"
+              />
+              <View style={[styles.timelineContainer, { borderColor: theme.border, backgroundColor: theme.background }]}>
+                <IncidentTimeline incidentId={getIncidentId(detailIncident)} />
+              </View>
+            </Card>
+          </Animated.View>
+        ) : null}
+      </ScrollView>
     </View>
   );
 };

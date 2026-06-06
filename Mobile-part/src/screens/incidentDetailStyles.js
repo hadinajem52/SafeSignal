@@ -21,74 +21,127 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 16,
+    paddingTop: 14,
   },
-  headerCard: {
-    marginBottom: 12,
+
+  // ---- Hero ----
+  hero: {
+    borderRadius: 22,
+    borderWidth: 1,
+    overflow: 'hidden',
+    marginBottom: 14,
   },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  heroGradient: {
+    paddingTop: 22,
+    paddingHorizontal: 18,
+    paddingBottom: 18,
     alignItems: 'center',
+  },
+  medallion: {
+    width: 172,
+    height: 172,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  heroBadgesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
     marginBottom: 12,
   },
-  categoryBadge: {
+  categoryChip: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingVertical: 5,
+    borderRadius: 999,
+    borderWidth: 1,
   },
-  categoryIcon: {
-    fontSize: 16,
-    marginRight: 6,
+  heroTitle: {
+    textAlign: 'center',
+    marginBottom: 4,
   },
-  badgesRow: {
-    alignItems: 'flex-end',
+  outcomePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    marginTop: 10,
   },
-  title: {
-    marginBottom: 6,
-  },
-  outcomeText: {
-    marginTop: 4,
+  heroMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    alignSelf: 'stretch',
+    marginTop: 16,
+    paddingTop: 14,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   detailLoader: {
-    alignSelf: 'flex-start',
-    marginTop: 8,
+    alignSelf: 'center',
+    marginTop: -4,
+    marginBottom: 12,
   },
+
+  // ---- Sections ----
   sectionCard: {
     marginBottom: 12,
   },
-  sectionTitle: {
-    marginBottom: 6,
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  sectionIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   sectionText: {
-    lineHeight: 20,
+    lineHeight: 21,
   },
+
+  // ---- Constellation ----
   constellationCard: {
     marginBottom: 12,
     borderWidth: 1,
   },
-  constellationHeader: {
+
+  // ---- Location ----
+  placeChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    gap: 6,
+    marginTop: 10,
   },
-  constellationTitle: {
-    marginLeft: 8,
+
+  // ---- Timeline / Messages ----
+  timelineCard: {
+    marginBottom: 12,
+    padding: 14,
   },
+  timelineContainer: {
+    height: 460,
+    marginTop: 2,
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  timelineCard: {
-    marginBottom: 12,
-    padding: 12,
-  },
-  timelineContainer: {
-    height: 400,
-    marginTop: 8,
   },
 });
 
