@@ -3,13 +3,12 @@ import { ActivityIndicator, ScrollView, TouchableOpacity, View } from 'react-nat
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import incidentConstants from '../../../constants/incident';
 import { formatDate } from '../utils/dateUtils';
 import {
   AppText,
-  Card,
   SeverityBadge,
   StatusBadge,
   IncidentTimeline,
@@ -83,7 +82,7 @@ const IncidentDetailScreen = ({ route, navigation }) => {
 
   if (!detailIncident) {
     return (
-      <View style={[styles.emptyContainer, { backgroundColor: theme.surface, paddingTop: insets.top }]}>
+      <View style={[styles.emptyContainer, { backgroundColor: theme.card, paddingTop: insets.top }]}>
         <AppText variant="body" style={{ color: theme.textSecondary }}>Incident details not available.</AppText>
       </View>
     );
@@ -120,6 +119,8 @@ const IncidentDetailScreen = ({ route, navigation }) => {
   const isFlagged = detailIncident.constellation?.status === 'flagged';
   const videoUrl = detailIncident.video_url || detailIncident.videoUrl;
 
+  const Divider = () => <View style={[styles.divider, { backgroundColor: theme.border }]} />;
+
   const SectionHeader = ({ icon, color, title, subtitle }) => (
     <View style={styles.sectionHeader}>
       <View style={[styles.sectionIconWrap, { backgroundColor: `${color}1A` }]}>
@@ -135,7 +136,7 @@ const IncidentDetailScreen = ({ route, navigation }) => {
   );
 
   return (
-    <View style={[styles.screenWrapper, { backgroundColor: theme.surface, paddingTop: insets.top }]}>
+    <View style={[styles.screenWrapper, { backgroundColor: theme.card, paddingTop: insets.top }]}>
       <View style={[styles.backHeader, { borderBottomColor: theme.border }]}>
         <TouchableOpacity
           style={styles.backButton}
@@ -155,11 +156,8 @@ const IncidentDetailScreen = ({ route, navigation }) => {
         contentContainerStyle={[styles.contentContainer, { paddingBottom: tabBarHeight + 8 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* ---- Hero ---- */}
-        <Animated.View
-          entering={FadeIn.duration(DURATION.page)}
-          style={[styles.hero, { borderColor: theme.border, backgroundColor: theme.card }]}
-        >
+        <Animated.View entering={FadeInDown.duration(DURATION.page)}>
+          {/* ---- Hero ---- */}
           <LinearGradient
             colors={[`${accent}2E`, `${accent}0F`, theme.card]}
             locations={[0, 0.5, 1]}
@@ -195,58 +193,61 @@ const IncidentDetailScreen = ({ route, navigation }) => {
               <Ionicons name="time-outline" size={14} color={theme.textTertiary} />
               <AppText variant="caption" style={{ color: theme.textSecondary }}>{reportedAtLabel}</AppText>
             </View>
+
+            {loadingDetail ? <ActivityIndicator color={theme.primary} style={{ marginTop: 12 }} /> : null}
           </LinearGradient>
-        </Animated.View>
 
-        {loadingDetail ? <ActivityIndicator color={theme.primary} style={styles.detailLoader} /> : null}
-
-        {/* ---- Description ---- */}
-        <Animated.View entering={FadeInDown.duration(DURATION.base).delay(60)}>
-          <Card style={styles.sectionCard}>
+          {/* ---- Description ---- */}
+          <Divider />
+          <View style={styles.section}>
             <SectionHeader icon="document-text-outline" color={theme.primary} title="Description" />
             <AppText variant="body" style={[styles.sectionText, { color: theme.textSecondary }]}>{description}</AppText>
-          </Card>
-        </Animated.View>
+          </View>
 
-        {/* ---- Video evidence ---- */}
-        {videoUrl ? (
-          <Animated.View entering={FadeInDown.duration(DURATION.base).delay(90)}>
-            <IncidentVideoPlayer videoUrl={videoUrl} />
-          </Animated.View>
-        ) : null}
-
-        {/* ---- Nearby witness signal ---- */}
-        {constellationCopy ? (
-          <Animated.View entering={FadeInDown.duration(DURATION.base).delay(120)}>
-            <Card style={[styles.constellationCard, { borderColor: theme.border, backgroundColor: theme.card }]}>
-              <View style={styles.sectionHeader}>
-                <View style={[styles.sectionIconWrap, { backgroundColor: isFlagged ? `${theme.warning}1A` : `${theme.primary}1A` }]}>
-                  <Ionicons
-                    name={isFlagged ? 'shield-outline' : 'radio-outline'}
-                    size={17}
-                    color={isFlagged ? theme.warning : theme.primary}
-                  />
-                </View>
-                <AppText variant="label" style={{ color: theme.text, flex: 1 }}>{constellationCopy.title}</AppText>
+          {/* ---- Video evidence ---- */}
+          {videoUrl ? (
+            <>
+              <Divider />
+              <View style={[styles.section, { paddingBottom: 4 }]}>
+                <IncidentVideoPlayer videoUrl={videoUrl} />
               </View>
-              <AppText variant="body" style={[styles.sectionText, { color: theme.textSecondary }]}>{constellationCopy.body}</AppText>
-            </Card>
-          </Animated.View>
-        ) : null}
+            </>
+          ) : null}
 
-        {/* ---- Closure details ---- */}
-        {closureDetails ? (
-          <Animated.View entering={FadeInDown.duration(DURATION.base).delay(150)}>
-            <Card style={styles.sectionCard}>
-              <SectionHeader icon="checkmark-done-outline" color={theme.success} title="Closure Details" />
-              <AppText variant="body" style={[styles.sectionText, { color: theme.textSecondary }]}>{closureDetails}</AppText>
-            </Card>
-          </Animated.View>
-        ) : null}
+          {/* ---- Nearby witness signal ---- */}
+          {constellationCopy ? (
+            <>
+              <Divider />
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <View style={[styles.sectionIconWrap, { backgroundColor: isFlagged ? `${theme.warning}1A` : `${theme.primary}1A` }]}>
+                    <Ionicons
+                      name={isFlagged ? 'shield-outline' : 'radio-outline'}
+                      size={17}
+                      color={isFlagged ? theme.warning : theme.primary}
+                    />
+                  </View>
+                  <AppText variant="label" style={{ color: theme.text, flex: 1 }}>{constellationCopy.title}</AppText>
+                </View>
+                <AppText variant="body" style={[styles.sectionText, { color: theme.textSecondary }]}>{constellationCopy.body}</AppText>
+              </View>
+            </>
+          ) : null}
 
-        {/* ---- Location ---- */}
-        <Animated.View entering={FadeInDown.duration(DURATION.base).delay(180)}>
-          <Card style={styles.sectionCard}>
+          {/* ---- Closure details ---- */}
+          {closureDetails ? (
+            <>
+              <Divider />
+              <View style={styles.section}>
+                <SectionHeader icon="checkmark-done-outline" color={theme.success} title="Closure Details" />
+                <AppText variant="body" style={[styles.sectionText, { color: theme.textSecondary }]}>{closureDetails}</AppText>
+              </View>
+            </>
+          ) : null}
+
+          {/* ---- Location ---- */}
+          <Divider />
+          <View style={styles.section}>
             <SectionHeader icon="location-outline" color={accent} title="Location" />
             {hasValidCoordinates ? (
               <>
@@ -274,25 +275,26 @@ const IncidentDetailScreen = ({ route, navigation }) => {
                 {locationLabel}
               </AppText>
             )}
-          </Card>
-        </Animated.View>
+          </View>
 
-        {/* ---- Updates & Messages ---- */}
-        {showTimeline ? (
-          <Animated.View entering={FadeInDown.duration(DURATION.base).delay(220)}>
-            <Card style={styles.timelineCard}>
-              <SectionHeader
-                icon="chatbubbles-outline"
-                color={theme.info}
-                title="Updates & Messages"
-                subtitle="Status updates & witness chat"
-              />
-              <View style={[styles.timelineContainer, { borderColor: theme.border, backgroundColor: theme.background }]}>
-                <IncidentTimeline incidentId={getIncidentId(detailIncident)} />
+          {/* ---- Updates & Messages ---- */}
+          {showTimeline ? (
+            <>
+              <Divider />
+              <View style={styles.section}>
+                <SectionHeader
+                  icon="chatbubbles-outline"
+                  color={theme.info}
+                  title="Updates & Messages"
+                  subtitle="Status updates & witness chat"
+                />
+                <View style={[styles.timelineContainer, { borderColor: theme.border, backgroundColor: theme.background }]}>
+                  <IncidentTimeline incidentId={getIncidentId(detailIncident)} />
+                </View>
               </View>
-            </Card>
-          </Animated.View>
-        ) : null}
+            </>
+          ) : null}
+        </Animated.View>
       </ScrollView>
     </View>
   );

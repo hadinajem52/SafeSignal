@@ -20,21 +20,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    padding: 16,
-    paddingTop: 14,
+    paddingTop: 0,
   },
 
-  // ---- Hero ----
-  hero: {
-    borderRadius: 22,
-    borderWidth: 1,
-    overflow: 'hidden',
-    marginBottom: 14,
-  },
+  // ---- Hero (full-bleed) ----
   heroGradient: {
-    paddingTop: 22,
+    paddingTop: 24,
     paddingHorizontal: 18,
-    paddingBottom: 18,
+    paddingBottom: 20,
     alignItems: 'center',
   },
   medallion: {
@@ -84,15 +77,15 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
-  detailLoader: {
-    alignSelf: 'center',
-    marginTop: -4,
-    marginBottom: 12,
-  },
 
-  // ---- Sections ----
-  sectionCard: {
-    marginBottom: 12,
+  // ---- Divided sections ----
+  // Dividers are full-bleed (no horizontal inset); only content is padded.
+  divider: {
+    height: StyleSheet.hairlineWidth,
+  },
+  section: {
+    paddingHorizontal: 18,
+    paddingVertical: 18,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -111,12 +104,6 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
 
-  // ---- Constellation ----
-  constellationCard: {
-    marginBottom: 12,
-    borderWidth: 1,
-  },
-
   // ---- Location ----
   placeChip: {
     flexDirection: 'row',
@@ -126,10 +113,6 @@ const styles = StyleSheet.create({
   },
 
   // ---- Timeline / Messages ----
-  timelineCard: {
-    marginBottom: 12,
-    padding: 14,
-  },
   timelineContainer: {
     height: 460,
     marginTop: 2,
