@@ -26,6 +26,7 @@ const mapRoutes = require('./routes/map');
 const settingsRoutes = require('./routes/settings');
 const adminRoutes = require('./routes/admin');
 const uploadsRoutes = require('./routes/uploads');
+const notificationsRoutes = require('./routes/notifications');
 
 const app = express();
 const REQUEST_BODY_LIMIT = '25mb';
@@ -94,6 +95,7 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/map', mapRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/notifications', notificationsRoutes);
 app.use('/uploads', uploadsRoutes);
 
 app.use((req, res) => {

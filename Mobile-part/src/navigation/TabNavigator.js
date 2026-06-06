@@ -14,6 +14,7 @@ import ReportIncidentScreen from '../screens/ReportIncidentScreen';
 import MapScreen from '../screens/Map/MapScreen';
 import AccountScreen from '../screens/Account/AccountScreen';
 import IncidentDetailScreen from '../screens/IncidentDetailScreen';
+import NotificationsScreen from '../screens/Notifications/NotificationsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -66,6 +67,7 @@ const stackScreenOptions = {
 const DashboardStack = () => (
   <Stack.Navigator screenOptions={stackScreenOptions}>
     <Stack.Screen name="Home" component={HomeScreen} />
+    <Stack.Screen name="Notifications" component={NotificationsScreen} />
     <Stack.Screen name="IncidentDetail" component={IncidentDetailScreen} />
   </Stack.Navigator>
 );

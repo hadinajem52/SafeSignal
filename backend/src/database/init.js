@@ -352,6 +352,23 @@ const initDatabase = async () => {
       );
     `);
 
+    // Create Notifications inbox table — persists user-facing notifications so
+    // they can be reviewed in the app (the socket only delivers them live).
+    await db.none(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        notification_id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+        event_name VARCHAR(60) NOT NULL,
+        title TEXT NOT NULL,
+        body TEXT,
+        incident_id INTEGER REFERENCES incidents(incident_id) ON DELETE SET NULL,
+        data JSONB NOT NULL DEFAULT '{}'::jsonb,
+        is_read BOOLEAN NOT NULL DEFAULT FALSE,
+        read_at TIMESTAMP,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     // Create indexes for performance
     await db.none(`
       CREATE INDEX IF NOT EXISTS idx_incidents_location ON incidents (latitude, longitude);
@@ -381,6 +398,8 @@ const initDatabase = async () => {
       CREATE INDEX IF NOT EXISTS idx_incident_comments_user_id ON incident_comments (user_id);
       CREATE INDEX IF NOT EXISTS idx_incident_comments_visibility ON incident_comments (incident_id, is_internal, created_at ASC);
       CREATE INDEX IF NOT EXISTS idx_moderator_settings_user_id ON moderator_settings (user_id);
+      CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications (user_id, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications (user_id) WHERE is_read = FALSE;
     `);
 
     await db.none(`

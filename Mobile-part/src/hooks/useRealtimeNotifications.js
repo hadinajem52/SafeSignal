@@ -8,10 +8,17 @@ import {
   initializeMobileNotifications,
   displayMobileNotification,
 } from '../services/mobileNotifications';
+import notificationStore from '../services/notificationStore';
 
 const MAX_DISPLAYED_EVENT_IDS = 100;
 
+const userKey = (user) => user?.user_id || user?.userId || user?.email || null;
+
 const titleFromPayload = (eventName, payload) => {
+  if (payload?.notificationTitle) {
+    return payload.notificationTitle;
+  }
+
   if (eventName === 'notification:report_alert') {
     return `High Priority Incident #${payload?.incidentId || ''}`.trim();
   }
@@ -32,6 +39,10 @@ const titleFromPayload = (eventName, payload) => {
 };
 
 const bodyFromPayload = (eventName, payload) => {
+  if (payload?.notificationBody) {
+    return payload.notificationBody;
+  }
+
   if (eventName === 'notification:report_alert') {
     const severity = payload?.severity ? String(payload.severity).toUpperCase() : 'HIGH';
     const title = payload?.title || 'New incident requires attention';
@@ -58,6 +69,7 @@ const bodyFromPayload = (eventName, payload) => {
 
 const useRealtimeNotifications = () => {
   const { isAuthenticated, user } = useAuth();
+  const identity = userKey(user);
   const { preferences, isLoading: preferencesLoading } = useUserPreferences();
   const socketRef = useRef(null);
   const displayedEventsRef = useRef(new Set());
@@ -75,6 +87,7 @@ const useRealtimeNotifications = () => {
 
     if (
       !isAuthenticated
+      || !identity
       || preferencesLoading
       || !preferences.pushNotifications
     ) {
@@ -123,9 +136,16 @@ const useRealtimeNotifications = () => {
             displayedEventsRef.current.delete(displayedEventsRef.current.values().next().value);
           }
 
+          const title = titleFromPayload(eventName, payload);
+          const body = bodyFromPayload(eventName, payload);
+
+          // The server already persisted this to the inbox before emitting;
+          // refresh the inbox so it (and the home badge) update live.
+          notificationStore.notifyRealtime(identity);
+
           await displayMobileNotification({
-            title: titleFromPayload(eventName, payload),
-            body: bodyFromPayload(eventName, payload),
+            title,
+            body,
             data: {
               eventName,
               incidentId: payload?.incidentId ? String(payload.incidentId) : '',
@@ -158,7 +178,7 @@ const useRealtimeNotifications = () => {
       isMounted = false;
       disconnectSocket();
     };
-  }, [isAuthenticated, preferences.pushNotifications, preferencesLoading, user?.user_id, user?.userId]);
+  }, [identity, isAuthenticated, preferences.pushNotifications, preferencesLoading]);
 };
 
 export default useRealtimeNotifications;

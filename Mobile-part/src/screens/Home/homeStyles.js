@@ -60,6 +60,24 @@ const homeStyles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  notifBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 999,
+    borderWidth: 2,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notifBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    lineHeight: 13,
+    fontWeight: '700',
+  },
 
   safetyCard: {
     borderRadius: 18,
