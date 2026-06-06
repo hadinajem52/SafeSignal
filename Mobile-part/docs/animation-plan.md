@@ -107,8 +107,9 @@ Everything below references these (`DURATION.base`, `EASING.out`, …).
 **Free the JS thread.**
 - No `console.log` in render/animation paths. Memoize derived values. Avoid re-creating callbacks/
   styles each render (`useCallback`, `useMemo`).
-- Keep `react-native-screens` enabled (default) and consider `enableFreeze(true)` so off-screen
-  screens stop rendering.
+- Keep `react-native-screens` enabled (default). **Avoid `enableFreeze(true)`** here — freezing
+  off-screen screens can release native `expo-video` surfaces and crash the player on return
+  ("shared object already released"). Revisit only if the video lifecycle is hardened.
 
 **Measure on the target device.**
 - The smoothness bar is a **low-end Android**, not a flagship or the simulator. Profile with the
@@ -147,9 +148,15 @@ Android by itself. Two ways to cover Android:
   Tradeoff: transitions become **JS/Reanimated-driven, not native** — still smooth if disciplined, but
   higher jank risk on low-end devices, which competes with the smoothness North Star.
 
-> **Recommendation (smoothness-first):** native-stack for the iOS interactive gesture **+ Predictive
-> Back** on Android. Move a stack to JS `@react-navigation/stack` only if an identical interactive drag
-> on older Android is a hard requirement.
+> **Status: DISCARDED (not needed right now).** We tried both routes:
+> 1. native-stack + **Predictive Back** (manifest/config-plugin flag) — needs Android 13/14+ + a rebuild,
+>    and is the system animation, not a finger-tracked card-drag; it didn't deliver.
+> 2. JS **`@react-navigation/stack`** + `react-native-gesture-handler` — would give the real finger-drag
+>    but adds native deps + a rebuild.
+>
+> Both were **reverted**: navigation is back on plain **native-stack** with simple `slide_from_right` /
+> `slide_from_bottom` push transitions (no swipe-back gesture, no gesture-handler, no predictive-back
+> flag/plugin). Revisit only if the interactive swipe-back becomes a priority.
 
 ### 5b. Screen transition presets
 
@@ -223,12 +230,12 @@ Each item notes its **smoothness guardrail**.
 
 ## 9. Checklist
 
-- [x] Babel reanimated/worklets plugin present & last; `enableFreeze(true)` set (`index.js`)
+- [x] Babel reanimated/worklets plugin present & last
+- [ ] `enableFreeze(true)` — **removed**: it can release native `expo-video` views (caused a "shared object already released" crash on the report detail). Re-add only if video is confirmed stable.
 - [x] `src/theme/motion.js` tokens created; animations reference them
 - [x] `expo-haptics` added; wired to submit / draft / confirm / refresh / tab change
-- [x] Back gesture left **edge-only** globally (`gestureEnabled` on stacks, no `fullScreenGestureEnabled`)
-- [x] Android `enableOnBackInvokedCallback="true"` set through Expo config plugin (predictive back)
-- [x] Per-screen `animation` presets configured (AppNavigator + TabNavigator stacks; report/witness = `slide_from_bottom`)
+- [ ] Interactive finger-tracked swipe-back — **DISCARDED/reverted** (native-stack + predictive back didn't deliver it; JS-stack route reverted). No swipe-back gesture for now.
+- [x] Per-screen transitions: native-stack `slide_from_right` on push stacks, `slide_from_bottom` for report/witness; directional tab slide on the bottom tabs
 - [x] Feed: `React.memo(FeedCard)` + FlatList perf props; used opacity-only `FadeIn` (no stagger) to stay scroll-safe
 - [x] Images fade in on load (`FadeInImage` on feed media)
 - [x] Skeleton pulse (`Skeleton` in MyReports loading)
@@ -238,5 +245,5 @@ Each item notes its **smoothness guardrail**.
 - [x] Only `transform`/`opacity` animated in hot paths
 - [x] Reduce-Motion: primitives gate via `useReducedMotion`; Reanimated entrances respect system setting
 - [ ] **Deferred (need on-device iteration):** animated counters (TextInput-text trick), shared-element feed→detail, map marker drop-in, theme crossfade
-- [ ] **Rebuild Android** (native: `expo-haptics` + manifest predictive-back flag) — `npx expo run:android`
+- [ ] **Rebuild Android** for `expo-haptics` (native module) — `npx expo run:android`. (gesture-handler/masked-view were removed with the discarded swipe-back feature.)
 - [ ] **Profile on a low-end Android — 60 fps on feed scroll & screen push**

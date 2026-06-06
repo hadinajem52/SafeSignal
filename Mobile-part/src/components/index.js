@@ -10,6 +10,7 @@ export { default as MapLegend } from './MapLegend';
 export { default as IncidentTimeline } from './IncidentTimeline';
 export { default as IncidentVideoPlayer } from './IncidentVideoPlayer';
 export { default as IncidentIllustration } from './IncidentIllustration';
+export { default as IncidentLocationMap } from './IncidentLocationMap';
 export { default as EmptyState, EMPTY_ART } from './EmptyState';
 export { default as PressableScale } from './PressableScale';
 export { default as FadeInImage } from './FadeInImage';

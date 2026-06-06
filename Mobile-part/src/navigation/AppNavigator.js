@@ -24,7 +24,6 @@ const AuthStack = () => (
     screenOptions={{
       headerShown: false,
       animation: 'slide_from_right',
-      gestureEnabled: true, // edge-only where supported; Android predictive back is enabled in app config.
     }}
   >
     <Stack.Screen name="Login" component={LoginScreen} />
@@ -41,7 +40,6 @@ const AppStack = () => (
     screenOptions={{
       headerShown: false,
       animation: 'slide_from_right',
-      gestureEnabled: true, // edge-only where supported; Android predictive back is enabled in app config.
     }}
   >
     <Stack.Screen name="MainTabs" component={TabNavigator} />

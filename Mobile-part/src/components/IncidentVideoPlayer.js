@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, InteractionManager, StyleSheet, View } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import AppText from './Text';
 import { useTheme } from '../context/ThemeContext';
@@ -9,31 +9,62 @@ import { tokenStorage } from '../services/tokenStorage';
 const IncidentVideoPlayer = ({ videoUrl }) => {
   const { theme } = useTheme();
   const resolvedUrl = resolveMediaUrl(videoUrl);
-  const [token, setToken] = useState(null);
+  // undefined = token not resolved yet; null = resolved, no token; string = token
+  const [token, setToken] = useState(undefined);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     let isActive = true;
 
-    tokenStorage.getToken().then((value) => {
-      if (isActive) {
-        setToken(value);
-      }
+    tokenStorage
+      .getToken()
+      .then((value) => {
+        if (isActive) setToken(value ?? null);
+      })
+      .catch(() => {
+        if (isActive) setToken(null);
+      });
+
+    // Defer mounting the native player until the screen push transition settles.
+    // Mounting expo-video mid-transition (and React's dev double-invoke) races the
+    // view teardown → "shared object already released" on the first open.
+    const task = InteractionManager.runAfterInteractions(() => {
+      if (isActive) setReady(true);
     });
 
     return () => {
       isActive = false;
+      task.cancel?.();
     };
   }, []);
 
   if (!resolvedUrl) return null;
 
-  return <VideoEvidenceCard resolvedUrl={resolvedUrl} theme={theme} token={token} />;
+  // Don't mount the player until (a) the auth token is resolved — otherwise the
+  // source flips from a URL string to a { uri, headers } object and releases the
+  // player — and (b) the screen has settled (see above).
+  if (token === undefined || !ready) {
+    return (
+      <View style={[styles.container, styles.loading, { borderColor: theme.border, backgroundColor: theme.surface }]}>
+        <ActivityIndicator color={theme.primary} />
+      </View>
+    );
+  }
+
+  // key forces a clean remount (fresh player) when the video URL changes.
+  return <VideoEvidenceCard key={resolvedUrl} resolvedUrl={resolvedUrl} theme={theme} token={token} />;
 };
 
 const VideoEvidenceCard = ({ resolvedUrl, theme, token }) => {
-  const source = token
-    ? { uri: resolvedUrl, headers: { Authorization: `Bearer ${token}` } }
-    : resolvedUrl;
+  // Stable source for the player's lifetime — never recreated on re-render.
+  const source = useMemo(
+    () =>
+      token
+        ? { uri: resolvedUrl, headers: { Authorization: `Bearer ${token}` } }
+        : resolvedUrl,
+    [resolvedUrl, token],
+  );
+
   const player = useVideoPlayer(source, (instance) => {
     instance.loop = false;
   });
@@ -44,7 +75,7 @@ const VideoEvidenceCard = ({ resolvedUrl, theme, token }) => {
       <VideoView
         player={player}
         style={styles.video}
-        allowsFullscreen
+        fullscreenOptions={{ enable: true }}
         allowsPictureInPicture
         nativeControls
       />
@@ -58,6 +89,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 10,
     marginBottom: 12,
+  },
+  loading: {
+    height: 240,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
     marginBottom: 8,
