@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { View, Image, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { AppText } from '../../components';
+import { AppText, FadeInImage } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import { resolveMediaUrl } from '../../utils/mediaUtils';
 
@@ -46,7 +46,7 @@ export default function FeedCardMedia({ media, height = 210 }) {
                   <Ionicons name="play-circle" size={56} color="rgba(255,255,255,0.92)" />
                 </View>
               ) : (
-                <Image source={{ uri: resolveMediaUrl(item.url) }} style={{ width, height }} resizeMode="cover" />
+                <FadeInImage source={{ uri: resolveMediaUrl(item.url) }} style={{ width, height }} resizeMode="cover" />
               )}
             </View>
           ))}

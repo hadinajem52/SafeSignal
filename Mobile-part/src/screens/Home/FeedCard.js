@@ -1,10 +1,12 @@
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { AppText, SeverityBadge, IncidentIllustration } from '../../components';
+import { AppText, SeverityBadge, IncidentIllustration, PressableScale } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import incidentConstants from '../../../../constants/incident';
 import { formatTimeAgo } from '../../utils/dateUtils';
+import { DURATION } from '../../theme/motion';
 import FeedCardMedia from './FeedCardMedia';
 
 const { CATEGORY_DISPLAY } = incidentConstants;
@@ -37,10 +39,10 @@ const FeedCard = ({ incident, onPress }) => {
   ];
 
   return (
-    <TouchableOpacity
+    <Animated.View entering={FadeIn.duration(DURATION.base)}>
+    <PressableScale
       style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}
       onPress={() => onPress?.(incident)}
-      activeOpacity={0.82}
     >
       {/* Category + Severity row */}
       <View style={styles.topRow}>
@@ -114,7 +116,8 @@ const FeedCard = ({ incident, onPress }) => {
           </AppText>
         </View>
       ) : null}
-    </TouchableOpacity>
+    </PressableScale>
+    </Animated.View>
   );
 };
 
@@ -191,4 +194,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default FeedCard;
+export default React.memo(FeedCard);

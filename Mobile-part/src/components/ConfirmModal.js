@@ -21,6 +21,7 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import Modal from './Modal';
 import AppText from './Text';
+import haptics from '../utils/haptics';
 
 const ConfirmModal = ({
   visible,
@@ -71,7 +72,11 @@ const ConfirmModal = ({
                   !isDestructive && !isCancel && styles.actionPrimary,
                   { borderColor: theme.border },
                 ]}
-                onPress={action.onPress}
+                onPress={() => {
+                  if (isDestructive) haptics.warning();
+                  else if (!isCancel) haptics.light();
+                  action.onPress?.();
+                }}
                 activeOpacity={0.75}
               >
                 <AppText

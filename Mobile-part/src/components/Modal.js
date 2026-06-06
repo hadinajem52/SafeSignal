@@ -104,7 +104,10 @@ const Modal = ({
                 backgroundColor: theme.card,
                 borderColor: theme.border,
                 shadowColor: theme.shadow,
-                transform: [{ translateY: slideAnim }],
+                transform: [
+                  { translateY: slideAnim },
+                  { scale: fadeAnim.interpolate({ inputRange: [0, 1], outputRange: [0.97, 1] }) },
+                ],
               },
               contentStyle,
             ]}
