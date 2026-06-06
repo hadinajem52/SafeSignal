@@ -12,10 +12,7 @@ module.exports = () => {
 
   return {
     ...config,
-    plugins: [
-      ...(config.plugins || []),
-      './plugins/withAndroidPredictiveBack',
-    ],
+    plugins: [...(config.plugins || [])],
     android: {
       ...config.android,
       ...(fs.existsSync(googleServicesFile) ? { googleServicesFile } : {}),

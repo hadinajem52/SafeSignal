@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Platform, Dimensions, Easing } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { CommonActions } from '@react-navigation/native';
@@ -18,6 +18,31 @@ import IncidentDetailScreen from '../screens/IncidentDetailScreen';
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
+const SCREEN_WIDTH = Dimensions.get('window').width;
+
+// Directional full-width slide between tabs, based on each tab's position in the
+// bar. progress: -1 = tab is left of active, 0 = active, +1 = right of active —
+// so moving to a tab on the right slides in from the right, and vice-versa.
+// translateX runs on the native driver (Android), so it stays smooth.
+const slideTabTransition = {
+  transitionSpec: {
+    animation: 'timing',
+    config: { duration: 260, easing: Easing.out(Easing.cubic) },
+  },
+  sceneStyleInterpolator: ({ current }) => ({
+    sceneStyle: {
+      transform: [
+        {
+          translateX: current.progress.interpolate({
+            inputRange: [-1, 0, 1],
+            outputRange: [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
+          }),
+        },
+      ],
+    },
+  }),
+};
+
 const CustomTabBarButton = ({ children, onPress, theme }) => (
   <TouchableOpacity
     style={styles.fabWrapper}
@@ -35,7 +60,6 @@ const CustomTabBarButton = ({ children, onPress, theme }) => (
 
 const stackScreenOptions = {
   headerShown: false,
-  gestureEnabled: true, // edge-only where supported; Android predictive back is enabled in app config.
   animation: 'slide_from_right',
 };
 
@@ -65,6 +89,7 @@ const TabNavigator = () => {
     <Tab.Navigator
       screenListeners={{ tabPress: () => haptics.selection() }}
       screenOptions={({ route }) => ({
+        ...slideTabTransition, // directional left/right slide based on tab position
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
 

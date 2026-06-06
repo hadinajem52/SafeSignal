@@ -13,6 +13,7 @@ import {
   IncidentTimeline,
   IncidentVideoPlayer,
   IncidentIllustration,
+  IncidentLocationMap,
 } from '../components';
 import { normalizeClosureDetails } from '../utils/incidentUtils';
 import { useTheme } from '../context/ThemeContext';
@@ -107,6 +108,12 @@ const IncidentDetailScreen = ({ route, navigation }) => {
   const closureDetails = normalizeClosureDetails(rawClosureDetails);
   const description = detailIncident.description || closureDetails || 'No description available.';
   const locationLabel = detailIncident.locationName || detailIncident.location_name || 'Location not set';
+  const placeName = detailIncident.locationName || detailIncident.location_name || '';
+  // Coordinates already arrive fuzzed-or-exact (decided server-side). If the fuzz
+  // flag is present, show an approximate-area circle instead of a precise pin.
+  const isApproximateLocation = Boolean(
+    detailIncident?.is_location_fuzzed ?? detailIncident?.isLocationFuzzed,
+  );
   const showTimeline = source !== 'community_feed';
   const constellationCopy = getConstellationCopy(detailIncident.constellation);
   const videoUrl = detailIncident.video_url || detailIncident.videoUrl;
@@ -188,11 +195,25 @@ const IncidentDetailScreen = ({ route, navigation }) => {
 
       <Card style={styles.sectionCard}>
         <AppText variant="label" style={[styles.sectionTitle, { color: theme.text }]}>Location</AppText>
-        <AppText variant="body" style={[styles.sectionText, { color: theme.textSecondary }]}> 
-          {hasValidCoordinates
-            ? `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
-            : locationLabel}
-        </AppText>
+        {hasValidCoordinates ? (
+          <>
+            <IncidentLocationMap
+              latitude={latitude}
+              longitude={longitude}
+              color={categoryConfig.mapColor}
+              approximate={isApproximateLocation}
+            />
+            {(placeName || isApproximateLocation) ? (
+              <AppText variant="caption" style={[styles.sectionText, { color: theme.textSecondary, marginTop: 8 }]}>
+                {placeName}{placeName && isApproximateLocation ? ' · ' : ''}{isApproximateLocation ? 'Approximate area' : ''}
+              </AppText>
+            ) : null}
+          </>
+        ) : (
+          <AppText variant="body" style={[styles.sectionText, { color: theme.textSecondary }]}>
+            {locationLabel}
+          </AppText>
+        )}
       </Card>
 
       <Card style={styles.sectionCard}>
