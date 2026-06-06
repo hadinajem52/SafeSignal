@@ -3,13 +3,13 @@ import {
   ActivityIndicator,
   FlatList,
   StyleSheet,
-  TouchableOpacity,
   View,
 } from 'react-native';
-import { AppText, EmptyState, EMPTY_ART } from '../../components';
+import { AppText, EmptyState, EMPTY_ART, PressableScale } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import useFeed from '../../hooks/useFeed';
 import FeedCard from './FeedCard';
+import haptics from '../../utils/haptics';
 
 const FILTERS = [
   { label: 'All',         value: null              },
@@ -20,7 +20,7 @@ const FILTERS = [
 ];
 
 const FilterChip = ({ item, active, onPress, theme }) => (
-  <TouchableOpacity
+  <PressableScale
     style={[
       styles.chip,
       {
@@ -28,12 +28,15 @@ const FilterChip = ({ item, active, onPress, theme }) => (
         backgroundColor: active ? theme.primary : theme.card,
       },
     ]}
-    onPress={() => onPress(item.value)}
+    onPress={() => {
+      haptics.selection();
+      onPress(item.value);
+    }}
   >
     <AppText variant="caption" style={{ color: active ? '#fff' : theme.text }}>
       {item.label}
     </AppText>
-  </TouchableOpacity>
+  </PressableScale>
 );
 
 const CommunityFeed = ({
@@ -59,11 +62,16 @@ const CommunityFeed = ({
   } = useFeed(filters);
   const isRefreshing = refreshing || externalRefreshing;
 
-  const handleCardPress = (incident) => {
+  const handleCardPress = useCallback((incident) => {
     navigation.navigate('IncidentDetail', { incident, source: 'community_feed' });
-  };
+  }, [navigation]);
+
+  const renderFeedItem = useCallback(({ item }) => (
+    <FeedCard incident={item} onPress={handleCardPress} />
+  ), [handleCardPress]);
 
   const handleRefresh = useCallback(async () => {
+    haptics.light();
     await Promise.all([
       refresh(),
       Promise.resolve(onExternalRefresh?.()),
@@ -154,7 +162,7 @@ const CommunityFeed = ({
     <FlatList
       data={incidents}
       keyExtractor={(item) => String(item.id)}
-      renderItem={({ item }) => <FeedCard incident={item} onPress={handleCardPress} />}
+      renderItem={renderFeedItem}
       ListHeaderComponent={headerElement}
       ListEmptyComponent={renderEmpty}
       ListFooterComponent={renderFooter}
@@ -164,6 +172,10 @@ const CommunityFeed = ({
       refreshing={isRefreshing}
       contentContainerStyle={[styles.wrapper, contentContainerStyle]}
       showsVerticalScrollIndicator={false}
+      removeClippedSubviews
+      initialNumToRender={6}
+      maxToRenderPerBatch={8}
+      windowSize={11}
     />
   );
 };

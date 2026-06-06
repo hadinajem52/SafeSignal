@@ -12,7 +12,10 @@ import useIncidentForm from "../hooks/useIncidentForm";
 import useLocationPicker from "../hooks/useLocationPicker";
 import useUserPreferences from "../hooks/useUserPreferences";
 import incidentConstants from "../../../constants/incident";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { AppText, Button, ConfirmModal, IncidentIllustration } from "../components";
+import haptics from "../utils/haptics";
+import { DURATION } from "../theme/motion";
 import {
   IncidentCategoryPicker,
   IncidentSeverityPicker,
@@ -370,6 +373,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
             idempotencyKeyRef.current = createIncidentIdempotencyKey();
             const successMessage = "Report submitted. Thanks for reporting this.";
             setSubmitSuccessMessage(successMessage);
+            haptics.success();
             showToast(successMessage, 'success');
 
             if (successNavigationTimerRef.current) {
@@ -381,9 +385,11 @@ const ReportIncidentScreen = ({ navigation, route }) => {
               navigation.navigate("Dashboard", { screen: "Home" });
             }, 1800);
           } else {
+            haptics.light();
             showToast('Draft saved. You can continue editing anytime.', 'success');
           }
         } else {
+          haptics.error();
           if (
             result.validationErrors &&
             Array.isArray(result.validationErrors)
@@ -402,6 +408,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
           }
         }
       } catch (error) {
+        haptics.error();
         showToast('An unexpected error occurred. Please try again.', 'error');
         console.error("Submit incident error:", error);
       } finally {
@@ -539,9 +546,13 @@ const ReportIncidentScreen = ({ navigation, route }) => {
         )}
 
         {showCategoryPicker && selectedCategory ? (
-          <View style={{ alignItems: 'center', marginTop: -8, marginBottom: 20 }}>
+          <Animated.View
+            key={selectedCategory}
+            entering={FadeInDown.duration(DURATION.base)}
+            style={{ alignItems: 'center', marginTop: -8, marginBottom: 20 }}
+          >
             <IncidentIllustration category={selectedCategory} size={130} />
-          </View>
+          </Animated.View>
         ) : null}
 
         {showSeverityPicker && (

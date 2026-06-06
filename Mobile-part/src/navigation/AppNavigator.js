@@ -24,6 +24,7 @@ const AuthStack = () => (
     screenOptions={{
       headerShown: false,
       animation: 'slide_from_right',
+      gestureEnabled: true, // edge-only where supported; Android predictive back is enabled in app config.
     }}
   >
     <Stack.Screen name="Login" component={LoginScreen} />
@@ -39,10 +40,16 @@ const AppStack = () => (
   <Stack.Navigator
     screenOptions={{
       headerShown: false,
+      animation: 'slide_from_right',
+      gestureEnabled: true, // edge-only where supported; Android predictive back is enabled in app config.
     }}
   >
     <Stack.Screen name="MainTabs" component={TabNavigator} />
-    <Stack.Screen name="WitnessPrompt" component={WitnessPromptScreen} />
+    <Stack.Screen
+      name="WitnessPrompt"
+      component={WitnessPromptScreen}
+      options={{ animation: 'slide_from_bottom' }}
+    />
   </Stack.Navigator>
 );
 

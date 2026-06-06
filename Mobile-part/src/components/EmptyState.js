@@ -1,8 +1,10 @@
 import React from 'react';
-import { View, Image, StyleSheet } from 'react-native';
+import { Image, StyleSheet } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import AppText from './Text';
 import Button from './Button';
 import { useTheme } from '../context/ThemeContext';
+import { DURATION } from '../theme/motion';
 
 // Unified (light + dark) empty / error illustrations, keyed for reuse across screens.
 export const EMPTY_ART = {
@@ -31,7 +33,7 @@ export default function EmptyState({
 }) {
   const { theme } = useTheme();
   return (
-    <View style={[styles.container, style]}>
+    <Animated.View entering={FadeInDown.duration(DURATION.page)} style={[styles.container, style]}>
       {illustration ? (
         <Image source={illustration} style={[styles.art, { width: size, height: size }]} resizeMode="contain" />
       ) : null}
@@ -42,7 +44,7 @@ export default function EmptyState({
         <AppText variant="body" style={[styles.message, { color: theme.textSecondary }]}>{message}</AppText>
       ) : null}
       {actionLabel ? <Button title={actionLabel} onPress={onAction} style={styles.action} /> : null}
-    </View>
+    </Animated.View>
   );
 }
 

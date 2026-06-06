@@ -5,6 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { CommonActions } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import haptics from '../utils/haptics';
 
 // Screens
 import HomeScreen from '../screens/Home/HomeScreen';
@@ -32,48 +33,37 @@ const CustomTabBarButton = ({ children, onPress, theme }) => (
   </TouchableOpacity>
 );
 
+const stackScreenOptions = {
+  headerShown: false,
+  gestureEnabled: true, // edge-only where supported; Android predictive back is enabled in app config.
+  animation: 'slide_from_right',
+};
+
 const DashboardStack = () => (
-  <Stack.Navigator>
-    <Stack.Screen
-      name="Home"
-      component={HomeScreen}
-      options={{ headerShown: false }}
-    />
-    <Stack.Screen
-      name="IncidentDetail"
-      component={IncidentDetailScreen}
-      options={{ headerShown: false }}
-    />
+  <Stack.Navigator screenOptions={stackScreenOptions}>
+    <Stack.Screen name="Home" component={HomeScreen} />
+    <Stack.Screen name="IncidentDetail" component={IncidentDetailScreen} />
   </Stack.Navigator>
 );
 
-const ReportsStack = () => {
-  return (
-    <Stack.Navigator>
-      <Stack.Screen 
-        name="MyReports" 
-        component={MyReportsScreen} 
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen 
-        name="ReportIncident" 
-        component={ReportIncidentScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="IncidentDetail"
-        component={IncidentDetailScreen}
-        options={{ headerShown: false }}
-      />
-    </Stack.Navigator>
-  );
-};
+const ReportsStack = () => (
+  <Stack.Navigator screenOptions={stackScreenOptions}>
+    <Stack.Screen name="MyReports" component={MyReportsScreen} />
+    <Stack.Screen
+      name="ReportIncident"
+      component={ReportIncidentScreen}
+      options={{ animation: 'slide_from_bottom' }}
+    />
+    <Stack.Screen name="IncidentDetail" component={IncidentDetailScreen} />
+  </Stack.Navigator>
+);
 
 const TabNavigator = () => {
   const { theme } = useTheme();
 
   return (
     <Tab.Navigator
+      screenListeners={{ tabPress: () => haptics.selection() }}
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;

@@ -11,3 +11,6 @@ export { default as IncidentTimeline } from './IncidentTimeline';
 export { default as IncidentVideoPlayer } from './IncidentVideoPlayer';
 export { default as IncidentIllustration } from './IncidentIllustration';
 export { default as EmptyState, EMPTY_ART } from './EmptyState';
+export { default as PressableScale } from './PressableScale';
+export { default as FadeInImage } from './FadeInImage';
+export { default as Skeleton } from './Skeleton';

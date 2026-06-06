@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { FlatList, View } from 'react-native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { LinearGradient } from 'expo-linear-gradient';
-import { AppText, ConfirmModal } from '../../components';
+import { AppText, ConfirmModal, Skeleton } from '../../components';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import useMyReports from '../../hooks/useMyReports';
@@ -46,14 +46,14 @@ const MyReportsScreen = ({ navigation }) => {
 
   if (isLoading) {
     return (
-      <View style={[myReportsStyles.loadingContainer, { backgroundColor: theme.background }]}> 
-        <View style={[myReportsStyles.skeletonHeader, { backgroundColor: theme.surface2 }]} />
-        <View style={[myReportsStyles.skeletonFilterRow, { backgroundColor: theme.card, borderColor: theme.border }]} />
+      <View style={[myReportsStyles.loadingContainer, { backgroundColor: theme.background }]}>
+        <Skeleton style={myReportsStyles.skeletonHeader} />
+        <Skeleton style={[myReportsStyles.skeletonFilterRow, { borderColor: theme.border }]} />
         {[1, 2, 3].map((item) => (
-          <View key={item} style={[myReportsStyles.skeletonCard, { backgroundColor: theme.card, borderColor: theme.border }]}> 
-            <View style={[myReportsStyles.skeletonLineWide, { backgroundColor: theme.surface2 }]} />
-            <View style={[myReportsStyles.skeletonLineMid, { backgroundColor: theme.surface }]} />
-            <View style={[myReportsStyles.skeletonLineShort, { backgroundColor: theme.surface }]} />
+          <View key={item} style={[myReportsStyles.skeletonCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            <Skeleton style={myReportsStyles.skeletonLineWide} />
+            <Skeleton style={myReportsStyles.skeletonLineMid} />
+            <Skeleton style={myReportsStyles.skeletonLineShort} />
           </View>
         ))}
       </View>
