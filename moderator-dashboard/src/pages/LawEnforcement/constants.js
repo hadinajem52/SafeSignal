@@ -74,6 +74,7 @@ export const SEVERITY_COLOR = {
 };
 
 export const LEI_QUEUE_WIDTH = { min: 320, max: 760, default: 420 };
+export const LEI_COMMS_WIDTH = { min: 280, max: 520, default: 300 };
 export const LEI_SPLITTER_WIDTH = 8;
 export const LEI_MIN_DETAIL_WIDTH = 520;
 

@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText, PanelRightClose, PanelRightOpen } from "lucide-react";
+import { FileText } from "lucide-react";
 import ConfirmDialog from "../../components/ConfirmDialog";
-import IncidentTimeline from "../../components/IncidentTimeline";
+import TimelineCommsPanel from "../../components/TimelineCommsPanel";
 import { reportsAPI } from "../../services/api";
 import { getConstellationPriorityBoost } from "../../utils/constellationUtils";
 import ReportDetail from "./ReportDetail";
@@ -339,61 +339,13 @@ function Reports() {
           ) : null}
 
           {/* Panel 3: timeline */}
-          <div
-            style={{ width: isTimelineCollapsed ? "44px" : `${panelWidths.right}px` }}
-            className="flex-shrink-0 border-l border-border overflow-hidden flex flex-col bg-surface/30"
-          >
-            {isTimelineCollapsed ? (
-              <div className="flex h-full flex-col items-center bg-surface">
-                <button
-                  type="button"
-                  onClick={() => setIsTimelineCollapsed(false)}
-                  aria-label="Expand Timeline and Comms panel"
-                  title="Expand Timeline and Comms"
-                  className="mt-3 inline-flex size-8 items-center justify-center border border-border text-muted hover:border-primary/40 hover:text-primary"
-                >
-                  <PanelRightOpen size={15} />
-                </button>
-                <div
-                  className="mt-4 text-[10px] font-bold uppercase text-muted"
-                  style={{ writingMode: "vertical-rl" }}
-                >
-                  Timeline &amp; Comms
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="flex-shrink-0 h-[52px] px-4 flex items-center justify-between gap-3 border-b border-border bg-surface">
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-bold uppercase tracking-[0.04em] text-text">
-                      Timeline &amp; Comms
-                    </p>
-                    <p className="text-[10px] text-muted mt-0.5 truncate">
-                      Notes &amp; reporter messages
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsTimelineCollapsed(true)}
-                    aria-label="Collapse Timeline and Comms panel"
-                    title="Collapse Timeline and Comms"
-                    className="inline-flex size-8 flex-shrink-0 items-center justify-center border border-border text-muted hover:border-primary/40 hover:text-primary"
-                  >
-                    <PanelRightClose size={15} />
-                  </button>
-                </div>
-                <div className="flex-1 overflow-hidden">
-                  {selectedReport ? (
-                    <IncidentTimeline incidentId={selectedReport.id} />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-full gap-2 text-muted text-[11px] font-semibold uppercase tracking-[0.04em]">
-                      No report selected
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
+          <TimelineCommsPanel
+            incidentId={selectedReport?.id || null}
+            collapsed={isTimelineCollapsed}
+            onToggle={setIsTimelineCollapsed}
+            width={panelWidths.right}
+            emptyLabel="No report selected"
+          />
         </div>
       </div>
 
