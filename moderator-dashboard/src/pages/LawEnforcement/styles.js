@@ -18,7 +18,10 @@ const leStyles = `
     color: var(--le-text);
     background: var(--le-bg);
   }
-  .lei-root * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* Reset LE's own markup at zero specificity (:where) so the shared,
+     Tailwind-styled Timeline & Comms panel keeps its utility spacing, while
+     every LE element below still normalizes exactly as before. */
+  :where(.lei-root) * { box-sizing: border-box; margin: 0; padding: 0; }
 
   /* TOPBAR */
   .lei-topbar {

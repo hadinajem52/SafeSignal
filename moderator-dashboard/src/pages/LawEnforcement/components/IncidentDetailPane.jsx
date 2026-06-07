@@ -3,7 +3,6 @@ import { ArrowUpRight } from "lucide-react";
 import { CLOSURE_OUTCOMES } from "../../../constants/incident";
 import EvidencePhotoViewer from "../../../components/EvidencePhotoViewer";
 import GoogleMapPanel from "../../../components/GoogleMapPanel";
-import IncidentTimeline from "../../../components/IncidentTimeline";
 import { useProtectedMediaUrl } from "../../../hooks/useProtectedMediaUrl";
 import {
   formatConstellationScore,
@@ -448,16 +447,6 @@ function IncidentDetailPane({
             </div>
           </div>
         )}
-
-        <div style={{ marginTop: 24 }}>
-          <div className="lei-section-label">Messages</div>
-          <div
-            className="border border-border overflow-hidden"
-            style={{ height: 460 }}
-          >
-            <IncidentTimeline incidentId={incident.id} allowInternal={false} />
-          </div>
-        </div>
 
         <div style={{ marginTop: 24 }}>
           <div className="lei-section-label">Chain of Custody</div>

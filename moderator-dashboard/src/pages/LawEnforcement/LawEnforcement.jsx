@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Shield, Wifi } from "lucide-react";
 import ConfirmDialog from "../../components/ConfirmDialog";
+import TimelineCommsPanel from "../../components/TimelineCommsPanel";
 import { useAuth } from "../../context/AuthContext";
 import leStyles from "./styles";
 import {
+  LEI_COMMS_WIDTH,
   LEI_MIN_DETAIL_WIDTH,
   LEI_QUEUE_WIDTH,
   LEI_SPLITTER_WIDTH,
@@ -21,6 +23,7 @@ import useLeiData from "./hooks/useLeiData";
 import useLeiRealtime from "./hooks/useLeiRealtime";
 import useLeiStatusTransitions from "./hooks/useLeiStatusTransitions";
 import useQueueSplitter from "./hooks/useQueueSplitter";
+import useTimelinePanelResize from "./hooks/useTimelinePanelResize";
 import useToastStack from "./hooks/useToastStack";
 
 function LawEnforcement() {
@@ -32,6 +35,7 @@ function LawEnforcement() {
   const [statusFilter, setStatusFilter] = useState("verified");
   const [sortMode, setSortMode] = useState("urgency");
   const [selectedIncidentId, setSelectedIncidentId] = useState(null);
+  const [isTimelineCollapsed, setIsTimelineCollapsed] = useState(false);
   const [leiAlerts, setLeiAlerts] = useState([]);
   const [lastRealtimeAlertAt, setLastRealtimeAlertAt] = useState(null);
 
@@ -48,6 +52,21 @@ function LawEnforcement() {
     minWidth: LEI_QUEUE_WIDTH.min,
     maxWidth: LEI_QUEUE_WIDTH.max,
     defaultWidth: LEI_QUEUE_WIDTH.default,
+    splitterWidth: LEI_SPLITTER_WIDTH,
+    minDetailWidth: LEI_MIN_DETAIL_WIDTH,
+  });
+
+  const {
+    panelWidth: commsPanelWidth,
+    isActive: isCommsSplitterActive,
+    handlePointerDown: handleCommsSplitterPointerDown,
+    handleKeyDown: handleCommsSplitterKeyDown,
+  } = useTimelinePanelResize({
+    containerRef: queueLayoutRef,
+    queueWidth: queuePanelWidth,
+    minWidth: LEI_COMMS_WIDTH.min,
+    maxWidth: LEI_COMMS_WIDTH.max,
+    defaultWidth: LEI_COMMS_WIDTH.default,
     splitterWidth: LEI_SPLITTER_WIDTH,
     minDetailWidth: LEI_MIN_DETAIL_WIDTH,
   });
@@ -324,6 +343,32 @@ function LawEnforcement() {
                     }
                   />
                 </div>
+
+                {/* Splitter to resize the messages panel (hidden when collapsed) */}
+                {!isTimelineCollapsed ? (
+                  <div
+                    role="separator"
+                    aria-orientation="vertical"
+                    aria-label="Resize detail and messages panels"
+                    tabIndex={0}
+                    aria-valuemin={LEI_COMMS_WIDTH.min}
+                    aria-valuemax={LEI_COMMS_WIDTH.max}
+                    aria-valuenow={Math.round(commsPanelWidth)}
+                    className={`lei-splitter${isCommsSplitterActive ? " active" : ""}`}
+                    onPointerDown={handleCommsSplitterPointerDown}
+                    onKeyDown={handleCommsSplitterKeyDown}
+                  />
+                ) : null}
+
+                {/* Panel 3: reporter messages (right-docked, collapsible) */}
+                <TimelineCommsPanel
+                  incidentId={selectedIncident?.id || null}
+                  collapsed={isTimelineCollapsed}
+                  onToggle={setIsTimelineCollapsed}
+                  width={commsPanelWidth}
+                  allowInternal={false}
+                  emptyLabel="No incident selected"
+                />
               </div>
             </div>
           </div>
