@@ -129,7 +129,7 @@ export default function IncidentChatFab({ incidentId, accent }) {
           styles.panel,
           {
             height: panelHeight,
-            paddingBottom: tabBarHeight,
+            paddingBottom: tabBarHeight + 10,
             backgroundColor: theme.card,
             borderColor: theme.border,
             shadowColor: theme.shadow,

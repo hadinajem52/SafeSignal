@@ -78,11 +78,7 @@ const HomeScreen = ({ navigation }) => {
           >
             <Ionicons name="notifications" size={24} color="#FFFFFF" />
             {unreadCount > 0 ? (
-              <View style={[styles.notifBadge, { backgroundColor: theme.error, borderColor: theme.primary }]}>
-                <AppText variant="caption" style={styles.notifBadgeText}>
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </AppText>
-              </View>
+              <View style={[styles.notifBadge, { backgroundColor: theme.error, borderColor: theme.primary }]} />
             ) : null}
           </TouchableOpacity>
         </LinearGradient>
