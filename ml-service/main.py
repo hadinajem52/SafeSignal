@@ -18,10 +18,6 @@ from pydantic import BaseModel, Field, ValidationError
 
 import config
 from cache_manager import RedisCacheManager, InMemoryLRUCache
-from models.embeddings import EmbeddingModel
-from models.classifier import CategoryClassifier
-from models.toxicity import ToxicityDetector
-from models.risk import RiskScorer
 from providers import get_provider, BaseProvider
 from providers.gemini import GeminiProvider
 from services.constellation_synthesis import synthesize_constellation as run_constellation_synthesis
@@ -57,10 +53,10 @@ cache = RedisCacheManager(
 )
 
 # Global model instances — only populated when ML_PROVIDER=local
-embedding_model: Optional[EmbeddingModel] = None
-classifier_model: Optional[CategoryClassifier] = None
-toxicity_model: Optional[ToxicityDetector] = None
-risk_scorer: Optional[RiskScorer] = None
+embedding_model: Optional[object] = None
+classifier_model: Optional[object] = None
+toxicity_model: Optional[object] = None
+risk_scorer: Optional[object] = None
 
 # Active provider — set during lifespan startup
 active_provider: Optional[BaseProvider] = None
@@ -129,6 +125,11 @@ async def lifespan(app: FastAPI):
     if config.ML_PROVIDER == "local":
         # Load HuggingFace models only when running the local provider.
         try:
+            from models.embeddings import EmbeddingModel
+            from models.classifier import CategoryClassifier
+            from models.toxicity import ToxicityDetector
+            from models.risk import RiskScorer
+
             embedding_model = EmbeddingModel(config.EMBEDDING_MODEL)
             classifier_model = CategoryClassifier(config.CLASSIFIER_MODEL)
             toxicity_model = ToxicityDetector()

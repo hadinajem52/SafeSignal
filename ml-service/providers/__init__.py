@@ -2,7 +2,6 @@
 Provider factory. Import get_provider() in main.py lifespan.
 """
 from providers.base import BaseProvider
-from providers.local import LocalProvider
 from providers.gemini import GeminiProvider
 
 import config
@@ -26,6 +25,8 @@ def get_provider(
             )
         return GeminiProvider()
 
+    from providers.local import LocalProvider
+
     return LocalProvider(
         classifier=classifier,
         embedding_model=embedding_model,
@@ -34,4 +35,4 @@ def get_provider(
     )
 
 
-__all__ = ["BaseProvider", "LocalProvider", "GeminiProvider", "get_provider"]
+__all__ = ["BaseProvider", "GeminiProvider", "get_provider"]
