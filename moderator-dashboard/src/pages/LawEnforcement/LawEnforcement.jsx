@@ -4,6 +4,7 @@ import { AlertTriangle, Shield, Wifi } from "lucide-react";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import TimelineCommsPanel from "../../components/TimelineCommsPanel";
 import { useAuth } from "../../context/AuthContext";
+import useAwaitingReply from "../../hooks/useAwaitingReply";
 import leStyles from "./styles";
 import {
   LEI_COMMS_WIDTH,
@@ -40,6 +41,7 @@ function LawEnforcement() {
   const [lastRealtimeAlertAt, setLastRealtimeAlertAt] = useState(null);
 
   const { toasts, pushToast } = useToastStack();
+  const { data: awaitingReplyIds } = useAwaitingReply();
 
   const {
     queuePanelWidth,
@@ -296,6 +298,7 @@ function LawEnforcement() {
                     onSortModeChange={setSortMode}
                     statusMutationPending={statusMutation.isPending}
                     onRequestAction={requestStatusUpdate}
+                    unreadIncidentIds={awaitingReplyIds}
                   />
                 </div>
                 <div

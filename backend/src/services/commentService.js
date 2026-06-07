@@ -239,7 +239,27 @@ async function createComment(incidentId, userId, commentData) {
   return commentResponse;
 }
 
+/**
+ * Incident IDs whose most recent public (non-internal) comment was written by a
+ * non-staff user (the reporter) — i.e. a citizen message awaiting a staff reply.
+ * Powers the unread-message dot in the staff queues. Stateless: the dot clears
+ * automatically once any staff member posts a public reply.
+ */
+async function getIncidentsAwaitingReply() {
+  // Latest public (non-internal) comment per incident, with its author's role.
+  const rows = await db.manyOrNone(
+    `SELECT DISTINCT ON (c.incident_id) c.incident_id, u.role
+     FROM incident_comments c
+     JOIN users u ON u.user_id = c.user_id
+     WHERE c.is_internal = FALSE
+     ORDER BY c.incident_id, c.created_at DESC`
+  );
+  // Awaiting a staff reply = the most recent message came from a non-staff user.
+  return rows.filter((row) => !isStaffRole(row.role)).map((row) => row.incident_id);
+}
+
 module.exports = {
   getTimeline,
   createComment,
+  getIncidentsAwaitingReply,
 };

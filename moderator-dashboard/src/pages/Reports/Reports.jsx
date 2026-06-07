@@ -8,6 +8,7 @@ import { getConstellationPriorityBoost } from "../../utils/constellationUtils";
 import ReportDetail from "./ReportDetail";
 import ReportFilters from "./ReportFilters";
 import ReportList from "./ReportList";
+import useAwaitingReply from "../../hooks/useAwaitingReply";
 import { useReportPanelResize } from "./hooks/useReportPanelResize";
 import { useReportSelection } from "./hooks/useReportSelection";
 import { useReportActions } from "./hooks/useReportActions";
@@ -52,6 +53,7 @@ function Reports() {
   const [parentReportReturn, setParentReportReturn] = useState(null);
 
   const queryClient = useQueryClient();
+  const { data: awaitingReplyIds } = useAwaitingReply();
 
   const pushToast = useCallback((message, type = "success") => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -290,6 +292,7 @@ function Reports() {
               selectedReportIds={selectedReportIds}
               onToggleSelection={handleToggleSelection}
               onToggleSelectAll={handleToggleSelectAll}
+              unreadReportIds={awaitingReplyIds}
             />
           </div>
 

@@ -23,4 +23,10 @@ export const timelineAPI = {
         }),
       "Failed to post comment",
     ),
+
+  getAwaitingReply: async () =>
+    requestData(
+      () => api.get(`/incidents/comments/awaiting-reply`),
+      "Failed to fetch awaiting-reply incidents",
+    ),
 };

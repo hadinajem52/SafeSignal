@@ -14,6 +14,7 @@ function ReportList({
   selectedReportIds,
   onToggleSelection,
   onToggleSelectAll,
+  unreadReportIds,
 }) {
   if (isLoading) {
     return <LoadingState />
@@ -70,7 +71,15 @@ function ReportList({
 
               {/* Report info */}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-text leading-snug truncate">{report.title}</p>
+                <p className="text-sm font-semibold text-text leading-snug truncate">
+                  {unreadReportIds?.has(String(report.id)) ? (
+                    <span
+                      title="New message from reporter"
+                      className="inline-block size-2 rounded-full bg-primary mr-1.5 align-middle"
+                    />
+                  ) : null}
+                  {report.title}
+                </p>
                 <div className="mt-1.5">
                   <StatusBadge status={report.status} size="xs" className="!rounded-none" />
                   {constellationMeta ? (

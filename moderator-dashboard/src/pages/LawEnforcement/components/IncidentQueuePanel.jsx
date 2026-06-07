@@ -22,6 +22,7 @@ function IncidentQueuePanel({
   onSortModeChange,
   statusMutationPending,
   onRequestAction,
+  unreadIncidentIds,
 }) {
   return (
     <div className="lei-queue-panel">
@@ -103,7 +104,24 @@ function IncidentQueuePanel({
                 onClick={() => onSelectIncident(incident.id)}
               >
                 <div>
-                  <div className="lei-incident-title">{incident.title}</div>
+                  <div className="lei-incident-title">
+                    {unreadIncidentIds?.has(String(incident.id)) ? (
+                      <span
+                        title="New message from reporter"
+                        style={{
+                          display: "inline-block",
+                          width: 7,
+                          height: 7,
+                          borderRadius: "50%",
+                          background: "var(--le-blue)",
+                          marginRight: 6,
+                          verticalAlign: "middle",
+                          flexShrink: 0,
+                        }}
+                      />
+                    ) : null}
+                    {incident.title}
+                  </div>
                   <div className="lei-incident-preview">
                     {incident.description}
                   </div>
