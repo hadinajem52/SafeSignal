@@ -1,9 +1,39 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
+const DEPLOYED_SOCKET_URL = 'https://safesignal-backend-aw78.onrender.com';
+
+const normalizeUrl = (value) => {
+  if (!value) {
+    return null;
+  }
+
+  return value.trim().replace(/\/+$/, '');
+};
+
+const getConfiguredSocketUrl = () => {
+  const socketUrl = normalizeUrl(process.env.EXPO_PUBLIC_SOCKET_URL);
+
+  if (socketUrl) {
+    return socketUrl;
+  }
+
+  const apiBaseUrl = normalizeUrl(
+    process.env.EXPO_PUBLIC_API_BASE_URL || process.env.EXPO_PUBLIC_API_URL
+  );
+
+  return apiBaseUrl?.replace(/\/api$/, '') || null;
+};
+
 export const getSocketUrl = () => {
+  const configuredUrl = getConfiguredSocketUrl();
+
+  if (configuredUrl) {
+    return configuredUrl;
+  }
+
   if (!__DEV__) {
-    return 'https://your-production-api.com';
+    return DEPLOYED_SOCKET_URL;
   }
 
   const debuggerHost = Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost;

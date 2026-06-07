@@ -4,6 +4,12 @@
   "main": "index.js",
   "scripts": {
     "start": "expo start",
+    "env:local": "node scripts/select-env.js local",
+    "env:emulator": "node scripts/select-env.js emulator",
+    "env:deployed": "node scripts/select-env.js deployed",
+    "start:local": "npm run env:local && expo start -c",
+    "start:emulator": "npm run env:emulator && expo start -c",
+    "start:deployed": "npm run env:deployed && expo start -c",
     "android": "adb reverse tcp:3000 tcp:3000 && expo run:android",
     "android:device": "adb reverse tcp:3000 tcp:3000",
     "ios": "expo run:ios",

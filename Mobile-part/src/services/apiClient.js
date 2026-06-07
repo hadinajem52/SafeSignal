@@ -3,9 +3,28 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { tokenStorage } from './tokenStorage';
 
+const DEPLOYED_API_BASE_URL = 'https://safesignal-backend-aw78.onrender.com/api';
+
+const normalizeApiBaseUrl = (value) => {
+  if (!value) {
+    return null;
+  }
+
+  const trimmedValue = value.trim().replace(/\/+$/, '');
+  return trimmedValue.endsWith('/api') ? trimmedValue : `${trimmedValue}/api`;
+};
+
 const getApiBaseUrl = () => {
+  const configuredUrl = normalizeApiBaseUrl(
+    process.env.EXPO_PUBLIC_API_BASE_URL || process.env.EXPO_PUBLIC_API_URL
+  );
+
+  if (configuredUrl) {
+    return configuredUrl;
+  }
+
   if (!__DEV__) {
-    return 'https://your-production-api.com/api';
+    return DEPLOYED_API_BASE_URL;
   }
 
   const debuggerHost = Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost;
