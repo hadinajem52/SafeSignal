@@ -919,6 +919,27 @@ router.post(
 );
 
 /**
+ * GET /api/incidents/comments/awaiting-reply
+ * Incident IDs whose latest public comment is from the reporter (awaiting a
+ * staff reply). Powers the unread-message dot in staff queues.
+ * Access: Staff only
+ */
+router.get(
+  '/comments/awaiting-reply',
+  authenticateToken,
+  requireRole(['moderator', 'admin', 'law_enforcement']),
+  async (req, res) => {
+    try {
+      const incidentIds = await commentService.getIncidentsAwaitingReply();
+      return res.json({ status: 'OK', data: { incidentIds } });
+    } catch (error) {
+      logger.error(`Failed to fetch awaiting-reply incidents: ${error.message}`);
+      return res.status(500).json({ status: 'ERROR', message: 'Failed to fetch awaiting-reply incidents' });
+    }
+  },
+);
+
+/**
  * GET /api/incidents/:id/timeline
  * Get timeline (comments + status changes) for an incident
  * Access: Authenticated users (citizen for own incidents, staff for all)

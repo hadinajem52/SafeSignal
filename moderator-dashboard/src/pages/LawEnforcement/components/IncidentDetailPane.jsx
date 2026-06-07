@@ -17,7 +17,7 @@ import {
   resolveReportPhotoUrl,
 } from "../../../utils/reportPhotos";
 import { STATUS_ACTION_CONFIG, WORKFLOW_STEPS } from "../constants";
-import { canTransitionTo, getNextWorkflowStatus } from "../helpers";
+import { getNextWorkflowStatus } from "../helpers";
 
 function EvidenceLink({ url, index, onOpen }) {
   const resolvedUrl = resolveReportPhotoUrl(url);
@@ -127,7 +127,15 @@ function IncidentDetailPane({
   const photoUrls = getReportPhotoUrls(incident);
   const videoUrl = getReportVideoUrl(incident);
   const hasMedia = photoUrls.length > 0 || Boolean(videoUrl);
-  const showCloseCaseOptions = canTransitionTo(incident, "police_closed") || isComplete;
+  // Surface closure/feed controls only at the final active stage (the step just
+  // before the terminal "closed" step) or once closed (for feed settings) —
+  // keeps earlier workflow stages uncluttered.
+  const finalActiveStatus = WORKFLOW_STEPS[WORKFLOW_STEPS.length - 2]?.id;
+  const isClosingStage = incident.status === finalActiveStatus;
+  const showCloseCaseOptions = isClosingStage || isComplete;
+  // At the closing stage the closure is driven by the Close Case button below,
+  // so don't also show the generic "advance to next status" button.
+  const showAdvanceAction = !isComplete && nextAction && nextStatus !== "police_closed";
   const mediaDisclosureLabel = [
     photoUrls.length ? `${photoUrls.length} photo${photoUrls.length === 1 ? "" : "s"}` : null,
     videoUrl ? "1 video" : null,
@@ -215,7 +223,7 @@ function IncidentDetailPane({
                 Case closed.
               </span>
             ) : null}
-            {!isComplete && nextAction ? (
+            {showAdvanceAction ? (
               <button
                 className="lei-btn-primary"
                 disabled={statusMutationPending}
@@ -289,21 +297,6 @@ function IncidentDetailPane({
                     <span>Publish to Community Feed</span>
                   </label>
 
-                  {isDisclosed && hasMedia ? (
-                    <label className="lei-close-check">
-                      <input
-                        type="checkbox"
-                        checked={isMediaDisclosed}
-                        onChange={(e) => onMediaDisclosedChange(e.target.checked)}
-                        className="lei-close-checkbox"
-                      />
-                      <span>
-                        Include attached media
-                        {mediaDisclosureLabel ? ` (${mediaDisclosureLabel})` : ""}
-                      </span>
-                    </label>
-                  ) : null}
-
                   <label
                     className="lei-close-check"
                     style={{
@@ -320,6 +313,21 @@ function IncidentDetailPane({
                     />
                     <span>Fuzz Location for Privacy</span>
                   </label>
+
+                  {isDisclosed && hasMedia ? (
+                    <label className="lei-close-check">
+                      <input
+                        type="checkbox"
+                        checked={!isMediaDisclosed}
+                        onChange={(e) => onMediaDisclosedChange(!e.target.checked)}
+                        className="lei-close-checkbox"
+                      />
+                      <span>
+                        Publish without media — use illustration
+                        {mediaDisclosureLabel ? ` (hides ${mediaDisclosureLabel})` : ""}
+                      </span>
+                    </label>
+                  ) : null}
 
                   <div className="lei-close-help">
                     Once published, this report will appear in the mobile Community Feed visible to all citizens.
