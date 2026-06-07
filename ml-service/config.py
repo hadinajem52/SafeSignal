@@ -2,10 +2,16 @@ import json
 import os
 import platform
 
-import torch
 from dotenv import load_dotenv
 
 load_dotenv()
+
+ML_PROVIDER = os.getenv("ML_PROVIDER", "local")
+
+if ML_PROVIDER == "local":
+    import torch
+else:
+    torch = None
 
 
 def _load_json_env(name: str, default):
@@ -42,7 +48,7 @@ EXPERIMENT_VARIANT = os.getenv("EXPERIMENT_VARIANT", "A")
 # Classifier + Embeddings (~340MB) -> GPU for speed
 # Toxicity (~418MB) -> CPU to save VRAM
 # Risk scorer -> CPU (rule-based, no neural net)
-GPU_AVAILABLE = torch.cuda.is_available()
+GPU_AVAILABLE = bool(torch and torch.cuda.is_available())
 USE_GPU = os.getenv("ML_USE_GPU", "true" if GPU_AVAILABLE else "false").lower() == "true"
 
 if GPU_AVAILABLE:
@@ -121,7 +127,8 @@ RISK_RULESET_VERSION = os.getenv("RISK_RULESET_VERSION", "risk-rules-v1")
 
 # Performance: number of CPU threads for inference
 NUM_THREADS = int(os.getenv("ML_NUM_THREADS", os.cpu_count() or 4))
-torch.set_num_threads(NUM_THREADS)
+if torch:
+    torch.set_num_threads(NUM_THREADS)
 print(f"[ML Service] CPU threads for inference: {NUM_THREADS}")
 
 # Endpoint-level asynchronous inference concurrency bound.
@@ -387,10 +394,6 @@ MODEL_VERSION_MAP = {
 }
 
 # ── Provider selection ────────────────────────────────────────────────────────
-# "local"  → run HuggingFace models in-process (original behaviour)
-# "gemini" → use Google Generative AI API (requires GEMINI_API_KEY)
-ML_PROVIDER = os.getenv("ML_PROVIDER", "local")
-
 # ── Gemini config (only used when ML_PROVIDER=gemini) ─────────────────────────
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_CHAT_MODEL = os.getenv("GEMINI_CHAT_MODEL", "gemini-2.5-flash")

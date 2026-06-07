@@ -146,7 +146,12 @@ class RedisCacheManager(BaseCacheManager):
     def _connect(self) -> bool:
         """Attempt to connect to Redis."""
         try:
-            self._redis = redis.from_url(self._redis_url, decode_responses=True)
+            self._redis = redis.from_url(
+                self._redis_url,
+                decode_responses=True,
+                socket_connect_timeout=1,
+                socket_timeout=1,
+            )
             self._redis.ping()
             self._connected = True
             logger.info("✅ Redis connected successfully")
