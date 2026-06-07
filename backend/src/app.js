@@ -31,6 +31,8 @@ const notificationsRoutes = require('./routes/notifications');
 const app = express();
 const REQUEST_BODY_LIMIT = '25mb';
 
+app.set('trust proxy', 1);
+
 if (process.env.SENTRY_DSN) {
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
