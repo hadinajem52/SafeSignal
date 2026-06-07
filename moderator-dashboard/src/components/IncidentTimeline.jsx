@@ -4,15 +4,16 @@ import { timelineAPI } from '../services/api'
 import { SOCKET_URL } from '../utils/network'
 import io from 'socket.io-client'
 
-const IncidentTimeline = ({ incidentId }) => {
+const IncidentTimeline = ({ incidentId, allowInternal = true }) => {
   const [timeline, setTimeline] = useState([])
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [message, setMessage] = useState('')
-  const [isInternal, setIsInternal] = useState(true)
+  const [isInternal, setIsInternal] = useState(allowInternal)
   const [error, setError] = useState(null)
   const timelineEndRef = useRef(null)
   const socketRef = useRef(null)
+  const effectiveIsInternal = allowInternal && isInternal
 
   const loadTimeline = useCallback(async () => {
     setLoading(true)
@@ -85,7 +86,7 @@ const IncidentTimeline = ({ incidentId }) => {
     setSending(true)
     const messageText = message.trim()
     setMessage('')
-    const result = await timelineAPI.postComment(incidentId, messageText, isInternal)
+    const result = await timelineAPI.postComment(incidentId, messageText, effectiveIsInternal)
     if (!result.success) {
       setError(result.error)
       setMessage(messageText)
@@ -223,6 +224,7 @@ const IncidentTimeline = ({ incidentId }) => {
       {/* Composer — bordered tab toggle matching Reports Queue design */}
       <div className="border-t border-border bg-card flex-shrink-0 p-3">
         {/* Tab switcher */}
+        {allowInternal && (
         <div className="flex mb-2">
           <button
             onClick={() => setIsInternal(false)}
@@ -249,6 +251,7 @@ const IncidentTimeline = ({ incidentId }) => {
             Internal Note
           </button>
         </div>
+        )}
 
         <textarea
           value={message}
@@ -259,9 +262,9 @@ const IncidentTimeline = ({ incidentId }) => {
               handleSend()
             }
           }}
-          placeholder={isInternal ? 'Add internal note (staff only)…' : 'Reply to citizen…'}
+          placeholder={effectiveIsInternal ? 'Add internal note (staff only)…' : 'Reply to citizen…'}
           className={`w-full px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 transition-shadow block ${
-            isInternal
+            effectiveIsInternal
               ? 'border border-warning/25 focus:ring-warning/30 bg-warning/5 text-text placeholder:text-muted/50'
               : 'border border-border bg-surface text-text focus:ring-primary/30 placeholder:text-muted/50'
           }`}
@@ -270,8 +273,8 @@ const IncidentTimeline = ({ incidentId }) => {
         />
 
         <div className="flex items-center justify-between mt-2">
-          <p className={`text-[10px] font-semibold ${isInternal ? 'text-warning/70' : 'text-muted'}`}>
-            {isInternal ? 'Staff only — not visible to reporter' : 'Visible to the reporter'}
+          <p className={`text-[10px] font-semibold ${effectiveIsInternal ? 'text-warning/70' : 'text-muted'}`}>
+            {effectiveIsInternal ? 'Staff only — not visible to reporter' : 'Visible to the reporter'}
           </p>
           <button
             onClick={handleSend}
@@ -279,7 +282,7 @@ const IncidentTimeline = ({ incidentId }) => {
             aria-label="Send message"
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.04em] border transition-all ${
               message.trim() && !sending
-                ? isInternal
+                ? effectiveIsInternal
                   ? 'border-warning bg-warning/8 text-warning hover:bg-warning hover:text-bg'
                   : 'border-primary bg-primary/8 text-primary hover:bg-primary hover:text-bg'
                 : 'border-border bg-surface text-muted/50 cursor-not-allowed'
