@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const app = require('./app');
 const db = require('./config/database');
 const logger = require('./utils/logger');
+const { canAccessInternalComments, isStaffRole } = require('./utils/roleAccess');
 const { startConstellationMaintenance } = require('./jobs/constellationMaintenance');
 const { startWeeklyDigestScheduler } = require('./services/notificationService');
 const { setSocketServer } = require('./utils/socketService');
@@ -72,7 +73,8 @@ io.on('connection', (socket) => {
 
   socket.on('join_incident', async ({ incidentId }) => {
     try {
-      const isStaff = ['moderator', 'admin', 'law_enforcement'].includes(role);
+      const isStaff = isStaffRole(role);
+      const canViewInternal = canAccessInternalComments(role);
       const incident = await db.oneOrNone(
         'SELECT incident_id, reporter_id FROM incidents WHERE incident_id = $1',
         [incidentId]
@@ -92,7 +94,7 @@ io.on('connection', (socket) => {
       socket.join(publicRoom);
       logger.info(`User ${userId} joined room ${publicRoom}`);
 
-      if (isStaff) {
+      if (canViewInternal) {
         const internalRoom = `incident_${incidentId}_internal`;
         socket.join(internalRoom);
         logger.info(`Staff ${userId} joined room ${internalRoom}`);

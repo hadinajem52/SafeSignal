@@ -6,6 +6,7 @@
 
 const db = require('../config/database');
 const ServiceError = require('../utils/ServiceError');
+const { canAccessInternalComments, isStaffRole } = require('../utils/roleAccess');
 const { emitComment } = require('../utils/socketService');
 
 /**
@@ -42,16 +43,18 @@ async function getTimeline(incidentId, userId) {
   }
 
   // Authorization: citizens can only view their own incidents, staff can view all
-  const isStaff = ['moderator', 'admin', 'law_enforcement'].includes(user.role);
+  const isStaff = isStaffRole(user.role);
+  const canViewInternal = canAccessInternalComments(user.role);
   const isOwner = incident.reporter_id === userId;
 
   if (!isStaff && !isOwner) {
     throw ServiceError.forbidden('You do not have permission to view this incident timeline');
   }
 
-  // Fetch comments and status changes in parallel
+  // Fetch comments and status changes in parallel. Internal notes are only
+  // included for moderators/admins — law enforcement and reporters never see them.
   const [comments, statusChanges] = await Promise.all([
-    getCommentsForIncident(incidentId, isStaff),
+    getCommentsForIncident(incidentId, canViewInternal),
     getStatusChangesForIncident(incidentId),
   ]);
 
@@ -73,7 +76,7 @@ async function getTimeline(incidentId, userId) {
       user_id: s.moderator_id,
       username: s.moderator_name,
       role: s.moderator_role,
-      notes: s.notes,
+      notes: canViewInternal ? s.notes : null,
       created_at: s.timestamp,
     })),
   ].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
@@ -183,16 +186,16 @@ async function createComment(incidentId, userId, commentData) {
   }
 
   // Authorization: citizens can only comment on their own incidents, staff can comment on all
-  const isStaff = ['moderator', 'admin', 'law_enforcement'].includes(user.role);
+  const isStaff = isStaffRole(user.role);
   const isOwner = incident.reporter_id === userId;
 
   if (!isStaff && !isOwner) {
     throw ServiceError.forbidden('You do not have permission to comment on this incident');
   }
 
-  // Only staff can create internal comments
-  if (isInternal && !isStaff) {
-    throw ServiceError.forbidden('Only staff members can create internal comments');
+  // Only moderators/admins can create internal comments (law enforcement is public-only)
+  if (isInternal && !canAccessInternalComments(user.role)) {
+    throw ServiceError.forbidden('Only moderators/admins can create internal comments');
   }
 
   // Cannot comment on draft incidents
