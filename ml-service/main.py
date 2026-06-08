@@ -252,6 +252,36 @@ class InsightsResponse(BaseModel):
     supported: bool
 
 
+class AreaInsightsRequest(BaseModel):
+    radius_km: float = Field(..., gt=0)
+    window_days: int = Field(..., ge=1)
+    total: int = Field(..., ge=0)
+    active: int = Field(default=0, ge=0)
+    resolved: int = Field(default=0, ge=0)
+    categories: List[List[object]] = Field(default_factory=list)
+    severities: Dict[str, int] = Field(default_factory=dict)
+    time_of_day: Dict[str, int] = Field(default_factory=dict)
+    busiest_period: Optional[str] = None
+    daily_counts: List[int] = Field(default_factory=list)
+    prev_window_total: Optional[int] = Field(default=None, ge=0)
+    trend: Optional[str] = Field(default=None, pattern=r"^(rising|falling|stable)$")
+    nearest_km: Optional[float] = Field(default=None, ge=0)
+    most_recent_hours: Optional[float] = Field(default=None, ge=0)
+    dominant_category: Optional[str] = None
+
+
+class AreaInsight(BaseModel):
+    headline: str
+    summary: str
+    tip: str
+    level: str
+
+
+class AreaInsightsResponse(BaseModel):
+    insight: Optional[AreaInsight]
+    supported: bool
+
+
 class ConstellationIncidentMetadata(BaseModel):
     category: Optional[str] = None
     severity: Optional[str] = None
@@ -640,6 +670,38 @@ async def generate_insights(request: InsightsRequest):
         raise HTTPException(status_code=503, detail="Failed to generate insights")
 
     return InsightsResponse(sections=sections, supported=True)
+
+
+@app.post("/insights/area", response_model=AreaInsightsResponse)
+async def generate_area_insights(request: AreaInsightsRequest):
+    """
+    Generate a citizen-facing read of recent nearby activity from aggregated counts.
+    Only meaningful when ML_PROVIDER=gemini; returns supported=False for local.
+    """
+    if active_provider is None:
+        raise HTTPException(status_code=503, detail="ML provider not initialised")
+
+    if not isinstance(active_provider, GeminiProvider):
+        return AreaInsightsResponse(insight=None, supported=False)
+
+    started_at = time.perf_counter()
+    payload = request.model_dump()
+
+    async with _get_semaphore():
+        result = await active_provider.generate_area_insights(payload)
+
+    log_inference_event("/insights/area", "area_insights", started_at)
+
+    if result is None:
+        raise HTTPException(status_code=503, detail="Failed to generate area insights")
+
+    try:
+        insight = AreaInsight(**result)
+    except (TypeError, ValidationError) as exc:
+        logger.warning("Invalid area insights payload returned by provider: %s", exc)
+        raise HTTPException(status_code=503, detail="Failed to generate area insights")
+
+    return AreaInsightsResponse(insight=insight, supported=True)
 
 
 @app.post("/constellations/synthesize", response_model=ConstellationSynthesisResponse)

@@ -20,6 +20,15 @@ const areaSafetyLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Tighter limit for the AI insights endpoint — caching absorbs most repeat loads,
+// so this only bounds genuinely distinct requests and protects the token budget.
+const areaInsightsLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 40,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 /**
  * Handle service errors
  */
@@ -158,6 +167,26 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     handleServiceError(error, res, 'Failed to fetch dashboard statistics');
+  }
+});
+
+/**
+ * @route   GET /api/stats/area-insights
+ * @desc    AI read of recent activity within 1 km over the last 7 days
+ * @access  Private
+ */
+router.get('/area-insights', authenticateToken, areaInsightsLimiter, async (req, res) => {
+  try {
+    const { latitude, longitude } = req.query;
+    const insights = await statsService.getAreaInsights(latitude, longitude);
+
+    res.set('Cache-Control', 'private, max-age=300');
+    res.json({
+      status: 'SUCCESS',
+      data: insights,
+    });
+  } catch (error) {
+    handleServiceError(error, res, 'Failed to generate area insights');
   }
 });
 

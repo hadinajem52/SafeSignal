@@ -4,7 +4,12 @@ jest.mock('../src/config/database', () => ({
   oneOrNone: jest.fn(),
 }));
 
+jest.mock('../src/utils/mlClient', () => ({
+  generateAreaInsights: jest.fn(),
+}));
+
 const db = require('../src/config/database');
+const mlClient = require('../src/utils/mlClient');
 const statsService = require('../src/services/statsService');
 
 describe('statsService safety score', () => {
@@ -295,5 +300,81 @@ describe('statsService DAC analytics', () => {
     expect(db.one.mock.calls[0][0]).toContain('first_action_at - created_at');
     expect(db.one.mock.calls[0][0]).toContain('closed_at - created_at');
     expect(db.one.mock.calls[0][0]).not.toContain('updated_at - created_at');
+  });
+});
+
+describe('statsService area insights', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  const recentRows = () => [
+    { category: 'theft', severity: 'high', status: 'verified', created_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString(), hour: 20, distance_km: 0.2 },
+    { category: 'theft', severity: 'medium', status: 'verified', created_at: new Date(Date.now() - 26 * 3600 * 1000).toISOString(), hour: 22, distance_km: 0.5 },
+    { category: 'vandalism', severity: 'low', status: 'resolved', created_at: new Date(Date.now() - 50 * 3600 * 1000).toISOString(), hour: 14, distance_km: 0.8 },
+  ];
+
+  it('aggregates nearby incidents into an anonymous, counts-only payload', () => {
+    const agg = statsService.buildAreaAggregate(recentRows(), 1, { latitude: 33.8938, longitude: 35.5018 });
+
+    expect(agg).toMatchObject({
+      radius_km: 1,
+      window_days: 7,
+      total: 3,
+      active: 2,
+      resolved: 1,
+      dominant_category: 'theft',
+      severities: { critical: 0, high: 1, medium: 1, low: 1 },
+    });
+    expect(agg.categories[0]).toEqual(['theft', 2]);
+    // Counts only — no report text, timestamps, or per-incident coordinates leak out.
+    expect(JSON.stringify(agg)).not.toContain('created_at');
+  });
+
+  it('returns a deterministic all-clear WITHOUT calling Gemini when nothing is nearby', async () => {
+    db.manyOrNone.mockResolvedValue([]);
+    db.one.mockResolvedValue({ count: 0 });
+
+    const result = await statsService.getAreaInsights(33.8938, 35.5018);
+
+    expect(result).toMatchObject({ level: 'calm', source: 'fallback', headline: 'All quiet nearby' });
+    expect(result.stats.total).toBe(0);
+    expect(mlClient.generateAreaInsights).not.toHaveBeenCalled();
+  });
+
+  it('returns the AI insight and caches it so repeat loads skip Gemini', async () => {
+    db.manyOrNone.mockResolvedValue(recentRows());
+    db.one.mockResolvedValue({ count: 1 });
+    mlClient.generateAreaInsights.mockResolvedValue({
+      supported: true,
+      insight: {
+        headline: 'Evening thefts nearby',
+        summary: '2 thefts reported within 1 km this week.',
+        tip: 'Keep bags zipped and phones away on evening walks here.',
+        level: 'caution',
+      },
+    });
+
+    const first = await statsService.getAreaInsights(34.01, 35.21);
+    const second = await statsService.getAreaInsights(34.01, 35.21);
+
+    expect(first).toMatchObject({ source: 'ai', headline: 'Evening thefts nearby', level: 'caution' });
+    expect(first.stats).toMatchObject({ total: 3, dominantCategory: 'theft' });
+    expect(second).toEqual(first);
+    // Second identical request served from cache — only one Gemini generation.
+    expect(mlClient.generateAreaInsights).toHaveBeenCalledTimes(1);
+  });
+
+  it('falls back to a tailored deterministic insight when the AI service is unavailable', async () => {
+    db.manyOrNone.mockResolvedValue(recentRows());
+    db.one.mockResolvedValue({ count: 0 });
+    mlClient.generateAreaInsights.mockResolvedValue(null);
+
+    const result = await statsService.getAreaInsights(35.55, 36.66);
+
+    expect(result.source).toBe('fallback');
+    expect(result.stats.total).toBe(3);
+    expect(result.headline).toBeTruthy();
+    expect(['calm', 'caution', 'elevated']).toContain(result.level);
   });
 });

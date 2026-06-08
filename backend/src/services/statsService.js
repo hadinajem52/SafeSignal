@@ -4,8 +4,10 @@
  * Centralizes complex PostGIS queries and scoring algorithms.
  */
 
+const crypto = require('crypto');
 const db = require('../config/database');
 const ServiceError = require('../utils/ServiceError');
+const mlClient = require('../utils/mlClient');
 const { LIMITS } = require('../../../constants/limits');
 
 const DEFAULT_SAFETY_RADIUS_KM = 0.5;
@@ -921,34 +923,6 @@ async function getUserDashboardStats(userId, { latitude, longitude, radius = DEF
       AND created_at >= NOW() - INTERVAL '7 days'
   `);
 
-    const trendingWithChangePromise = db.manyOrNone(`
-    WITH current_week AS (
-      SELECT category, COUNT(*) as count
-      FROM incidents
-      WHERE is_draft = FALSE
-        AND created_at >= NOW() - INTERVAL '7 days'
-      GROUP BY category
-    ),
-    prev_week AS (
-      SELECT category, COUNT(*) as count
-      FROM incidents
-      WHERE is_draft = FALSE
-        AND created_at >= NOW() - INTERVAL '14 days'
-        AND created_at < NOW() - INTERVAL '7 days'
-      GROUP BY category
-    )
-    SELECT c.category,
-           c.count,
-           CASE
-             WHEN COALESCE(p.count, 0) = 0 THEN CASE WHEN c.count > 0 THEN 100 ELSE 0 END
-             ELSE ROUND(((c.count - p.count)::float / p.count) * 100)
-           END as "changePercentage"
-    FROM current_week c
-    LEFT JOIN prev_week p ON c.category = p.category
-    ORDER BY c.count DESC
-    LIMIT 5
-  `);
-
     const userStatsPromise = db.one(`
     SELECT 
       COUNT(*)::int as "totalReports",
@@ -973,7 +947,6 @@ async function getUserDashboardStats(userId, { latitude, longitude, radius = DEF
         nearbyIncidents,
         activeNearbyRow,
         resolvedThisWeek,
-        trendingWithChange,
         userStats,
         recentActivity,
         nearbyConstellations,
@@ -981,7 +954,6 @@ async function getUserDashboardStats(userId, { latitude, longitude, radius = DEF
         nearbyIncidentsPromise,
         activeNearbyPromise,
         resolvedThisWeekPromise,
-        trendingWithChangePromise,
         userStatsPromise,
         recentActivityPromise,
         nearbyConstellationsPromise,
@@ -1003,7 +975,6 @@ async function getUserDashboardStats(userId, { latitude, longitude, radius = DEF
             activeNearby: activeNearbyCount,
             resolvedThisWeek: parseInt(resolvedThisWeek.count),
         },
-        trendingCategories: trendingWithChange || [],
         userStats: {
             totalReports: parseInt(userStats.totalReports || 0),
             verifiedReports: parseInt(userStats.verifiedReports || 0),
@@ -1134,11 +1105,279 @@ async function getAreaSafetyStats(latitude, longitude, radius = DEFAULT_SAFETY_R
     };
 }
 
+// ── Area AI insights ──────────────────────────────────────────────────────────
+// Citizen-facing read of recent nearby activity. Scope is intentionally tighter
+// than the safety score: a 1 km / 7 day window of "what's been happening near me".
+const AREA_INSIGHTS_RADIUS_KM = 1;
+const AREA_INSIGHTS_WINDOW_DAYS = 7;
+const AREA_RESOLVED_STATUSES = ['resolved', 'police_closed'];
+// Token guardrail: identical area situations share one Gemini generation for the TTL.
+const AREA_INSIGHTS_CACHE_TTL_MS = 30 * 60 * 1000;
+const AREA_INSIGHTS_CACHE_MAX = 500;
+
+const areaInsightsCache = new Map();
+
+function areaCacheGet(key) {
+    const hit = areaInsightsCache.get(key);
+    if (!hit) return null;
+    if (Date.now() > hit.expiresAt) {
+        areaInsightsCache.delete(key);
+        return null;
+    }
+    // Refresh LRU recency
+    areaInsightsCache.delete(key);
+    areaInsightsCache.set(key, hit);
+    return hit.value;
+}
+
+function areaCacheSet(key, value) {
+    if (areaInsightsCache.size >= AREA_INSIGHTS_CACHE_MAX) {
+        const oldest = areaInsightsCache.keys().next().value;
+        if (oldest !== undefined) areaInsightsCache.delete(oldest);
+    }
+    areaInsightsCache.set(key, { value, expiresAt: Date.now() + AREA_INSIGHTS_CACHE_TTL_MS });
+}
+
+function bucketForHour(hour) {
+    if (hour >= 6 && hour <= 11) return 'morning';
+    if (hour >= 12 && hour <= 17) return 'afternoon';
+    if (hour >= 18 && hour <= 21) return 'evening';
+    return 'night';
+}
+
+function deriveTrend(currentTotal, prevTotal) {
+    if (!Number.isFinite(prevTotal) || prevTotal === 0) {
+        return currentTotal > 0 ? 'rising' : 'stable';
+    }
+    const ratio = currentTotal / prevTotal;
+    if (ratio >= 1.25) return 'rising';
+    if (ratio <= 0.75) return 'falling';
+    return 'stable';
+}
+
+/**
+ * Reduce raw nearby incidents into a compact, anonymous payload. No report text
+ * or coordinates are included — only counts — so input tokens stay tiny and no
+ * PII reaches the model.
+ */
+function buildAreaAggregate(rows, prevTotal, coords) {
+    const now = Date.now();
+    const total = rows.length;
+
+    const severities = { critical: 0, high: 0, medium: 0, low: 0 };
+    const timeOfDay = { night: 0, morning: 0, afternoon: 0, evening: 0 };
+    const categoryCounts = {};
+    const dailyCounts = [0, 0, 0, 0, 0, 0, 0]; // index 0 = oldest day, 6 = today
+
+    let active = 0;
+    let resolved = 0;
+    let nearestKm = null;
+    let mostRecentHours = null;
+
+    for (const row of rows) {
+        if (severities[row.severity] !== undefined) severities[row.severity] += 1;
+
+        const created = new Date(row.created_at);
+        const hour = Number.isFinite(row.hour) ? row.hour : created.getHours();
+        timeOfDay[bucketForHour(hour)] += 1;
+
+        categoryCounts[row.category] = (categoryCounts[row.category] || 0) + 1;
+
+        if (ACTIVE_NEARBY_STATUSES.includes(row.status)) active += 1;
+        if (AREA_RESOLVED_STATUSES.includes(row.status)) resolved += 1;
+
+        const ageMs = now - created.getTime();
+        const daysAgo = Math.floor(ageMs / DAY_MS);
+        const dayIndex = Math.min(6, Math.max(0, 6 - daysAgo));
+        dailyCounts[dayIndex] += 1;
+
+        const distanceKm = Number(row.distance_km);
+        if (Number.isFinite(distanceKm)) {
+            nearestKm = nearestKm === null ? distanceKm : Math.min(nearestKm, distanceKm);
+        }
+        const ageHours = ageMs / (60 * 60 * 1000);
+        if (Number.isFinite(ageHours)) {
+            mostRecentHours = mostRecentHours === null ? ageHours : Math.min(mostRecentHours, ageHours);
+        }
+    }
+
+    const categories = Object.entries(categoryCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5);
+
+    const busiestEntry = Object.entries(timeOfDay)
+        .filter(([, count]) => count > 0)
+        .sort((a, b) => b[1] - a[1])[0];
+
+    return {
+        geo: [Math.round(coords.latitude * 1000) / 1000, Math.round(coords.longitude * 1000) / 1000],
+        radius_km: AREA_INSIGHTS_RADIUS_KM,
+        window_days: AREA_INSIGHTS_WINDOW_DAYS,
+        total,
+        active,
+        resolved,
+        categories,
+        severities,
+        time_of_day: timeOfDay,
+        busiest_period: busiestEntry ? busiestEntry[0] : null,
+        daily_counts: dailyCounts,
+        prev_window_total: Number.isFinite(prevTotal) ? prevTotal : 0,
+        trend: deriveTrend(total, prevTotal),
+        // Rounded so continuously-drifting values don't bust the cache every request.
+        nearest_km: nearestKm === null ? null : Math.round(nearestKm * 10) / 10,
+        most_recent_hours: mostRecentHours === null ? null : Math.round(mostRecentHours),
+        dominant_category: categories.length ? categories[0][0] : null,
+    };
+}
+
+function titleCase(value) {
+    const text = String(value || '').replace(/_/g, ' ');
+    return text ? text[0].toUpperCase() + text.slice(1) : text;
+}
+
+/**
+ * Deterministic insight used when there are no incidents (skips Gemini entirely)
+ * or when the AI service is unavailable. Still tailored to the aggregate.
+ */
+function buildFallbackInsight(agg) {
+    if (agg.total === 0) {
+        return {
+            headline: 'All quiet nearby',
+            summary: `No incidents reported within ${agg.radius_km} km in the last ${agg.window_days} days.`,
+            tip: 'Nothing to act on right now — check back later for fresh reports in your area.',
+            level: 'calm',
+        };
+    }
+
+    const level =
+        agg.severities.critical > 0 || agg.total >= 6 || agg.trend === 'rising'
+            ? 'elevated'
+            : agg.total >= 3 || agg.dominant_category
+                ? 'caution'
+                : 'calm';
+
+    const countWord = agg.total === 1 ? 'report' : 'reports';
+    const domCat = agg.dominant_category ? titleCase(agg.dominant_category) : 'Incidents';
+    const timing = agg.busiest_period ? `, most often in the ${agg.busiest_period}` : '';
+
+    const headline =
+        level === 'elevated'
+            ? 'Heightened activity nearby'
+            : level === 'caution'
+                ? 'Some activity nearby'
+                : 'Mostly calm nearby';
+
+    const summary = `${agg.total} ${countWord} within ${agg.radius_km} km in the last ${agg.window_days} days${timing}. ${domCat} ${
+        agg.categories[0] && agg.categories[0][1] > 1 ? 'reports lead' : 'leads'
+    } the activity.`;
+
+    const tip = agg.busiest_period
+        ? `Activity peaks in the ${agg.busiest_period} — plan walks and errands around quieter hours when you can.`
+        : `${domCat} is the most reported type nearby — factor that into your plans around here.`;
+
+    return { headline, summary, tip, level };
+}
+
+function buildInsightStats(agg) {
+    return {
+        total: agg.total,
+        active: agg.active,
+        resolved: agg.resolved,
+        radiusKm: agg.radius_km,
+        windowDays: agg.window_days,
+        dominantCategory: agg.dominant_category,
+        busiestPeriod: agg.busiest_period,
+        trend: agg.trend,
+        nearestKm: agg.nearest_km,
+        mostRecentHours: agg.most_recent_hours,
+    };
+}
+
+/**
+ * Generate an AI read of recent activity within 1 km over the last 7 days.
+ * @param {number} latitude
+ * @param {number} longitude
+ * @returns {Promise<Object>} { headline, summary, tip, level, source, stats }
+ */
+async function getAreaInsights(latitude, longitude) {
+    const coords = parseCoordinates(latitude, longitude, { required: true });
+
+    const params = [coords.longitude, coords.latitude, AREA_INSIGHTS_RADIUS_KM, SAFETY_SCORE_STATUSES, AREA_INSIGHTS_WINDOW_DAYS];
+
+    const [rows, prevRow] = await Promise.all([
+        db.manyOrNone(`
+      SELECT
+        category,
+        severity,
+        status,
+        created_at,
+        EXTRACT(HOUR FROM created_at)::int AS hour,
+        ST_Distance(
+          i.location,
+          ST_SetSRID(ST_Point($1::float, $2::float), 4326)::geography
+        ) / 1000 AS distance_km
+      FROM incidents i
+      WHERE i.is_draft = FALSE
+        AND i.status = ANY($4::text[])
+        AND i.created_at >= NOW() - ($5::int * INTERVAL '1 day')
+        AND ST_DWithin(
+          i.location,
+          ST_SetSRID(ST_Point($1::float, $2::float), 4326)::geography,
+          $3::float * 1000
+        )
+    `, params),
+        db.one(`
+      SELECT COUNT(*)::int AS count
+      FROM incidents i
+      WHERE i.is_draft = FALSE
+        AND i.status = ANY($4::text[])
+        AND i.created_at >= NOW() - (($5::int * 2) * INTERVAL '1 day')
+        AND i.created_at < NOW() - ($5::int * INTERVAL '1 day')
+        AND ST_DWithin(
+          i.location,
+          ST_SetSRID(ST_Point($1::float, $2::float), 4326)::geography,
+          $3::float * 1000
+        )
+    `, params),
+    ]);
+
+    const aggregate = buildAreaAggregate(rows, prevRow ? prevRow.count : 0, coords);
+
+    // Guardrail: nothing to report → deterministic answer, no Gemini call.
+    if (aggregate.total === 0) {
+        return { ...buildFallbackInsight(aggregate), source: 'fallback', stats: buildInsightStats(aggregate) };
+    }
+
+    // Guardrail: identical situations within the TTL reuse one generation.
+    const cacheKey = crypto.createHash('sha1').update(JSON.stringify(aggregate)).digest('hex');
+    const cached = areaCacheGet(cacheKey);
+    if (cached) return cached;
+
+    let insight = null;
+    const ml = await mlClient.generateAreaInsights(aggregate);
+    if (ml && ml.supported && ml.insight) {
+        insight = { ...ml.insight, source: 'ai', stats: buildInsightStats(aggregate) };
+    }
+
+    if (!insight) {
+        // ML unavailable / non-Gemini provider — return a tailored fallback, but do
+        // not cache it so we recover as soon as the service is back.
+        return { ...buildFallbackInsight(aggregate), source: 'fallback', stats: buildInsightStats(aggregate) };
+    }
+
+    areaCacheSet(cacheKey, insight);
+    return insight;
+}
+
 module.exports = {
     getModeratorStats,
     getDacAnalytics,
     getUserDashboardStats,
     getNearbyConstellationsForUser,
     getAreaSafetyStats,
+    getAreaInsights,
     calculateSafetyScore,
+    // Exported for unit tests
+    buildAreaAggregate,
+    buildFallbackInsight,
 };

@@ -33,6 +33,11 @@ const homeStyles = StyleSheet.create({
     height: 104,
     borderRadius: 16,
   },
+  skeletonCardMedium: {
+    height: 168,
+    borderRadius: 16,
+    marginBottom: 14,
+  },
 
   header: {
     marginTop: 34,

@@ -9,13 +9,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { AppText, Card } from '../../components';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import useAreaInsights from '../../hooks/useAreaInsights';
 import useDashboardData from '../../hooks/useDashboardData';
 import useNotifications from '../../hooks/useNotifications';
+import AreaInsightsCard from './AreaInsightsCard';
 import CommunityFeed from './CommunityFeed';
 import QuickStatsRow from './QuickStatsRow';
 import SafetyScoreCard from './SafetyScoreCard';
 import styles from './homeStyles';
-import TrendingSection from './TrendingSection';
 
 const LOCATION_ENABLE_STATUSES = ['disabled', 'permission_denied'];
 
@@ -48,6 +49,7 @@ const HomeScreen = ({ navigation }) => {
     error,
     onRefresh,
   } = useDashboardData();
+  const { insight: areaInsight, loading: areaInsightLoading } = useAreaInsights();
   const safetyScore = normalizeSafetyScore(dashboardData?.safetyScore);
   const activeNearbyCount = dashboardData?.quickStats?.activeNearby || 0;
   const witnessPrompts = dashboardData?.witnessPrompts || {};
@@ -116,6 +118,8 @@ const HomeScreen = ({ navigation }) => {
         onCtaPress={showEnableLocationCta ? () => navigation.navigate('Account') : undefined}
       />
 
+      <AreaInsightsCard insight={areaInsight} loading={areaInsightLoading} />
+
       {witnessPromptCount > 0 && firstNearbyConstellationId ? (
         <TouchableOpacity
           activeOpacity={0.9}
@@ -147,8 +151,6 @@ const HomeScreen = ({ navigation }) => {
         onMapPress={() => navigation.navigate('Map')}
       />
 
-      <TrendingSection trendingCategories={dashboardData?.trendingCategories} />
-
       {error ? (
         <Card style={[styles.errorContainer, { backgroundColor: `${theme.error}15` }]}>
           <AppText variant="bodySmall" style={[styles.errorText, { color: theme.error }]}>{error}</AppText>
@@ -158,13 +160,14 @@ const HomeScreen = ({ navigation }) => {
         </Card>
       ) : null}
     </>
-  ), [user, theme, activeNearbyCount, safetyScore, location, safetyScoreUnavailableReason, showEnableLocationCta, dashboardData, error, onRefresh, navigation, refreshing, witnessPromptCount, firstNearbyConstellationId, witnessPrompts, unreadCount]);
+  ), [user, theme, activeNearbyCount, safetyScore, location, safetyScoreUnavailableReason, showEnableLocationCta, areaInsight, areaInsightLoading, dashboardData, error, onRefresh, navigation, refreshing, witnessPromptCount, firstNearbyConstellationId, witnessPrompts, unreadCount]);
 
   if (loading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
         <View style={[styles.skeletonHeader, { backgroundColor: theme.surface2 }]} />
         <View style={[styles.skeletonCardLarge, { backgroundColor: theme.surface }]} />
+        <View style={[styles.skeletonCardMedium, { backgroundColor: theme.surface }]} />
         <View style={styles.skeletonRow}>
           <View style={[styles.skeletonCardSmall, { backgroundColor: theme.surface }]} />
           <View style={[styles.skeletonCardSmall, { backgroundColor: theme.surface }]} />
