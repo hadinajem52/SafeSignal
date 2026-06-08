@@ -9,7 +9,7 @@ import styles from './myReportsStyles';
 
 const { CATEGORY_DISPLAY } = incidentConstants;
 
-const PROGRESS_STEPS = ['Submitted', 'Reviewing', 'Verified', 'Resolved'];
+const PROGRESS_STEPS = ['Submitted', 'In Review', 'Verified', 'Response', 'Resolved'];
 
 const getSeverityColor = (severity, theme) => {
   switch (severity) {
@@ -26,30 +26,32 @@ const getSeverityColor = (severity, theme) => {
   }
 };
 
+// Mirrors IncidentStatusTracker so the preview and the detail page agree.
+// Stage = number of filled dots (1 = Submitted … 5 = Resolved).
 const getProgressStage = (status) => {
   switch (status) {
     case 'draft':
-      return 0;
     case 'submitted':
+      return 1; // Submitted
     case 'auto_processed':
     case 'auto_flagged':
-      return 1;
     case 'in_review':
     case 'needs_info':
-      return 2;
+      return 2; // In Review
     case 'verified':
+    case 'published':
+    case 'merged':
+      return 3; // Verified
     case 'dispatched':
     case 'on_scene':
     case 'investigating':
-    case 'published':
-    case 'merged':
-      return 3;
+      return 4; // Response
     case 'police_closed':
     case 'resolved':
     case 'archived':
-      return 4;
+      return 5; // Resolved
     case 'rejected':
-      return 3;
+      return 2; // stops at review
     default:
       return 1;
   }
@@ -79,13 +81,8 @@ const ReportItem = ({ item, onPress, onLongPress }) => {
     mapIcon: 'help-circle',
     mapColor: theme.mapMarkerDefault,
   };
-  const hasLocation =
-    item.location &&
-    Number.isFinite(Number(item.location.latitude)) &&
-    Number.isFinite(Number(item.location.longitude));
-  const locationDisplay = hasLocation
-    ? `${item.location.latitude.toFixed(4)}, ${item.location.longitude.toFixed(4)}`
-    : item.locationName || 'Location not set';
+  const locationDisplay =
+    item.locationName || item.location_name || 'Location not set';
   const createdAtText = formatTimeAgo(item.createdAt || item.timestamp || new Date().toISOString());
   const stage = getProgressStage(item.status);
   const isRejected = item.status === 'rejected';
