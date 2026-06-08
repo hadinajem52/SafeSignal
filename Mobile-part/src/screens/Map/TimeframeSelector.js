@@ -11,12 +11,15 @@ const TIMEFRAME_OPTIONS = [
   { value: '90d', label: '90d' },
 ];
 
-const TimeframeSelector = ({ selectedTimeframe, onSelectTimeframe }) => {
+const ALL_OPTION = { value: 'all', label: 'All' };
+
+const TimeframeSelector = ({ selectedTimeframe, onSelectTimeframe, includeAll = false }) => {
   const { theme } = useTheme();
+  const options = includeAll ? [...TIMEFRAME_OPTIONS, ALL_OPTION] : TIMEFRAME_OPTIONS;
 
   return (
     <View style={[styles.timeframeContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-      {TIMEFRAME_OPTIONS.map((option) => {
+      {options.map((option) => {
         const isActive = selectedTimeframe === option.value;
 
         return (

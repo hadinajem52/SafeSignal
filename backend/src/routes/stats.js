@@ -5,6 +5,7 @@
  */
 
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const authenticateToken = require('../middleware/auth');
 const requireRole = require('../middleware/roles');
 const statsService = require('../services/statsService');
@@ -12,6 +13,12 @@ const mlClient = require('../utils/mlClient');
 const ServiceError = require('../utils/ServiceError');
 
 const router = express.Router();
+const areaSafetyLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 /**
  * Handle service errors
@@ -159,17 +166,9 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
  * @desc    Get safety statistics for a specific area
  * @access  Public
  */
-router.get('/area-safety', async (req, res) => {
+router.get('/area-safety', areaSafetyLimiter, async (req, res) => {
   try {
     const { latitude, longitude, radius } = req.query;
-
-    if (!latitude || !longitude) {
-      return res.status(400).json({
-        status: 'ERROR',
-        message: 'Latitude and longitude are required',
-      });
-    }
-
     const safetyStats = await statsService.getAreaSafetyStats(latitude, longitude, radius);
 
     res.json({

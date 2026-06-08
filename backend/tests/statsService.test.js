@@ -7,6 +7,92 @@ jest.mock('../src/config/database', () => ({
 const db = require('../src/config/database');
 const statsService = require('../src/services/statsService');
 
+describe('statsService safety score', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('labels empty incident data as limited data instead of proven safety', () => {
+    const score = statsService.calculateSafetyScore([], {
+      radius: 1,
+      now: '2026-06-08T00:00:00.000Z',
+    });
+
+    expect(score).toMatchObject({
+      score: 100,
+      label: 'Limited Data',
+      confidence: 'low',
+      incidentCount: 0,
+      radiusKm: 1,
+      windowDays: 30,
+    });
+    expect(score.description).toContain('not a safety guarantee');
+  });
+
+  it('makes repeated nearby critical incidents worse than one critical incident', () => {
+    const now = '2026-06-08T00:00:00.000Z';
+    const criticalIncident = {
+      severity: 'critical',
+      status: 'verified',
+      created_at: now,
+      distance_km: 0,
+    };
+
+    const oneIncident = statsService.calculateSafetyScore([criticalIncident], { now });
+    const twoIncidents = statsService.calculateSafetyScore(
+      [criticalIncident, criticalIncident],
+      { now }
+    );
+
+    expect(oneIncident.score).toBeGreaterThan(twoIncidents.score);
+    expect(twoIncidents).toMatchObject({
+      score: 0,
+      label: 'High Activity',
+      confidence: 'moderate',
+      incidentCount: 2,
+    });
+  });
+
+  it('filters area safety inputs to recent eligible incidents', async () => {
+    db.manyOrNone.mockResolvedValue([
+      {
+        incident_id: 1,
+        category: 'theft',
+        severity: 'medium',
+        status: 'verified',
+        created_at: '2026-06-08T00:00:00.000Z',
+        distance_km: 0.2,
+      },
+    ]);
+
+    const result = await statsService.getAreaSafetyStats(33.8938, 35.5018, 1);
+
+    expect(result.safetyScoreDetails).toMatchObject({
+      incidentCount: 1,
+      radiusKm: 1,
+      windowDays: 30,
+    });
+    expect(db.manyOrNone.mock.calls[0][0]).toContain('i.status = ANY');
+    expect(db.manyOrNone.mock.calls[0][0]).toContain('i.created_at >= NOW()');
+    expect(db.manyOrNone.mock.calls[0][1]).toEqual([
+      35.5018,
+      33.8938,
+      1,
+      expect.arrayContaining(['verified', 'resolved', 'police_closed']),
+      30,
+    ]);
+  });
+
+  it('rejects invalid area safety coordinates', async () => {
+    await expect(statsService.getAreaSafetyStats(999, 35.5018, 1)).rejects.toMatchObject({
+      statusCode: 400,
+      code: 'BAD_REQUEST',
+    });
+
+    expect(db.manyOrNone).not.toHaveBeenCalled();
+  });
+});
+
 describe('statsService witness prompts', () => {
   beforeEach(() => {
     jest.clearAllMocks();

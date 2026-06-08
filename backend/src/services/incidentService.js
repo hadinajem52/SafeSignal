@@ -2984,7 +2984,11 @@ async function escalateIncident(incidentId, requestingUser, reason) {
  * If is_location_fuzzed = TRUE, apply ±150m jitter to lat/lng.
  * The fuzz flag is never returned to the client.
  */
-async function getPublicFeed({ category, closure_outcome, severity, lat, lng, radius, sort, limit = 20, offset = 0 } = {}) {
+// Days back for each supported feed timeframe. Optional — when omitted the feed
+// returns the full history (the community feed relies on that).
+const FEED_TIMEFRAME_DAYS = { '24h': 1, '7d': 7, '30d': 30, '90d': 90 };
+
+async function getPublicFeed({ category, closure_outcome, severity, timeframe, lat, lng, radius, sort, limit = 20, offset = 0 } = {}) {
   const parsedLimit = Number.parseInt(limit, 10);
   const parsedOffset = Number.parseInt(offset, 10);
   const safeLimit = Number.isInteger(parsedLimit) ? parsedLimit : 20;
@@ -3002,6 +3006,17 @@ async function getPublicFeed({ category, closure_outcome, severity, lat, lng, ra
   if (category)        { conditions.push(`i.category = $${p++}`);         params.push(category); }
   if (closure_outcome) { conditions.push(`i.closure_outcome = $${p++}`);  params.push(closure_outcome); }
   if (severity)        { conditions.push(`i.severity = $${p++}`);         params.push(severity); }
+
+  // Optional recency window — filters on when the report was closed/resolved.
+  // closed_at is only set for police_closed/resolved/archived; 'published' rows
+  // have none, so we fall back to the immutable incident_date rather than
+  // updated_at (which a later edit would bump, making old reports reappear).
+  if (timeframe && FEED_TIMEFRAME_DAYS[timeframe]) {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - FEED_TIMEFRAME_DAYS[timeframe]);
+    conditions.push(`COALESCE(i.closed_at, i.incident_date) >= $${p++}`);
+    params.push(startDate);
+  }
 
   let geoJoin = '';
   if (lat !== undefined && lat !== null && lng !== undefined && lng !== null && radius !== undefined && radius !== null) {

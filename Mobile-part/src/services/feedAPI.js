@@ -8,6 +8,7 @@ export const feedAPI = {
         category,
         closure_outcome,
         severity,
+        timeframe,
         lat,
         lng,
         radius,
@@ -21,6 +22,7 @@ export const feedAPI = {
       if (category) query.append('category', category);
       if (closure_outcome) query.append('closure_outcome', closure_outcome);
       if (severity) query.append('severity', severity);
+      if (timeframe) query.append('timeframe', timeframe);
       if (lat !== undefined && lat !== null) query.append('lat', String(lat));
       if (lng !== undefined && lng !== null) query.append('lng', String(lng));
       if (radius !== undefined && radius !== null) query.append('radius', String(radius));

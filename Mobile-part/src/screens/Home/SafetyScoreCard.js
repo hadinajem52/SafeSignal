@@ -11,6 +11,41 @@ const getSafetyScoreColor = (theme, score) => {
   return theme.safetyPoor;
 };
 
+const normalizeScore = (score) => {
+  const parsedScore = Number(score);
+
+  if (!Number.isFinite(parsedScore)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(100, Math.round(parsedScore)));
+};
+
+const formatRadius = (radiusKm) => {
+  const radius = Number(radiusKm);
+
+  if (!Number.isFinite(radius)) {
+    return 'this area';
+  }
+
+  return `${Number.isInteger(radius) ? radius : radius.toFixed(1)} km`;
+};
+
+const buildSafetyNote = (safetyScore) => {
+  const incidentCount = Number(safetyScore?.incidentCount);
+  const windowDays = Number(safetyScore?.windowDays);
+  const confidence = safetyScore?.confidence;
+
+  if (!Number.isFinite(incidentCount) || !Number.isFinite(windowDays)) {
+    return 'Based on recent verified incident reports';
+  }
+
+  const incidentWord = incidentCount === 1 ? 'incident' : 'incidents';
+  const note = `Based on ${incidentCount} verified ${incidentWord} within ${formatRadius(safetyScore.radiusKm)} over ${windowDays} days`;
+
+  return confidence ? `${note}. Confidence: ${confidence}` : note;
+};
+
 const SafetyScoreCard = ({ safetyScore, location, unavailableReason, ctaLabel, onCtaPress }) => {
   const { theme } = useTheme();
   const [displayScore, setDisplayScore] = useState(0);
@@ -25,8 +60,7 @@ const SafetyScoreCard = ({ safetyScore, location, unavailableReason, ctaLabel, o
   }, [enterAnim, opacityAnim]);
 
   useEffect(() => {
-    const parsedTarget = Number(safetyScore?.score);
-    const target = Number.isFinite(parsedTarget) ? parsedTarget : 0;
+    const target = normalizeScore(safetyScore?.score);
     let current = 0;
     if (target <= 0) {
       setDisplayScore(0);
@@ -50,10 +84,10 @@ const SafetyScoreCard = ({ safetyScore, location, unavailableReason, ctaLabel, o
       <Animated.View style={{ transform: [{ scale: enterAnim }], opacity: opacityAnim }}>
         <Card style={[styles.safetyCard, { borderColor: theme.warning }]}> 
           <View style={styles.safetyHeader}>
-            <AppText variant="label" style={[styles.safetyTitle, { color: theme.text }]}>Area Safety Score</AppText>
+            <AppText variant="label" style={[styles.safetyTitle, { color: theme.text }]}>Area Activity Score</AppText>
           </View>
           <AppText variant="body" style={[styles.safetyDescription, { color: theme.text }]}> 
-            Safety score unavailable
+            Activity score unavailable
           </AppText>
           <AppText variant="bodySmall" style={[styles.safetyNote, { color: theme.textSecondary }]}> 
             {unavailableReason || 'We could not determine safety conditions for your area right now.'}
@@ -71,13 +105,15 @@ const SafetyScoreCard = ({ safetyScore, location, unavailableReason, ctaLabel, o
     );
   }
 
-  const scoreColor = getSafetyScoreColor(theme, safetyScore.score);
+  const score = normalizeScore(safetyScore.score);
+  const scoreColor = getSafetyScoreColor(theme, score);
+  const safetyNote = buildSafetyNote(safetyScore);
 
   return (
     <Animated.View style={{ transform: [{ scale: enterAnim }], opacity: opacityAnim }}>
       <Card style={[styles.safetyCard, { borderColor: scoreColor }]}> 
         <View style={styles.safetyHeader}>
-          <AppText variant="label" style={[styles.safetyTitle, { color: theme.text }]}>Area Safety Score</AppText>
+          <AppText variant="label" style={[styles.safetyTitle, { color: theme.text }]}>Area Activity Score</AppText>
           {location ? (
             <View style={[styles.locationBadge, { backgroundColor: theme.surface2 }]}> 
               <Ionicons name="location-outline" size={12} color={theme.textSecondary} />
@@ -101,7 +137,7 @@ const SafetyScoreCard = ({ safetyScore, location, unavailableReason, ctaLabel, o
               {safetyScore.description}
             </AppText>
             <AppText variant="bodySmall" style={[styles.safetyNote, { color: theme.textTertiary }]}> 
-              Based on incidents within 1km radius
+              {safetyNote}
             </AppText>
           </View>
         </View>
