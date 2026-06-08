@@ -15,6 +15,7 @@ import {
   IncidentVideoPlayer,
   IncidentIllustration,
   IncidentLocationMap,
+  IncidentStatusTracker,
 } from '../components';
 import { normalizeClosureDetails } from '../utils/incidentUtils';
 import { useTheme } from '../context/ThemeContext';
@@ -23,7 +24,7 @@ import { haptics } from '../utils/haptics';
 import { DURATION } from '../theme/motion';
 import styles from './incidentDetailStyles';
 
-const { CATEGORY_DISPLAY } = incidentConstants;
+const { CATEGORY_DISPLAY, STATUS_LABELS } = incidentConstants;
 
 const getIncidentId = (incident) => incident?.incident_id || incident?.id;
 
@@ -192,6 +193,22 @@ const IncidentDetailScreen = ({ route, navigation }) => {
 
             {loadingDetail ? <ActivityIndicator color={theme.primary} style={{ marginTop: 12 }} /> : null}
           </LinearGradient>
+
+          {/* ---- Status workflow ---- */}
+          {showTimeline ? (
+            <>
+              <Divider />
+              <View style={styles.section}>
+                <SectionHeader
+                  icon="git-commit-outline"
+                  color={theme.info}
+                  title="Status"
+                  subtitle={STATUS_LABELS[displayStatus] || 'Tracking progress'}
+                />
+                <IncidentStatusTracker status={detailIncident.status} />
+              </View>
+            </>
+          ) : null}
 
           {/* ---- Description ---- */}
           <Divider />
