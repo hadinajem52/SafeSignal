@@ -84,7 +84,11 @@ const MapScreen = () => {
 
         let result;
         if (mapMode === MAP_MODES.ACTIVE) {
-          const params = { timeframe: selectedTimeframe, includeConstellation: true };
+          // Active map requires a concrete window; 'all' only applies to resolved.
+          const params = {
+            timeframe: selectedTimeframe === 'all' ? '30d' : selectedTimeframe,
+            includeConstellation: true,
+          };
           if (selectedCategory) params.category = selectedCategory;
           result = await incidentAPI.getMapIncidents(params);
         } else {
@@ -95,6 +99,8 @@ const MapScreen = () => {
           do {
             const page = await feedAPI.getPublicFeed({
               category: selectedCategory || undefined,
+              // 'all' omits the window so older resolved reports stay visible.
+              timeframe: selectedTimeframe === 'all' ? undefined : selectedTimeframe,
               limit: RESOLVED_PAGE_SIZE,
               offset,
             });
@@ -177,6 +183,14 @@ const MapScreen = () => {
   useEffect(() => {
     setSelectedIncident(null);
   }, [mapMode]);
+
+  // 'all' is a resolved-only window; if it carries over into Active, snap back
+  // to a concrete default so the Active query stays valid and a chip stays lit.
+  useEffect(() => {
+    if (mapMode === MAP_MODES.ACTIVE && selectedTimeframe === 'all') {
+      setSelectedTimeframe('30d');
+    }
+  }, [mapMode, selectedTimeframe, setSelectedTimeframe]);
 
   useEffect(() => {
     let hintTimer;
@@ -309,12 +323,11 @@ const MapScreen = () => {
             onSelectCategory={setSelectedCategory}
           />
 
-          {mapMode === MAP_MODES.ACTIVE ? (
-            <TimeframeSelector
-              selectedTimeframe={selectedTimeframe}
-              onSelectTimeframe={setSelectedTimeframe}
-            />
-          ) : null}
+          <TimeframeSelector
+            selectedTimeframe={selectedTimeframe}
+            onSelectTimeframe={setSelectedTimeframe}
+            includeAll={mapMode === MAP_MODES.RESOLVED}
+          />
         </View>
       </View>
 

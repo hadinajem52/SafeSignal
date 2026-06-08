@@ -17,6 +17,21 @@ import SafetyScoreCard from './SafetyScoreCard';
 import styles from './homeStyles';
 import TrendingSection from './TrendingSection';
 
+const LOCATION_ENABLE_STATUSES = ['disabled', 'permission_denied'];
+
+const normalizeSafetyScore = (safetyScore) => {
+  const score = Number(safetyScore?.score);
+
+  if (!safetyScore || !Number.isFinite(score)) {
+    return null;
+  }
+
+  return {
+    ...safetyScore,
+    score: Math.max(0, Math.min(100, Math.round(score))),
+  };
+};
+
 const HomeScreen = ({ navigation }) => {
   const { user } = useAuth();
   const { theme } = useTheme();
@@ -27,30 +42,28 @@ const HomeScreen = ({ navigation }) => {
     refreshing,
     locationLoading,
     location,
+    locationStatus,
     locationIssue,
     dashboardData,
     error,
     onRefresh,
   } = useDashboardData();
-  const safetyScore = dashboardData?.safetyScore;
+  const safetyScore = normalizeSafetyScore(dashboardData?.safetyScore);
   const activeNearbyCount = dashboardData?.quickStats?.activeNearby || 0;
   const witnessPrompts = dashboardData?.witnessPrompts || {};
   const witnessPromptCount = witnessPrompts.count || 0;
   const firstNearbyConstellationId = witnessPrompts.firstNearbyConstellationId;
-  const locationIssueLower = (locationIssue || '').toLowerCase();
   const showEnableLocationCta =
-    !location &&
     !locationLoading &&
-    (locationIssueLower.includes('disabled in app preferences') ||
-      locationIssueLower.includes('permission'));
+    LOCATION_ENABLE_STATUSES.includes(locationStatus);
   const safetyScoreUnavailableReason = error
     ? `We could not load safety data right now. ${error}`
-    : locationLoading
+    : locationLoading || locationStatus === 'pending'
       ? 'Detecting your current location...'
     : locationIssue
       ? locationIssue
-      : location
-        ? 'Safety data for your current area is temporarily unavailable from the server.'
+      : locationStatus === 'available'
+        ? 'Reported activity data for your current area is temporarily unavailable from the server.'
         : 'Location is temporarily unavailable, so nearby safety cannot be calculated right now.';
 
   // useMemo must be declared before any early returns (Rules of Hooks)

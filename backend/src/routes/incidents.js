@@ -397,6 +397,7 @@ router.get(
     query('category').optional().isString().trim().isIn(VALID_CATEGORIES),
     query('closure_outcome').optional().isString().trim().isIn(VALID_CLOSURE_OUTCOMES),
     query('severity').optional().isString().trim().isIn(VALID_SEVERITIES),
+    query('timeframe').optional().isString().trim().isIn(['24h', '7d', '30d', '90d']),
     query('sort').optional().isString().trim().isIn(['severity']),
     query('lat').optional().isFloat({ min: LIMITS.COORDINATES.LAT.MIN, max: LIMITS.COORDINATES.LAT.MAX }),
     query('lng').optional().isFloat({ min: LIMITS.COORDINATES.LNG.MIN, max: LIMITS.COORDINATES.LNG.MAX }),
@@ -418,12 +419,13 @@ router.get(
     if (handleValidationErrors(req, res)) return;
 
     try {
-      const { category, closure_outcome, severity, lat, lng, radius, sort, limit = 20, offset = 0 } = req.query;
+      const { category, closure_outcome, severity, timeframe, lat, lng, radius, sort, limit = 20, offset = 0 } = req.query;
 
       const result = await incidentService.getPublicFeed({
         category,
         closure_outcome,
         severity,
+        timeframe,
         lat,
         lng,
         radius,

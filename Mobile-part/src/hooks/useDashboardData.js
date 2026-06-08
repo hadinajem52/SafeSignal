@@ -5,9 +5,16 @@ import * as Location from 'expo-location';
 import { statsAPI } from '../services/api';
 import useUserPreferences from './useUserPreferences';
 
-const FALLBACK_COORDS = { latitude: 33.8938, longitude: 35.5018 };
-// Round coords to ~1 km precision to avoid cache-busting on minor GPS drift
-const roundCoord = (n) => Math.round(n * 100) / 100;
+const LOCATION_STATUS = {
+  PENDING: 'pending',
+  AVAILABLE: 'available',
+  DISABLED: 'disabled',
+  PERMISSION_DENIED: 'permission_denied',
+  UNAVAILABLE: 'unavailable',
+};
+
+// Round coords to roughly 100m precision to reduce cache churn without shifting a 1km score too much.
+const roundCoord = (n) => Math.round(n * 1000) / 1000;
 
 const withTimeout = (task, ms) => {
   let id;
@@ -18,19 +25,19 @@ const withTimeout = (task, ms) => {
 };
 
 const useDashboardData = () => {
-  const { preferences, reloadPreferences } = useUserPreferences();
+  const { preferences, isLoading: preferencesLoading, reloadPreferences } = useUserPreferences();
   const queryClient = useQueryClient();
   const [location, setLocation] = useState(null);
   const [locationIssue, setLocationIssue] = useState('');
   const [locationLoading, setLocationLoading] = useState(false);
-  // Track whether location has been resolved at least once this session
-  const locationResolvedRef = useRef(false);
+  const [locationStatus, setLocationStatus] = useState(LOCATION_STATUS.PENDING);
+  const [locationRequestId, setLocationRequestId] = useState(0);
   const runIdRef = useRef(0);
 
   // Stable rounded coords so cache key doesn't bust on GPS drift
   const roundedLat = location ? roundCoord(location.latitude) : undefined;
   const roundedLng = location ? roundCoord(location.longitude) : undefined;
-  const queryKey = ['dashboard', roundedLat, roundedLng];
+  const queryKey = ['dashboard', locationStatus, roundedLat, roundedLng];
 
   // On focus: only reload preferences and invalidate stale data — don't re-trigger GPS
   useFocusEffect(
@@ -42,7 +49,7 @@ const useDashboardData = () => {
   );
 
   const queryFn = useCallback(async () => {
-    const params = location
+    const params = locationStatus === LOCATION_STATUS.AVAILABLE && location
       ? { latitude: roundedLat, longitude: roundedLng, radius: 1 }
       : {};
 
@@ -51,50 +58,60 @@ const useDashboardData = () => {
       return result.data;
     }
     throw new Error(result.error || 'Failed to load dashboard data');
-  }, [location, roundedLat, roundedLng]);
+  }, [location, locationStatus, roundedLat, roundedLng]);
 
   const {
     data: dashboardData,
     isLoading,
     isFetching,
     error,
-    refetch,
   } = useQuery({
     queryKey,
     queryFn,
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
-    // Always enabled — fires immediately with no coords for fast first paint,
+    // Fires with no coords for fast first paint after preferences load,
     // then re-fires once location resolves.
-    // placeholderData keeps the previous key's data visible while the new query
-    // is in-flight, preventing the skeleton from flashing when coords change.
-    enabled: true,
-    placeholderData: (previousData) => previousData,
+    enabled: !preferencesLoading,
   });
 
   useEffect(() => {
     const currentRunId = ++runIdRef.current;
     const isStale = () => currentRunId !== runIdRef.current;
 
-    const applyLocation = (coords, issue = '') => {
+    const applyLocation = (coords) => {
       if (isStale()) return;
       setLocation(coords);
-      setLocationIssue(issue);
+      setLocationIssue('');
+      setLocationStatus(LOCATION_STATUS.AVAILABLE);
       setLocationLoading(false);
-      locationResolvedRef.current = true;
     };
 
-    // If location already resolved this session, skip re-fetching GPS
-    if (locationResolvedRef.current) return;
+    const applyLocationIssue = (status, issue) => {
+      if (isStale()) return;
+      setLocation(null);
+      setLocationIssue(issue);
+      setLocationStatus(status);
+      setLocationLoading(false);
+    };
+
+    if (preferencesLoading) {
+      setLocationLoading(false);
+      return undefined;
+    }
 
     const requestLocation = async () => {
       if (!preferences.locationServices) {
-        applyLocation(FALLBACK_COORDS, 'Location is disabled in app preferences.');
+        applyLocationIssue(
+          LOCATION_STATUS.DISABLED,
+          'Location is disabled in app preferences.'
+        );
         return;
       }
 
       setLocationLoading(true);
       setLocationIssue('');
+      setLocationStatus(LOCATION_STATUS.PENDING);
 
       try {
         // Quick permission check — 3 s
@@ -103,7 +120,10 @@ const useDashboardData = () => {
           3000
         );
         if (status !== 'granted') {
-          applyLocation(FALLBACK_COORDS, 'Location permission not granted.');
+          applyLocationIssue(
+            LOCATION_STATUS.PERMISSION_DENIED,
+            'Location permission not granted.'
+          );
           return;
         }
 
@@ -128,24 +148,32 @@ const useDashboardData = () => {
         );
         applyLocation(pos.coords);
       } catch {
-        applyLocation(FALLBACK_COORDS);
+        applyLocationIssue(
+          LOCATION_STATUS.UNAVAILABLE,
+          'Location is temporarily unavailable, so nearby safety cannot be calculated right now.'
+        );
       }
     };
 
     requestLocation();
-  }, [preferences.locationServices]);
+    return undefined;
+  }, [preferences.locationServices, preferencesLoading, locationRequestId]);
 
   const onRefresh = useCallback(() => {
-    // Allow location re-resolve on explicit pull-to-refresh
-    locationResolvedRef.current = false;
-    refetch();
-  }, [refetch]);
+    setLocation(null);
+    setLocationIssue('');
+    setLocationStatus(LOCATION_STATUS.PENDING);
+    setLocationLoading(Boolean(preferences.locationServices));
+    setLocationRequestId((value) => value + 1);
+    queryClient.invalidateQueries({ queryKey: ['dashboard'], refetchType: 'active' });
+  }, [preferences.locationServices, queryClient]);
 
   return {
-    loading: isLoading,
+    loading: preferencesLoading || isLoading,
     refreshing: isFetching,
     locationLoading,
     location,
+    locationStatus,
     locationIssue,
     dashboardData,
     error: error?.message || null,

@@ -5,9 +5,12 @@
  */
 
 const db = require('../config/database');
+const ServiceError = require('../utils/ServiceError');
+const { LIMITS } = require('../../../constants/limits');
 
 const DEFAULT_SAFETY_RADIUS_KM = 1;
 const MAX_SAFETY_RADIUS_KM = 1;
+const SAFETY_SCORE_WINDOW_DAYS = 30;
 const CONSTELLATION_RADIUS_METERS = 500;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const SLA_MINUTES = 30;
@@ -26,6 +29,8 @@ const ACTIONED_STATUSES = [
 const CLOSED_STATUSES = ['police_closed', 'resolved', 'archived'];
 const DISPATCHED_STATUSES = ['dispatched', 'on_scene', 'investigating', 'police_closed', 'resolved', 'archived'];
 const ON_SCENE_STATUSES = ['on_scene', 'investigating', 'police_closed', 'resolved', 'archived'];
+const ACTIVE_NEARBY_STATUSES = ['verified', 'dispatched', 'on_scene', 'investigating', 'published'];
+const SAFETY_SCORE_STATUSES = [...ACTIVE_NEARBY_STATUSES, 'resolved', 'police_closed'];
 
 const FUNNEL_STAGES = [
     { label: 'Received', statuses: null, color: 'var(--dac-blue)' },
@@ -90,15 +95,21 @@ const PERIODS = {
     },
 };
 
-/**
- * Severity weightings for safety score calculation
- * Adjustable central configuration
- */
-const SEVERITY_SCORES = {
-    low: 5,
-    medium: 15,
-    high: 35,
-    critical: 60,
+const SEVERITY_RISK_WEIGHTS = {
+    low: 4,
+    medium: 12,
+    high: 28,
+    critical: 55,
+};
+
+const STATUS_RISK_MULTIPLIERS = {
+    verified: 1,
+    dispatched: 1,
+    on_scene: 1,
+    investigating: 0.9,
+    published: 0.75,
+    police_closed: 0.35,
+    resolved: 0.25,
 };
 
 function normalizeSafetyRadius(radius) {
@@ -111,44 +122,151 @@ function normalizeSafetyRadius(radius) {
     return Math.min(parsedRadius, MAX_SAFETY_RADIUS_KM);
 }
 
+function parseCoordinates(latitude, longitude, { required = false } = {}) {
+    const hasLatitude = latitude !== undefined && latitude !== null && latitude !== '';
+    const hasLongitude = longitude !== undefined && longitude !== null && longitude !== '';
+
+    if (!hasLatitude && !hasLongitude) {
+        if (required) {
+            throw ServiceError.badRequest('Latitude and longitude are required');
+        }
+
+        return null;
+    }
+
+    if (!hasLatitude || !hasLongitude) {
+        throw ServiceError.badRequest('Latitude and longitude must be provided together');
+    }
+
+    const parsedLatitude = Number(latitude);
+    const parsedLongitude = Number(longitude);
+
+    if (
+        !Number.isFinite(parsedLatitude) ||
+        !Number.isFinite(parsedLongitude) ||
+        parsedLatitude < LIMITS.COORDINATES.LAT.MIN ||
+        parsedLatitude > LIMITS.COORDINATES.LAT.MAX ||
+        parsedLongitude < LIMITS.COORDINATES.LNG.MIN ||
+        parsedLongitude > LIMITS.COORDINATES.LNG.MAX
+    ) {
+        throw ServiceError.badRequest('Invalid coordinates');
+    }
+
+    return {
+        latitude: parsedLatitude,
+        longitude: parsedLongitude,
+    };
+}
+
+function clampScore(value) {
+    return Math.max(0, Math.min(100, value));
+}
+
+function getIncidentAgeDays(incident, now) {
+    const timestamp = new Date(incident.created_at || incident.createdAt).getTime();
+
+    if (!Number.isFinite(timestamp)) {
+        return 0;
+    }
+
+    return Math.max(0, (now.getTime() - timestamp) / DAY_MS);
+}
+
+function getRecencyMultiplier(incident, now, windowDays) {
+    const ageRatio = Math.min(getIncidentAgeDays(incident, now) / windowDays, 1);
+    return 1 - ageRatio * 0.65;
+}
+
+function getDistanceMultiplier(incident, radiusKm) {
+    const distanceKm = Number(incident.distance_km);
+
+    if (!Number.isFinite(distanceKm) || distanceKm < 0) {
+        return 1;
+    }
+
+    const distanceRatio = Math.min(distanceKm / radiusKm, 1);
+    return 1 - distanceRatio * 0.5;
+}
+
+function calculateIncidentRisk(incident, now, radiusKm, windowDays) {
+    const severityRisk = SEVERITY_RISK_WEIGHTS[incident.severity] || 0;
+    const statusMultiplier = STATUS_RISK_MULTIPLIERS[incident.status] || 0;
+
+    return severityRisk *
+        statusMultiplier *
+        getRecencyMultiplier(incident, now, windowDays) *
+        getDistanceMultiplier(incident, radiusKm);
+}
+
+function getSafetyConfidence(incidentCount) {
+    if (incidentCount === 0) {
+        return 'low';
+    }
+
+    return incidentCount < 3 ? 'moderate' : 'high';
+}
+
+function describeSafetyScore(score, incidentCount, radiusKm, windowDays) {
+    if (incidentCount === 0) {
+        return {
+            label: 'Limited Data',
+            description: `No verified incidents were reported within ${radiusKm} km in the last ${windowDays} days. This reflects reports, not a safety guarantee.`,
+        };
+    }
+
+    if (score >= 85) {
+        return {
+            label: 'Low Activity',
+            description: 'Recent verified incident activity near this area is low.',
+        };
+    }
+
+    if (score >= 70) {
+        return {
+            label: 'Moderate Activity',
+            description: 'Some recent verified incidents were reported near this area.',
+        };
+    }
+
+    if (score >= 50) {
+        return {
+            label: 'Elevated Activity',
+            description: 'Recent verified incidents suggest elevated activity near this area.',
+        };
+    }
+
+    return {
+        label: 'High Activity',
+        description: 'Recent verified incidents suggest high activity near this area. Stay alert.',
+    };
+}
+
 /**
- * Calculate safety score based on a list of incidents
- * @param {Array} incidents - List of incidents with 'severity' property
+ * Calculate a reported-activity safety score from recent, verified incidents.
+ * @param {Array} incidents - List of nearby incidents with severity, status, created_at, and distance_km
  * @returns {Object} Score object { score, label, description }
  */
-function calculateSafetyScore(incidents) {
-    let totalScore = 0;
-
-    incidents.forEach(incident => {
-        totalScore += SEVERITY_SCORES[incident.severity] || 0;
-    });
-
-    // Calculate average score per incident, then inverse it for "Safety" (100 is best)
-    // Logic: More severe incidents = Higher totalScore = Lower Safety Score
-    const avgScore = incidents.length > 0 ? totalScore / incidents.length : 0;
-    const score = Math.max(0, Math.round(100 - Math.min(100, avgScore)));
-
-    let label = 'Safe';
-    let description = 'This area appears to be safe with few reported incidents.';
-
-    if (score >= 80) {
-        label = 'Very Safe';
-        description = 'This area has an excellent safety record.';
-    } else if (score >= 60) {
-        label = 'Safe';
-        description = 'This area is generally safe with moderate incident reports.';
-    } else if (score >= 40) {
-        label = 'Caution';
-        description = 'Exercise caution in this area due to recent incidents.';
-    } else {
-        label = 'High Risk';
-        description = 'This area has elevated incident activity. Stay alert.';
-    }
+function calculateSafetyScore(incidents, options = {}) {
+    const radiusKm = normalizeSafetyRadius(options.radius);
+    const windowDays = SAFETY_SCORE_WINDOW_DAYS;
+    const now = options.now ? new Date(options.now) : new Date();
+    const totalRisk = incidents.reduce(
+        (sum, incident) => sum + calculateIncidentRisk(incident, now, radiusKm, windowDays),
+        0
+    );
+    const score = clampScore(Math.round(100 - totalRisk));
+    const incidentCount = incidents.length;
+    const { label, description } = describeSafetyScore(score, incidentCount, radiusKm, windowDays);
 
     return {
         score,
         label,
         description,
+        confidence: getSafetyConfidence(incidentCount),
+        incidentCount,
+        radiusKm,
+        windowDays,
+        generatedAt: now.toISOString(),
     };
 }
 
@@ -749,23 +867,31 @@ async function getDacAnalytics(period = '30d') {
  * @returns {Promise<Object>} User dashboard data
  */
 async function getUserDashboardStats(userId, { latitude, longitude, radius = DEFAULT_SAFETY_RADIUS_KM }) {
-    const parsedLatitude = Number(latitude);
-    const parsedLongitude = Number(longitude);
-    const hasCoords = Number.isFinite(parsedLatitude) && Number.isFinite(parsedLongitude);
+    const coords = parseCoordinates(latitude, longitude);
     const normalizedRadius = normalizeSafetyRadius(radius);
+    const hasCoords = Boolean(coords);
 
     // Single spatial scan returns all nearby incidents + active count in one pass
     const nearbyIncidentsPromise = hasCoords
         ? db.manyOrNone(`
-      SELECT severity, created_at, status
+      SELECT
+        severity,
+        created_at,
+        status,
+        ST_Distance(
+          i.location,
+          ST_SetSRID(ST_Point($1::float, $2::float), 4326)::geography
+        ) / 1000 as distance_km
       FROM incidents i
       WHERE i.is_draft = FALSE
+        AND i.status = ANY($4::text[])
+        AND i.created_at >= NOW() - ($5::int * INTERVAL '1 day')
         AND ST_DWithin(
           i.location,
           ST_SetSRID(ST_Point($1::float, $2::float), 4326)::geography,
           $3::float * 1000
         )
-    `, [parsedLongitude, parsedLatitude, normalizedRadius])
+    `, [coords.longitude, coords.latitude, normalizedRadius, SAFETY_SCORE_STATUSES, SAFETY_SCORE_WINDOW_DAYS])
         : Promise.resolve([]);
 
     const activeNearbyPromise = hasCoords
@@ -774,9 +900,9 @@ async function getUserDashboardStats(userId, { latitude, longitude, radius = DEF
     SELECT COUNT(*) as count
     FROM incidents
     WHERE is_draft = FALSE
-      AND status = 'verified'
+      AND status = ANY($1::text[])
       AND created_at >= NOW() - INTERVAL '7 days'
-  `);
+  `, [ACTIVE_NEARBY_STATUSES]);
 
     const resolvedThisWeekPromise = db.one(`
     SELECT COUNT(*) as count
@@ -852,12 +978,12 @@ async function getUserDashboardStats(userId, { latitude, longitude, radius = DEF
         nearbyConstellationsPromise,
     ]);
 
-    const safetyScore = hasCoords ? calculateSafetyScore(nearbyIncidents) : null;
+    const safetyScore = hasCoords ? calculateSafetyScore(nearbyIncidents, { radius: normalizedRadius }) : null;
 
     // When coords present, derive active count from the shared spatial query result
     const activeNearbyCount = hasCoords
         ? nearbyIncidents.filter(
-            (i) => i.status === 'verified' &&
+            (i) => ACTIVE_NEARBY_STATUSES.includes(i.status) &&
             new Date(i.created_at) >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
           ).length
         : parseInt(activeNearbyRow.count);
@@ -954,29 +1080,30 @@ async function getNearbyConstellationsForUser(userId) {
  * @returns {Promise<Object>} Area safety details
  */
 async function getAreaSafetyStats(latitude, longitude, radius = DEFAULT_SAFETY_RADIUS_KM) {
+    const coords = parseCoordinates(latitude, longitude, { required: true });
     const normalizedRadius = normalizeSafetyRadius(radius);
 
     // Calculate incidents within radius
     const incidents = await db.manyOrNone(`
     SELECT i.incident_id, i.title, i.category, i.severity, i.created_at,
+           i.status,
            ST_Distance(
              i.location,
              ST_SetSRID(ST_Point($1::float, $2::float), 4326)::geography
            ) / 1000 as distance_km
     FROM incidents i
     WHERE i.is_draft = FALSE
+      AND i.status = ANY($4::text[])
+      AND i.created_at >= NOW() - ($5::int * INTERVAL '1 day')
       AND ST_DWithin(
         i.location,
         ST_SetSRID(ST_Point($1::float, $2::float), 4326)::geography,
         $3::float * 1000
       )
     ORDER BY distance_km ASC
-    LIMIT 50
-  `, [longitude, latitude, normalizedRadius]);
+  `, [coords.longitude, coords.latitude, normalizedRadius, SAFETY_SCORE_STATUSES, SAFETY_SCORE_WINDOW_DAYS]);
 
-    // Calculate safety score
-    // We reuse the pure function logic here!
-    const scoreData = calculateSafetyScore(incidents);
+    const scoreData = calculateSafetyScore(incidents, { radius: normalizedRadius });
 
     // Aggregate category counts
     const categoryCounts = {};
@@ -985,14 +1112,15 @@ async function getAreaSafetyStats(latitude, longitude, radius = DEFAULT_SAFETY_R
     });
 
     return {
-        latitude: parseFloat(latitude),
-        longitude: parseFloat(longitude),
+        latitude: coords.latitude,
+        longitude: coords.longitude,
         radius: normalizedRadius,
         safetyScore: scoreData.score,
-        safetyLabel: scoreData.label,             // Added structured data
-        safetyDescription: scoreData.description, // Added structured data
+        safetyLabel: scoreData.label,
+        safetyDescription: scoreData.description,
+        safetyScoreDetails: scoreData,
         totalIncidents: incidents.length,
-        incidents: incidents,
+        incidents: incidents.slice(0, 50),
         categories: categoryCounts,
     };
 }
@@ -1003,4 +1131,5 @@ module.exports = {
     getUserDashboardStats,
     getNearbyConstellationsForUser,
     getAreaSafetyStats,
+    calculateSafetyScore,
 };
