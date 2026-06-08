@@ -1,6 +1,6 @@
 import api from './apiClient';
 
-const DEFAULT_SAFETY_RADIUS_KM = 1;
+const DEFAULT_SAFETY_RADIUS_KM = 0.5;
 const MAX_SAFETY_RADIUS_KM = 1;
 
 const normalizeSafetyRadius = (radius = DEFAULT_SAFETY_RADIUS_KM) => {

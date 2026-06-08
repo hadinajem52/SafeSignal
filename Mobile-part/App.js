@@ -7,6 +7,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import { AuthProvider } from './src/context/AuthContext';
 import { ThemeProvider } from './src/context/ThemeContext';
 import { ToastProvider } from './src/context/ToastContext';
+import { PreferencesProvider } from './src/context/PreferencesContext';
+import { LocationProvider } from './src/context/LocationContext';
 import AppNavigator from './src/navigation/AppNavigator';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -47,8 +49,12 @@ export default function App() {
         <ThemeProvider>
           <ToastProvider>
             <AuthProvider>
-              <StatusBar style="auto" />
-              <AppNavigator />
+              <PreferencesProvider>
+                <LocationProvider>
+                  <StatusBar style="auto" />
+                  <AppNavigator />
+                </LocationProvider>
+              </PreferencesProvider>
             </AuthProvider>
           </ToastProvider>
         </ThemeProvider>

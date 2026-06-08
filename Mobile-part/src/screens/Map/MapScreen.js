@@ -64,7 +64,6 @@ const MapScreen = () => {
   } = useMapRegion({
     defaultRegion: DEFAULT_REGION,
     mapRef,
-    locationServicesEnabled: preferences.locationServices,
   });
 
   const fetchIncidents = useCallback(

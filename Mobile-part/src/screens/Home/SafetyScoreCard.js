@@ -111,13 +111,13 @@ const SafetyScoreCard = ({ safetyScore, location, unavailableReason, ctaLabel, o
 
   return (
     <Animated.View style={{ transform: [{ scale: enterAnim }], opacity: opacityAnim }}>
-      <Card style={[styles.safetyCard, { borderColor: scoreColor }]}> 
+      <Card style={[styles.safetyCard, { borderColor: `${scoreColor}55` }]}>
         <View style={styles.safetyHeader}>
           <AppText variant="label" style={[styles.safetyTitle, { color: theme.text }]}>Area Activity Score</AppText>
           {location ? (
-            <View style={[styles.locationBadge, { backgroundColor: theme.surface2 }]}> 
-              <Ionicons name="location-outline" size={12} color={theme.textSecondary} />
-              <AppText variant="caption" style={[styles.locationBadgeText, { color: theme.textSecondary }]}> 
+            <View style={[styles.locationBadge, { backgroundColor: theme.surface2 }]}>
+              <Ionicons name="location-outline" size={11} color={theme.textSecondary} />
+              <AppText variant="small" style={[styles.locationBadgeText, { color: theme.textSecondary }]}>
                 Your Location
               </AppText>
             </View>
@@ -125,21 +125,30 @@ const SafetyScoreCard = ({ safetyScore, location, unavailableReason, ctaLabel, o
         </View>
 
         <View style={styles.safetyContent}>
-          <View style={[styles.scoreRing, { borderColor: `${scoreColor}40` }]}> 
-            <View style={[styles.scoreCircle, { backgroundColor: theme.surface }]}> 
+          <View style={[styles.scoreRing, { borderColor: `${scoreColor}59` }]}>
+            <View style={[styles.scoreCircle, { backgroundColor: theme.surface }]}>
               <AppText variant="h1" style={[styles.scoreNumber, { color: scoreColor }]}>{displayScore}</AppText>
-              <AppText variant="caption" style={[styles.scoreLabel, { color: theme.textSecondary }]}>{safetyScore.label}</AppText>
             </View>
           </View>
 
           <View style={styles.safetyInfo}>
-            <AppText variant="body" style={[styles.safetyDescription, { color: theme.text }]}> 
+            <View style={[styles.scoreLabelPill, { backgroundColor: `${scoreColor}1f` }]}>
+              <View style={[styles.scoreLabelDot, { backgroundColor: scoreColor }]} />
+              <AppText variant="caption" style={[styles.scoreLabelText, { color: scoreColor }]}>
+                {safetyScore.label}
+              </AppText>
+            </View>
+            <AppText variant="body" style={[styles.safetyDescription, { color: theme.text }]}>
               {safetyScore.description}
             </AppText>
-            <AppText variant="bodySmall" style={[styles.safetyNote, { color: theme.textTertiary }]}> 
-              {safetyNote}
-            </AppText>
           </View>
+        </View>
+
+        <View style={[styles.safetyNoteRow, { borderTopColor: theme.border }]}>
+          <Ionicons name="shield-checkmark-outline" size={13} color={theme.textTertiary} style={styles.safetyNoteIcon} />
+          <AppText variant="bodySmall" style={[styles.safetyNoteText, { color: theme.textTertiary }]}>
+            {safetyNote}
+          </AppText>
         </View>
       </Card>
     </Animated.View>

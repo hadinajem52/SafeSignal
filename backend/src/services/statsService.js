@@ -8,9 +8,13 @@ const db = require('../config/database');
 const ServiceError = require('../utils/ServiceError');
 const { LIMITS } = require('../../../constants/limits');
 
-const DEFAULT_SAFETY_RADIUS_KM = 1;
+const DEFAULT_SAFETY_RADIUS_KM = 0.5;
 const MAX_SAFETY_RADIUS_KM = 1;
 const SAFETY_SCORE_WINDOW_DAYS = 30;
+// Reports needed before accumulated risk is trusted at full weight. Below this,
+// risk is damped toward the neutral baseline (see calculateSafetyScore) so a
+// single noisy report can't dominate the score.
+const SAFETY_CONFIDENCE_FULL_COUNT = 3;
 const CONSTELLATION_RADIUS_METERS = 500;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const SLA_MINUTES = 30;
@@ -250,12 +254,17 @@ function calculateSafetyScore(incidents, options = {}) {
     const radiusKm = normalizeSafetyRadius(options.radius);
     const windowDays = SAFETY_SCORE_WINDOW_DAYS;
     const now = options.now ? new Date(options.now) : new Date();
+    const incidentCount = incidents.length;
     const totalRisk = incidents.reduce(
         (sum, incident) => sum + calculateIncidentRisk(incident, now, radiusKm, windowDays),
         0
     );
-    const score = clampScore(Math.round(100 - totalRisk));
-    const incidentCount = incidents.length;
+    // Confidence shrinkage: a handful of reports is a noisy sample, so damp the
+    // accumulated risk toward the neutral baseline until enough incidents
+    // corroborate it. One report counts ~1/3, two ~2/3, three or more fully —
+    // this stops a single severe incident from dominating the gauge.
+    const confidenceFactor = Math.min(1, incidentCount / SAFETY_CONFIDENCE_FULL_COUNT);
+    const score = clampScore(Math.round(100 - totalRisk * confidenceFactor));
     const { label, description } = describeSafetyScore(score, incidentCount, radiusKm, windowDays);
 
     return {

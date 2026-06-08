@@ -71,23 +71,25 @@ const homeStyles = StyleSheet.create({
   },
 
   safetyCard: {
-    borderRadius: 18,
+    borderRadius: 20,
     padding: 18,
     marginBottom: 16,
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   safetyHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: 18,
   },
-  safetyTitle: {},
+  safetyTitle: {
+    letterSpacing: 0.2,
+  },
   locationBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
     borderRadius: 999,
   },
   locationBadgeText: {
@@ -98,33 +100,66 @@ const homeStyles = StyleSheet.create({
     alignItems: 'center',
   },
   scoreRing: {
-    width: 92,
-    height: 92,
+    width: 88,
+    height: 88,
     borderRadius: 999,
     borderWidth: 4,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
+    marginRight: 16,
   },
   scoreCircle: {
-    width: 78,
-    height: 78,
+    width: 76,
+    height: 76,
     borderRadius: 999,
     justifyContent: 'center',
     alignItems: 'center',
   },
   scoreNumber: {
-    lineHeight: 30,
-  },
-  scoreLabel: {
-    marginTop: 1,
+    fontSize: 34,
+    lineHeight: 40,
   },
   safetyInfo: {
     flex: 1,
   },
-  safetyDescription: {},
+  scoreLabelPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    marginBottom: 8,
+  },
+  scoreLabelDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 999,
+    marginRight: 6,
+  },
+  scoreLabelText: {
+    letterSpacing: 0.2,
+  },
+  safetyDescription: {
+    lineHeight: 21,
+  },
   safetyNote: {
     marginTop: 8,
+  },
+  safetyNoteRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: 16,
+    paddingTop: 14,
+    borderTopWidth: 1,
+  },
+  safetyNoteIcon: {
+    marginRight: 6,
+    marginTop: 1,
+  },
+  safetyNoteText: {
+    flex: 1,
+    lineHeight: 18,
   },
   safetyCtaButton: {
     marginTop: 12,

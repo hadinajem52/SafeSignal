@@ -46,11 +46,34 @@ describe('statsService safety score', () => {
 
     expect(oneIncident.score).toBeGreaterThan(twoIncidents.score);
     expect(twoIncidents).toMatchObject({
-      score: 0,
+      score: 27,
       label: 'High Activity',
       confidence: 'moderate',
       incidentCount: 2,
     });
+  });
+
+  it('damps low-count samples toward the baseline via confidence shrinkage', () => {
+    const now = '2026-06-08T00:00:00.000Z';
+    const criticalIncident = {
+      severity: 'critical',
+      status: 'verified',
+      created_at: now,
+      distance_km: 0,
+    };
+
+    // A single fresh critical incident carries 55 raw risk, but with only one
+    // report it is weighted at 1/3, so the score stays well above the un-shrunk
+    // 45 it would otherwise produce.
+    const one = statsService.calculateSafetyScore([criticalIncident], { now });
+    expect(one).toMatchObject({ score: 82, confidence: 'moderate', incidentCount: 1 });
+
+    // Three corroborating reports are trusted at full weight and saturate the gauge.
+    const three = statsService.calculateSafetyScore(
+      [criticalIncident, criticalIncident, criticalIncident],
+      { now }
+    );
+    expect(three).toMatchObject({ score: 0, confidence: 'high', incidentCount: 3 });
   });
 
   it('filters area safety inputs to recent eligible incidents', async () => {
