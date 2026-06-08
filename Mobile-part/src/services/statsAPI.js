@@ -39,4 +39,27 @@ export const statsAPI = {
       return { success: false, error: message };
     }
   },
+
+  async getAreaInsights({ latitude, longitude } = {}) {
+    try {
+      if (latitude === undefined || longitude === undefined) {
+        return { success: false, error: 'Location required for area insights' };
+      }
+
+      const queryParams = new URLSearchParams();
+      queryParams.append('latitude', latitude.toString());
+      queryParams.append('longitude', longitude.toString());
+
+      const response = await api.get(`/stats/area-insights?${queryParams.toString()}`);
+
+      if (response.data.status === 'SUCCESS') {
+        return { success: true, data: response.data.data };
+      }
+
+      return { success: false, error: response.data.message };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to fetch area insights';
+      return { success: false, error: message };
+    }
+  },
 };

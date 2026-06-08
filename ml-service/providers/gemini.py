@@ -74,6 +74,32 @@ def _extract_insight_sections(text: str) -> Dict[str, str]:
     return sections
 
 
+def _extract_area_insight(text: str) -> Dict[str, str]:
+    """Parse and validate the citizen-facing area insight response."""
+    data = _extract_json((text or "").strip())
+    if not isinstance(data, dict):
+        raise ValueError("Area insight response must be a JSON object")
+
+    _require_keys(data, ["headline", "summary", "tip", "level"], "area_insights")
+
+    level = str(data["level"]).strip().lower()
+    if level not in ("calm", "caution", "elevated"):
+        raise ValueError(
+            f"Area insight level must be calm|caution|elevated, got {level!r}"
+        )
+
+    # Defensive length caps so a misbehaving model can't bloat the card.
+    limits = {"headline": 80, "summary": 320, "tip": 240}
+    insight: Dict[str, str] = {"level": level}
+    for key in ("headline", "summary", "tip"):
+        value = str(data[key]).strip()
+        if not value:
+            raise ValueError(f"Area insight field {key!r} must be non-empty")
+        insight[key] = value[: limits[key]]
+
+    return insight
+
+
 def _get_finish_reason_name(response) -> Optional[str]:
     candidates = getattr(response, "candidates", None) or []
     if not candidates:
@@ -340,6 +366,44 @@ Hard rules:
   in priority or pattern when that metric is present and relevant
 - Return all four keys exactly as shown
 - Do not use markdown, code fences, bullet points, or introductory phrases
+"""
+
+_AREA_INSIGHTS_SYSTEM = """\
+You are a neighborhood safety analyst for SafeSignal, a citizen incident-reporting app.
+A resident is checking what has been reported near them. You receive ONLY aggregated,
+anonymous counts for incidents within a small radius over the last few days — never
+names, addresses, or report text.
+
+Write a short, genuinely useful read of the local situation. Be calm and factual, never
+alarmist or fear-mongering. Empower the resident with specifics they can act on.
+
+Respond with ONLY a JSON object - no extra text:
+{
+  "headline": "...",
+  "summary": "...",
+  "tip": "...",
+  "level": "calm|caution|elevated"
+}
+
+Field rules:
+- headline: <= 6 words, specific to THIS data (not a generic slogan).
+- summary: 1-2 sentences. Lead with the standout fact and cite the real numbers — the
+  dominant category and its count, the busiest time of day, a rising trend, or a tight
+  cluster (small nearest distance).
+- tip: ONE concrete precaution that follows directly from the pattern below. If thefts
+  peak in the evening, make the tip about evenings. If one category dominates, target it.
+  If a critical incident is present, acknowledge it plainly. If activity is low, keep the
+  tip light and reassuring.
+- level: calm = few reports, low severity, stable/falling. caution = a moderate cluster or
+  a clear category/timing pattern. elevated = high volume, any critical incident, or a
+  sharp rising trend.
+
+Hard rules:
+- Use ONLY the numbers provided. Never invent incidents, locations, times, or trends.
+- Do NOT use vague filler: "stay aware", "be vigilant", "stay safe", "be careful",
+  "remain cautious", "exercise caution", "significant", "various", "leverage".
+- Reference exact numbers whenever the payload provides them.
+- No markdown, code fences, or preamble. JSON only. Keep every field tight.
 """
 
 _MEDIA_JUDGMENT_SYSTEM = """\
@@ -790,6 +854,57 @@ class GeminiProvider(BaseProvider):
                     await asyncio.sleep(wait)
 
         logger.error("generate_insights failed after 3 attempts")
+        return None
+
+    async def generate_area_insights(self, payload: Dict) -> Optional[Dict]:
+        """
+        Generate a citizen-facing read of recent nearby activity from aggregated,
+        anonymous counts. Returns {headline, summary, tip, level} or None on failure.
+        """
+        payload_text = json.dumps(payload, separators=(",", ":"))
+        prompt = (
+            "Aggregated nearby-activity data:\n"
+            f"{payload_text}\n\n"
+            "Generate the resident-facing area insight JSON."
+        )
+
+        for attempt in range(3):
+            try:
+                response = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        self._client.models.generate_content,
+                        model=config.GEMINI_CHAT_MODEL,
+                        contents=prompt,
+                        config=types.GenerateContentConfig(
+                            system_instruction=_AREA_INSIGHTS_SYSTEM,
+                            temperature=0.0,
+                            max_output_tokens=220,
+                            automatic_function_calling=types.AutomaticFunctionCallingConfig(
+                                disable=True,
+                            ),
+                            thinking_config=types.ThinkingConfig(thinking_budget=0),
+                        ),
+                    ),
+                    timeout=30.0,
+                )
+                finish_reason = _get_finish_reason_name(response)
+                if finish_reason and finish_reason.upper() != "STOP":
+                    raise ValueError(
+                        f"Area insight generation ended with finish_reason={finish_reason}"
+                    )
+                return _extract_area_insight(getattr(response, "text", ""))
+            except Exception as e:
+                wait = 2**attempt
+                logger.warning(
+                    "generate_area_insights attempt %d failed: %s - retrying in %ds",
+                    attempt + 1,
+                    e,
+                    wait,
+                )
+                if attempt < 2:
+                    await asyncio.sleep(wait)
+
+        logger.error("generate_area_insights failed after 3 attempts")
         return None
 
     async def synthesize_constellation(self, prompt: str) -> Optional[Dict]:

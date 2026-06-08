@@ -129,6 +129,24 @@ async function generateInsights(stats) {
 }
 
 /**
+ * Generate a citizen-facing read of recent nearby activity from aggregated counts.
+ * @param {Object} aggregate - Anonymous aggregate stats (no raw report text)
+ * @returns {Promise<{insight: Object|null, supported: boolean}|null>}
+ */
+async function generateAreaInsights(aggregate) {
+  try {
+    const response = await mlClient.post('/insights/area', aggregate);
+    return {
+      insight: response.data?.insight ?? null,
+      supported: response.data?.supported ?? false,
+    };
+  } catch (error) {
+    logger.warn(`ML generateAreaInsights failed: ${error.message}`);
+    return null;
+  }
+}
+
+/**
  * Full ML analysis (classification + toxicity + risk + similarity)
  * @param {Object} params
  * @returns {Promise<Object|null>}
@@ -261,6 +279,7 @@ module.exports = {
   dedupCompare,
   detectToxicity,
   generateInsights,
+  generateAreaInsights,
   analyzeIncident,
   synthesizeConstellation,
   analyzeReportMedia,
