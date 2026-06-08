@@ -6,12 +6,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
 import { AppText, Button } from '../../components';
 import { configureGoogleAuth, signInWithGoogle, statusCodes } from '../../services/googleAuth';
+import AnimatedBackground from './AnimatedBackground';
 import AuthDivider from './AuthDivider';
 import AuthFormInput from './AuthFormInput';
 import AuthHeader from './AuthHeader';
@@ -22,6 +23,7 @@ const RegisterScreen = ({ navigation }) => {
   const { register, googleSignIn } = useAuth();
   const { theme } = useTheme();
   const { showToast } = useToast();
+  const insets = useSafeAreaInsets();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -146,29 +148,21 @@ const RegisterScreen = ({ navigation }) => {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0}
     >
       <View style={authStyles.backgroundLayer} pointerEvents="none">
-        <LinearGradient
-          colors={[theme.primaryLight || 'rgba(29,78,216,0.14)', 'rgba(255,255,255,0)']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={authStyles.bgOrbTop}
-        />
-        <LinearGradient
-          colors={[theme.primaryLight || 'rgba(29,78,216,0.14)', 'rgba(255,255,255,0)']}
-          start={{ x: 1, y: 1 }}
-          end={{ x: 0, y: 0 }}
-          style={authStyles.bgOrbBottom}
-        />
+        <AnimatedBackground />
       </View>
+
+      <View style={[authStyles.stickyHeader, { paddingTop: insets.top + 24 }]}>
+        <AuthHeader subtitle="Join the community" marginBottom={0} />
+      </View>
+
       <ScrollView
         contentContainerStyle={authStyles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <AuthHeader subtitle="Join the community" />
-
-        <View style={[authStyles.formContainer, { backgroundColor: theme.card, borderColor: theme.border }]}> 
-          <AppText variant="h2" style={[authStyles.formTitle, { color: theme.text }]}>Create Account</AppText>
-          <AppText variant="body" style={[authStyles.formSubtitle, { color: theme.textSecondary }]}> 
+        <View style={authStyles.formContainer}>
+          <AppText variant="h2" style={[authStyles.formTitle, { color: theme.text }]}>Create account</AppText>
+          <AppText variant="body" style={[authStyles.formSubtitle, { color: theme.textSecondary }]}>
             Sign up to report and track incidents
           </AppText>
 
@@ -184,6 +178,7 @@ const RegisterScreen = ({ navigation }) => {
           <View style={authStyles.emailSectionSpacing}>
             <AuthFormInput
               label="Username"
+              icon="person-outline"
               placeholder="Choose a username"
               value={username}
               onChangeText={(text) => {
@@ -198,6 +193,7 @@ const RegisterScreen = ({ navigation }) => {
 
             <AuthFormInput
               label="Email"
+              icon="mail-outline"
               placeholder="Enter your email"
               value={email}
               onChangeText={(text) => {
@@ -213,6 +209,7 @@ const RegisterScreen = ({ navigation }) => {
 
             <AuthFormInput
               label="Password"
+              icon="lock-closed-outline"
               placeholder="Create a password"
               value={password}
               onChangeText={(text) => {
@@ -229,6 +226,7 @@ const RegisterScreen = ({ navigation }) => {
 
             <AuthFormInput
               label="Confirm Password"
+              icon="lock-closed-outline"
               placeholder="Confirm your password"
               value={confirmPassword}
               onChangeText={(text) => {

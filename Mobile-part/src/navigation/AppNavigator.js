@@ -26,8 +26,8 @@ const AuthStack = () => (
       animation: 'slide_from_right',
     }}
   >
-    <Stack.Screen name="Login" component={LoginScreen} />
-    <Stack.Screen name="Register" component={RegisterScreen} />
+    <Stack.Screen name="Login" component={LoginScreen} options={{ animation: 'none' }} />
+    <Stack.Screen name="Register" component={RegisterScreen} options={{ animation: 'none' }} />
     <Stack.Screen name="Verification" component={VerificationScreen} />
   </Stack.Navigator>
 );
