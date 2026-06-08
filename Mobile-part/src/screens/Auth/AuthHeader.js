@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { AppText } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import authStyles from './authStyles';
@@ -12,51 +11,71 @@ const AuthHeader = ({
   subtitle,
   titleColor,
   children,
-  marginBottom = 28,
+  marginBottom = 32,
+  tagSubtitle = true,
 }) => {
   const { theme } = useTheme();
-  const pulse = useRef(new Animated.Value(1)).current;
+  const halo = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, { toValue: 1.06, duration: 900, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: true }),
-      ])
+    const haloLoop = Animated.loop(
+      Animated.timing(halo, { toValue: 1, duration: 2600, useNativeDriver: true })
     );
-    loop.start();
-    return () => loop.stop();
-  }, [pulse]);
+    haloLoop.start();
+    return () => haloLoop.stop();
+  }, [halo]);
+
+  const haloScale = halo.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1.5] });
+  const haloOpacity = halo.interpolate({ inputRange: [0, 0.15, 1], outputRange: [0, 0.5, 0] });
 
   return (
-    <View style={[authStyles.headerWrap, { marginBottom }]}> 
-      <LinearGradient
-        colors={[theme.primaryLight || 'rgba(29,78,216,0.2)', 'rgba(255,255,255,0.05)']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[authStyles.brandHero, { borderColor: theme.border }]}
-      >
+    <View style={[authStyles.headerWrap, { marginBottom }]}>
+      <View style={authStyles.brandBadgeWrap}>
+        {/* Expanding halo ring — echoes the radar sweep in the background */}
         <Animated.View
+          pointerEvents="none"
           style={[
-            authStyles.brandIconWrap,
+            authStyles.brandBadgeHalo,
+            {
+              borderColor: theme.primary,
+              opacity: haloOpacity,
+              transform: [{ scale: haloScale }],
+            },
+          ]}
+        />
+        <View
+          style={[
+            authStyles.brandBadge,
             {
               backgroundColor: theme.primary,
-              transform: [{ scale: pulse }],
+              shadowColor: theme.primary,
             },
           ]}
         >
-          <Ionicons name={iconName} size={28} color="#FFFFFF" />
-        </Animated.View>
-        <AppText variant="h1" style={[authStyles.brandTitle, { color: titleColor || theme.text }]}> 
-          {title}
-        </AppText>
-        {subtitle ? (
-          <AppText variant="body" style={[authStyles.brandSubtitle, { color: theme.textSecondary }]}> 
+          <Ionicons name={iconName} size={30} color="#FFFFFF" />
+        </View>
+      </View>
+
+      <AppText variant="h1" style={[authStyles.brandTitle, { color: titleColor || theme.text }]}>
+        {title}
+      </AppText>
+
+      {subtitle && tagSubtitle ? (
+        <View style={authStyles.brandTagRow}>
+          <View style={[authStyles.brandTagDot, { backgroundColor: theme.accentOrange }]} />
+          <AppText variant="small" style={[authStyles.brandTagText, { color: theme.textTertiary }]}>
             {subtitle}
           </AppText>
-        ) : null}
-        {children}
-      </LinearGradient>
+        </View>
+      ) : null}
+
+      {subtitle && !tagSubtitle ? (
+        <AppText variant="body" style={[authStyles.brandSubtitle, { color: theme.textSecondary }]}>
+          {subtitle}
+        </AppText>
+      ) : null}
+
+      {children}
     </View>
   );
 };

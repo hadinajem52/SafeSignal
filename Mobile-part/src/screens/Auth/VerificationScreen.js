@@ -224,6 +224,7 @@ const VerificationScreen = ({ navigation, route }) => {
             title="Verify your email"
             titleColor={theme.text}
             subtitle="Enter the 6-digit code we sent to"
+            tagSubtitle={false}
             marginBottom={20}
           >
             <View

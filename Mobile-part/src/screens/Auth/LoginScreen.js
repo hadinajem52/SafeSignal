@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
@@ -22,6 +23,7 @@ const LoginScreen = ({ navigation }) => {
   const { login, googleSignIn } = useAuth();
   const { theme } = useTheme();
   const { showToast } = useToast();
+  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -115,16 +117,19 @@ const LoginScreen = ({ navigation }) => {
       <View style={authStyles.backgroundLayer} pointerEvents="none">
         <AnimatedBackground />
       </View>
+
+      <View style={[authStyles.stickyHeader, { paddingTop: insets.top + 24 }]}>
+        <AuthHeader subtitle="Community safety network" marginBottom={0} />
+      </View>
+
       <ScrollView
         contentContainerStyle={authStyles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <AuthHeader subtitle="Community safety network" />
-
-        <View style={[authStyles.formContainer, { backgroundColor: theme.card, borderColor: theme.border }]}> 
-          <AppText variant="h2" style={[authStyles.formTitle, { color: theme.text }]}>Welcome Back</AppText>
-          <AppText variant="body" style={[authStyles.formSubtitle, { color: theme.textSecondary }]}>Sign in to your account</AppText>
+        <View style={authStyles.formContainer}>
+          <AppText variant="h2" style={[authStyles.formTitle, { color: theme.text }]}>Welcome back</AppText>
+          <AppText variant="body" style={[authStyles.formSubtitle, { color: theme.textSecondary }]}>Sign in to keep your community safe</AppText>
 
           <GoogleSignInButton
             title="Continue with Google"
@@ -138,6 +143,7 @@ const LoginScreen = ({ navigation }) => {
           <View style={authStyles.emailSectionSpacing}>
             <AuthFormInput
               label="Email"
+              icon="mail-outline"
               placeholder="Enter your email"
               value={email}
               onChangeText={(text) => {
@@ -155,6 +161,7 @@ const LoginScreen = ({ navigation }) => {
 
             <AuthFormInput
               label="Password"
+              icon="lock-closed-outline"
               placeholder="Enter your password"
               value={password}
               onChangeText={(text) => {

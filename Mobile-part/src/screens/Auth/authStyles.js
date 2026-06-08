@@ -30,64 +30,88 @@ const authStyles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 24,
+    paddingHorizontal: 28,
+    paddingTop: 12,
+    paddingBottom: 40,
   },
 
+  // ── Sticky brand lockup region (pinned above the scrolling form) ──
+  stickyHeader: {
+    paddingHorizontal: 28,
+    paddingBottom: 8,
+  },
+
+  // ── Full-bleed brand lockup (no card chrome) ──
   headerWrap: {
     alignItems: 'center',
   },
-  brandHero: {
-    width: '100%',
-    borderRadius: 20,
-    borderWidth: 1,
-    paddingVertical: 20,
-    paddingHorizontal: 18,
+  brandBadgeWrap: {
+    width: 92,
+    height: 92,
     alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 18,
   },
-  brandIconWrap: {
+  brandBadgeHalo: {
+    position: 'absolute',
+    width: 92,
+    height: 92,
+    borderRadius: 999,
+    borderWidth: 1.5,
+  },
+  brandBadge: {
     width: 64,
     height: 64,
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.16,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 8,
   },
   brandTitle: {
     textAlign: 'center',
+    letterSpacing: 0.4,
+  },
+  brandTagRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  brandTagDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 999,
+    marginRight: 7,
+  },
+  brandTagText: {
+    textTransform: 'uppercase',
+    letterSpacing: 1.4,
   },
   brandSubtitle: {
     textAlign: 'center',
-    marginTop: 3,
+    marginTop: 8,
   },
 
+  // ── Form area floats directly over the animated background ──
   formContainer: {
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 6,
+    width: '100%',
   },
   formTitle: {
     marginBottom: 4,
   },
   formSubtitle: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   emailSectionSpacing: {
     marginTop: 4,
   },
 
   button: {
-    marginTop: 8,
+    marginTop: 10,
+    minHeight: 54,
+    borderRadius: 14,
   },
   buttonDisabled: {
     opacity: 0.78,
@@ -96,18 +120,20 @@ const authStyles = StyleSheet.create({
   footerContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 18,
+    alignItems: 'center',
+    marginTop: 24,
   },
   footerText: {},
   linkText: {},
   termsText: {
     textAlign: 'center',
-    marginTop: 18,
-    paddingHorizontal: 20,
+    marginTop: 22,
+    paddingHorizontal: 24,
   },
   hintText: {
     marginTop: -6,
-    marginBottom: 8,
+    marginBottom: 10,
+    marginLeft: 2,
   },
 
   verificationScroll: {
