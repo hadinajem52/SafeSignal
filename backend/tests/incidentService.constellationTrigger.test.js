@@ -30,7 +30,7 @@ describe('incident constellation trigger', () => {
     jest.clearAllMocks();
   });
 
-  it('returns the incident even when async constellation creation fails', async () => {
+  it('does not auto-open a constellation when an incident is created', async () => {
     const incident = {
       incident_id: 10,
       reporter_id: 7,
@@ -52,7 +52,6 @@ describe('incident constellation trigger', () => {
     db.one.mockResolvedValueOnce(incident).mockResolvedValueOnce({ report_id: 55 });
     db.manyOrNone.mockResolvedValue([]);
     db.none.mockResolvedValue();
-    constellationService.openConstellationForIncident.mockRejectedValue(new Error('boom'));
 
     const result = await incidentService.createIncident(
       {
@@ -72,6 +71,7 @@ describe('incident constellation trigger', () => {
 
     expect(result).toMatchObject({ incident_id: 10, status: 'submitted' });
     await new Promise(process.nextTick);
-    expect(constellationService.openConstellationForIncident).toHaveBeenCalledWith(result, 7);
+    // Constellations are now activated manually by a moderator, never on report creation.
+    expect(constellationService.openConstellationForIncident).not.toHaveBeenCalled();
   });
 });

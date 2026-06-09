@@ -33,6 +33,10 @@ export function useReportMutations({
     mutationFn: (reportId) => reportsAPI.retryMediaJudgment(reportId),
   });
 
+  const activateConstellationMutation = useMutation({
+    mutationFn: (reportId) => reportsAPI.activateConstellation(reportId),
+  });
+
   const invalidateReports = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["reports"] });
   }, [queryClient]);
@@ -155,6 +159,34 @@ export function useReportMutations({
     pushToast("Media judgment refreshed.");
   }, [pushToast, queryClient, retryMediaJudgmentMutation, selectedReport?.id]);
 
+  const onActivateConstellation = useCallback(async () => {
+    if (!selectedReport?.id) return;
+    if (selectedReport.constellation) {
+      pushToast("A witness constellation is already active for this report.", "warning");
+      return;
+    }
+    const reportId = selectedReport.id;
+    const result = await activateConstellationMutation.mutateAsync(reportId);
+    if (!result.success) {
+      pushToast(result.error || "Failed to activate witness prompts.", "error");
+      return;
+    }
+    // Surface the freshly created constellation immediately; the detail poll then
+    // keeps the corroboration tally live while it stays active.
+    setSelectedReport((prev) =>
+      prev && prev.id === reportId ? { ...prev, constellation: result.data } : prev,
+    );
+    queryClient.invalidateQueries({ queryKey: ["reports"] });
+    pushToast("Witness prompts sent to nearby users.");
+  }, [
+    activateConstellationMutation,
+    pushToast,
+    queryClient,
+    selectedReport?.constellation,
+    selectedReport?.id,
+    setSelectedReport,
+  ]);
+
   const onOpenDuplicateCandidate = useCallback(
     async (duplicateIncidentId) => {
       const duplicateId = Number(duplicateIncidentId);
@@ -184,12 +216,14 @@ export function useReportMutations({
     linkDuplicateMutation,
     updateCategoryMutation,
     retryMediaJudgmentMutation,
+    activateConstellationMutation,
     invalidateReports,
     handleVerify,
     handleReject,
     onMerge,
     onApplySuggestedCategory,
     onRetryMediaJudgment,
+    onActivateConstellation,
     onOpenDuplicateCandidate,
   };
 }

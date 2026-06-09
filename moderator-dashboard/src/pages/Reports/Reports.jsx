@@ -146,6 +146,25 @@ function Reports() {
       query.state.data?.mediaJudgmentStatus === "pending" ? 3000 : false,
   });
 
+  // While a constellation is active for the selected report, poll its corroboration
+  // results so the moderator sees the witness feedback update in place.
+  const { data: liveConstellation } = useQuery({
+    queryKey: ["report-constellation", selectedReport?.id],
+    queryFn: async () => {
+      if (!selectedReport?.id) return null;
+      const result = await reportsAPI.getById(selectedReport.id);
+      return result.success ? result.data?.constellation ?? null : null;
+    },
+    enabled: Boolean(selectedReport?.id) && Boolean(selectedReport?.constellation),
+    refetchInterval: (query) =>
+      query.state.data?.status === "active" ? 10000 : false,
+  });
+
+  const detailConstellation =
+    liveConstellation !== undefined
+      ? liveConstellation
+      : selectedReport?.constellation ?? null;
+
   const {
     bulkActionPending,
     bulkConfirmAction,
@@ -157,6 +176,7 @@ function Reports() {
     linkDuplicateMutation,
     updateCategoryMutation,
     retryMediaJudgmentMutation,
+    activateConstellationMutation,
     executeBulkAction,
     handleEscalateRequest,
     handleRejectRequest,
@@ -164,6 +184,7 @@ function Reports() {
     onMerge,
     onApplySuggestedCategory,
     onRetryMediaJudgment,
+    onActivateConstellation,
     onOpenDuplicateCandidate,
   } = useReportActions({
     queryClient,
@@ -308,6 +329,9 @@ function Reports() {
           <div className="flex-1 overflow-hidden min-w-0">
             <ReportDetail
               report={selectedReport}
+              constellation={detailConstellation}
+              onActivateConstellation={onActivateConstellation}
+              activateConstellationPending={activateConstellationMutation.isPending}
               mlSummary={mlSummary}
               isMlLoading={isMlLoading}
               dedupData={dedupData}

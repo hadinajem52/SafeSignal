@@ -46,4 +46,10 @@ export const reportsAPI = {
       () => api.post(`/incidents/${id}/reject`, { reason }),
       "Failed to reject report",
     ),
+
+  activateConstellation: async (id) =>
+    requestData(
+      () => api.post(`/incidents/${id}/constellation`),
+      "Failed to activate witness constellation",
+    ),
 };

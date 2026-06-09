@@ -109,6 +109,64 @@ describe('constellationService eligibility', () => {
   });
 });
 
+describe('constellationService manual activation', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  const staleIncidentRow = (overrides = {}) => ({
+    incident_id: 10,
+    reporter_id: 7,
+    is_draft: false,
+    status: 'submitted',
+    latitude: 12.345678,
+    longitude: -98.765432,
+    // 6 hours old — would fail the automatic freshness window, allowed for manual.
+    incident_date: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+    ...overrides,
+  });
+
+  it('activates a constellation for a stale report when a moderator triggers it', async () => {
+    db.oneOrNone
+      .mockResolvedValueOnce(staleIncidentRow()) // load incident
+      .mockResolvedValueOnce(null) // toxicity check
+      .mockResolvedValueOnce(null); // no active constellation
+    db.one.mockResolvedValue(activeConstellation());
+    db.none.mockResolvedValue();
+    db.manyOrNone.mockResolvedValue([]); // no nearby targets to notify
+
+    const result = await constellationService.activateConstellationForIncident(10, 99);
+
+    expect(db.one).toHaveBeenCalled();
+    expect(result).toMatchObject({
+      constellationId: 3,
+      status: 'active',
+      confidenceState: 'single_report',
+    });
+  });
+
+  it('returns 404 when the incident does not exist', async () => {
+    db.oneOrNone.mockResolvedValueOnce(null);
+
+    await expect(
+      constellationService.activateConstellationForIncident(404, 99)
+    ).rejects.toMatchObject({ statusCode: 404 });
+    expect(db.one).not.toHaveBeenCalled();
+  });
+
+  it('rejects activation when an active constellation already exists', async () => {
+    db.oneOrNone
+      .mockResolvedValueOnce(staleIncidentRow()) // load incident
+      .mockResolvedValueOnce(null) // toxicity check
+      .mockResolvedValueOnce({ constellation_id: 3 }); // active exists
+
+    await expect(
+      constellationService.activateConstellationForIncident(10, 99)
+    ).rejects.toMatchObject({ statusCode: 409 });
+    expect(db.one).not.toHaveBeenCalled();
+  });
+});
+
 describe('constellationService reads', () => {
   beforeEach(() => {
     jest.clearAllMocks();

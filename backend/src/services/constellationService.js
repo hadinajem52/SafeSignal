@@ -117,7 +117,7 @@ const formatLimitedConstellation = (row) => {
   return payload;
 };
 
-async function evaluateEligibility(incident, reporterId) {
+async function evaluateEligibility(incident, reporterId, { manual = false } = {}) {
   if (!incident || incident.is_draft) {
     return { eligible: false, reason: 'draft_incident' };
   }
@@ -126,7 +126,9 @@ async function evaluateEligibility(incident, reporterId) {
     return { eligible: false, reason: 'missing_coordinates' };
   }
 
-  if (!isFreshIncident(incident.incident_date)) {
+  // Moderator-initiated activation overrides the freshness window: staff decide when
+  // a report is worth a witness sweep regardless of how long ago it was filed.
+  if (!manual && !isFreshIncident(incident.incident_date)) {
     return { eligible: false, reason: 'stale_incident' };
   }
 
@@ -162,17 +164,21 @@ async function evaluateEligibility(incident, reporterId) {
     return { eligible: false, reason: 'active_constellation_exists' };
   }
 
-  const recent = await db.one(
-    `SELECT COUNT(*)::int AS count
-     FROM incident_constellations c
-     JOIN incidents i ON i.incident_id = c.incident_id
-     WHERE i.reporter_id = $1
-       AND c.opens_at > NOW() - ($2::text)::interval`,
-    [reporterId, `${LIMITS.CONSTELLATION.CREATION_WINDOW_MINUTES} minutes`]
-  );
+  // The per-reporter creation cap guards the automatic trigger only; a moderator
+  // acting deliberately is not rate-limited.
+  if (!manual) {
+    const recent = await db.one(
+      `SELECT COUNT(*)::int AS count
+       FROM incident_constellations c
+       JOIN incidents i ON i.incident_id = c.incident_id
+       WHERE i.reporter_id = $1
+         AND c.opens_at > NOW() - ($2::text)::interval`,
+      [reporterId, `${LIMITS.CONSTELLATION.CREATION_WINDOW_MINUTES} minutes`]
+    );
 
-  if (recent.count >= LIMITS.CONSTELLATION.CREATION_LIMIT) {
-    return { eligible: false, reason: 'creation_rate_limited' };
+    if (recent.count >= LIMITS.CONSTELLATION.CREATION_LIMIT) {
+      return { eligible: false, reason: 'creation_rate_limited' };
+    }
   }
 
   return { eligible: true, reason: null };
@@ -215,6 +221,55 @@ async function openConstellationForIncident(incident, reporterId) {
   } catch (error) {
     if (error.code === '23505') {
       return { created: false, reason: 'active_constellation_exists', constellation: null };
+    }
+    throw error;
+  }
+}
+
+const MANUAL_ACTIVATION_ERRORS = {
+  draft_incident: () => ServiceError.badRequest('Draft reports cannot trigger witness prompts'),
+  missing_coordinates: () => ServiceError.badRequest('This report has no location, so nearby witnesses cannot be prompted'),
+  toxic_or_abusive: () => ServiceError.conflict('This report is held for review and cannot trigger witness prompts'),
+  active_constellation_exists: () => ServiceError.conflict('A witness constellation is already active for this report'),
+};
+
+const manualActivationError = (reason) => {
+  const build = MANUAL_ACTIVATION_ERRORS[reason];
+  return build ? build() : ServiceError.badRequest('This report is not eligible for witness prompts');
+};
+
+/**
+ * Moderator-initiated activation of a witness constellation for a specific incident.
+ * Bypasses the freshness window and per-reporter rate limit (staff act deliberately),
+ * but keeps the coordinate, draft, abuse, and duplicate-active guards.
+ */
+async function activateConstellationForIncident(incidentId, activatedByUserId) {
+  const incident = await db.oneOrNone(
+    `SELECT incident_id, reporter_id, is_draft, status, latitude, longitude, incident_date
+     FROM incidents
+     WHERE incident_id = $1`,
+    [incidentId]
+  );
+
+  if (!incident) {
+    throw ServiceError.notFound('Incident');
+  }
+
+  const eligibility = await evaluateEligibility(incident, incident.reporter_id, { manual: true });
+  if (!eligibility.eligible) {
+    throw manualActivationError(eligibility.reason);
+  }
+
+  try {
+    const constellation = await createConstellation(incident);
+    notifyNearbyUsers(constellation).catch((error) => {
+      logger.error(`Witness prompt notification failed for constellation ${constellation.constellation_id}: ${error.message}`);
+    });
+    logger.info(`Constellation ${constellation.constellation_id} manually activated for incident ${incident.incident_id} by user ${activatedByUserId}`);
+    return formatFullConstellation({ ...constellation, reporter_id: incident.reporter_id });
+  } catch (error) {
+    if (error.code === '23505') {
+      throw ServiceError.conflict('A witness constellation is already active for this report');
     }
     throw error;
   }
@@ -547,6 +602,7 @@ module.exports = {
   VALID_SIGNAL_TYPES,
   evaluateEligibility,
   openConstellationForIncident,
+  activateConstellationForIncident,
   notifyNearbyUsers,
   getConstellationForUser,
   submitCorroboration,
