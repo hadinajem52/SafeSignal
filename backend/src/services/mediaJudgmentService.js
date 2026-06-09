@@ -1,14 +1,14 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const axios = require('axios');
 const db = require('../config/database');
 const ServiceError = require('../utils/ServiceError');
 const logger = require('../utils/logger');
 const mlClient = require('../utils/mlClient');
-const { UPLOAD_ROOT } = require('../middleware/incidentUpload');
+const { INCIDENT_MEDIA_DIR } = require('../middleware/incidentUpload');
 
 const INCIDENT_MEDIA_PREFIX = '/uploads/incidents/';
-const INCIDENT_MEDIA_DIR = path.resolve(UPLOAD_ROOT, 'incidents');
 const TERMINAL_STATUSES = new Set(['completed', 'unsupported', 'skipped']);
 
 function getMimeType(filename) {
@@ -44,9 +44,9 @@ function getMediaUrls(incident) {
   ].filter(Boolean);
 }
 
-function resolveStoredMedia(url, role, index) {
-  if (typeof url !== 'string' || !url.startsWith(INCIDENT_MEDIA_PREFIX)) {
-    return { error: `Unsupported media URL for analysis: ${url || '(empty)'}` };
+function resolveLocalMedia(url, role, index) {
+  if (!INCIDENT_MEDIA_DIR) {
+    return { error: `Local media unavailable (R2 mode): ${url}` };
   }
 
   const originalName = path.basename(url);
@@ -80,10 +80,54 @@ function resolveStoredMedia(url, role, index) {
   };
 }
 
-function getStoredMediaResolution(incident, role) {
-  return getMediaUrls(incident).reduce(
-    (result, url, index) => {
-      const resolved = resolveStoredMedia(url, role, index);
+async function resolveRemoteMedia(url, role, index) {
+  let response;
+  try {
+    response = await axios.get(url, { responseType: 'arraybuffer', timeout: 30000 });
+  } catch (err) {
+    return { error: `Failed to fetch remote media (${url}): ${err.message}` };
+  }
+
+  const originalName = path.basename(new URL(url).pathname);
+  const mimeType = response.headers['content-type']?.split(';')[0] || getMimeType(originalName);
+  const buffer = Buffer.from(response.data);
+
+  return {
+    mediaFile: {
+      role,
+      url,
+      buffer,
+      filename: `${role}-${index + 1}-${originalName}`,
+      mimeType,
+      kind: mimeType.startsWith('video/') ? 'video' : 'photo',
+      size: buffer.length,
+    },
+  };
+}
+
+async function resolveStoredMedia(url, role, index) {
+  if (typeof url !== 'string' || !url) {
+    return { error: `Unsupported media URL for analysis: ${url || '(empty)'}` };
+  }
+
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return resolveRemoteMedia(url, role, index);
+  }
+
+  if (url.startsWith(INCIDENT_MEDIA_PREFIX)) {
+    return resolveLocalMedia(url, role, index);
+  }
+
+  return { error: `Unsupported media URL for analysis: ${url}` };
+}
+
+async function getStoredMediaResolution(incident, role) {
+  const results = await Promise.all(
+    getMediaUrls(incident).map((url, index) => resolveStoredMedia(url, role, index))
+  );
+
+  return results.reduce(
+    (result, resolved) => {
       if (resolved.error) {
         result.errors.push(resolved.error);
       } else {
@@ -271,10 +315,10 @@ async function analyzeIncidentMedia(incidentId, { force = false } = {}) {
   }
 
   const duplicateIncident = await getDuplicateComparisonIncidentForReport(context.report_id);
-  const reportMediaResolution = getStoredMediaResolution(context, 'report');
+  const reportMediaResolution = await getStoredMediaResolution(context, 'report');
   const duplicateMediaRole = duplicateIncident?.comparison_role || 'linked_duplicate';
   const duplicateMediaResolution = duplicateIncident
-    ? getStoredMediaResolution(duplicateIncident, duplicateMediaRole)
+    ? await getStoredMediaResolution(duplicateIncident, duplicateMediaRole)
     : { files: [], errors: [] };
   const reportMedia = reportMediaResolution.files;
   const duplicateMedia = duplicateMediaResolution.files;

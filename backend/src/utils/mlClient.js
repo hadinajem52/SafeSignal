@@ -243,9 +243,12 @@ async function analyzeReportMedia({ metadata, mediaFiles }) {
     }
 
     for (const mediaFile of mediaFiles || []) {
+      const stream = mediaFile.buffer
+        ? mediaFile.buffer
+        : fs.createReadStream(mediaFile.path);
       form.append(
         'files',
-        fs.createReadStream(mediaFile.path),
+        stream,
         {
           filename: mediaFile.filename,
           contentType: mediaFile.mimeType || 'application/octet-stream',

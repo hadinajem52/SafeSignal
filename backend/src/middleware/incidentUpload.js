@@ -1,7 +1,7 @@
 const crypto = require('crypto');
+const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { LIMITS } = require('../../../constants/limits');
 const logger = require('../utils/logger');
 
@@ -11,19 +11,43 @@ const UPLOAD_LIMITS = {
   totalBytes: LIMITS.MAX_UPLOAD_BYTES,
 };
 
+// When R2 credentials are present use cloud storage; otherwise fall back to
+// local disk (development without R2 configured).
+const R2_ENABLED = Boolean(process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY);
+
+const UPLOAD_ROOT = R2_ENABLED ? null : path.join(__dirname, '..', '..', 'uploads');
+const INCIDENT_MEDIA_DIR = UPLOAD_ROOT ? path.join(UPLOAD_ROOT, 'incidents') : null;
+
+if (INCIDENT_MEDIA_DIR) {
+  fs.mkdirSync(INCIDENT_MEDIA_DIR, { recursive: true });
+}
+
 const R2_PUBLIC_URL = (process.env.R2_PUBLIC_URL || 'https://pub-743fef4114774b0cbc8dcd46f8aea4bb.r2.dev').replace(/\/$/, '');
 const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || 'safesignal-media';
+const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID || 'f46667807c03b4ece1d4d23e52158f3f';
 
-const s3 = new S3Client({
-  region: 'auto',
-  endpoint: `https://${process.env.R2_ACCOUNT_ID || 'f46667807c03b4ece1d4d23e52158f3f'}.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
-  },
-});
+let s3 = null;
+if (R2_ENABLED) {
+  const { S3Client } = require('@aws-sdk/client-s3');
+  s3 = new S3Client({
+    region: 'auto',
+    endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+    credentials: {
+      accessKeyId: process.env.R2_ACCESS_KEY_ID,
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+    },
+  });
+}
 
-const storage = multer.memoryStorage();
+const storage = R2_ENABLED
+  ? multer.memoryStorage()
+  : multer.diskStorage({
+      destination: (_req, _file, callback) => callback(null, INCIDENT_MEDIA_DIR),
+      filename: (_req, file, callback) => {
+        const extension = path.extname(file.originalname || '').toLowerCase();
+        callback(null, `${crypto.randomUUID()}${extension}`);
+      },
+    });
 
 const fileFilter = (_req, file, callback) => {
   if (file.fieldname === 'photos' && file.mimetype?.startsWith('image/')) {
@@ -74,6 +98,14 @@ function getUploadedFiles(req) {
   return [...(files.photos || []), ...(files.video || [])];
 }
 
+function cleanupUploadedFiles(req) {
+  if (R2_ENABLED) return;
+  for (const file of getUploadedFiles(req)) {
+    logger.warn(`Cleaning up incident upload file: field=${file.fieldname} size=${file.size} path=${file.path}`);
+    fs.rm(file.path, { force: true }, () => {});
+  }
+}
+
 function validateUploadedSizes(req, res, next) {
   const files = req.files || {};
   const photoFiles = files.photos || [];
@@ -91,6 +123,7 @@ function validateUploadedSizes(req, res, next) {
     logger.warn(
       `Incident upload rejected after parse: oversizedPhoto=${hasOversizedPhoto} oversizedVideo=${hasOversizedVideo} totalBytes=${totalBytes}`
     );
+    cleanupUploadedFiles(req);
     res.status(400).json({
       status: 'ERROR',
       message: hasOversizedPhoto
@@ -106,6 +139,11 @@ function validateUploadedSizes(req, res, next) {
 }
 
 async function uploadFilesToR2(req, res, next) {
+  if (!R2_ENABLED) {
+    next();
+    return;
+  }
+
   const files = getUploadedFiles(req);
   if (files.length === 0) {
     next();
@@ -113,6 +151,7 @@ async function uploadFilesToR2(req, res, next) {
   }
 
   try {
+    const { PutObjectCommand } = require('@aws-sdk/client-s3');
     await Promise.all(
       files.map(async (file) => {
         const extension = path.extname(file.originalname || '').toLowerCase();
@@ -139,7 +178,9 @@ async function uploadFilesToR2(req, res, next) {
 }
 
 function toMediaUrl(file) {
-  return file ? (file.r2Url || null) : null;
+  if (!file) return null;
+  if (R2_ENABLED) return file.r2Url || null;
+  return file.filename ? `/uploads/incidents/${file.filename}` : null;
 }
 
 function attachIncidentMedia(req, _res, next) {
@@ -169,6 +210,7 @@ function handleIncidentUploadError(error, _req, res, next) {
   }
 
   if (error instanceof multer.MulterError) {
+    cleanupUploadedFiles(_req);
     const fieldName = error.field || 'media';
     logger.warn(
       `Incident upload multer error: code=${error.code} field=${fieldName} message=${error.message}`
@@ -201,6 +243,8 @@ const incidentUpload = [
 
 module.exports = {
   incidentUpload,
-  cleanupUploadedFiles: () => {},
-  UPLOAD_ROOT: null,
+  cleanupUploadedFiles,
+  UPLOAD_ROOT,
+  INCIDENT_MEDIA_DIR,
+  R2_ENABLED,
 };
