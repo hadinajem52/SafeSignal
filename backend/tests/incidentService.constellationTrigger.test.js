@@ -12,9 +12,6 @@ jest.mock('../src/services/notificationService', () => ({
   notifyStaffIncidentEvent: jest.fn().mockResolvedValue(),
 }));
 jest.mock('../src/utils/mlClient', () => ({}));
-jest.mock('../src/services/constellationService', () => ({
-  openConstellationForIncident: jest.fn(),
-}));
 jest.mock('../src/utils/logger', () => ({
   info: jest.fn(),
   warn: jest.fn(),
@@ -22,7 +19,6 @@ jest.mock('../src/utils/logger', () => ({
 }));
 
 const db = require('../src/config/database');
-const constellationService = require('../src/services/constellationService');
 const incidentService = require('../src/services/incidentService');
 
 describe('incident constellation trigger', () => {
@@ -71,7 +67,15 @@ describe('incident constellation trigger', () => {
 
     expect(result).toMatchObject({ incident_id: 10, status: 'submitted' });
     await new Promise(process.nextTick);
-    // Constellations are now activated manually by a moderator, never on report creation.
-    expect(constellationService.openConstellationForIncident).not.toHaveBeenCalled();
+
+    // Constellations are now activated manually by a moderator, never on report
+    // creation: no incident_constellations write should occur here.
+    const executedSql = [
+      ...db.one.mock.calls,
+      ...db.none.mock.calls,
+      ...db.oneOrNone.mock.calls,
+      ...db.manyOrNone.mock.calls,
+    ].map(([sql]) => String(sql));
+    expect(executedSql.some((sql) => /incident_constellations/i.test(sql))).toBe(false);
   });
 });

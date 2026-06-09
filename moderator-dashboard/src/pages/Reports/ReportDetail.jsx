@@ -102,12 +102,19 @@ function CommunitySignalCard({ constellation }) {
 function WitnessConstellationSection({
   constellation,
   hasCoordinates,
+  statusAllowsActivation,
   activating,
   onActivate,
 }) {
   if (constellation) {
     return <CommunitySignalCard constellation={constellation} />;
   }
+
+  const blockedReason = !hasCoordinates
+    ? "This report has no location, so nearby witnesses can't be prompted."
+    : !statusAllowsActivation
+      ? "Witness prompts can't be activated for a flagged, closed, or rejected report."
+      : null;
 
   return (
     <DetailSection title="Community Signal">
@@ -120,16 +127,14 @@ function WitnessConstellationSection({
         <button
           type="button"
           onClick={onActivate}
-          disabled={activating || !hasCoordinates}
+          disabled={activating || Boolean(blockedReason)}
           className="inline-flex items-center gap-2 border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-bold uppercase tracking-[0.04em] text-primary transition-colors hover:bg-primary/15 disabled:opacity-50"
         >
           <Radio size={14} />
           {activating ? "Activating…" : "Activate witness prompts"}
         </button>
-        {!hasCoordinates ? (
-          <p className="text-[11px] text-muted">
-            This report has no location, so nearby witnesses can&apos;t be prompted.
-          </p>
+        {blockedReason ? (
+          <p className="text-[11px] text-muted">{blockedReason}</p>
         ) : null}
       </div>
     </DetailSection>
@@ -448,6 +453,7 @@ function ReportDetail({
   constellation,
   onActivateConstellation,
   activateConstellationPending,
+  canActivateConstellation,
   mlSummary,
   isMlLoading,
   dedupData,
@@ -644,6 +650,7 @@ function ReportDetail({
         <WitnessConstellationSection
           constellation={constellation}
           hasCoordinates={hasReportCoordinates}
+          statusAllowsActivation={canActivateConstellation}
           activating={activateConstellationPending}
           onActivate={onActivateConstellation}
         />

@@ -161,10 +161,9 @@ export function useReportMutations({
 
   const onActivateConstellation = useCallback(async () => {
     if (!selectedReport?.id) return;
-    if (selectedReport.constellation) {
-      pushToast("A witness constellation is already active for this report.", "warning");
-      return;
-    }
+    // The backend is the source of truth for whether activation is allowed
+    // (status, duplicate-active, etc.); surface its rejection rather than guessing
+    // from possibly-stale selected-report state.
     const reportId = selectedReport.id;
     const result = await activateConstellationMutation.mutateAsync(reportId);
     if (!result.success) {
@@ -182,7 +181,6 @@ export function useReportMutations({
     activateConstellationMutation,
     pushToast,
     queryClient,
-    selectedReport?.constellation,
     selectedReport?.id,
     setSelectedReport,
   ]);

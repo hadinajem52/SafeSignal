@@ -48,15 +48,14 @@ const toNumber = (value) => (value === null || value === undefined ? null : Numb
 
 const isStaffRole = (role) => STAFF_ROLES.has(role);
 
-const isFreshIncident = (incidentDate) => {
-  const reportedAt = new Date(incidentDate).getTime();
-  if (!Number.isFinite(reportedAt)) {
-    return false;
-  }
-
-  const ageMs = Date.now() - reportedAt;
-  return ageMs >= 0 && ageMs <= LIMITS.CONSTELLATION.ELIGIBILITY_WINDOW_MINUTES * 60 * 1000;
-};
+// Statuses where prompting fresh witnesses no longer makes sense.
+const NON_ACTIVATABLE_INCIDENT_STATUSES = new Set([
+  'rejected',
+  'merged',
+  'archived',
+  'resolved',
+  'police_closed',
+]);
 
 const hasCoordinates = (incident) => {
   const latitude = Number(incident.latitude);
@@ -117,7 +116,7 @@ const formatLimitedConstellation = (row) => {
   return payload;
 };
 
-async function evaluateEligibility(incident, reporterId, { manual = false } = {}) {
+async function evaluateEligibility(incident) {
   if (!incident || incident.is_draft) {
     return { eligible: false, reason: 'draft_incident' };
   }
@@ -126,14 +125,12 @@ async function evaluateEligibility(incident, reporterId, { manual = false } = {}
     return { eligible: false, reason: 'missing_coordinates' };
   }
 
-  // Moderator-initiated activation overrides the freshness window: staff decide when
-  // a report is worth a witness sweep regardless of how long ago it was filed.
-  if (!manual && !isFreshIncident(incident.incident_date)) {
-    return { eligible: false, reason: 'stale_incident' };
-  }
-
   if (incident.status === 'auto_flagged') {
     return { eligible: false, reason: 'toxic_or_abusive' };
+  }
+
+  if (NON_ACTIVATABLE_INCIDENT_STATUSES.has(incident.status)) {
+    return { eligible: false, reason: 'incident_not_actionable' };
   }
 
   const toxicity = await db.oneOrNone(
@@ -164,23 +161,6 @@ async function evaluateEligibility(incident, reporterId, { manual = false } = {}
     return { eligible: false, reason: 'active_constellation_exists' };
   }
 
-  // The per-reporter creation cap guards the automatic trigger only; a moderator
-  // acting deliberately is not rate-limited.
-  if (!manual) {
-    const recent = await db.one(
-      `SELECT COUNT(*)::int AS count
-       FROM incident_constellations c
-       JOIN incidents i ON i.incident_id = c.incident_id
-       WHERE i.reporter_id = $1
-         AND c.opens_at > NOW() - ($2::text)::interval`,
-      [reporterId, `${LIMITS.CONSTELLATION.CREATION_WINDOW_MINUTES} minutes`]
-    );
-
-    if (recent.count >= LIMITS.CONSTELLATION.CREATION_LIMIT) {
-      return { eligible: false, reason: 'creation_rate_limited' };
-    }
-  }
-
   return { eligible: true, reason: null };
 }
 
@@ -206,29 +186,10 @@ async function createConstellation(incident) {
   );
 }
 
-async function openConstellationForIncident(incident, reporterId) {
-  const eligibility = await evaluateEligibility(incident, reporterId);
-  if (!eligibility.eligible) {
-    return { created: false, reason: eligibility.reason, constellation: null };
-  }
-
-  try {
-    const constellation = await createConstellation(incident);
-    notifyNearbyUsers(constellation).catch((error) => {
-      logger.error(`Witness prompt notification failed for constellation ${constellation.constellation_id}: ${error.message}`);
-    });
-    return { created: true, reason: null, constellation };
-  } catch (error) {
-    if (error.code === '23505') {
-      return { created: false, reason: 'active_constellation_exists', constellation: null };
-    }
-    throw error;
-  }
-}
-
 const MANUAL_ACTIVATION_ERRORS = {
   draft_incident: () => ServiceError.badRequest('Draft reports cannot trigger witness prompts'),
   missing_coordinates: () => ServiceError.badRequest('This report has no location, so nearby witnesses cannot be prompted'),
+  incident_not_actionable: () => ServiceError.conflict('This report is closed or rejected, so witness prompts cannot be activated'),
   toxic_or_abusive: () => ServiceError.conflict('This report is held for review and cannot trigger witness prompts'),
   active_constellation_exists: () => ServiceError.conflict('A witness constellation is already active for this report'),
 };
@@ -240,8 +201,8 @@ const manualActivationError = (reason) => {
 
 /**
  * Moderator-initiated activation of a witness constellation for a specific incident.
- * Bypasses the freshness window and per-reporter rate limit (staff act deliberately),
- * but keeps the coordinate, draft, abuse, and duplicate-active guards.
+ * Requires the report to be open, located, non-abusive, and free of an active
+ * constellation, then opens the window and notifies nearby users.
  */
 async function activateConstellationForIncident(incidentId, activatedByUserId) {
   const incident = await db.oneOrNone(
@@ -255,7 +216,7 @@ async function activateConstellationForIncident(incidentId, activatedByUserId) {
     throw ServiceError.notFound('Incident');
   }
 
-  const eligibility = await evaluateEligibility(incident, incident.reporter_id, { manual: true });
+  const eligibility = await evaluateEligibility(incident);
   if (!eligibility.eligible) {
     throw manualActivationError(eligibility.reason);
   }
@@ -601,7 +562,6 @@ module.exports = {
   STAFF_ROLES,
   VALID_SIGNAL_TYPES,
   evaluateEligibility,
-  openConstellationForIncident,
   activateConstellationForIncident,
   notifyNearbyUsers,
   getConstellationForUser,
