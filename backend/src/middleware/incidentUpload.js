@@ -1,27 +1,29 @@
 const crypto = require('crypto');
-const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { LIMITS } = require('../../../constants/limits');
 const logger = require('../utils/logger');
 
-const UPLOAD_ROOT = path.join(__dirname, '..', '..', 'uploads');
-const INCIDENT_MEDIA_DIR = path.join(UPLOAD_ROOT, 'incidents');
 const UPLOAD_LIMITS = {
   imageBytes: LIMITS.MAX_PHOTO_BYTES,
   videoBytes: LIMITS.MAX_VIDEO_BYTES,
   totalBytes: LIMITS.MAX_UPLOAD_BYTES,
 };
 
-fs.mkdirSync(INCIDENT_MEDIA_DIR, { recursive: true });
+const R2_PUBLIC_URL = (process.env.R2_PUBLIC_URL || 'https://pub-743fef4114774b0cbc8dcd46f8aea4bb.r2.dev').replace(/\/$/, '');
+const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || 'safesignal-media';
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, callback) => callback(null, INCIDENT_MEDIA_DIR),
-  filename: (_req, file, callback) => {
-    const extension = path.extname(file.originalname || '').toLowerCase();
-    callback(null, `${crypto.randomUUID()}${extension}`);
+const s3 = new S3Client({
+  region: 'auto',
+  endpoint: `https://${process.env.R2_ACCOUNT_ID || 'f46667807c03b4ece1d4d23e52158f3f'}.r2.cloudflarestorage.com`,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
   },
 });
+
+const storage = multer.memoryStorage();
 
 const fileFilter = (_req, file, callback) => {
   if (file.fieldname === 'photos' && file.mimetype?.startsWith('image/')) {
@@ -72,13 +74,6 @@ function getUploadedFiles(req) {
   return [...(files.photos || []), ...(files.video || [])];
 }
 
-function cleanupUploadedFiles(req) {
-  for (const file of getUploadedFiles(req)) {
-    logger.warn(`Cleaning up incident upload file: field=${file.fieldname} size=${file.size} path=${file.path}`);
-    fs.rm(file.path, { force: true }, () => {});
-  }
-}
-
 function validateUploadedSizes(req, res, next) {
   const files = req.files || {};
   const photoFiles = files.photos || [];
@@ -96,7 +91,6 @@ function validateUploadedSizes(req, res, next) {
     logger.warn(
       `Incident upload rejected after parse: oversizedPhoto=${hasOversizedPhoto} oversizedVideo=${hasOversizedVideo} totalBytes=${totalBytes}`
     );
-    cleanupUploadedFiles(req);
     res.status(400).json({
       status: 'ERROR',
       message: hasOversizedPhoto
@@ -111,8 +105,41 @@ function validateUploadedSizes(req, res, next) {
   next();
 }
 
+async function uploadFilesToR2(req, res, next) {
+  const files = getUploadedFiles(req);
+  if (files.length === 0) {
+    next();
+    return;
+  }
+
+  try {
+    await Promise.all(
+      files.map(async (file) => {
+        const extension = path.extname(file.originalname || '').toLowerCase();
+        const key = `incidents/${crypto.randomUUID()}${extension}`;
+
+        await s3.send(
+          new PutObjectCommand({
+            Bucket: R2_BUCKET_NAME,
+            Key: key,
+            Body: file.buffer,
+            ContentType: file.mimetype,
+          })
+        );
+
+        file.r2Key = key;
+        file.r2Url = `${R2_PUBLIC_URL}/${key}`;
+      })
+    );
+    next();
+  } catch (err) {
+    logger.error(`R2 upload failed: ${err.message}`);
+    res.status(500).json({ status: 'ERROR', message: 'Media upload failed' });
+  }
+}
+
 function toMediaUrl(file) {
-  return file ? `/uploads/incidents/${file.filename}` : null;
+  return file ? (file.r2Url || null) : null;
 }
 
 function attachIncidentMedia(req, _res, next) {
@@ -142,7 +169,6 @@ function handleIncidentUploadError(error, _req, res, next) {
   }
 
   if (error instanceof multer.MulterError) {
-    cleanupUploadedFiles(_req);
     const fieldName = error.field || 'media';
     logger.warn(
       `Incident upload multer error: code=${error.code} field=${fieldName} message=${error.message}`
@@ -169,11 +195,12 @@ const incidentUpload = [
   ]),
   handleIncidentUploadError,
   validateUploadedSizes,
+  uploadFilesToR2,
   attachIncidentMedia,
 ];
 
 module.exports = {
   incidentUpload,
-  cleanupUploadedFiles,
-  UPLOAD_ROOT,
+  cleanupUploadedFiles: () => {},
+  UPLOAD_ROOT: null,
 };

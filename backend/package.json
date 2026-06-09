@@ -23,6 +23,7 @@
     "globalTeardown": "<rootDir>/tests/jest.teardown.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1064.0",
     "@faker-js/faker": "^10.4.0",
     "@sentry/node": "^10.38.0",
     "@sentry/profiling-node": "^10.38.0",
