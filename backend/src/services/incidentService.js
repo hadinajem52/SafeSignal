@@ -22,7 +22,6 @@ const { LIMITS } = require('../../../constants/limits');
 const { emitToRoles } = require('../utils/socketService');
 const settingsService = require('./settingsService');
 const notificationService = require('./notificationService');
-const constellationService = require('./constellationService');
 const mediaJudgmentService = require('./mediaJudgmentService');
 
 const LEI_STATUSES = ['verified', 'dispatched', 'on_scene', 'investigating', 'police_closed'];
@@ -1341,21 +1340,8 @@ async function createIncident(incidentData, reporterId, options = {}) {
       logger.warn(`Staff notification failed for incident ${incident.incident_id}: ${error.message}`);
     }
 
-    Promise.resolve()
-      .then(() => constellationService.openConstellationForIncident(incident, reporterId))
-      .then((result) => {
-        if (result.created) {
-          logger.info(
-            `Constellation ${result.constellation.constellation_id} opened for incident ${incident.incident_id}`
-          );
-          return;
-        }
-        logger.info(`Constellation skipped for incident ${incident.incident_id}: ${result.reason}`);
-      })
-      .catch((error) => {
-        logger.error(`Constellation creation failed for incident ${incident.incident_id}: ${error.message}`);
-      });
-
+    // Witness constellations are no longer opened automatically; a moderator
+    // activates them per report from the dashboard.
     logger.info(
       `Incident post-processing finished main steps: incidentId=${incident.incident_id} elapsedMs=${Date.now() - postProcessStartedAt}`
     );

@@ -1,5 +1,5 @@
 import React from "react";
-import { AlertTriangle, ArrowLeft, ChevronRight, RotateCw, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ChevronRight, Radio, RotateCw, ShieldCheck } from "lucide-react";
 import DetailSection from "../../components/DetailSection";
 import DedupCandidatesPanel from "../../components/DedupCandidatesPanel";
 import EvidencePhotoViewer from "../../components/EvidencePhotoViewer";
@@ -92,6 +92,45 @@ function CommunitySignalCard({ constellation }) {
           <span>Expires</span>
           <span className="font-semibold text-text tabular-nums">{expiresAt}</span>
         </div>
+      </div>
+    </DetailSection>
+  );
+}
+
+// Renders the witness-constellation results once one is active, otherwise a
+// moderator CTA to open one for this report.
+function WitnessConstellationSection({
+  constellation,
+  hasCoordinates,
+  activating,
+  onActivate,
+}) {
+  if (constellation) {
+    return <CommunitySignalCard constellation={constellation} />;
+  }
+
+  return (
+    <DetailSection title="Community Signal">
+      <div className="space-y-3 text-sm">
+        <p className="text-xs leading-relaxed text-muted text-pretty">
+          Ask people near this report whether they noticed anything unusual. Prompts
+          are private and anonymous; the corroboration results appear here once
+          witnesses respond.
+        </p>
+        <button
+          type="button"
+          onClick={onActivate}
+          disabled={activating || !hasCoordinates}
+          className="inline-flex items-center gap-2 border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-bold uppercase tracking-[0.04em] text-primary transition-colors hover:bg-primary/15 disabled:opacity-50"
+        >
+          <Radio size={14} />
+          {activating ? "Activating…" : "Activate witness prompts"}
+        </button>
+        {!hasCoordinates ? (
+          <p className="text-[11px] text-muted">
+            This report has no location, so nearby witnesses can&apos;t be prompted.
+          </p>
+        ) : null}
       </div>
     </DetailSection>
   );
@@ -406,6 +445,9 @@ function MediaJudgmentCard({
 
 function ReportDetail({
   report,
+  constellation,
+  onActivateConstellation,
+  activateConstellationPending,
   mlSummary,
   isMlLoading,
   dedupData,
@@ -448,6 +490,11 @@ function ReportDetail({
 
   const photoUrls = getReportPhotoUrls(report);
   const videoUrl = getReportVideoUrl(report);
+  const hasReportCoordinates =
+    report.latitude != null &&
+    report.longitude != null &&
+    Number.isFinite(Number(report.latitude)) &&
+    Number.isFinite(Number(report.longitude));
 
   return (
     <div className="flex flex-col h-full bg-card overflow-hidden">
@@ -594,7 +641,12 @@ function ReportDetail({
           />
         </DetailSection>
 
-        <CommunitySignalCard constellation={report.constellation} />
+        <WitnessConstellationSection
+          constellation={constellation}
+          hasCoordinates={hasReportCoordinates}
+          activating={activateConstellationPending}
+          onActivate={onActivateConstellation}
+        />
 
         {/* ML Insights */}
         <DetailSection

@@ -11,6 +11,7 @@ const optionalAuth = require('../middleware/optionalAuth');
 const requireRole = require('../middleware/roles');
 const { cleanupUploadedFiles, incidentUpload } = require('../middleware/incidentUpload');
 const incidentService = require('../services/incidentService');
+const constellationService = require('../services/constellationService');
 const commentService = require('../services/commentService');
 const ServiceError = require('../utils/ServiceError');
 const logger = require('../utils/logger');
@@ -667,6 +668,41 @@ router.post(
       });
     } catch (error) {
       handleServiceError(error, res, 'Failed to verify incident');
+    }
+  }
+);
+
+/**
+ * @route   POST /api/incidents/:id/constellation
+ * @desc    Manually activate a witness constellation for an incident (prompts nearby users)
+ * @access  Private (Moderator/Admin)
+ */
+router.post(
+  '/:id/constellation',
+  authenticateToken,
+  requireRole(['moderator', 'admin']),
+  [param('id').isInt()],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        status: 'ERROR',
+        message: 'Invalid incident ID',
+      });
+    }
+
+    try {
+      const constellation = await constellationService.activateConstellationForIncident(
+        Number(req.params.id),
+        req.user.userId
+      );
+      res.status(201).json({
+        status: 'OK',
+        message: 'Witness constellation activated',
+        data: constellation,
+      });
+    } catch (error) {
+      handleServiceError(error, res, 'Failed to activate witness constellation');
     }
   }
 );

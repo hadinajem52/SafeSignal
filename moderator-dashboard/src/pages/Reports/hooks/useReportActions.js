@@ -24,12 +24,14 @@ export function useReportActions({
     linkDuplicateMutation,
     updateCategoryMutation,
     retryMediaJudgmentMutation,
+    activateConstellationMutation,
     invalidateReports,
     handleVerify,
     handleReject,
     onMerge,
     onApplySuggestedCategory,
     onRetryMediaJudgment,
+    onActivateConstellation,
     onOpenDuplicateCandidate,
   } = useReportMutations({
     queryClient,
@@ -106,6 +108,7 @@ export function useReportActions({
     linkDuplicateMutation,
     updateCategoryMutation,
     retryMediaJudgmentMutation,
+    activateConstellationMutation,
     executeBulkAction,
     handleEscalateRequest,
     handleRejectRequest,
@@ -113,6 +116,7 @@ export function useReportActions({
     onMerge,
     onApplySuggestedCategory,
     onRetryMediaJudgment,
+    onActivateConstellation,
     onOpenDuplicateCandidate,
   };
 }
