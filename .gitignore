@@ -25,6 +25,7 @@ expo-env.d.ts
 *.mobileprovision
 /.ruff_cache
 /.playwright-mcp
+.playwright-cli/
 # Metro
 .metro-health-check*
 
