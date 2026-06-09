@@ -17,6 +17,10 @@ import {
   getReportVideoUrl,
   resolveReportPhotoUrl,
 } from "../../utils/reportPhotos";
+import {
+  ACTIVATION_MAX_AGE_HOURS,
+  isReportWithinActivationWindow,
+} from "./reportStatusRules";
 
 // Bordered kbd chip — used in header action buttons and empty state
 function KbdChip({ label, style }) {
@@ -103,6 +107,7 @@ function WitnessConstellationSection({
   constellation,
   hasCoordinates,
   statusAllowsActivation,
+  withinAgeWindow,
   activating,
   onActivate,
 }) {
@@ -114,7 +119,9 @@ function WitnessConstellationSection({
     ? "This report has no location, so nearby witnesses can't be prompted."
     : !statusAllowsActivation
       ? "Witness prompts can't be activated for a flagged, closed, or rejected report."
-      : null;
+      : !withinAgeWindow
+        ? `This report is older than ${ACTIVATION_MAX_AGE_HOURS} hours, so witness prompts can't be activated.`
+        : null;
 
   return (
     <DetailSection title="Community Signal">
@@ -501,6 +508,7 @@ function ReportDetail({
     report.longitude != null &&
     Number.isFinite(Number(report.latitude)) &&
     Number.isFinite(Number(report.longitude));
+  const withinActivationWindow = isReportWithinActivationWindow(report);
 
   return (
     <div className="flex flex-col h-full bg-card overflow-hidden">
@@ -651,6 +659,7 @@ function ReportDetail({
           constellation={constellation}
           hasCoordinates={hasReportCoordinates}
           statusAllowsActivation={canActivateConstellation}
+          withinAgeWindow={withinActivationWindow}
           activating={activateConstellationPending}
           onActivate={onActivateConstellation}
         />
