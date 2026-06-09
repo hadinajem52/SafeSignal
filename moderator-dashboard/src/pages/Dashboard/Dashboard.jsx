@@ -6,10 +6,7 @@ import GoogleMapPanel from "../../components/GoogleMapPanel";
 import LoadingState from "../../components/LoadingState";
 import { getStatusCfg } from "../../constants/incidentStatuses";
 import { CAT_COLORS } from "../../constants/categoryConfig";
-import {
-  getConstellationMarkerStyle,
-  getConstellationMeta,
-} from "../../utils/constellationUtils";
+import { getConstellationMarkerStyle } from "../../utils/constellationUtils";
 import "./dashboard.css";
 
 /* ─── SVG icons ──────────────────────────────────────────────────────────── */
@@ -233,26 +230,6 @@ function Dashboard() {
       });
   }, [allIncidents]);
 
-  const constellationStats = useMemo(() => {
-    return allIncidents.reduce(
-      (acc, incident) => {
-        const constellation = incident.constellation;
-        if (!constellation) return acc;
-        if (constellation.status === "flagged") acc.flagged += 1;
-        if (constellation.confidenceState === "corroborated") acc.corroborated += 1;
-        if (
-          ["mixed_signals", "activity_not_confirmed"].includes(
-            constellation.confidenceState,
-          )
-        ) {
-          acc.mixed += 1;
-        }
-        return acc;
-      },
-      { corroborated: 0, mixed: 0, flagged: 0 },
-    );
-  }, [allIncidents]);
-
   const criticalCount = useMemo(
     () => allIncidents.filter((i) => i.severity === "critical").length,
     [allIncidents],
@@ -395,34 +372,6 @@ function Dashboard() {
             </div>
             <div className="dash-stat-value">{c.value}</div>
             <div className={`dash-stat-delta ${c.deltaClass}`}>{c.delta}</div>
-          </div>
-        ))}
-      </div>
-
-      <div className="dash-signal-grid">
-        {[
-          {
-            label: "Corroborated",
-            value: constellationStats.corroborated,
-            meta: getConstellationMeta({ confidenceState: "corroborated" }),
-          },
-          {
-            label: "Mixed / Contradicted",
-            value: constellationStats.mixed,
-            meta: getConstellationMeta({ confidenceState: "mixed_signals" }),
-          },
-          {
-            label: "Signal Review",
-            value: constellationStats.flagged,
-            meta: getConstellationMeta({ status: "flagged" }),
-          },
-        ].map((item) => (
-          <div key={item.label} className="dash-signal-card">
-            <div className="dash-signal-dot" style={{ background: item.meta.color }} />
-            <div>
-              <div className="dash-signal-value">{item.value}</div>
-              <div className="dash-signal-label">{item.label}</div>
-            </div>
           </div>
         ))}
       </div>
