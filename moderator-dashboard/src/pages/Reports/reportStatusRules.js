@@ -30,3 +30,14 @@ export function canActivateConstellation(report) {
     report && !NON_ACTIVATABLE_CONSTELLATION_STATUSES.has(report.status),
   );
 }
+
+// Mirrors the backend MAX_INCIDENT_AGE_HOURS cap (server remains authoritative).
+export const ACTIVATION_MAX_AGE_HOURS = 24;
+
+export function isReportWithinActivationWindow(report) {
+  const occurredAt = new Date(
+    report?.incident_date ?? report?.createdAt ?? NaN,
+  ).getTime();
+  if (!Number.isFinite(occurredAt)) return false;
+  return Date.now() - occurredAt <= ACTIVATION_MAX_AGE_HOURS * 60 * 60 * 1000;
+}

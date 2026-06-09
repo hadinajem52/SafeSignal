@@ -57,6 +57,18 @@ const NON_ACTIVATABLE_INCIDENT_STATUSES = new Set([
   'police_closed',
 ]);
 
+const ACTIVATION_MAX_AGE_MS = LIMITS.CONSTELLATION.MAX_INCIDENT_AGE_HOURS * 60 * 60 * 1000;
+
+// Witness prompts ask about recent activity, so an incident that occurred too long
+// ago is not worth a sweep even when a moderator triggers it.
+const isWithinActivationWindow = (incidentDate) => {
+  const occurredAt = new Date(incidentDate).getTime();
+  if (!Number.isFinite(occurredAt)) {
+    return false;
+  }
+  return Date.now() - occurredAt <= ACTIVATION_MAX_AGE_MS;
+};
+
 const hasCoordinates = (incident) => {
   const latitude = Number(incident.latitude);
   const longitude = Number(incident.longitude);
@@ -133,6 +145,10 @@ async function evaluateEligibility(incident) {
     return { eligible: false, reason: 'incident_not_actionable' };
   }
 
+  if (!isWithinActivationWindow(incident.incident_date)) {
+    return { eligible: false, reason: 'stale_incident' };
+  }
+
   const toxicity = await db.oneOrNone(
     `SELECT rm.is_toxic
      FROM reports r
@@ -189,6 +205,7 @@ async function createConstellation(incident) {
 const MANUAL_ACTIVATION_ERRORS = {
   draft_incident: () => ServiceError.badRequest('Draft reports cannot trigger witness prompts'),
   missing_coordinates: () => ServiceError.badRequest('This report has no location, so nearby witnesses cannot be prompted'),
+  stale_incident: () => ServiceError.conflict(`This report is older than ${LIMITS.CONSTELLATION.MAX_INCIDENT_AGE_HOURS} hours, so witness prompts cannot be activated`),
   incident_not_actionable: () => ServiceError.conflict('This report is closed or rejected, so witness prompts cannot be activated'),
   toxic_or_abusive: () => ServiceError.conflict('This report is held for review and cannot trigger witness prompts'),
   active_constellation_exists: () => ServiceError.conflict('A witness constellation is already active for this report'),

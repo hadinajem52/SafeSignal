@@ -95,6 +95,15 @@ describe('constellationService eligibility', () => {
     expect(db.oneOrNone).not.toHaveBeenCalled();
   });
 
+  it('rejects incidents older than the 24 hour activation window', async () => {
+    const tooOld = new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString();
+
+    await expect(
+      constellationService.evaluateEligibility({ ...freshIncident(), incident_date: tooOld })
+    ).resolves.toMatchObject({ eligible: false, reason: 'stale_incident' });
+    expect(db.oneOrNone).not.toHaveBeenCalled();
+  });
+
   it('rejects duplicate active constellations', async () => {
     db.oneOrNone.mockResolvedValueOnce(null).mockResolvedValueOnce({ constellation_id: 3 });
 
