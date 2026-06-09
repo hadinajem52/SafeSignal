@@ -81,30 +81,26 @@ describe('constellationService eligibility', () => {
     expect(db.oneOrNone).not.toHaveBeenCalled();
   });
 
-  it('rejects stale incidents', async () => {
-    const staleDate = new Date(Date.now() - 31 * 60 * 1000).toISOString();
-
+  it('rejects auto-flagged incidents before any DB lookup', async () => {
     await expect(
-      constellationService.evaluateEligibility({ ...freshIncident(), incident_date: staleDate }, 7)
-    ).resolves.toMatchObject({ eligible: false, reason: 'stale_incident' });
+      constellationService.evaluateEligibility({ ...freshIncident(), status: 'auto_flagged' })
+    ).resolves.toMatchObject({ eligible: false, reason: 'toxic_or_abusive' });
+    expect(db.oneOrNone).not.toHaveBeenCalled();
+  });
+
+  it('rejects closed or rejected incidents', async () => {
+    await expect(
+      constellationService.evaluateEligibility({ ...freshIncident(), status: 'police_closed' })
+    ).resolves.toMatchObject({ eligible: false, reason: 'incident_not_actionable' });
+    expect(db.oneOrNone).not.toHaveBeenCalled();
   });
 
   it('rejects duplicate active constellations', async () => {
     db.oneOrNone.mockResolvedValueOnce(null).mockResolvedValueOnce({ constellation_id: 3 });
 
-    await expect(constellationService.evaluateEligibility(freshIncident(), 7)).resolves.toMatchObject({
+    await expect(constellationService.evaluateEligibility(freshIncident())).resolves.toMatchObject({
       eligible: false,
       reason: 'active_constellation_exists',
-    });
-  });
-
-  it('rejects creation rate limits', async () => {
-    db.oneOrNone.mockResolvedValueOnce(null).mockResolvedValueOnce(null);
-    db.one.mockResolvedValue({ count: 2 });
-
-    await expect(constellationService.evaluateEligibility(freshIncident(), 7)).resolves.toMatchObject({
-      eligible: false,
-      reason: 'creation_rate_limited',
     });
   });
 });

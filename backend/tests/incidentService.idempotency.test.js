@@ -12,9 +12,6 @@ jest.mock('../src/services/notificationService', () => ({
   notifyStaffIncidentEvent: jest.fn().mockResolvedValue(),
 }));
 jest.mock('../src/utils/mlClient', () => ({}));
-jest.mock('../src/services/constellationService', () => ({
-  openConstellationForIncident: jest.fn(),
-}));
 jest.mock('../src/utils/logger', () => ({
   info: jest.fn(),
   warn: jest.fn(),

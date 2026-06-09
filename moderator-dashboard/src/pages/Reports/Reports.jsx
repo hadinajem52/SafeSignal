@@ -12,7 +12,11 @@ import useAwaitingReply from "../../hooks/useAwaitingReply";
 import { useReportPanelResize } from "./hooks/useReportPanelResize";
 import { useReportSelection } from "./hooks/useReportSelection";
 import { useReportActions } from "./hooks/useReportActions";
-import { canEscalateReport, canRejectReport } from "./reportStatusRules";
+import {
+  canActivateConstellation,
+  canEscalateReport,
+  canRejectReport,
+} from "./reportStatusRules";
 
 // Priority score: severity is the primary sort key; age (log-scaled) is a
 // tiebreaker within the same tier so stale reports don't beat newer ones.
@@ -153,7 +157,13 @@ function Reports() {
     queryFn: async () => {
       if (!selectedReport?.id) return null;
       const result = await reportsAPI.getById(selectedReport.id);
-      return result.success ? result.data?.constellation ?? null : null;
+      // Throw on failure so a transient error keeps the last-known constellation
+      // instead of collapsing to null (which would hide an active one and wrongly
+      // re-show the activation CTA).
+      if (!result.success) {
+        throw new Error(result.error || "Failed to load constellation");
+      }
+      return result.data?.constellation ?? null;
     },
     enabled: Boolean(selectedReport?.id) && Boolean(selectedReport?.constellation),
     refetchInterval: (query) =>
@@ -332,6 +342,7 @@ function Reports() {
               constellation={detailConstellation}
               onActivateConstellation={onActivateConstellation}
               activateConstellationPending={activateConstellationMutation.isPending}
+              canActivateConstellation={canActivateConstellation(selectedReport)}
               mlSummary={mlSummary}
               isMlLoading={isMlLoading}
               dedupData={dedupData}
