@@ -66,23 +66,41 @@ const toNumber = (value) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
-const isAndroidChrome = () => {
+/**
+ * The deck.gl WebGL HeatmapLayer fails to compile its fragment shader on many
+ * mobile GPUs (insufficient `highp float` precision), which dumps the raw shader
+ * source onto the screen — the compile happens async inside deck.gl's render
+ * loop, so neither try/catch nor the React error boundary can intercept it.
+ * Mobile devices don't need the GPU heatmap (markers/clusters convey the same
+ * info), so disable it on any device that looks mobile or touch-first.
+ */
+const prefersNoWebglHeatmap = () => {
   if (typeof navigator === "undefined") {
     return false;
   }
 
-  const brands = navigator.userAgentData?.brands?.map((brand) => brand.brand) ?? [];
-  const platform = navigator.userAgentData?.platform ?? "";
-  if (brands.includes("Google Chrome")) {
-    return platform === "Android" || /Android/i.test(navigator.userAgent);
+  // Modern Chromium exposes a reliable mobile boolean via Client Hints.
+  if (navigator.userAgentData?.mobile === true) {
+    return true;
   }
 
-  const userAgent = navigator.userAgent;
-  return (
-    /Android/i.test(userAgent) &&
-    /Chrome\//i.test(userAgent) &&
-    !/EdgA|OPR|SamsungBrowser|Firefox|DuckDuckGo/i.test(userAgent)
-  );
+  const userAgent = navigator.userAgent || "";
+  if (
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(
+      userAgent,
+    )
+  ) {
+    return true;
+  }
+
+  // iPadOS reports a desktop UA but is touch-only — catch it via touch + coarse pointer.
+  const coarsePointer =
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(pointer: coarse)").matches;
+  const touchCapable = (navigator.maxTouchPoints || 0) > 1;
+
+  return coarsePointer && touchCapable;
 };
 
 /**
@@ -152,7 +170,7 @@ function GoogleMapPanelContent({
     id: "safesignal-google-maps-script",
     googleMapsApiKey,
   });
-  const canRenderHeatmap = useMemo(() => !isAndroidChrome(), []);
+  const canRenderHeatmap = useMemo(() => !prefersNoWebglHeatmap(), []);
 
   useEffect(() => {
     if (typeof document === "undefined") return undefined;

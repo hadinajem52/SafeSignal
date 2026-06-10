@@ -67,7 +67,7 @@ router.post(
   '/login',
   [
     body('email').isEmail().normalizeEmail(),
-    body('password').isLength({ min: 6 }),
+    body('password').trim().isLength({ min: 6 }),
   ],
   async (req, res) => {
     if (handleValidationErrors(req, res)) return;
@@ -97,7 +97,7 @@ router.post(
   [
     body('username').trim().isLength({ min: 3, max: 50 }),
     body('email').isEmail().normalizeEmail(),
-    body('password').isLength({ min: 6 }),
+    body('password').trim().isLength({ min: 6 }),
     body('role').optional().isIn(['citizen', 'moderator', 'law_enforcement']),
   ],
   async (req, res) => {
@@ -198,8 +198,8 @@ router.patch(
   '/me/password',
   authenticateToken,
   [
-    body('currentPassword').isString().notEmpty(),
-    body('newPassword').isString().isLength({ min: 8 }),
+    body('currentPassword').isString().trim().notEmpty(),
+    body('newPassword').isString().trim().isLength({ min: 8 }),
   ],
   async (req, res) => {
     if (handleValidationErrors(req, res)) return;
