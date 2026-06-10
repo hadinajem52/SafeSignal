@@ -26,7 +26,7 @@ function DangerActionPanel({
   return (
     <>
       <div
-        className={`flex items-start gap-4 p-4 border transition-colors ${
+        className={`flex flex-col sm:flex-row items-start gap-3 sm:gap-4 p-4 border transition-colors ${
           isUnlocked
             ? 'border-danger/50 bg-danger/5'
             : 'border-border bg-surface'
@@ -59,13 +59,13 @@ function DangerActionPanel({
         </div>
 
         {/* Controls */}
-        <div className="flex items-center gap-2 flex-shrink-0 self-center">
+        <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto sm:self-center">
           <input
             type="text"
             value={inputValue}
             onChange={onInputChange}
             placeholder={inputPlaceholder}
-            className={`bg-bg border font-mono text-[11px] font-medium px-2.5 py-1.5 outline-none w-40 transition-colors ${
+            className={`bg-bg border font-mono text-[11px] font-medium px-2.5 py-1.5 outline-none flex-1 sm:flex-none sm:w-40 transition-colors ${
               isUnlocked
                 ? 'border-danger/70 text-danger'
                 : 'border-border text-text focus:border-muted'

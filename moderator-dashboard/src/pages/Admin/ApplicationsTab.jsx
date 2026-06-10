@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   AlertTriangle,
+  ArrowLeft,
   CheckCircle2,
   Search,
   ShieldAlert,
@@ -10,6 +11,7 @@ import {
 } from "lucide-react";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import LoadingState from "../../components/LoadingState";
+import useIsMobile from "../../hooks/useIsMobile";
 
 // ── Risk assessment ──────────────────────────────────────────────────────────
 
@@ -144,6 +146,8 @@ function ApplicationsTab({
   const [search, setSearch] = useState("");
   const [confirmApprove, setConfirmApprove] = useState(null);
   const [confirmReject, setConfirmReject] = useState(null);
+  const [mobileShowDetail, setMobileShowDetail] = useState(false);
+  const isMobile = useIsMobile();
 
   // Auto-select first pending on load
   const firstPending = applications.find((a) => !a.isVerified);
@@ -168,7 +172,11 @@ function ApplicationsTab({
   return (
     <div className="flex flex-1 overflow-hidden min-h-0 border border-border">
       {/* ── Left panel: list ── */}
-      <div className="w-[340px] flex-shrink-0 flex flex-col border-r border-border overflow-hidden">
+      <div
+        className={`flex-shrink-0 flex-col border-r border-border overflow-hidden ${
+          isMobile ? "w-full" : "w-[340px]"
+        } ${isMobile && mobileShowDetail ? "hidden" : "flex"}`}
+      >
         {/* Header */}
         <div className="px-4 pt-3 pb-2 border-b border-border flex-shrink-0">
           <p className="text-[10px] font-bold tracking-widest uppercase text-muted mb-2">
@@ -201,7 +209,10 @@ function ApplicationsTab({
               return (
                 <button
                   key={app.id}
-                  onClick={() => setSelectedId(app.id)}
+                  onClick={() => {
+                    setSelectedId(app.id);
+                    setMobileShowDetail(true);
+                  }}
                   className={`w-full text-left px-4 py-3 border-b border-border transition-colors ${
                     isSelected
                       ? "bg-primary/5 border-l-2 border-l-primary pl-[14px]"
@@ -243,10 +254,24 @@ function ApplicationsTab({
       </div>
 
       {/* ── Right panel: detail ── */}
+      <div
+        className={`flex-col overflow-hidden min-w-0 ${
+          isMobile ? "w-full" : "flex-1"
+        } ${isMobile && !mobileShowDetail ? "hidden" : "flex"}`}
+      >
       {selected && selectedRisk ? (
         <div className="flex flex-col flex-1 overflow-hidden">
           {/* Detail topbar */}
-          <div className="flex items-center gap-3 px-5 h-12 border-b border-border bg-card flex-shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-5 h-12 border-b border-border bg-card flex-shrink-0">
+            {isMobile && (
+              <button
+                onClick={() => setMobileShowDetail(false)}
+                aria-label="Back to applications list"
+                className="flex items-center px-2 py-1.5 border border-border text-muted hover:text-text flex-shrink-0"
+              >
+                <ArrowLeft size={13} />
+              </button>
+            )}
             <span className="font-extrabold text-sm tracking-wide uppercase text-text flex-1 truncate">
               {selected.username}
             </span>
@@ -324,6 +349,7 @@ function ApplicationsTab({
           </p>
         </div>
       )}
+      </div>
 
       {/* ── Dialogs ── */}
       <ConfirmDialog

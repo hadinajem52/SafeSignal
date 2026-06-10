@@ -1,14 +1,16 @@
 import { useCallback, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText } from "lucide-react";
+import { ArrowLeft, FileText } from "lucide-react";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import TimelineCommsPanel from "../../components/TimelineCommsPanel";
+import IncidentTimeline from "../../components/IncidentTimeline";
 import { reportsAPI } from "../../services/api";
 import { getConstellationPriorityBoost } from "../../utils/constellationUtils";
 import ReportDetail from "./ReportDetail";
 import ReportFilters from "./ReportFilters";
 import ReportList from "./ReportList";
 import useAwaitingReply from "../../hooks/useAwaitingReply";
+import useIsMobile from "../../hooks/useIsMobile";
 import { useReportPanelResize } from "./hooks/useReportPanelResize";
 import { useReportSelection } from "./hooks/useReportSelection";
 import { useReportActions } from "./hooks/useReportActions";
@@ -55,6 +57,10 @@ function Reports() {
   const [toasts, setToasts] = useState([]);
   const [isTimelineCollapsed, setIsTimelineCollapsed] = useState(false);
   const [parentReportReturn, setParentReportReturn] = useState(null);
+  // Mobile single-column navigation: list <-> detail, with a detail/messages tab.
+  const [mobileView, setMobileView] = useState("list"); // 'list' | 'detail'
+  const [mobileTab, setMobileTab] = useState("detail"); // 'detail' | 'messages'
+  const isMobile = useIsMobile();
 
   const queryClient = useQueryClient();
   const { data: awaitingReplyIds } = useAwaitingReply();
@@ -225,6 +231,8 @@ function Reports() {
     (report) => {
       setParentReportReturn(null);
       setSelectedReport(report);
+      setMobileView("detail");
+      setMobileTab("detail");
     },
     [setSelectedReport],
   );
@@ -253,8 +261,52 @@ function Reports() {
     if (opened) setParentReportReturn(null);
   }, [onOpenDuplicateCandidate, parentReportReturn]);
 
+  const reportListEl = (
+    <ReportList
+      reports={filteredReports}
+      isLoading={isLoading}
+      selectedReportId={selectedReport?.id ?? null}
+      onSelectReport={handleSelectReport}
+      selectedReportIds={selectedReportIds}
+      onToggleSelection={handleToggleSelection}
+      onToggleSelectAll={handleToggleSelectAll}
+      unreadReportIds={awaitingReplyIds}
+    />
+  );
+
+  const reportDetailEl = (
+    <ReportDetail
+      report={selectedReport}
+      constellation={detailConstellation}
+      onActivateConstellation={onActivateConstellation}
+      activateConstellationPending={activateConstellationMutation.isPending}
+      canActivateConstellation={canActivateConstellation(selectedReport)}
+      mlSummary={mlSummary}
+      isMlLoading={isMlLoading}
+      dedupData={dedupData}
+      isDedupLoading={isDedupLoading}
+      isMerging={linkDuplicateMutation.isPending}
+      updateCategoryPending={updateCategoryMutation.isPending}
+      verifyPending={verifyMutation.isPending}
+      rejectPending={rejectMutation.isPending}
+      retryMediaJudgmentPending={retryMediaJudgmentMutation.isPending}
+      canVerify={canEscalateReport(selectedReport)}
+      canReject={canRejectReport(selectedReport)}
+      onMerge={onMerge}
+      onApplySuggestedCategory={onApplySuggestedCategory}
+      onRetryMediaJudgment={onRetryMediaJudgment}
+      onVerify={handleEscalateRequest}
+      onReject={handleRejectRequest}
+      onMergeInto={onMergeInto}
+      mergeTargets={mergeTargets}
+      onOpenDuplicateCandidate={handleOpenDuplicateFromDetail}
+      parentReport={parentReportReturn}
+      onReturnToParent={handleReturnToParentReport}
+    />
+  );
+
   return (
-    <div className="flex flex-col h-dvh overflow-hidden bg-bg">
+    <div className="flex flex-col h-full overflow-hidden bg-bg">
       {/* Toast stack */}
       <div className="fixed bottom-6 right-6 z-50 space-y-2 pointer-events-none">
         {toasts.map((toast) => (
@@ -279,7 +331,7 @@ function Reports() {
           <FileText size={14} />
           Reports Queue
         </div>
-        <div className="ml-auto flex items-center gap-4 text-[11px] text-muted font-medium flex-shrink-0">
+        <div className="ml-auto hidden md:flex items-center gap-4 text-[11px] text-muted font-medium flex-shrink-0">
           {[
             ["E", "escalate"],
             ["R", "reject"],
@@ -312,86 +364,101 @@ function Reports() {
         onBulkReject={() => setBulkConfirmAction("reject")}
       />
 
-      {/* ── Three-panel body ── */}
-      <div className="flex flex-1 overflow-x-auto overflow-y-hidden">
-        <div ref={panelsContainerRef} className="flex flex-1 min-w-[936px]">
-          {/* Panel 1: report list */}
-          <div
-            style={{ width: `${panelWidths.left}px` }}
-            className="flex-shrink-0 border-r border-border overflow-hidden flex flex-col"
-          >
-            <ReportList
-              reports={filteredReports}
-              isLoading={isLoading}
-              selectedReportId={selectedReport?.id ?? null}
-              onSelectReport={handleSelectReport}
-              selectedReportIds={selectedReportIds}
-              onToggleSelection={handleToggleSelection}
-              onToggleSelectAll={handleToggleSelectAll}
-              unreadReportIds={awaitingReplyIds}
-            />
-          </div>
+      {/* ── Body: mobile single-column / desktop three-panel ── */}
+      {isMobile ? (
+        <div className="flex flex-1 flex-col overflow-hidden">
+          {mobileView === "list" || !selectedReport ? (
+            <div className="flex flex-1 flex-col overflow-hidden">
+              {reportListEl}
+            </div>
+          ) : (
+            <div className="flex flex-1 flex-col overflow-hidden">
+              {/* Back + Details/Messages tab switcher */}
+              <div className="flex-shrink-0 flex items-center gap-2 h-12 px-3 bg-surface border-b border-border">
+                <button
+                  type="button"
+                  onClick={() => setMobileView("list")}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.03em] text-muted hover:text-text border border-border"
+                >
+                  <ArrowLeft size={13} />
+                  Queue
+                </button>
+                <div className="ml-auto flex">
+                  {[
+                    ["detail", "Details"],
+                    ["messages", "Messages"],
+                  ].map(([key, label], idx) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setMobileTab(key)}
+                      className={`px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.03em] border border-border ${idx === 0 ? "border-r-0" : ""} ${
+                        mobileTab === key
+                          ? "bg-surface/80 text-text"
+                          : "bg-transparent text-muted hover:text-text"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex-1 overflow-hidden">
+                {mobileTab === "detail" ? (
+                  reportDetailEl
+                ) : (
+                  <IncidentTimeline
+                    incidentId={selectedReport?.id || null}
+                    allowInternal
+                  />
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-1 overflow-x-auto overflow-y-hidden">
+          <div ref={panelsContainerRef} className="flex flex-1 min-w-[936px]">
+            {/* Panel 1: report list */}
+            <div
+              style={{ width: `${panelWidths.left}px` }}
+              className="flex-shrink-0 border-r border-border overflow-hidden flex flex-col"
+            >
+              {reportListEl}
+            </div>
 
-          <div
-            role="separator"
-            aria-orientation="vertical"
-            aria-label="Resize report list and detail panels"
-            onPointerDown={(event) => handleSplitterPointerDown("left", event)}
-            className={`flex-shrink-0 w-px cursor-col-resize touch-none ${activeSplitter === "left" ? "bg-primary" : "bg-border hover:bg-border/70"}`}
-          />
-
-          {/* Panel 2: report detail */}
-          <div className="flex-1 overflow-hidden min-w-0">
-            <ReportDetail
-              report={selectedReport}
-              constellation={detailConstellation}
-              onActivateConstellation={onActivateConstellation}
-              activateConstellationPending={activateConstellationMutation.isPending}
-              canActivateConstellation={canActivateConstellation(selectedReport)}
-              mlSummary={mlSummary}
-              isMlLoading={isMlLoading}
-              dedupData={dedupData}
-              isDedupLoading={isDedupLoading}
-              isMerging={linkDuplicateMutation.isPending}
-              updateCategoryPending={updateCategoryMutation.isPending}
-              verifyPending={verifyMutation.isPending}
-              rejectPending={rejectMutation.isPending}
-              retryMediaJudgmentPending={retryMediaJudgmentMutation.isPending}
-              canVerify={canEscalateReport(selectedReport)}
-              canReject={canRejectReport(selectedReport)}
-              onMerge={onMerge}
-              onApplySuggestedCategory={onApplySuggestedCategory}
-              onRetryMediaJudgment={onRetryMediaJudgment}
-              onVerify={handleEscalateRequest}
-              onReject={handleRejectRequest}
-              onMergeInto={onMergeInto}
-              mergeTargets={mergeTargets}
-              onOpenDuplicateCandidate={handleOpenDuplicateFromDetail}
-              parentReport={parentReportReturn}
-              onReturnToParent={handleReturnToParentReport}
-            />
-          </div>
-
-          {!isTimelineCollapsed ? (
             <div
               role="separator"
               aria-orientation="vertical"
-              aria-label="Resize report detail and timeline panels"
-              onPointerDown={(event) => handleSplitterPointerDown("right", event)}
-              className={`flex-shrink-0 w-px cursor-col-resize touch-none ${activeSplitter === "right" ? "bg-primary" : "bg-border hover:bg-border/70"}`}
+              aria-label="Resize report list and detail panels"
+              onPointerDown={(event) => handleSplitterPointerDown("left", event)}
+              className={`flex-shrink-0 w-px cursor-col-resize touch-none ${activeSplitter === "left" ? "bg-primary" : "bg-border hover:bg-border/70"}`}
             />
-          ) : null}
 
-          {/* Panel 3: timeline */}
-          <TimelineCommsPanel
-            incidentId={selectedReport?.id || null}
-            collapsed={isTimelineCollapsed}
-            onToggle={setIsTimelineCollapsed}
-            width={panelWidths.right}
-            emptyLabel="No report selected"
-          />
+            {/* Panel 2: report detail */}
+            <div className="flex-1 overflow-hidden min-w-0">{reportDetailEl}</div>
+
+            {!isTimelineCollapsed ? (
+              <div
+                role="separator"
+                aria-orientation="vertical"
+                aria-label="Resize report detail and timeline panels"
+                onPointerDown={(event) => handleSplitterPointerDown("right", event)}
+                className={`flex-shrink-0 w-px cursor-col-resize touch-none ${activeSplitter === "right" ? "bg-primary" : "bg-border hover:bg-border/70"}`}
+              />
+            ) : null}
+
+            {/* Panel 3: timeline */}
+            <TimelineCommsPanel
+              incidentId={selectedReport?.id || null}
+              collapsed={isTimelineCollapsed}
+              onToggle={setIsTimelineCollapsed}
+              width={panelWidths.right}
+              emptyLabel="No report selected"
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Single-report action confirmation */}
       <ConfirmDialog

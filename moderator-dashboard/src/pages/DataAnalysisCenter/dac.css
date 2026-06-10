@@ -352,3 +352,35 @@
     display: inline-flex;
     animation: dac-spin 0.8s linear infinite;
   }
+
+  /* ── Responsive: tablet ───────────────────────────────────────────── */
+  @media (max-width: 1023px) {
+    .dac-grid-3col { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* ── Responsive: mobile ───────────────────────────────────────────── */
+  @media (max-width: 767px) {
+    .dac-topbar {
+      height: auto;
+      min-height: 56px;
+      flex-wrap: wrap;
+      padding: 10px 16px;
+      gap: 4px 12px;
+    }
+    .dac-topbar-title { font-size: 15px; }
+    .dac-topbar-right {
+      margin-left: 0;
+      width: 100%;
+      flex-wrap: wrap;
+    }
+    .dac-period-btn { flex: 1; justify-content: center; min-width: 56px; }
+    .dac-scroll { padding: 16px 16px 28px; }
+    .dac-section-row { flex-wrap: wrap; }
+    .dac-grid-4 { grid-template-columns: 1fr 1fr; }
+    .dac-grid-2 { grid-template-columns: 1fr; gap: 12px; }
+    .dac-grid-3col { grid-template-columns: 1fr; gap: 12px; }
+    .dac-heatmap-grid,
+    .dac-hm-hour-row { padding-left: 10px; padding-right: 10px; }
+    .dac-kpi { padding: 14px 14px; }
+    .dac-kpi-value { font-size: 26px; }
+  }

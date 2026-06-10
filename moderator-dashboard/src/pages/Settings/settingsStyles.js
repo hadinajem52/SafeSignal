@@ -173,4 +173,26 @@ export const SETTINGS_CSS = `
   .st-inset-label { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--color-text-muted); margin-bottom:8px; }
   .st-col-row { display:flex; flex-direction:column; gap:8px; padding:14px 18px; }
   .st-col-row+.st-col-row { border-top:1px solid var(--color-border); }
+
+  /* RESPONSIVE: mobile */
+  @media (max-width: 767px) {
+    .st-topbar { padding:0 16px; height:52px; }
+    .st-body { flex-direction:column; }
+    .st-snav {
+      width:100%; border-right:none; border-bottom:1px solid var(--color-border);
+      padding:0; overflow-x:auto; overflow-y:hidden;
+    }
+    .st-snav-group { display:flex; padding:0; }
+    .st-snav-group-label { display:none; }
+    .st-snav-item {
+      width:auto; white-space:nowrap; border-left:none;
+      border-bottom:2px solid transparent; padding:12px 14px;
+    }
+    .st-snav-item.active { border-bottom-color:var(--color-primary); }
+    .st-scroll { padding:16px; }
+    .st-row { gap:12px; padding:14px; }
+    .st-sev-grid { grid-template-columns:1fr 1fr; }
+    .st-select { min-width:0; }
+    .st-profile-card { padding:14px; gap:12px; }
+  }
 `
