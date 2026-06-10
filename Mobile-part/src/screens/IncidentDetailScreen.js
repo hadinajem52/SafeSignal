@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Pressable, ScrollView, TouchableOpacity, View } from 'react-native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,8 +16,10 @@ import {
   IncidentIllustration,
   IncidentLocationMap,
   IncidentStatusTracker,
+  FadeInImage,
 } from '../components';
 import { normalizeClosureDetails } from '../utils/incidentUtils';
+import { resolveMediaUrl } from '../utils/mediaUtils';
 import { useTheme } from '../context/ThemeContext';
 import { incidentAPI } from '../services/api';
 import { haptics } from '../utils/haptics';
@@ -53,6 +55,7 @@ const IncidentDetailScreen = ({ route, navigation }) => {
   const insets = useSafeAreaInsets();
   const [detailIncident, setDetailIncident] = useState(incident || null);
   const [loadingDetail, setLoadingDetail] = useState(Boolean(getIncidentId(incident)));
+  const [fullscreenPhoto, setFullscreenPhoto] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -119,6 +122,11 @@ const IncidentDetailScreen = ({ route, navigation }) => {
   const constellationCopy = getConstellationCopy(detailIncident.constellation);
   const isFlagged = detailIncident.constellation?.status === 'flagged';
   const videoUrl = detailIncident.video_url || detailIncident.videoUrl;
+  const photoUrls = Array.isArray(detailIncident.photo_urls)
+    ? detailIncident.photo_urls
+    : Array.isArray(detailIncident.photoUrls)
+      ? detailIncident.photoUrls
+      : [];
 
   const Divider = () => <View style={[styles.divider, { backgroundColor: theme.border }]} />;
 
@@ -228,6 +236,35 @@ const IncidentDetailScreen = ({ route, navigation }) => {
             </>
           ) : null}
 
+          {/* ---- Photo evidence ---- */}
+          {photoUrls.length > 0 ? (
+            <>
+              <Divider />
+              <View style={styles.section}>
+                <SectionHeader
+                  icon="image-outline"
+                  color={theme.info}
+                  title={photoUrls.length > 1 ? `Photo Evidence (${photoUrls.length})` : 'Photo Evidence'}
+                />
+                <View style={{ gap: 10 }}>
+                  {photoUrls.filter(Boolean).map((url, i) => (
+                    <Pressable
+                      key={`${url}-${i}`}
+                      onPress={() => setFullscreenPhoto(resolveMediaUrl(url))}
+                      style={{ borderRadius: 14, overflow: 'hidden', backgroundColor: theme.surface }}
+                    >
+                      <FadeInImage
+                        source={{ uri: resolveMediaUrl(url) }}
+                        style={{ width: '100%', height: 240 }}
+                        resizeMode="cover"
+                      />
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            </>
+          ) : null}
+
           {/* ---- Nearby witness signal ---- */}
           {constellationCopy ? (
             <>
@@ -297,6 +334,38 @@ const IncidentDetailScreen = ({ route, navigation }) => {
       {showTimeline ? (
         <IncidentChatFab incidentId={getIncidentId(detailIncident)} accent={accent} />
       ) : null}
+
+      <Modal
+        visible={Boolean(fullscreenPhoto)}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setFullscreenPhoto(null)}
+      >
+        <Pressable
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.92)',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onPress={() => setFullscreenPhoto(null)}
+        >
+          {fullscreenPhoto ? (
+            <Image
+              source={{ uri: fullscreenPhoto }}
+              style={{ width: '100%', height: '82%' }}
+              resizeMode="contain"
+            />
+          ) : null}
+          <Pressable
+            onPress={() => setFullscreenPhoto(null)}
+            hitSlop={12}
+            style={{ position: 'absolute', top: insets.top + 12, right: 16, padding: 8 }}
+          >
+            <Ionicons name="close" size={30} color="#fff" />
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 };

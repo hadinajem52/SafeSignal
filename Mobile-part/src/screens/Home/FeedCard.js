@@ -4,6 +4,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText, SeverityBadge, IncidentIllustration, PressableScale } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
+import useUserPreferences from '../../hooks/useUserPreferences';
 import incidentConstants from '../../../../constants/incident';
 import { formatTimeAgo } from '../../utils/dateUtils';
 import { DURATION } from '../../theme/motion';
@@ -20,6 +21,7 @@ const OUTCOME_STYLES = {
 
 const FeedCard = ({ incident, onPress }) => {
   const { theme } = useTheme();
+  const { preferences } = useUserPreferences();
   const cat = CATEGORY_DISPLAY[incident.category] || CATEGORY_DISPLAY.other;
   const outcome = OUTCOME_STYLES[incident.closureOutcome] || {
     label: incident.closureOutcome || 'Closed',
@@ -66,7 +68,7 @@ const FeedCard = ({ incident, onPress }) => {
 
       {/* Media (Instagram-style) when present, else the category illustration */}
       {media.length > 0 ? (
-        <FeedCardMedia media={media} />
+        <FeedCardMedia media={media} autoplay={preferences.feedVideoAutoplay} />
       ) : (
         <View style={styles.illustrationWrap}>
           <IncidentIllustration category={incident.category} size={150} />

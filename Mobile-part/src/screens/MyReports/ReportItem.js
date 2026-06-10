@@ -41,7 +41,7 @@ const getProgressStage = (status) => {
     case 'verified':
     case 'published':
     case 'merged':
-      return 3; // Verified
+      return 3; // Verified (merged folds onto its parent; recolored below by parent)
     case 'dispatched':
     case 'on_scene':
     case 'investigating':
@@ -84,9 +84,14 @@ const ReportItem = ({ item, onPress, onLongPress }) => {
   const locationDisplay =
     item.locationName || item.location_name || 'Location not set';
   const createdAtText = formatTimeAgo(item.createdAt || item.timestamp || new Date().toISOString());
-  const stage = getProgressStage(item.status);
-  const isRejected = item.status === 'rejected';
-  const progressColor = isRejected ? theme.error : theme.primary;
+  // A merged report inherits its parent's fate: merged into a rejected report it reads
+  // as a terminal rejection (red, stops at review); merged into any other (valid) parent
+  // it keeps the normal teal progression. A plain rejection is always red.
+  const readsAsRejected =
+    item.status === 'rejected' ||
+    (item.status === 'merged' && item.duplicateOfStatus === 'rejected');
+  const stage = readsAsRejected ? 2 : getProgressStage(item.status);
+  const progressColor = readsAsRejected ? theme.error : theme.primary;
   const constellationLabel = getConstellationLabel(item.constellation);
   const duplicateOfTitle = item.duplicateOfTitle ? `: ${item.duplicateOfTitle}` : '';
   const duplicateOfText = item.duplicateOfIncidentId

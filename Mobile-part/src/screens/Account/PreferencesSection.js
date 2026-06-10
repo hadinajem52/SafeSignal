@@ -10,8 +10,10 @@ const PreferencesSection = ({
   onLocationToggle,
   onNotificationsToggle,
   onDefaultAnonymousToggle,
+  onFeedAutoplayToggle,
   onSendTestNotification,
   onSendFcmTestNotification,
+  onSimulateWitnessPrompt,
   isSendingFcmTest,
   feedbackMessage,
 }) => {
@@ -66,6 +68,21 @@ const PreferencesSection = ({
         />
       </View>
 
+      <View style={[styles.settingRow, { borderBottomColor: theme.divider }]}>
+        <View style={styles.settingInfo}>
+          <AppText variant="label" style={[styles.settingLabel, { color: theme.text }]}>Autoplay Feed Videos</AppText>
+          <AppText variant="caption" style={[styles.settingHint, { color: theme.textSecondary }]}>
+            {preferences.feedVideoAutoplay ? 'Videos play automatically (muted)' : 'Tap a video to play it'}
+          </AppText>
+        </View>
+        <Switch
+          value={preferences.feedVideoAutoplay}
+          onValueChange={onFeedAutoplayToggle}
+          trackColor={{ false: theme.switchTrackOff, true: theme.info }}
+          thumbColor={preferences.feedVideoAutoplay ? theme.primary : theme.switchThumbOff}
+        />
+      </View>
+
       <TouchableOpacity
         style={[styles.linkRow, { borderBottomColor: theme.divider }]}
         onPress={onSendTestNotification}
@@ -85,6 +102,21 @@ const PreferencesSection = ({
           </AppText>
           <AppText variant="caption" style={[styles.settingHint, { color: theme.textSecondary }]}>
             Tests Firebase delivery to this device
+          </AppText>
+        </View>
+        <AppText variant="h5" style={[styles.linkArrow, { color: theme.textTertiary }]}>›</AppText>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.linkRow, { borderBottomColor: theme.divider }]}
+        onPress={onSimulateWitnessPrompt}
+      >
+        <View style={styles.settingInfo}>
+          <AppText variant="label" style={[styles.linkText, { color: theme.text }]}>
+            Simulate Witness Prompt
+          </AppText>
+          <AppText variant="caption" style={[styles.settingHint, { color: theme.textSecondary }]}>
+            Preview the nearby-witness prompt (simulation only)
           </AppText>
         </View>
         <AppText variant="h5" style={[styles.linkArrow, { color: theme.textTertiary }]}>›</AppText>

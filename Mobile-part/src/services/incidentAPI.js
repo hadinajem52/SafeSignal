@@ -225,6 +225,7 @@ export const incidentAPI = {
             videoUrl: incident.video_url || incident.videoUrl || null,
             duplicateOfIncidentId: incident.duplicate_of_incident_id || incident.duplicateOfIncidentId || null,
             duplicateOfTitle: incident.duplicate_of_title || incident.duplicateOfTitle || null,
+            duplicateOfStatus: incident.duplicate_of_status || incident.duplicateOfStatus || null,
           };
         });
 

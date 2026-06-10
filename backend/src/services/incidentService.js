@@ -1186,70 +1186,12 @@ async function createIncident(incidentData, reporterId, options = {}) {
           );
         }
 
-        // ── Link high-confidence duplicates ────────────────────────────
-        if (highConfidenceDuplicates > 0) {
-          const topCandidate = scoredCandidates[0];
-          const canonicalIncidentId = topCandidate.canonicalIncidentId || topCandidate.incidentId;
-          const canonicalReport = await db.oneOrNone(
-            'SELECT report_id FROM reports WHERE incident_id = $1 ORDER BY created_at DESC LIMIT 1',
-            [canonicalIncidentId]
-          );
-          if (canonicalReport) {
-            await db.none(
-              `DELETE FROM report_links
-               WHERE link_type = 'duplicate'
-                 AND canonical_report_id = $1
-                 AND duplicate_report_id = $2`,
-              [report.report_id, canonicalReport.report_id]
-            );
-            await db.none(
-              `DELETE FROM report_links
-               WHERE link_type = 'duplicate'
-                 AND duplicate_report_id = $1
-                 AND canonical_report_id <> $2`,
-              [report.report_id, canonicalReport.report_id]
-            );
-            await db.none(
-              `INSERT INTO report_links (canonical_report_id, duplicate_report_id, link_type)
-               VALUES ($1, $2, 'duplicate')
-               ON CONFLICT (canonical_report_id, duplicate_report_id) DO NOTHING`,
-              [canonicalReport.report_id, report.report_id]
-            );
-            logger.info(
-              `Duplicate link created: incident ${incident.incident_id} → ` +
-              `incident ${canonicalIncidentId} (score: ${topCandidate.score})`
-            );
-          }
-
-          await db.none(
-            `UPDATE incidents
-             SET status = 'auto_processed',
-                 ${getLifecycleTimestampUpdate("'auto_processed'")}
-                 updated_at = CURRENT_TIMESTAMP
-             WHERE incident_id = $1 AND status = 'submitted'`,
-            [incident.incident_id]
-          );
-          // Re-read status only if it was actually changed
-          const refreshed = await db.one(
-            'SELECT status FROM incidents WHERE incident_id = $1',
-            [incident.incident_id]
-          );
-          incident.status = refreshed.status;
-
-          await logAction(
-            incident.incident_id,
-            null,
-            'merged',
-            `Auto-detected as potential duplicate of incident #${canonicalIncidentId} (score: ${topCandidate.score})`
-          );
-
-          emitToRoles(['moderator', 'admin'], 'incident:duplicate', {
-            incidentId: incident.incident_id,
-            duplicateOf: canonicalIncidentId,
-            score: topCandidate.score,
-            candidates: highConfidenceDuplicates,
-          });
-        }
+        // High-confidence duplicates are surfaced as suggestions only — they are stored
+        // in dedup_candidates and shown in the report's "Potential Duplicates" panel for
+        // a moderator to merge manually (linkDuplicateIncident). We deliberately do NOT
+        // auto-create the duplicate link or flip the status here; merging is a human
+        // decision. highConfidenceDuplicates still feeds the risk score and the
+        // "don't auto-verify a likely duplicate" guard above.
 
         mediaJudgmentService.queueIncidentMediaAnalysis(incident.incident_id);
 
@@ -1366,6 +1308,14 @@ async function createIncident(incidentData, reporterId, options = {}) {
  * @param {number} [filters.offset=0] - Offset for pagination
  * @returns {Promise<Array>} Array of incidents
  */
+const stripReporterIdentity = (incident) => {
+  const clone = { ...incident };
+  delete clone.reporter_id;
+  delete clone.username;
+  delete clone.email;
+  return clone;
+};
+
 async function getAllIncidents(filters = {}) {
   const {
     category,
@@ -1380,6 +1330,7 @@ async function getAllIncidents(filters = {}) {
     includeConstellation,
     userRole
   );
+  const isStaff = STAFF_ROLES.has(userRole);
 
   let query = `
     SELECT i.*, u.username, u.email
@@ -1425,9 +1376,14 @@ async function getAllIncidents(filters = {}) {
   params.push(limit, offset);
 
   const incidents = await db.manyOrNone(query, params);
-  return includeStaffConstellation
+  const formatted = includeStaffConstellation
     ? incidents.map(formatIncidentWithStaffConstellation)
     : incidents;
+
+  // Citizens never receive reporter identity (username/email/reporter_id): this keeps
+  // anonymous reports anonymous to the public and avoids leaking PII on this endpoint.
+  // Staff keep full visibility.
+  return isStaff ? formatted : formatted.map(stripReporterIdentity);
 }
 
 async function countIncidents(filters = {}) {
@@ -1492,6 +1448,7 @@ async function getUserIncidents(userId, filters = {}) {
       i.closure_outcome, i.closure_details,
       duplicate_parent.incident_id AS duplicate_of_incident_id,
       duplicate_parent.title AS duplicate_of_title,
+      duplicate_parent.status AS duplicate_of_status,
       c.constellation_id,
       c.status AS constellation_status,
       c.confidence_state AS constellation_confidence_state,
@@ -1518,7 +1475,7 @@ async function getUserIncidents(userId, filters = {}) {
         WHERE pc.depth < 20
           AND NOT rl.canonical_report_id = ANY(pc.path)
       )
-      SELECT ci.incident_id, ci.title
+      SELECT ci.incident_id, ci.title, ci.status
       FROM parent_chain pc
       JOIN reports cr ON cr.report_id = pc.report_id
       JOIN incidents ci ON ci.incident_id = cr.incident_id
@@ -1734,6 +1691,7 @@ const formatIncidentDetail = (row, includeStaffDetails) => {
   if (!includeStaffDetails) {
     incident.username = null;
     incident.email = null;
+    incident.reporter_id = null;
     if (PUBLIC_DETAIL_MEDIA_STATUSES.has(incident.status) && incident.is_disclosed && !incident.is_media_disclosed) {
       incident.photo_urls = [];
       incident.video_url = null;
@@ -2630,7 +2588,11 @@ async function getLEIIncidentById(incidentId) {
     [incidentId]
   );
 
-  const [incident, actions] = await Promise.all([incidentQuery, actionsQuery]);
+  const [incident, actions, linkedDuplicates] = await Promise.all([
+    incidentQuery,
+    actionsQuery,
+    getLinkedDuplicateIncidentSummaries(incidentId),
+  ]);
 
   if (!incident) {
     throw ServiceError.notFound('Incident');
@@ -2639,6 +2601,7 @@ async function getLEIIncidentById(incidentId) {
   return {
     incident: formatIncidentWithStaffConstellation(incident),
     actions,
+    linkedDuplicates,
   };
 }
 

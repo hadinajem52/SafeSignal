@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { View, ScrollView, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { AppText, FadeInImage } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import { resolveMediaUrl } from '../../utils/mediaUtils';
+import FeedVideo from './FeedVideo';
 
 /**
  * Instagram-style media block for a feed card: a single image, or a swipeable
@@ -13,7 +13,7 @@ import { resolveMediaUrl } from '../../utils/mediaUtils';
  *
  * `media` = [{ type: 'image' | 'video', url }]
  */
-export default function FeedCardMedia({ media, height = 210 }) {
+export default function FeedCardMedia({ media, height = 210, autoplay = false }) {
   const { theme } = useTheme();
   const [index, setIndex] = useState(0);
   const [width, setWidth] = useState(0);
@@ -42,9 +42,12 @@ export default function FeedCardMedia({ media, height = 210 }) {
           {media.map((item, i) => (
             <View key={`${item.type}-${i}`} style={{ width, height }}>
               {item.type === 'video' ? (
-                <View style={[styles.video, { backgroundColor: '#0B1220' }]}>
-                  <Ionicons name="play-circle" size={56} color="rgba(255,255,255,0.92)" />
-                </View>
+                <FeedVideo
+                  url={item.url}
+                  autoplay={autoplay && i === index}
+                  width={width}
+                  height={height}
+                />
               ) : (
                 <FadeInImage source={{ uri: resolveMediaUrl(item.url) }} style={{ width, height }} resizeMode="cover" />
               )}
@@ -79,11 +82,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     marginBottom: 12,
-  },
-  video: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   counter: {
     position: 'absolute',

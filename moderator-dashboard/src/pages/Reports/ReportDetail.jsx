@@ -1,5 +1,5 @@
 import React from "react";
-import { AlertTriangle, ArrowLeft, ChevronRight, Radio, RotateCw, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ChevronRight, EyeOff, GitMerge, Radio, RotateCw, ShieldCheck } from "lucide-react";
 import DetailSection from "../../components/DetailSection";
 import DedupCandidatesPanel from "../../components/DedupCandidatesPanel";
 import EvidencePhotoViewer from "../../components/EvidencePhotoViewer";
@@ -477,12 +477,16 @@ function ReportDetail({
   onRetryMediaJudgment,
   onVerify,
   onReject,
-  onNext,
+  onMergeInto,
+  mergeTargets,
   onOpenDuplicateCandidate,
   parentReport,
   onReturnToParent,
 }) {
   const [fullscreenPhoto, setFullscreenPhoto] = React.useState(null);
+  const [mergeOpen, setMergeOpen] = React.useState(false);
+  const [mergeQuery, setMergeQuery] = React.useState("");
+  const [mergeTarget, setMergeTarget] = React.useState(null);
 
   if (!report) {
     return (
@@ -509,6 +513,31 @@ function ReportDetail({
     Number.isFinite(Number(report.latitude)) &&
     Number.isFinite(Number(report.longitude));
   const withinActivationWindow = isReportWithinActivationWindow(report);
+
+  const closeMergeDialog = () => {
+    setMergeOpen(false);
+    setMergeQuery("");
+    setMergeTarget(null);
+  };
+
+  const handleMergeConfirm = async () => {
+    if (!mergeTarget) return;
+    const merged = await onMergeInto?.(mergeTarget.id);
+    if (merged) closeMergeDialog();
+  };
+
+  const mergeQueryNormalized = mergeQuery.trim().toLowerCase();
+  const mergeMatches =
+    mergeQueryNormalized && !mergeTarget
+      ? (mergeTargets || [])
+          .filter(
+            (candidate) =>
+              candidate.id !== report.id &&
+              (String(candidate.id).includes(mergeQueryNormalized) ||
+                (candidate.title || "").toLowerCase().includes(mergeQueryNormalized)),
+          )
+          .slice(0, 8)
+      : [];
 
   return (
     <div className="flex flex-col h-full bg-card overflow-hidden">
@@ -556,16 +585,21 @@ function ReportDetail({
             <KbdChip label="R" /> {rejectPending ? "Rejecting…" : "Reject"}
           </button>
 
-          {/* Next — bordered, no bg fill */}
+          {/* Merge — fold this report into another as a duplicate */}
           <button
-            onClick={onNext}
-            aria-label="Next report"
+            onClick={() => setMergeOpen(true)}
+            disabled={report.status === "merged"}
+            aria-label="Merge report into another"
+            title="Merge this report into another report"
             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.04em]
-              border border-border text-muted transition-colors
-              hover:border-border/80 hover:text-text"
+              border border-border text-muted bg-transparent transition-colors
+              hover:border-primary hover:text-primary disabled:opacity-40"
           >
-            Next
-            <KbdChip label="N" />
+            {/* h-5 matches the KbdChip height on Escalate/Reject so all three align */}
+            <span className="inline-flex h-5 items-center">
+              <GitMerge size={13} />
+            </span>
+            Merge
           </button>
         </div>
       </div>
@@ -604,7 +638,18 @@ function ReportDetail({
             <p className="text-[9px] font-bold uppercase tracking-[0.05em] text-muted mb-1">
               Reporter
             </p>
-            <p className="text-xs font-semibold text-text">{report.reporter}</p>
+            <p className="text-xs font-semibold text-text flex items-center gap-1.5">
+              {report.reporter}
+              {report.is_anonymous ? (
+                <span
+                  className="inline-flex items-center gap-1 border border-warning/40 bg-warning/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.04em] text-warning"
+                  title="Reporter requested anonymity — hidden from the public, visible to staff"
+                >
+                  <EyeOff size={10} />
+                  Anonymous
+                </span>
+              ) : null}
+            </p>
           </div>
           <div className="p-3 border-b border-border">
             <p className="text-[9px] font-bold uppercase tracking-[0.05em] text-muted mb-1">
@@ -750,6 +795,112 @@ function ReportDetail({
           onOpenCandidate={onOpenDuplicateCandidate}
         />
       </div>
+      {mergeOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={closeMergeDialog}
+        >
+          <div
+            className="w-full max-w-sm border border-border bg-card p-5 shadow-soft"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3 className="text-sm font-extrabold uppercase tracking-wide text-text">
+              Merge report
+            </h3>
+            <p className="mt-1.5 text-xs leading-relaxed text-muted text-pretty">
+              Merge <span className="font-semibold text-text">#{report.id}</span> into another
+              report. This report is marked as a{" "}
+              <span className="font-semibold">duplicate (merged)</span> of the target, which stays
+              the canonical incident.
+            </p>
+            <label className="mt-3 block text-[10px] font-bold uppercase tracking-[0.05em] text-muted">
+              Target report
+            </label>
+
+            {mergeTarget ? (
+              <div className="mt-1 flex items-center gap-2 border border-primary/40 bg-primary/5 px-2.5 py-2">
+                <span className="text-[11px] text-muted tabular-nums">#{mergeTarget.id}</span>
+                <span className="flex-1 truncate text-xs font-medium text-text">
+                  {mergeTarget.title}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMergeTarget(null);
+                    setMergeQuery("");
+                  }}
+                  className="text-[10px] font-bold uppercase text-muted hover:text-text"
+                >
+                  Change
+                </button>
+              </div>
+            ) : (
+              <>
+                <input
+                  type="text"
+                  autoFocus
+                  value={mergeQuery}
+                  onChange={(event) => setMergeQuery(event.target.value)}
+                  placeholder="Search by title or ID…"
+                  className="mt-1 w-full border border-border bg-surface px-3 py-2 text-sm text-text outline-none focus:border-primary"
+                />
+                {mergeMatches.length > 0 ? (
+                  <ul className="mt-1 max-h-48 divide-y divide-border overflow-y-auto border border-border">
+                    {mergeMatches.map((candidate) => (
+                      <li key={candidate.id}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMergeTarget(candidate);
+                            setMergeQuery("");
+                          }}
+                          className="flex w-full items-center gap-2 px-2.5 py-2 text-left hover:bg-surface"
+                        >
+                          <span className="text-[11px] text-muted tabular-nums">
+                            #{candidate.id}
+                          </span>
+                          <span className="flex-1 truncate text-xs text-text">
+                            {candidate.title}
+                          </span>
+                          <StatusBadge
+                            status={candidate.status}
+                            size="xs"
+                            className="!rounded-none"
+                          />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : mergeQueryNormalized ? (
+                  <p className="mt-1 text-[11px] text-muted">
+                    No matching reports in the current view.
+                  </p>
+                ) : null}
+              </>
+            )}
+
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeMergeDialog}
+                className="border border-border px-3 py-1.5 text-xs font-bold uppercase text-muted hover:text-text"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleMergeConfirm}
+                disabled={isMerging || !mergeTarget}
+                className="inline-flex items-center gap-1.5 border border-primary/60 bg-primary/10 px-3 py-1.5 text-xs font-bold uppercase text-primary hover:bg-primary/20 disabled:opacity-50"
+              >
+                <GitMerge size={13} />
+                {isMerging ? "Merging…" : "Merge"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <EvidencePhotoViewer
         photo={fullscreenPhoto}
         onClose={() => setFullscreenPhoto(null)}
