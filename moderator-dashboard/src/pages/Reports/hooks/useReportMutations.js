@@ -126,6 +126,48 @@ export function useReportMutations({
     [linkDuplicateMutation, normalizeReport, pushToast, queryClient, reportsAPI, selectedReport?.id, selectedReport?.status, setSelectedReport],
   );
 
+  // Manual merge: fold the report currently being reviewed INTO a target report.
+  // The viewed report becomes the duplicate (status 'merged'); the target stays
+  // canonical. Returns true on success so the caller can close its dialog.
+  const onMergeInto = useCallback(
+    async (targetIncidentId) => {
+      if (!selectedReport?.id) return false;
+      const target = Number(targetIncidentId);
+      if (!Number.isInteger(target) || target <= 0) {
+        pushToast("Enter a valid incident ID to merge into.", "error");
+        return false;
+      }
+      if (target === Number(selectedReport.id)) {
+        pushToast("A report can't be merged into itself.", "error");
+        return false;
+      }
+      const mergedId = selectedReport.id;
+      const result = await linkDuplicateMutation.mutateAsync({
+        reportId: target, // canonical / parent
+        duplicateIncidentId: mergedId, // becomes 'merged'
+      });
+      if (!result.success) {
+        pushToast(result.error || "Failed to merge report.", "error");
+        return false;
+      }
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
+      queryClient.invalidateQueries({ queryKey: ["report-dedup", mergedId] });
+      queryClient.invalidateQueries({ queryKey: ["report-dedup", target] });
+      setSelectedReportIds((prev) => prev.filter((id) => id !== mergedId));
+      setSelectedReport(null);
+      pushToast(`Report #${mergedId} merged into #${target}.`);
+      return true;
+    },
+    [
+      linkDuplicateMutation,
+      pushToast,
+      queryClient,
+      selectedReport?.id,
+      setSelectedReport,
+      setSelectedReportIds,
+    ],
+  );
+
   const onApplySuggestedCategory = useCallback(
     async (category) => {
       if (!selectedReport?.id) return;
@@ -219,6 +261,7 @@ export function useReportMutations({
     handleVerify,
     handleReject,
     onMerge,
+    onMergeInto,
     onApplySuggestedCategory,
     onRetryMediaJudgment,
     onActivateConstellation,

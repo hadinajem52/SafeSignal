@@ -87,6 +87,7 @@ function EvidenceVideo({ videoUrl, onOpen }) {
 function IncidentDetailPane({
   incident,
   actionLog,
+  linkedDuplicates = [],
   statusMutationPending,
   onRequestAction,
   isDisclosed,
@@ -453,6 +454,44 @@ function IncidentDetailPane({
                 />
               ))}
             </div>
+          </div>
+        )}
+
+        {linkedDuplicates.length > 0 && (
+          <div style={{ marginTop: 24 }}>
+            <div className="lei-section-label">
+              Merged Duplicates ({linkedDuplicates.length})
+            </div>
+            {linkedDuplicates.map((dup) => {
+              const evidenceCount =
+                (dup.photoUrls || []).length + (dup.videoUrl ? 1 : 0);
+              return (
+                <div key={dup.incidentId} className="lei-custody-entry">
+                  <div className="lei-custody-action">
+                    #{dup.incidentId}
+                    {dup.title ? ` · ${dup.title}` : ""}
+                  </div>
+                  {dup.description && (
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "var(--le-text-dim)",
+                        marginTop: 4,
+                      }}
+                    >
+                      {dup.description}
+                    </div>
+                  )}
+                  <div className="lei-custody-meta" style={{ marginTop: 4 }}>
+                    {dup.reporter || "Anonymous"} · {dup.status || "merged"} ·{" "}
+                    {evidenceCount} evidence
+                    {dup.linkedAt
+                      ? ` · linked ${new Date(dup.linkedAt).toLocaleString()}`
+                      : ""}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 

@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import MapView, { Circle, Marker } from 'react-native-maps';
+import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText, Button, Card } from '../components';
 import { useTheme } from '../context/ThemeContext';
@@ -63,10 +64,11 @@ const WitnessPromptScreen = ({ navigation, route }) => {
   const { theme } = useTheme();
   const { showToast } = useToast();
   const constellationId = route?.params?.constellationId || route?.params?.constellation_id;
+  const isSimulation = route?.params?.simulation === true;
   const [selectedSignal, setSelectedSignal] = useState(null);
   const [note, setNote] = useState('');
   const [status, setStatus] = useState(null);
-  const [loadingStatus, setLoadingStatus] = useState(Boolean(constellationId));
+  const [loadingStatus, setLoadingStatus] = useState(!isSimulation && Boolean(constellationId));
   const [loadError, setLoadError] = useState(null);
   const { submitting, error, setError, submit } = useWitnessPromptSubmission({
     constellationId,
@@ -85,6 +87,25 @@ const WitnessPromptScreen = ({ navigation, route }) => {
     let active = true;
 
     const loadStatus = async () => {
+      if (isSimulation) {
+        // Simulation preview: skip the backend lookup entirely. Best-effort fill the
+        // coarse map anchor from the cached location (instant, no GPS acquisition).
+        setLoadingStatus(false);
+        setLoadError(null);
+        try {
+          const lastKnown = await Location.getLastKnownPositionAsync();
+          if (active && lastKnown?.coords) {
+            setStatus({
+              centerLatitude: Number(lastKnown.coords.latitude.toFixed(2)),
+              centerLongitude: Number(lastKnown.coords.longitude.toFixed(2)),
+            });
+          }
+        } catch {
+          // No cached location or permission — the screen shows the no-map fallback.
+        }
+        return;
+      }
+
       if (!constellationId) {
         setLoadingStatus(false);
         setLoadError('This witness prompt is missing an identifier.');
@@ -110,11 +131,18 @@ const WitnessPromptScreen = ({ navigation, route }) => {
     return () => {
       active = false;
     };
-  }, [constellationId]);
+  }, [constellationId, isSimulation]);
 
   const handleSubmit = async () => {
     if (!selectedSignal) {
       setError('Choose a response before submitting.');
+      return;
+    }
+
+    if (isSimulation) {
+      // Nothing is sent in simulation mode; just confirm and close.
+      showToast('Simulation only — your response was not sent.', 'success');
+      navigation.goBack();
       return;
     }
 
@@ -193,9 +221,17 @@ const WitnessPromptScreen = ({ navigation, route }) => {
           <AppText variant="h2" style={[styles.title, { color: theme.text }]}> 
             Did you notice anything unusual nearby?
           </AppText>
-          <AppText variant="body" style={[styles.subtitle, { color: theme.textSecondary }]}> 
+          <AppText variant="body" style={[styles.subtitle, { color: theme.textSecondary }]}>
             Your response helps clarify nearby activity. We do not show reporter details, exact movement, or witness notes.
           </AppText>
+          {isSimulation ? (
+            <View style={[styles.simulationBadge, { backgroundColor: `${theme.warning}1A`, borderColor: `${theme.warning}55` }]}>
+              <Ionicons name="flask-outline" size={14} color={theme.warning} />
+              <AppText variant="caption" style={{ color: theme.warning }}>
+                Simulation preview — nothing is sent.
+              </AppText>
+            </View>
+          ) : null}
         </View>
 
         {loadError ? (
@@ -321,6 +357,17 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     lineHeight: 22,
+  },
+  simulationBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    marginTop: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
   },
   errorCard: {
     borderWidth: 1,

@@ -39,13 +39,14 @@ describe('incident detail privacy', () => {
     jest.clearAllMocks();
   });
 
-  it('strips username and email for public incident reads', async () => {
+  it('strips reporter identity for public incident reads', async () => {
     db.oneOrNone.mockResolvedValue(incidentRow());
 
     const incident = await incidentService.getPublicIncidentById(10);
 
     expect(incident.username).toBeNull();
     expect(incident.email).toBeNull();
+    expect(incident.reporter_id).toBeNull();
   });
 
   it('includes username and email for staff incident reads', async () => {
@@ -111,6 +112,26 @@ describe('incident detail privacy', () => {
     expect(incidents[0].constellation).toBeUndefined();
   });
 
+  it('strips reporter identity from public incident lists', async () => {
+    db.manyOrNone.mockResolvedValue([incidentRow()]);
+
+    const incidents = await incidentService.getAllIncidents({ userRole: null });
+
+    expect(incidents[0]).not.toHaveProperty('username');
+    expect(incidents[0]).not.toHaveProperty('email');
+    expect(incidents[0]).not.toHaveProperty('reporter_id');
+  });
+
+  it('keeps reporter identity in staff incident lists', async () => {
+    db.manyOrNone.mockResolvedValue([incidentRow()]);
+
+    const incidents = await incidentService.getAllIncidents({ userRole: 'moderator' });
+
+    expect(incidents[0].username).toBe('reporter');
+    expect(incidents[0].email).toBe('reporter@example.com');
+    expect(incidents[0].reporter_id).toBe(7);
+  });
+
   it('includes only aggregate constellation fields for staff incident lists', async () => {
     db.manyOrNone.mockResolvedValue([incidentRow()]);
 
@@ -150,7 +171,8 @@ describe('incident detail privacy', () => {
     });
 
     db.oneOrNone.mockResolvedValueOnce(incidentRow());
-    db.manyOrNone.mockResolvedValueOnce([]);
+    db.manyOrNone.mockResolvedValueOnce([]); // actions
+    db.manyOrNone.mockResolvedValueOnce([]); // linked duplicates
 
     const detail = await incidentService.getLEIIncidentById(10);
 
@@ -160,6 +182,7 @@ describe('incident detail privacy', () => {
       centerLatitude: 12.345678,
       centerLongitude: -98.765432,
     });
+    expect(detail.linkedDuplicates).toEqual([]);
     expect(detail.incident.constellation).not.toHaveProperty('clusterLinks');
   });
 

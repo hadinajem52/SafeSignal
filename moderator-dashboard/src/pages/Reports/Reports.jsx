@@ -106,6 +106,10 @@ function Reports() {
       );
   }, [reports, searchTerm, statusFilter, sortMode]);
 
+  // Pool the merge picker searches over: every loaded report (current status filter),
+  // independent of the top search box.
+  const mergeTargets = useMemo(() => reports.map(normalizeReport), [reports]);
+
   const {
     panelWidths,
     activeSplitter,
@@ -192,6 +196,7 @@ function Reports() {
     handleRejectRequest,
     executeSingleAction,
     onMerge,
+    onMergeInto,
     onApplySuggestedCategory,
     onRetryMediaJudgment,
     onActivateConstellation,
@@ -359,7 +364,8 @@ function Reports() {
               onRetryMediaJudgment={onRetryMediaJudgment}
               onVerify={handleEscalateRequest}
               onReject={handleRejectRequest}
-              onNext={handleSelectNextReportFromHeader}
+              onMergeInto={onMergeInto}
+              mergeTargets={mergeTargets}
               onOpenDuplicateCandidate={handleOpenDuplicateFromDetail}
               parentReport={parentReportReturn}
               onReturnToParent={handleReturnToParentReport}

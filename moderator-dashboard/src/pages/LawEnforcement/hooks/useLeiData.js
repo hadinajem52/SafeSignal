@@ -90,6 +90,9 @@ export default function useLeiData({
     };
   }, [detailMatchesSelection, detailedIncident, visibleSelectedIncident]);
   const actionLog = detailMatchesSelection ? incidentDetail?.actions || [] : [];
+  const linkedDuplicates = detailMatchesSelection
+    ? incidentDetail?.linkedDuplicates || []
+    : [];
 
   const activeLeiIncidents = useMemo(
     () =>
@@ -136,6 +139,7 @@ export default function useLeiData({
     activeLeiIncidents,
     selectedIncident,
     actionLog,
+    linkedDuplicates,
     displayAlerts,
   };
 }

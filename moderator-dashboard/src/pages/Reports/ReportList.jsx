@@ -37,6 +37,7 @@ function ReportList({
           onChange={onToggleSelectAll}
           className="size-3.5 accent-primary"
         />
+        <span className="text-[11px] font-semibold text-muted uppercase tracking-wider w-12">ID</span>
         <span className="text-[11px] font-semibold text-muted uppercase tracking-wider flex-1">Report</span>
         <span className="text-[11px] font-semibold text-muted uppercase tracking-wider w-12 text-center">Sev.</span>
         <span className="text-[11px] font-semibold text-muted uppercase tracking-wider w-16 text-right">Age</span>
@@ -67,6 +68,11 @@ function ReportList({
                   onChange={() => onToggleSelection(report.id)}
                   className="size-3.5 accent-primary"
                 />
+              </div>
+
+              {/* ID */}
+              <div className="w-12 flex-shrink-0">
+                <span className="text-xs text-muted tabular-nums">#{report.id}</span>
               </div>
 
               {/* Report info */}

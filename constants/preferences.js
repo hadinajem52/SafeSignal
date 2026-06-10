@@ -6,6 +6,7 @@ const DEFAULT_PREFERENCES = {
   locationServices: false,
   pushNotifications: true,
   defaultAnonymous: false,
+  feedVideoAutoplay: false,
   displayName: '',
   avatarUri: '',
 };

@@ -80,6 +80,7 @@ function LawEnforcement() {
     activeLeiIncidents,
     selectedIncident,
     actionLog,
+    linkedDuplicates,
     displayAlerts,
   } = useLeiData({
     statusFilter,
@@ -324,6 +325,7 @@ function LawEnforcement() {
                   <IncidentDetailPane
                     incident={selectedIncident}
                     actionLog={actionLog}
+                    linkedDuplicates={linkedDuplicates}
                     statusMutationPending={statusMutation.isPending}
                     onRequestAction={requestStatusUpdate}
                     isDisclosed={isDisclosed}

@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Linking, ScrollView, TouchableOpacity } from 'react-native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { AppText, ConfirmModal } from '../../components';
@@ -53,6 +53,7 @@ const getNotificationAccessStatus = (notificationPermission, pushNotificationsEn
 };
 
 const AccountScreen = () => {
+  const navigation = useNavigation();
   const { logout, user } = useAuth();
   const { theme, isDark, setThemeMode } = useTheme();
   const { showToast } = useToast();
@@ -256,6 +257,13 @@ const AccountScreen = () => {
     }
   };
 
+  const handleSimulateWitnessPrompt = () => {
+    // Local-only preview of the nearby-witness prompt — no backend or FCM involved.
+    // Navigate immediately; the prompt screen fills its coarse map anchor from the
+    // cached location, so there's no GPS-acquisition delay blocking the transition.
+    navigation.navigate('WitnessPrompt', { simulation: true });
+  };
+
   const refreshAccessStatus = useCallback(async () => {
     try {
       const [locationPermission, cameraPermission, mediaPermission] = await Promise.all([
@@ -351,8 +359,10 @@ const AccountScreen = () => {
         onLocationToggle={handleLocationToggle}
         onNotificationsToggle={handleNotificationsToggle}
         onDefaultAnonymousToggle={(value) => updatePreference('defaultAnonymous', value)}
+        onFeedAutoplayToggle={(value) => updatePreference('feedVideoAutoplay', value)}
         onSendTestNotification={handleSendTestNotification}
         onSendFcmTestNotification={handleSendFcmTestNotification}
+        onSimulateWitnessPrompt={handleSimulateWitnessPrompt}
         isSendingFcmTest={isSendingFcmTest}
         feedbackMessage={inlinePreferenceFeedback}
       />
