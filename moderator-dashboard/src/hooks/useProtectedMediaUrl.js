@@ -1,5 +1,16 @@
 import React from "react";
 import { STORAGE_KEYS } from "../constants/storageKeys";
+import { API_BASE_URL } from "../utils/network";
+
+const API_ORIGIN = API_BASE_URL.replace(/\/api$/, "");
+
+// Only media served by the backend's authenticated /uploads route needs a
+// token-authenticated fetch. Public media (R2 bucket URLs, data/blob URLs) is
+// loaded directly by the <video>/<img> element, which avoids a cross-origin
+// CORS preflight the public bucket doesn't answer.
+function needsAuthenticatedFetch(url) {
+  return url.startsWith(`${API_ORIGIN}/`) || url.startsWith("/");
+}
 
 export function useProtectedMediaUrl(url) {
   const [mediaUrl, setMediaUrl] = React.useState(null);
@@ -8,6 +19,12 @@ export function useProtectedMediaUrl(url) {
   React.useEffect(() => {
     if (!url) {
       setMediaUrl(null);
+      setHasError(false);
+      return undefined;
+    }
+
+    if (!needsAuthenticatedFetch(url)) {
+      setMediaUrl(url);
       setHasError(false);
       return undefined;
     }
