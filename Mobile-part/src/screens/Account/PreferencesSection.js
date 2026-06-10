@@ -25,9 +25,11 @@ const PreferencesSection = ({
 
       <View style={[styles.settingRow, { borderBottomColor: theme.divider }]}> 
         <View style={styles.settingInfo}>
-          <AppText variant="label" style={[styles.settingLabel, { color: theme.text }]}>Witness Location Sharing</AppText>
-          <AppText variant="caption" style={[styles.settingHint, { color: theme.textSecondary }]}> 
-            {preferences.locationServices ? 'Enabled for nearby witness prompts' : 'Disabled'}
+          <AppText variant="label" style={[styles.settingLabel, { color: theme.text }]}>Location Sharing</AppText>
+          <AppText variant="caption" style={[styles.settingHint, { color: theme.textSecondary }]}>
+            {preferences.locationServices
+              ? 'On — powers your area activity score and nearby witness prompts'
+              : 'Off — turn on to see your area activity score'}
           </AppText>
         </View>
         <Switch

@@ -7,6 +7,7 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import useNotificationForegroundHandler from '../hooks/useNotificationForegroundHandler';
 import useRealtimeNotifications from '../hooks/useRealtimeNotifications';
 import useWitnessPromptNotifications from '../hooks/useWitnessPromptNotifications';
+import useFirstLaunchLocationPrompt from '../hooks/useFirstLaunchLocationPrompt';
 
 import LoginScreen from '../screens/Auth/LoginScreen';
 import RegisterScreen from '../screens/Auth/RegisterScreen';
@@ -72,6 +73,7 @@ const AppNavigator = () => {
   useNotificationForegroundHandler();
   useRealtimeNotifications();
   useWitnessPromptNotifications({ navigationRef, isNavigationReady });
+  useFirstLaunchLocationPrompt();
 
   const navigationTheme = {
     ...(isDark ? DarkTheme : DefaultTheme),

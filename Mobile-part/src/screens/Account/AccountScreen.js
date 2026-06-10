@@ -13,7 +13,7 @@ import useUserPreferences from '../../hooks/useUserPreferences';
 import useUserStats from '../../hooks/useUserStats';
 import { getMobileNotificationStatus, sendTestNotification } from '../../services/mobileNotifications';
 import { pushTokenService } from '../../services/pushTokenService';
-import { userAPI } from '../../services/userAPI';
+import useLocationConsent from '../../hooks/useLocationConsent';
 import ContributionsGrid from '../Home/ContributionsGrid';
 import AccessStatusSection from './AccessStatusSection';
 import DangerZone from './DangerZone';
@@ -58,6 +58,7 @@ const AccountScreen = () => {
   const { theme, isDark, setThemeMode } = useTheme();
   const { showToast } = useToast();
   const { preferences, updatePreference } = useUserPreferences();
+  const { enableLocationSharing, disableLocationSharing } = useLocationConsent();
   const { userStats, loading: userStatsLoading, error: userStatsError } = useUserStats();
   const tabBarHeight = useBottomTabBarHeight();
   const [isEditingName, setIsEditingName] = useState(false);
@@ -165,40 +166,24 @@ const AccountScreen = () => {
 
   const handleLocationToggle = async (value) => {
     if (!value) {
-      updatePreference('locationServices', false);
-      await userAPI.setLocationConsent(false);
-      setInlinePreferenceFeedback('Witness location sharing disabled');
+      await disableLocationSharing();
+      setInlinePreferenceFeedback('Location sharing disabled');
       setTimeout(() => setInlinePreferenceFeedback(''), 1800);
       return;
     }
 
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      updatePreference('locationServices', false);
-      await userAPI.setLocationConsent(false);
-      showToast('Location permission is needed before enabling witness prompts.', 'warning');
+    const result = await enableLocationSharing();
+    if (!result.success) {
+      if (result.reason === 'permission_denied') {
+        showToast('Location permission is needed. Enable it in system settings to turn this on.', 'warning');
+      } else {
+        showToast(result.error || 'Could not enable location sharing.', 'error');
+      }
       return;
     }
 
-    const consentResult = await userAPI.setLocationConsent(true);
-    if (!consentResult.success) {
-      showToast(consentResult.error, 'error');
-      return;
-    }
-
-    updatePreference('locationServices', true);
-    setInlinePreferenceFeedback('Witness location sharing enabled');
+    setInlinePreferenceFeedback('Location sharing enabled');
     setTimeout(() => setInlinePreferenceFeedback(''), 1800);
-
-    try {
-      const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      await userAPI.updateLocation({
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-      });
-    } catch {
-      // Consent is enabled; location will sync on next app foreground if permission remains available.
-    }
   };
 
   const handleNotificationsToggle = async (value) => {
