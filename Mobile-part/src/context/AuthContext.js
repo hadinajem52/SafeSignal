@@ -117,15 +117,6 @@ export const AuthProvider = ({ children }) => {
   };
 
   /**
-   * Register a new user (now requires verification)
-   */
-  const register = async (username, email, password) => {
-    const result = await authAPI.register(username, email, password);
-    // Don't set authenticated here - user needs to verify email first
-    return result;
-  };
-
-  /**
    * Login user
    */
   const login = async (email, password) => {
@@ -134,6 +125,22 @@ export const AuthProvider = ({ children }) => {
       setUser(result.user);
       setIsAuthenticated(true);
     }
+    return result;
+  };
+
+  /**
+   * Register a new user.
+   * If the backend requires email verification, the caller routes to the
+   * verification screen. Otherwise the account is active immediately, so we
+   * log the user in right away to land them on the dashboard.
+   */
+  const register = async (username, email, password) => {
+    const result = await authAPI.register(username, email, password);
+
+    if (result.success && !result.requiresVerification) {
+      return login(email, password);
+    }
+
     return result;
   };
 
