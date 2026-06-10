@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
+  Linking,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -9,8 +10,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { AppText, Card } from '../../components';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useToast } from '../../context/ToastContext';
 import useAreaInsights from '../../hooks/useAreaInsights';
 import useDashboardData from '../../hooks/useDashboardData';
+import useLocationConsent from '../../hooks/useLocationConsent';
 import useNotifications from '../../hooks/useNotifications';
 import AreaInsightsCard from './AreaInsightsCard';
 import CommunityFeed from './CommunityFeed';
@@ -36,6 +39,9 @@ const normalizeSafetyScore = (safetyScore) => {
 const HomeScreen = ({ navigation }) => {
   const { user } = useAuth();
   const { theme } = useTheme();
+  const { showToast } = useToast();
+  const { enableLocationSharing } = useLocationConsent();
+  const [enablingLocation, setEnablingLocation] = useState(false);
   const tabBarHeight = useBottomTabBarHeight();
   const { unreadCount } = useNotifications();
   const {
@@ -58,6 +64,27 @@ const HomeScreen = ({ navigation }) => {
   const showEnableLocationCta =
     !locationLoading &&
     LOCATION_ENABLE_STATUSES.includes(locationStatus);
+
+  // Turn on location right from the dashboard instead of sending the user to a
+  // confusingly-named switch in Account. Flipping the preference inside
+  // enableLocationSharing makes LocationContext re-acquire automatically.
+  const handleEnableLocation = useCallback(async () => {
+    if (enablingLocation) return;
+    setEnablingLocation(true);
+    try {
+      const result = await enableLocationSharing();
+      if (result.success) {
+        showToast('Location enabled. Calculating your area activity…', 'success');
+      } else if (result.reason === 'permission_denied') {
+        showToast('Location permission is blocked. Enable it in system settings.', 'warning');
+        Linking.openSettings().catch(() => {});
+      } else {
+        showToast(result.error || 'Could not enable location right now.', 'error');
+      }
+    } finally {
+      setEnablingLocation(false);
+    }
+  }, [enablingLocation, enableLocationSharing, showToast]);
   const safetyScoreUnavailableReason = error
     ? `We could not load safety data right now. ${error}`
     : locationLoading || locationStatus === 'pending'
@@ -114,8 +141,8 @@ const HomeScreen = ({ navigation }) => {
         safetyScore={safetyScore}
         location={location}
         unavailableReason={safetyScoreUnavailableReason}
-        ctaLabel={showEnableLocationCta ? 'Manage Location' : undefined}
-        onCtaPress={showEnableLocationCta ? () => navigation.navigate('Account') : undefined}
+        ctaLabel={showEnableLocationCta ? (enablingLocation ? 'Enabling…' : 'Enable Location') : undefined}
+        onCtaPress={showEnableLocationCta ? handleEnableLocation : undefined}
       />
 
       <AreaInsightsCard insight={areaInsight} loading={areaInsightLoading} />
@@ -160,7 +187,7 @@ const HomeScreen = ({ navigation }) => {
         </Card>
       ) : null}
     </>
-  ), [user, theme, activeNearbyCount, safetyScore, location, safetyScoreUnavailableReason, showEnableLocationCta, areaInsight, areaInsightLoading, dashboardData, error, onRefresh, navigation, refreshing, witnessPromptCount, firstNearbyConstellationId, witnessPrompts, unreadCount]);
+  ), [user, theme, activeNearbyCount, safetyScore, location, safetyScoreUnavailableReason, showEnableLocationCta, enablingLocation, handleEnableLocation, areaInsight, areaInsightLoading, dashboardData, error, onRefresh, navigation, refreshing, witnessPromptCount, firstNearbyConstellationId, witnessPrompts, unreadCount]);
 
   if (loading) {
     return (

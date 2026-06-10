@@ -73,7 +73,7 @@ export const LocationProvider = ({ children }) => {
       if (!locationServices) {
         setCoords(null);
         setStatus(LOCATION_STATUS.DISABLED);
-        setIssue('Location is disabled in app preferences.');
+        setIssue('Location sharing is off. Enable it to see your area activity score.');
         setLoading(false);
         return null;
       }
