@@ -142,11 +142,11 @@ function DatabaseTab({
 
       {/* Split panel */}
       <div
-        className="flex border border-border overflow-hidden flex-shrink-0"
+        className="flex flex-col lg:flex-row border border-border overflow-hidden flex-shrink-0"
         style={{ minHeight: 360, height: '55vh' }}
       >
         {/* Table list */}
-        <div className="w-60 flex-shrink-0 flex flex-col border-r border-border overflow-hidden">
+        <div className="w-full lg:w-60 flex-shrink-0 flex flex-col border-b lg:border-b-0 lg:border-r border-border overflow-hidden max-h-44 lg:max-h-none">
           <div className="flex items-center justify-between px-3.5 py-2 border-b border-border flex-shrink-0">
             <span className="text-[10px] font-bold tracking-widest uppercase text-muted">
               Managed Tables

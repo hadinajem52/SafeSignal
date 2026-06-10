@@ -66,6 +66,25 @@ const toNumber = (value) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+const isAndroidChrome = () => {
+  if (typeof navigator === "undefined") {
+    return false;
+  }
+
+  const brands = navigator.userAgentData?.brands?.map((brand) => brand.brand) ?? [];
+  const platform = navigator.userAgentData?.platform ?? "";
+  if (brands.includes("Google Chrome")) {
+    return platform === "Android" || /Android/i.test(navigator.userAgent);
+  }
+
+  const userAgent = navigator.userAgent;
+  return (
+    /Android/i.test(userAgent) &&
+    /Chrome\//i.test(userAgent) &&
+    !/EdgA|OPR|SamsungBrowser|Firefox|DuckDuckGo/i.test(userAgent)
+  );
+};
+
 /**
  * Build a custom teardrop-pin icon for Google Maps colored by severity.
  * Uses the SVG path symbol interface so no `new google.maps.Size/Point()` needed.
@@ -133,6 +152,7 @@ function GoogleMapPanelContent({
     id: "safesignal-google-maps-script",
     googleMapsApiKey,
   });
+  const canRenderHeatmap = useMemo(() => !isAndroidChrome(), []);
 
   useEffect(() => {
     if (typeof document === "undefined") return undefined;
@@ -210,14 +230,14 @@ function GoogleMapPanelContent({
   );
 
   const heatmapData = useMemo(() => {
-    if (!showHeatmap || validMarkers.length === 0) {
+    if (!showHeatmap || !canRenderHeatmap || validMarkers.length === 0) {
       return [];
     }
     return validMarkers.map((marker) => ({
       position: [marker.lng, marker.lat],
       weight: marker.weight,
     }));
-  }, [showHeatmap, validMarkers]);
+  }, [canRenderHeatmap, showHeatmap, validMarkers]);
 
   useEffect(() => {
     if (!mapInstance || heatmapData.length === 0) {

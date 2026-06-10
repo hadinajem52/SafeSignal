@@ -195,7 +195,7 @@ export default function UsersView({
           <div className="u-count">{filtered.length} users</div>
         </div>
 
-        <div className="u-panels">
+        <div className={`u-panels ${selected ? "has-selection" : ""}`}>
           <div className="u-list-panel">
             <div className="u-list-header">
               <div className="u-col-lbl">User</div>
@@ -267,6 +267,13 @@ export default function UsersView({
               return (
                 <div className="u-detail">
                   <div className="u-detail-bar">
+                    <button
+                      className="u-back-btn"
+                      onClick={() => onSelectUser(null)}
+                      aria-label="Back to user list"
+                    >
+                      ← Back
+                    </button>
                     <div className="u-detail-name">{selected.name}</div>
                     {isAdmin && (
                       <button className="u-act-btn promote" onClick={onOpenPromote}>

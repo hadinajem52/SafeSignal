@@ -173,10 +173,10 @@ function AdminPanel() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Topbar */}
-      <div className="flex-shrink-0 border-b border-border bg-card px-6 h-[61px] flex flex-col justify-center">
-        <div className="flex items-center gap-3 mb-0.5">
-          <ShieldCheck size={20} className="text-primary" />
-          <h1 className="font-display font-extrabold text-xl tracking-tight text-text uppercase">
+      <div className="flex-shrink-0 border-b border-border bg-card px-4 sm:px-6 min-h-[61px] py-2 sm:py-0 flex flex-col justify-center">
+        <div className="flex items-center gap-2 sm:gap-3 mb-0.5 flex-wrap">
+          <ShieldCheck size={20} className="text-primary flex-shrink-0" />
+          <h1 className="font-display font-extrabold text-base sm:text-xl tracking-tight text-text uppercase">
             Admin Control Center
           </h1>
           <span className="text-[9px] font-bold tracking-widest uppercase px-2 py-0.5 border border-warning/60 text-warning bg-warning/8">
@@ -202,7 +202,7 @@ function AdminPanel() {
       ) : null}
 
       {/* Tab bar */}
-      <div className="flex-shrink-0 flex border-b border-border bg-card px-6">
+      <div className="flex-shrink-0 flex border-b border-border bg-card px-4 sm:px-6">
         <button onClick={() => setActiveTab('applications')} className={tabClassName('applications')}>
           <UserCheck size={13} />
           Applications
@@ -219,7 +219,7 @@ function AdminPanel() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-hidden flex flex-col min-h-0 px-6 pt-5 pb-5">
+      <div className="flex-1 overflow-hidden flex flex-col min-h-0 px-4 sm:px-6 pt-4 sm:pt-5 pb-5">
       {activeTab === 'applications' ? (
         <ApplicationsTab
           applications={applications}

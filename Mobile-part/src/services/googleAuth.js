@@ -1,14 +1,19 @@
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 
 let isConfigured = false;
+const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
 
 export const configureGoogleAuth = () => {
   if (isConfigured) {
     return;
   }
 
+  if (!googleWebClientId) {
+    throw new Error('EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID is not configured');
+  }
+
   GoogleSignin.configure({
-    webClientId: '148707906240-89fv5lp1aikj89h9pioihipd8m9hej7n.apps.googleusercontent.com',
+    webClientId: googleWebClientId,
     offlineAccess: true,
   });
 

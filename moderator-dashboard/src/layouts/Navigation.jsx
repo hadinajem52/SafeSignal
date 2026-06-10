@@ -11,6 +11,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   LayoutDashboard,
+  X,
 } from 'lucide-react'
 
 function NavSection({ label, collapsed }) {
@@ -24,35 +25,48 @@ function NavSection({ label, collapsed }) {
   )
 }
 
-function NavItem({ path, label, icon: Icon, active, collapsed }) {
+function NavItem({ path, label, icon: Icon, active, collapsed, mobile, onNavigate }) {
+  if (collapsed) {
+    return (
+      <Link
+        to={path}
+        onClick={onNavigate}
+        title={label}
+        className={`flex items-center justify-center h-10 w-10 mx-auto transition-colors w-full ${
+          active ? 'text-primary' : 'text-muted/80 hover:bg-card hover:text-text'
+        }`}
+      >
+        <Icon size={14} className="flex-shrink-0" />
+        <span className="sr-only">{label}</span>
+      </Link>
+    )
+  }
+
   return (
     <Link
       to={path}
-      title={collapsed ? label : undefined}
-      className={`
-        flex items-center gap-2.5 transition-colors w-full
-        ${collapsed
-          ? 'justify-center h-10 w-10 mx-auto'
-          : `px-[10px] py-2 border-l-2 text-[13px] font-[500]
-             ${active
-               ? 'border-l-primary bg-primary/[0.08] text-primary'
-               : 'border-l-transparent text-muted/80 hover:bg-card hover:text-text'
-             }`
-        }
-        ${!collapsed && active ? '' : collapsed && active ? 'text-primary' : ''}
-      `}
+      onClick={onNavigate}
+      className={`flex items-center gap-2.5 transition-colors w-full border-l-2 font-[500] ${
+        mobile ? 'px-4 py-3 text-sm' : 'px-[10px] py-2 text-[13px]'
+      } ${
+        active
+          ? 'border-l-primary bg-primary/[0.08] text-primary'
+          : 'border-l-transparent text-muted/80 hover:bg-card hover:text-text'
+      }`}
     >
-      <Icon size={14} className="flex-shrink-0" />
-      {!collapsed && <span>{label}</span>}
-      {active && collapsed && <span className="sr-only">{label}</span>}
+      <Icon size={mobile ? 17 : 14} className="flex-shrink-0" />
+      <span>{label}</span>
     </Link>
   )
 }
 
-function Navigation({ collapsed, onToggle }) {
+function Navigation({ collapsed, onToggle, mobile = false, onNavigate }) {
   const { logout, user } = useAuth()
   const location = useLocation()
 
+  // The mobile drawer always shows the expanded layout regardless of the
+  // desktop collapse preference.
+  const isCollapsed = mobile ? false : collapsed
   const isActive = (path) => location.pathname === path
 
   const navGroup = [
@@ -78,15 +92,15 @@ function Navigation({ collapsed, onToggle }) {
 
   return (
     <div
-      className={`
-        flex flex-col flex-shrink-0 bg-card border-r border-border font-display
-        overflow-hidden
-        ${collapsed ? 'w-[60px]' : 'w-56'}
-      `}
+      className={`flex flex-col bg-card border-r border-border font-display overflow-hidden ${
+        mobile
+          ? 'h-full w-[264px] max-w-[82vw]'
+          : `hidden lg:flex flex-shrink-0 ${isCollapsed ? 'w-[60px]' : 'w-56'}`
+      }`}
     >
-      {/* Logo + collapse button */}
-      <div className={`flex items-center border-b border-border flex-shrink-0 h-[61px] ${collapsed ? 'justify-center px-0' : 'px-4 gap-2.5 justify-between'}`}>
-        {!collapsed && (
+      {/* Logo + collapse/close button */}
+      <div className={`flex items-center border-b border-border flex-shrink-0 h-[61px] ${isCollapsed ? 'justify-center px-0' : 'px-4 gap-2.5 justify-between'}`}>
+        {!isCollapsed && (
           <div className="flex items-center gap-2.5 min-w-0">
             <Shield size={22} className="text-primary flex-shrink-0" />
             <div className="min-w-0">
@@ -97,44 +111,44 @@ function Navigation({ collapsed, onToggle }) {
         )}
         <button
           onClick={onToggle}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className={`
-            flex items-center justify-center rounded-lg transition-colors flex-shrink-0
-            text-muted hover:text-text hover:bg-surface
-            ${collapsed ? 'w-9 h-9' : 'w-7 h-7'}
-          `}
+          aria-label={mobile ? 'Close menu' : isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={mobile ? 'Close menu' : isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          className={`flex items-center justify-center rounded-lg transition-colors flex-shrink-0 text-muted hover:text-text hover:bg-surface ${
+            isCollapsed ? 'w-9 h-9' : mobile ? 'w-9 h-9' : 'w-7 h-7'
+          }`}
         >
-          {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+          {mobile ? <X size={18} /> : isCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
         </button>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-1">
-        <NavSection label="Navigation" collapsed={collapsed} />
+        <NavSection label="Navigation" collapsed={isCollapsed} />
         {navGroup.map(({ path, label, icon }) => (
           <NavItem key={path} path={path} label={label} icon={icon}
-            active={isActive(path)} collapsed={collapsed} />
+            active={isActive(path)} collapsed={isCollapsed} mobile={mobile} onNavigate={onNavigate} />
         ))}
 
-        <NavSection label="Operations" collapsed={collapsed} />
+        <NavSection label="Operations" collapsed={isCollapsed} />
         {opsGroup.map(({ path, label, icon }) => (
           <NavItem key={path} path={path} label={label} icon={icon}
-            active={isActive(path)} collapsed={collapsed} />
+            active={isActive(path)} collapsed={isCollapsed} mobile={mobile} onNavigate={onNavigate} />
         ))}
       </nav>
 
       {/* Logout */}
-      <div className={`border-t border-border flex-shrink-0 ${collapsed ? 'py-1' : 'p-3'}`}>
+      <div className={`border-t border-border flex-shrink-0 ${isCollapsed ? 'py-1' : 'p-3'}`}>
         <button
-          onClick={logout}
-          title={collapsed ? 'Logout' : undefined}
-          className={`flex items-center gap-2.5 text-[13px] font-[500] text-muted/80
-            hover:text-text transition-colors w-full
-            ${collapsed ? 'justify-center h-10 w-10 mx-auto' : 'px-[10px] py-2 border-l-2 border-l-transparent hover:bg-card'}`}
+          onClick={() => { onNavigate?.(); logout() }}
+          title={isCollapsed ? 'Logout' : undefined}
+          className={`flex items-center gap-2.5 font-[500] text-muted/80 hover:text-text transition-colors w-full ${
+            isCollapsed
+              ? 'justify-center h-10 w-10 mx-auto'
+              : `border-l-2 border-l-transparent hover:bg-card ${mobile ? 'px-4 py-3 text-sm' : 'px-[10px] py-2 text-[13px]'}`
+          }`}
         >
-          <LogOut size={14} className="flex-shrink-0" />
-          {!collapsed && <span>Logout</span>}
+          <LogOut size={mobile ? 17 : 14} className="flex-shrink-0" />
+          {!isCollapsed && <span>Logout</span>}
         </button>
       </div>
     </div>

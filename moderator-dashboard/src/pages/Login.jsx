@@ -304,7 +304,7 @@ function Login() {
         </div>
 
         {/* ══════════ RIGHT PANEL ══════════ */}
-        <div className="w-full lg:w-[40%] bg-[#0D1117] border-l border-[#1C2430] relative flex flex-col justify-center px-11 py-12 overflow-y-auto">
+        <div className="w-full lg:w-[40%] bg-[#0D1117] border-l border-[#1C2430] relative flex flex-col justify-center px-6 sm:px-11 py-10 sm:py-12 overflow-y-auto">
 
           {/* Corner accent */}
           <div className="absolute top-0 left-0 w-px h-20 bg-[#00f0ff]" />

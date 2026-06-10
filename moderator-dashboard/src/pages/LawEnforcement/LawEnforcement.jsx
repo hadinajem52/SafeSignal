@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Shield, Wifi } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Shield, Wifi } from "lucide-react";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import TimelineCommsPanel from "../../components/TimelineCommsPanel";
+import IncidentTimeline from "../../components/IncidentTimeline";
 import { useAuth } from "../../context/AuthContext";
 import useAwaitingReply from "../../hooks/useAwaitingReply";
+import useIsMobile from "../../hooks/useIsMobile";
 import leStyles from "./styles";
 import {
   LEI_COMMS_WIDTH,
@@ -39,6 +41,16 @@ function LawEnforcement() {
   const [isTimelineCollapsed, setIsTimelineCollapsed] = useState(false);
   const [leiAlerts, setLeiAlerts] = useState([]);
   const [lastRealtimeAlertAt, setLastRealtimeAlertAt] = useState(null);
+  // Mobile single-column navigation for the queue view.
+  const [mobileView, setMobileView] = useState("list"); // 'list' | 'detail'
+  const [mobileTab, setMobileTab] = useState("detail"); // 'detail' | 'messages'
+  const isMobile = useIsMobile();
+
+  const handleSelectIncident = useCallback((id) => {
+    setSelectedIncidentId(id);
+    setMobileView("detail");
+    setMobileTab("detail");
+  }, []);
 
   const { toasts, pushToast } = useToastStack();
   const { data: awaitingReplyIds } = useAwaitingReply();
@@ -109,12 +121,15 @@ function LawEnforcement() {
     const statusById = new Map(
       allLeiIncidents.map((inc) => [String(inc.incident_id), inc.status]),
     );
-    setLeiAlerts((prev) =>
-      prev.filter((a) => {
+    setLeiAlerts((prev) => {
+      const next = prev.filter((a) => {
         const s = statusById.get(String(a.incidentId));
         return !s || s === "verified";
-      }),
-    );
+      });
+      // Preserve the previous reference when nothing was removed so this effect
+      // (keyed on a possibly fresh `allLeiIncidents` array) can't loop on itself.
+      return next.length === prev.length ? prev : next;
+    });
   }, [allLeiIncidents]);
 
   const {
@@ -187,6 +202,52 @@ function LawEnforcement() {
     );
   }
 
+  const incidentQueueEl = (
+    <IncidentQueuePanel
+      isLoading={isLoading}
+      incidents={filteredIncidents}
+      selectedIncidentId={selectedIncidentId}
+      onSelectIncident={handleSelectIncident}
+      searchTerm={searchTerm}
+      onSearchChange={setSearchTerm}
+      statusFilter={statusFilter}
+      onStatusFilterChange={setStatusFilter}
+      sortMode={sortMode}
+      onSortModeChange={setSortMode}
+      statusMutationPending={statusMutation.isPending}
+      onRequestAction={requestStatusUpdate}
+      unreadIncidentIds={awaitingReplyIds}
+    />
+  );
+
+  const incidentDetailEl = (
+    <IncidentDetailPane
+      incident={selectedIncident}
+      actionLog={actionLog}
+      linkedDuplicates={linkedDuplicates}
+      statusMutationPending={statusMutation.isPending}
+      onRequestAction={requestStatusUpdate}
+      isDisclosed={isDisclosed}
+      onDisclosedChange={(value) => {
+        setIsDisclosed(value);
+        if (!value) setIsMediaDisclosed(false);
+      }}
+      isLocationFuzzed={isLocationFuzzed}
+      onLocationFuzzedChange={setIsLocationFuzzed}
+      isMediaDisclosed={isMediaDisclosed}
+      onMediaDisclosedChange={setIsMediaDisclosed}
+      closureOutcome={closureOutcome}
+      onClosureOutcomeChange={setClosureOutcome}
+      caseId={caseId}
+      onCaseIdChange={setCaseId}
+      officerNotes={officerNotes}
+      onOfficerNotesChange={setOfficerNotes}
+      onRequestDisclosureUpdate={(incident) =>
+        requestDisclosureUpdate(incident)
+      }
+    />
+  );
+
   return (
     <>
       <style>{leStyles}</style>
@@ -206,7 +267,7 @@ function LawEnforcement() {
               size={16}
               style={{ color: "var(--le-blue)", flexShrink: 0 }}
             />
-            Law Enforcement Operations
+            <span className="lei-topbar-title-text">Law Enforcement Operations</span>
           </div>
           <div className="lei-tab-bar">
             {VIEWS.map(({ id, label, Icon }) => (
@@ -273,109 +334,136 @@ function LawEnforcement() {
               alerts={displayAlerts}
               onDispatch={handleAlertDispatch}
               statusMutationPending={statusMutation.isPending}
-              onSelectIncident={setSelectedIncidentId}
+              onSelectIncident={handleSelectIncident}
             />
-            <div className="lei-content">
-              <div ref={queueLayoutRef} className="lei-content-inner">
-                <div
-                  style={{
-                    width: `${queuePanelWidth}px`,
-                    flexShrink: 0,
-                    minWidth: 0,
-                    minHeight: 0,
-                    overflow: "hidden",
-                  }}
-                >
-                  <IncidentQueuePanel
-                    isLoading={isLoading}
-                    incidents={filteredIncidents}
-                    selectedIncidentId={selectedIncidentId}
-                    onSelectIncident={setSelectedIncidentId}
-                    searchTerm={searchTerm}
-                    onSearchChange={setSearchTerm}
-                    statusFilter={statusFilter}
-                    onStatusFilterChange={setStatusFilter}
-                    sortMode={sortMode}
-                    onSortModeChange={setSortMode}
-                    statusMutationPending={statusMutation.isPending}
-                    onRequestAction={requestStatusUpdate}
-                    unreadIncidentIds={awaitingReplyIds}
-                  />
-                </div>
-                <div
-                  role="separator"
-                  aria-orientation="vertical"
-                  aria-label="Resize queue and detail panels"
-                  tabIndex={0}
-                  aria-valuemin={LEI_QUEUE_WIDTH.min}
-                  aria-valuemax={LEI_QUEUE_WIDTH.max}
-                  aria-valuenow={Math.round(queuePanelWidth)}
-                  className={`lei-splitter${isQueueSplitterActive ? " active" : ""}`}
-                  onPointerDown={handleQueueSplitterPointerDown}
-                  onKeyDown={handleQueueSplitterKeyDown}
-                />
-                <div
-                  style={{
-                    flex: 1,
-                    minWidth: 0,
-                    minHeight: 0,
-                    overflow: "hidden",
-                  }}
-                >
-                  <IncidentDetailPane
-                    incident={selectedIncident}
-                    actionLog={actionLog}
-                    linkedDuplicates={linkedDuplicates}
-                    statusMutationPending={statusMutation.isPending}
-                    onRequestAction={requestStatusUpdate}
-                    isDisclosed={isDisclosed}
-                    onDisclosedChange={(value) => {
-                      setIsDisclosed(value);
-                      if (!value) setIsMediaDisclosed(false);
+            {isMobile ? (
+              <div className="lei-content">
+                {mobileView === "list" || !selectedIncident ? (
+                  <div
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      minHeight: 0,
+                      overflow: "hidden",
                     }}
-                    isLocationFuzzed={isLocationFuzzed}
-                    onLocationFuzzedChange={setIsLocationFuzzed}
-                    isMediaDisclosed={isMediaDisclosed}
-                    onMediaDisclosedChange={setIsMediaDisclosed}
-                    closureOutcome={closureOutcome}
-                    onClosureOutcomeChange={setClosureOutcome}
-                    caseId={caseId}
-                    onCaseIdChange={setCaseId}
-                    officerNotes={officerNotes}
-                    onOfficerNotesChange={setOfficerNotes}
-                    onRequestDisclosureUpdate={(incident) =>
-                      requestDisclosureUpdate(incident)
-                    }
-                  />
-                </div>
-
-                {/* Splitter to resize the messages panel (hidden when collapsed) */}
-                {!isTimelineCollapsed ? (
+                  >
+                    {incidentQueueEl}
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      flex: 1,
+                      display: "flex",
+                      flexDirection: "column",
+                      minWidth: 0,
+                      minHeight: 0,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div className="lei-mobile-subbar">
+                      <button
+                        type="button"
+                        className="lei-mobile-back"
+                        onClick={() => setMobileView("list")}
+                      >
+                        <ArrowLeft size={13} />
+                        Queue
+                      </button>
+                      <div className="lei-mobile-tabs">
+                        <button
+                          type="button"
+                          className={mobileTab === "detail" ? "active" : ""}
+                          onClick={() => setMobileTab("detail")}
+                        >
+                          Details
+                        </button>
+                        <button
+                          type="button"
+                          className={mobileTab === "messages" ? "active" : ""}
+                          onClick={() => setMobileTab("messages")}
+                        >
+                          Messages
+                        </button>
+                      </div>
+                    </div>
+                    <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
+                      {mobileTab === "detail" ? (
+                        incidentDetailEl
+                      ) : (
+                        <IncidentTimeline
+                          incidentId={selectedIncident?.id || null}
+                          allowInternal={false}
+                        />
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="lei-content">
+                <div ref={queueLayoutRef} className="lei-content-inner">
+                  <div
+                    style={{
+                      width: `${queuePanelWidth}px`,
+                      flexShrink: 0,
+                      minWidth: 0,
+                      minHeight: 0,
+                      overflow: "hidden",
+                    }}
+                  >
+                    {incidentQueueEl}
+                  </div>
                   <div
                     role="separator"
                     aria-orientation="vertical"
-                    aria-label="Resize detail and messages panels"
+                    aria-label="Resize queue and detail panels"
                     tabIndex={0}
-                    aria-valuemin={LEI_COMMS_WIDTH.min}
-                    aria-valuemax={LEI_COMMS_WIDTH.max}
-                    aria-valuenow={Math.round(commsPanelWidth)}
-                    className={`lei-splitter${isCommsSplitterActive ? " active" : ""}`}
-                    onPointerDown={handleCommsSplitterPointerDown}
-                    onKeyDown={handleCommsSplitterKeyDown}
+                    aria-valuemin={LEI_QUEUE_WIDTH.min}
+                    aria-valuemax={LEI_QUEUE_WIDTH.max}
+                    aria-valuenow={Math.round(queuePanelWidth)}
+                    className={`lei-splitter${isQueueSplitterActive ? " active" : ""}`}
+                    onPointerDown={handleQueueSplitterPointerDown}
+                    onKeyDown={handleQueueSplitterKeyDown}
                   />
-                ) : null}
+                  <div
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      minHeight: 0,
+                      overflow: "hidden",
+                    }}
+                  >
+                    {incidentDetailEl}
+                  </div>
 
-                {/* Panel 3: reporter messages (right-docked, collapsible) */}
-                <TimelineCommsPanel
-                  incidentId={selectedIncident?.id || null}
-                  collapsed={isTimelineCollapsed}
-                  onToggle={setIsTimelineCollapsed}
-                  width={commsPanelWidth}
-                  allowInternal={false}
-                  emptyLabel="No incident selected"
-                />
+                  {/* Splitter to resize the messages panel (hidden when collapsed) */}
+                  {!isTimelineCollapsed ? (
+                    <div
+                      role="separator"
+                      aria-orientation="vertical"
+                      aria-label="Resize detail and messages panels"
+                      tabIndex={0}
+                      aria-valuemin={LEI_COMMS_WIDTH.min}
+                      aria-valuemax={LEI_COMMS_WIDTH.max}
+                      aria-valuenow={Math.round(commsPanelWidth)}
+                      className={`lei-splitter${isCommsSplitterActive ? " active" : ""}`}
+                      onPointerDown={handleCommsSplitterPointerDown}
+                      onKeyDown={handleCommsSplitterKeyDown}
+                    />
+                  ) : null}
+
+                  {/* Panel 3: reporter messages (right-docked, collapsible) */}
+                  <TimelineCommsPanel
+                    incidentId={selectedIncident?.id || null}
+                    collapsed={isTimelineCollapsed}
+                    onToggle={setIsTimelineCollapsed}
+                    width={commsPanelWidth}
+                    allowInternal={false}
+                    emptyLabel="No incident selected"
+                  />
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
