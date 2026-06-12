@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { AppText, FadeInImage } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import { resolveMediaUrl } from '../../utils/mediaUtils';
@@ -8,13 +8,14 @@ import FeedVideo from './FeedVideo';
 /**
  * Instagram-style media block for a feed card: a single image, or a swipeable
  * carousel (with dots + counter) when several photos/a video are attached.
- * Videos render as a tappable poster that plays inline (see FeedVideo). A single
- * item skips the carousel ScrollView so the poster's tap isn't swallowed by a
- * horizontal scroll responder.
+ * Tapping an image calls `onImagePress` (opens the detail screen); videos render
+ * as a tappable poster that plays inline (see FeedVideo). A single item skips the
+ * carousel ScrollView so the poster's tap isn't swallowed by a horizontal scroll
+ * responder.
  *
  * `media` = [{ type: 'image' | 'video', url }]
  */
-export default function FeedCardMedia({ media, height = 210, autoplay = false }) {
+export default function FeedCardMedia({ media, height = 210, autoplay = false, onImagePress }) {
   const { theme } = useTheme();
   const [index, setIndex] = useState(0);
   const [width, setWidth] = useState(0);
@@ -30,7 +31,14 @@ export default function FeedCardMedia({ media, height = 210, autoplay = false })
     item.type === 'video' ? (
       <FeedVideo url={item.url} autoplay={autoplay && i === index} width={width} height={height} />
     ) : (
-      <FadeInImage source={{ uri: resolveMediaUrl(item.url) }} style={{ width, height }} resizeMode="cover" />
+      <Pressable
+        onPress={onImagePress}
+        disabled={!onImagePress}
+        accessibilityRole={onImagePress ? 'button' : undefined}
+        style={{ width, height }}
+      >
+        <FadeInImage source={{ uri: resolveMediaUrl(item.url) }} style={{ width, height }} resizeMode="cover" />
+      </Pressable>
     );
 
   return (
