@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { resolveMediaUrl } from '../../utils/mediaUtils';
 import { tokenStorage } from '../../services/tokenStorage';
+import VideoControls from '../../components/VideoControls';
 
 /**
  * Inline feed video. Shows a tappable poster until played:
@@ -71,6 +72,8 @@ export default function FeedVideo({ url, autoplay = false, width, height }) {
 }
 
 function FeedVideoPlayer({ resolvedUrl, token, autoplay, width, height }) {
+  const videoRef = useRef(null);
+
   const source = useMemo(
     () =>
       token
@@ -83,19 +86,22 @@ function FeedVideoPlayer({ resolvedUrl, token, autoplay, width, height }) {
     instance.loop = autoplay;
     // Feed autoplay is muted; a deliberate play press keeps sound on.
     instance.muted = autoplay;
+    instance.timeUpdateEventInterval = 0.5; // drives the custom scrubber
     instance.play();
   });
 
   return (
     <View style={{ width, height, backgroundColor: '#000' }}>
       <VideoView
+        ref={videoRef}
         player={player}
         style={{ width, height }}
         contentFit="contain"
         fullscreenOptions={{ enable: true }}
         allowsPictureInPicture
-        nativeControls
+        nativeControls={false}
       />
+      <VideoControls player={player} videoRef={videoRef} compact />
     </View>
   );
 }

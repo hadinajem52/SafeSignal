@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, InteractionManager, StyleSheet, View } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useTheme } from '../context/ThemeContext';
 import { resolveMediaUrl } from '../utils/mediaUtils';
 import { tokenStorage } from '../services/tokenStorage';
+import VideoControls from './VideoControls';
 
 const IncidentVideoPlayer = ({ videoUrl }) => {
   const { theme } = useTheme();
@@ -53,6 +54,8 @@ const IncidentVideoPlayer = ({ videoUrl }) => {
 };
 
 const VideoEvidenceCard = ({ resolvedUrl, token }) => {
+  const videoRef = useRef(null);
+
   // Stable source for the player's lifetime.
   const source = useMemo(
     () =>
@@ -67,18 +70,21 @@ const VideoEvidenceCard = ({ resolvedUrl, token }) => {
   // createVideoPlayer + release() hits during navigation transitions.
   const player = useVideoPlayer(source, (instance) => {
     instance.loop = false;
+    instance.timeUpdateEventInterval = 0.25; // drives the custom scrubber
   });
 
   return (
     <View style={[styles.media, styles.videoWrap]}>
       <VideoView
+        ref={videoRef}
         player={player}
         style={styles.video}
         contentFit="contain"
         fullscreenOptions={{ enable: true }}
         allowsPictureInPicture
-        nativeControls
+        nativeControls={false}
       />
+      <VideoControls player={player} videoRef={videoRef} />
     </View>
   );
 };
