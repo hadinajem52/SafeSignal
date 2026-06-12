@@ -8,8 +8,9 @@ import FeedVideo from './FeedVideo';
 /**
  * Instagram-style media block for a feed card: a single image, or a swipeable
  * carousel (with dots + counter) when several photos/a video are attached.
- * Videos render as a tappable poster — tapping the card opens the detail screen,
- * where the full player lives (avoids many video players inside a scrolling list).
+ * Videos render as a tappable poster that plays inline (see FeedVideo). A single
+ * item skips the carousel ScrollView so the poster's tap isn't swallowed by a
+ * horizontal scroll responder.
  *
  * `media` = [{ type: 'image' | 'video', url }]
  */
@@ -25,35 +26,38 @@ export default function FeedCardMedia({ media, height = 210, autoplay = false })
     if (i !== index) setIndex(i);
   };
 
+  const renderItem = (item, i) =>
+    item.type === 'video' ? (
+      <FeedVideo url={item.url} autoplay={autoplay && i === index} width={width} height={height} />
+    ) : (
+      <FadeInImage source={{ uri: resolveMediaUrl(item.url) }} style={{ width, height }} resizeMode="cover" />
+    );
+
   return (
     <View
       style={[styles.wrap, { height, backgroundColor: theme.surface }]}
       onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
     >
       {width > 0 ? (
-        <ScrollView
-          horizontal
-          pagingEnabled
-          scrollEnabled={many}
-          showsHorizontalScrollIndicator={false}
-          onScroll={onScroll}
-          scrollEventThrottle={16}
-        >
-          {media.map((item, i) => (
-            <View key={`${item.type}-${i}`} style={{ width, height }}>
-              {item.type === 'video' ? (
-                <FeedVideo
-                  url={item.url}
-                  autoplay={autoplay && i === index}
-                  width={width}
-                  height={height}
-                />
-              ) : (
-                <FadeInImage source={{ uri: resolveMediaUrl(item.url) }} style={{ width, height }} resizeMode="cover" />
-              )}
-            </View>
-          ))}
-        </ScrollView>
+        many ? (
+          <ScrollView
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={onScroll}
+            scrollEventThrottle={16}
+          >
+            {media.map((item, i) => (
+              <View key={`${item.type}-${i}`} style={{ width, height }}>
+                {renderItem(item, i)}
+              </View>
+            ))}
+          </ScrollView>
+        ) : (
+          // Single item: render directly, no horizontal ScrollView wrapping the
+          // video poster (a scroll responder can otherwise eat the play tap).
+          <View style={{ width, height }}>{renderItem(media[0], 0)}</View>
+        )
       ) : null}
 
       {many ? (
