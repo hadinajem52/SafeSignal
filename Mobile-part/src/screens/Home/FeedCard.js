@@ -100,7 +100,11 @@ const FeedCard = ({ incident, onPress }) => {
         {/* Media (Instagram-style) when present, else the category illustration.
             Media owns its own touches (carousel swipe + inline video playback). */}
         {media.length > 0 ? (
-          <FeedCardMedia media={media} autoplay={preferences.feedVideoAutoplay} />
+          <FeedCardMedia
+            media={media}
+            autoplay={preferences.feedVideoAutoplay}
+            onImagePress={openDetail}
+          />
         ) : (
           <Pressable
             accessibilityRole="button"
