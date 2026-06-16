@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 
 const app = require('./app');
 const db = require('./config/database');
+const verifySchema = require('./database/verifySchema');
 const logger = require('./utils/logger');
 const { canAccessInternalComments, isStaffRole } = require('./utils/roleAccess');
 const { startConstellationMaintenance } = require('./jobs/constellationMaintenance');
@@ -142,6 +143,10 @@ async function startServer() {
   } catch (error) {
     isDatabaseAvailable = false;
     logger.warn(`Database connection unavailable at startup: ${db.formatDatabaseError(error)}`);
+  }
+
+  if (isDatabaseAvailable) {
+    await verifySchema();
   }
 
   server.listen(PORT, () => {
