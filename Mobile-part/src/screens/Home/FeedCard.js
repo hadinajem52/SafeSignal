@@ -1,7 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
-  FadeIn,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
@@ -65,11 +64,13 @@ const FeedCard = ({ incident, onPress }) => {
   };
   const openDetail = () => onPress?.(incident);
 
+  // No `entering` animation here: this card is recycled by FlashList, where
+  // Reanimated entering/layout animations re-fire on recycled cells (fade-flicker
+  // on scroll). The media still fades in via expo-image's transition.
   return (
-    <Animated.View entering={FadeIn.duration(DURATION.base)}>
-      <Animated.View
-        style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }, cardStyle]}
-      >
+    <Animated.View
+      style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }, cardStyle]}
+    >
         <Pressable
           accessibilityRole="button"
           onPress={openDetail}
@@ -167,7 +168,6 @@ const FeedCard = ({ incident, onPress }) => {
             </View>
           ) : null}
         </Pressable>
-      </Animated.View>
     </Animated.View>
   );
 };

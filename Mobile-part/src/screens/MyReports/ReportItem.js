@@ -1,8 +1,8 @@
 import React from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import incidentConstants from '../../../../constants/incident';
-import { AppText, Card, SeverityBadge, StatusBadge } from '../../components';
+import { AppText, Card, PressableScale, SeverityBadge, StatusBadge } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import { formatTimeAgo } from '../../utils/dateUtils';
 import styles from './myReportsStyles';
@@ -99,15 +99,13 @@ const ReportItem = ({ item, onPress, onLongPress }) => {
     : null;
 
   return (
-    <Pressable onPress={() => onPress(item)} onLongPress={() => onLongPress && onLongPress(item)} style={styles.incidentCard}>
-      {({ pressed }) => (
+    <PressableScale onPress={() => onPress(item)} onLongPress={() => onLongPress && onLongPress(item)} style={styles.incidentCard}>
         <Card
           style={[
             styles.incidentCardInner,
             {
               borderColor: getSeverityColor(item.severity, theme),
               backgroundColor: theme.card,
-              transform: [{ scale: pressed ? 0.985 : 1 }],
             },
           ]}
         >
@@ -205,8 +203,7 @@ const ReportItem = ({ item, onPress, onLongPress }) => {
             </AppText>
           </View>
         </Card>
-      )}
-    </Pressable>
+    </PressableScale>
   );
 };
 

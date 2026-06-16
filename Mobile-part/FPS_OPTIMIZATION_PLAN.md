@@ -93,6 +93,27 @@ Reanimated/worklets correct; Toast/Modal/auth-shake animations use the native dr
 **Still deferred:** C6 (flatten list-item elevation — visual, needs design sign-off), timeline
 virtualization (only if chat threads get long).
 
+### Round 3 — animation smoothness (applied)
+
+Focused pass on animation jank. Baseline was already strong: interactive/continuous animations
+run on the Reanimated UI thread, imperative ones (Toast/Modal/auth-shake) use the native driver,
+nothing animates layout props, and `CategoryFilter`'s `useNativeDriver:false` is correct (color).
+
+- **FeedCard `entering` animation removed** ([FeedCard.js](src/screens/Home/FeedCard.js)) — the card
+  carried `entering={FadeIn}`, but the feed is now a **FlashList**, where Reanimated entering/layout
+  animations re-fire on **recycled** cells (fade-flicker on scroll, occasional mis-positioning). Removed
+  the outer entering wrapper; the media still fades in via expo-image's `transition`, so the entrance
+  still feels soft. This fixes a smoothness regression introduced by the FlashList migration.
+- **ReportItem press → `PressableScale`** ([ReportItem.js](src/screens/MyReports/ReportItem.js)) — was an
+  instant `transform: scale` snap on the `pressed` render-prop; now uses the app-standard Reanimated
+  `PressableScale` (smooth UI-thread scale, consistent with every other tappable surface).
+
+**Evaluated, left as-is (acceptable, not jank):** Incident Detail's whole-subtree `FadeInDown` entrance
+(fires once on mount; could be lightened on very heavy incidents but fine); video scrubber drag
+(JS-thread re-render only while actively scrubbing); full-width tab slide (native-driven). Notifications'
+`FadeInDown` stagger is fine because it stayed on **FlatList** (not recycled) — another reason that list
+wasn't migrated to FlashList.
+
 ---
 
 ## 1. Executive summary
