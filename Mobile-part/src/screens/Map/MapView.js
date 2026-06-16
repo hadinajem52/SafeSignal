@@ -36,12 +36,14 @@ const MapCanvas = ({
 
 
 
+  const [mapReady, setMapReady] = useState(Platform.OS !== 'android');
+
   const [tracksViewChanges, setTracksViewChanges] = useState(true);
   useEffect(() => {
     setTracksViewChanges(true);
     const timer = setTimeout(() => setTracksViewChanges(false), 900);
     return () => clearTimeout(timer);
-  }, [incidents]);
+  }, [incidents, mapReady]);
 
 
 
@@ -145,6 +147,7 @@ const MapCanvas = ({
       style={styles.map}
       provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
       initialRegion={region}
+      onMapReady={() => setMapReady(true)}
       onRegionChangeComplete={onRegionChange}
       showsUserLocation={nativeUserLocationEnabled}
       showsMyLocationButton={false}
@@ -156,7 +159,7 @@ const MapCanvas = ({
       loadingIndicatorColor={theme.mapMarkerDefault}
       loadingBackgroundColor={theme.card}>
 
-      {markers}
+      {mapReady ? markers : null}
     </MapView>);
 
 };
