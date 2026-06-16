@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useCallback, useContext, useState, useEffect, useMemo } from 'react';
 import { useColorScheme } from 'react-native';
 import { ThemeProvider as RestyleThemeProvider } from '@shopify/restyle';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -42,22 +42,20 @@ export const ThemeProvider = ({ children }) => {
   /**
    * Set theme mode and persist to storage
    */
-  const setThemeMode = async (newMode) => {
+  const setThemeMode = useCallback(async (newMode) => {
     try {
       setMode(newMode);
       await AsyncStorage.setItem('theme_mode', newMode);
     } catch (error) {
       console.error('Error saving theme preference:', error);
     }
-  };
+  }, []);
 
-  const value = {
-    theme,
-    mode,
-    isDark,
-    setThemeMode,
-    isLoadingTheme,
-  };
+  // Stable identity so consumers don't re-render on unrelated provider renders.
+  const value = useMemo(
+    () => ({ theme, mode, isDark, setThemeMode, isLoadingTheme }),
+    [theme, mode, isDark, setThemeMode, isLoadingTheme],
+  );
 
   return (
     <ThemeContext.Provider value={value}>

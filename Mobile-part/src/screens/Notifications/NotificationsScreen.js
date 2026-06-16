@@ -25,7 +25,7 @@ const getVisual = (eventName, theme) => {
   return { icon: ICON_BY_EVENT[eventName] || 'notifications', tint: theme.primary };
 };
 
-const NotificationItem = ({ item, index, theme, onPress, onRemove }) => {
+const NotificationItem = React.memo(({ item, index, theme, onPress, onRemove }) => {
   const { icon, tint } = getVisual(item.eventName, theme);
   return (
     <Animated.View entering={FadeInDown.duration(DURATION.base).delay(stagger(index))}>
@@ -71,7 +71,7 @@ const NotificationItem = ({ item, index, theme, onPress, onRemove }) => {
       </PressableScale>
     </Animated.View>
   );
-};
+});
 
 const NotificationsScreen = ({ navigation }) => {
   const { theme } = useTheme();

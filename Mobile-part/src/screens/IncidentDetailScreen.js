@@ -48,6 +48,30 @@ const getConstellationCopy = (constellation) => {
   };
 };
 
+// Defined at module scope (not inside the screen) so they aren't remounted on every
+// screen re-render, e.g. when toggling the fullscreen photo. They read theme directly.
+const Divider = () => {
+  const { theme } = useTheme();
+  return <View style={[styles.divider, { backgroundColor: theme.border }]} />;
+};
+
+const SectionHeader = ({ icon, color, title, subtitle }) => {
+  const { theme } = useTheme();
+  return (
+    <View style={styles.sectionHeader}>
+      <View style={[styles.sectionIconWrap, { backgroundColor: `${color}1A` }]}>
+        <Ionicons name={icon} size={17} color={color} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <AppText variant="label" style={{ color: theme.text }}>{title}</AppText>
+        {subtitle ? (
+          <AppText variant="small" style={{ color: theme.textTertiary, marginTop: 1 }}>{subtitle}</AppText>
+        ) : null}
+      </View>
+    </View>
+  );
+};
+
 const IncidentDetailScreen = ({ route, navigation }) => {
   const { incident, source } = route.params || {};
   const { theme } = useTheme();
@@ -127,22 +151,6 @@ const IncidentDetailScreen = ({ route, navigation }) => {
     : Array.isArray(detailIncident.photoUrls)
       ? detailIncident.photoUrls
       : [];
-
-  const Divider = () => <View style={[styles.divider, { backgroundColor: theme.border }]} />;
-
-  const SectionHeader = ({ icon, color, title, subtitle }) => (
-    <View style={styles.sectionHeader}>
-      <View style={[styles.sectionIconWrap, { backgroundColor: `${color}1A` }]}>
-        <Ionicons name={icon} size={17} color={color} />
-      </View>
-      <View style={{ flex: 1 }}>
-        <AppText variant="label" style={{ color: theme.text }}>{title}</AppText>
-        {subtitle ? (
-          <AppText variant="small" style={{ color: theme.textTertiary, marginTop: 1 }}>{subtitle}</AppText>
-        ) : null}
-      </View>
-    </View>
-  );
 
   return (
     <View style={[styles.screenWrapper, { backgroundColor: theme.card, paddingTop: insets.top }]}>

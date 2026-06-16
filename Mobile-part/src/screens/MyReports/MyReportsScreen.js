@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { FlatList, View } from 'react-native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -29,20 +29,28 @@ const MyReportsScreen = ({ navigation }) => {
   const [draftModalIncident, setDraftModalIncident] = useState(null);
   const [deleteModalIncident, setDeleteModalIncident] = useState(null);
 
-  const handleIncidentPress = (incident) => {
+  const handleIncidentPress = useCallback((incident) => {
     if (incident.isDraft) {
       setDraftModalIncident(incident);
       return;
     }
 
     navigation.navigate('IncidentDetail', { incident });
-  };
+  }, [navigation]);
 
-  const handleIncidentLongPress = (incident) => {
+  const handleIncidentLongPress = useCallback((incident) => {
     if (incident.isDraft) {
       setDeleteModalIncident(incident);
     }
-  };
+  }, []);
+
+  const renderItem = useCallback(({ item }) => (
+    <ReportItem
+      item={item}
+      onPress={handleIncidentPress}
+      onLongPress={handleIncidentLongPress}
+    />
+  ), [handleIncidentPress, handleIncidentLongPress]);
 
   if (isLoading) {
     return (
@@ -82,13 +90,7 @@ const MyReportsScreen = ({ navigation }) => {
 
       <FlatList
         data={incidents}
-        renderItem={({ item }) => (
-          <ReportItem
-            item={item}
-            onPress={handleIncidentPress}
-            onLongPress={handleIncidentLongPress}
-          />
-        )}
+        renderItem={renderItem}
         keyExtractor={(item, index) =>
           item.id ? item.id.toString() : `${item.createdAt || 'report'}-${item.status || 'status'}-${index}`
         }
@@ -96,6 +98,10 @@ const MyReportsScreen = ({ navigation }) => {
         refreshing={isRefreshing}
         onRefresh={handleRefresh}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews
+        initialNumToRender={6}
+        maxToRenderPerBatch={8}
+        windowSize={11}
         ListEmptyComponent={
           <EmptyReportsState
             selectedFilter={selectedFilter}

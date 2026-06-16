@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Platform, View } from 'react-native';
 import MapView, { Callout, Circle, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,6 +31,114 @@ const MapCanvas = ({
   const { theme } = useTheme();
   const nativeUserLocationEnabled = showsUserLocation;
 
+  // react-native-maps re-renders a custom-view marker to a bitmap on every frame
+  // while `tracksViewChanges` is true (its default). With many resolved markers that
+  // sustains a heavy CPU/GPU cost. We let the icons paint once when the incident set
+  // changes, then freeze them. The delay is intentionally NOT 500ms so it doesn't
+  // race MapScreen's fitToCoordinates timer (which also fires at 500ms).
+  const [tracksViewChanges, setTracksViewChanges] = useState(true);
+  useEffect(() => {
+    setTracksViewChanges(true);
+    const timer = setTimeout(() => setTracksViewChanges(false), 900);
+    return () => clearTimeout(timer);
+  }, [incidents]);
+
+  // Build the marker elements once per data/mode/theme change instead of on every
+  // render. MapScreen re-renders on each pan (onRegionChangeComplete -> setRegion)
+  // and on unrelated state (selected incident, hint, header height); memoizing keeps
+  // those from rebuilding the whole marker set. `theme` is a stable reference
+  // (module-level light/dark objects), so listing it as a dep is safe.
+  const markers = useMemo(
+    () =>
+      incidents
+        .filter((incident) => {
+          const latitude = incident?.location?.latitude;
+          const longitude = incident?.location?.longitude;
+          return Number.isFinite(latitude) && Number.isFinite(longitude);
+        })
+        .map((incident) => {
+          const markerColor = getMarkerColor(incident.category, categoryDisplay, theme.mapMarkerDefault);
+          const categoryLabel = getCategoryLabel(incident.category, categoryDisplay);
+          const coordinate = {
+            latitude: incident.location.latitude,
+            longitude: incident.location.longitude,
+          };
+
+          // Active mode: decorative radius circle + transparent tap-target marker
+          if (showActiveOverlays) {
+            const isCorroborated = incident.constellation?.confidenceState === 'corroborated';
+            const confidenceOpacity = getConfidenceOpacity(incident.constellation?.confidenceScore);
+
+            return (
+              <React.Fragment key={incident.id}>
+                {isCorroborated ? (
+                  <Circle
+                    center={coordinate}
+                    radius={230}
+                    strokeColor={`${markerColor}${confidenceOpacity}`}
+                    fillColor="transparent"
+                    strokeWidth={3}
+                  />
+                ) : null}
+                <Circle
+                  center={coordinate}
+                  radius={150}
+                  strokeColor={`${markerColor}80`}
+                  fillColor={`${markerColor}22`}
+                />
+                <Marker
+                  coordinate={coordinate}
+                  onPress={() => onMarkerPress(incident)}
+                  tracksViewChanges={false}
+                  anchor={{ x: 0.5, y: 0.5 }}
+                >
+                  <View style={{ width: 40, height: 40, opacity: 0 }} />
+                </Marker>
+              </React.Fragment>
+            );
+          }
+
+          // Resolved mode: standard icon marker with callout
+          return (
+            <Marker
+              key={incident.id}
+              coordinate={coordinate}
+              pinColor={markerColor}
+              onPress={() => onMarkerPress(incident)}
+              tracksViewChanges={tracksViewChanges}
+            >
+              <View style={styles.markerContainer}>
+                <View style={[styles.markerIconContainer, { backgroundColor: markerColor }]}>
+                  <Ionicons
+                    name={categoryDisplay[incident.category]?.mapIcon || 'help-circle'}
+                    size={16}
+                    color={theme.card}
+                  />
+                </View>
+                <View style={[styles.markerArrow, { borderTopColor: markerColor }]} />
+              </View>
+              <Callout tooltip onPress={() => onMarkerPress(incident)}>
+                <View style={[styles.calloutContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                  <AppText variant="label" style={[styles.calloutTitle, { color: theme.text }]} numberOfLines={2}>
+                    {incident.title}
+                  </AppText>
+                  <AppText variant="caption" style={[styles.calloutCategory, { color: theme.textSecondary }]}>
+                    {categoryLabel}
+                  </AppText>
+                  <AppText variant="small" style={[styles.calloutTime, { color: theme.textTertiary }]}>
+                    {incident.closedAt || incident.createdAt || incident.timestamp
+                      ? formatTimeAgo(incident.closedAt || incident.createdAt || incident.timestamp)
+                      : 'Just now'}
+                  </AppText>
+                  <AppText variant="small" style={[styles.calloutTap, { color: theme.mapMarkerDefault }]}>Tap for details</AppText>
+                </View>
+              </Callout>
+            </Marker>
+          );
+        }),
+    [incidents, categoryDisplay, showActiveOverlays, onMarkerPress, theme, tracksViewChanges],
+  );
+
   return (
     <MapView
       ref={mapRef}
@@ -48,91 +156,9 @@ const MapCanvas = ({
       loadingIndicatorColor={theme.mapMarkerDefault}
       loadingBackgroundColor={theme.card}
     >
-      {incidents.filter((incident) => {
-        const latitude = incident?.location?.latitude;
-        const longitude = incident?.location?.longitude;
-        return Number.isFinite(latitude) && Number.isFinite(longitude);
-      }).map((incident) => {
-        const markerColor = getMarkerColor(incident.category, categoryDisplay, theme.mapMarkerDefault);
-        const categoryLabel = getCategoryLabel(incident.category, categoryDisplay);
-        const coordinate = {
-          latitude: incident.location.latitude,
-          longitude: incident.location.longitude,
-        };
-
-        // Active mode: decorative radius circle + transparent tap-target marker
-        if (showActiveOverlays) {
-          const isCorroborated = incident.constellation?.confidenceState === 'corroborated';
-          const confidenceOpacity = getConfidenceOpacity(incident.constellation?.confidenceScore);
-
-          return (
-            <React.Fragment key={incident.id}>
-              {isCorroborated ? (
-                <Circle
-                  center={coordinate}
-                  radius={230}
-                  strokeColor={`${markerColor}${confidenceOpacity}`}
-                  fillColor="transparent"
-                  strokeWidth={3}
-                />
-              ) : null}
-              <Circle
-                center={coordinate}
-                radius={150}
-                strokeColor={`${markerColor}80`}
-                fillColor={`${markerColor}22`}
-              />
-              <Marker
-                coordinate={coordinate}
-                onPress={() => onMarkerPress(incident)}
-                tracksViewChanges={false}
-                anchor={{ x: 0.5, y: 0.5 }}
-              >
-                <View style={{ width: 40, height: 40, opacity: 0 }} />
-              </Marker>
-            </React.Fragment>
-          );
-        }
-
-        // Resolved mode: standard icon marker with callout
-        return (
-          <Marker
-            key={incident.id}
-            coordinate={coordinate}
-            pinColor={markerColor}
-            onPress={() => onMarkerPress(incident)}
-          >
-            <View style={styles.markerContainer}>
-              <View style={[styles.markerIconContainer, { backgroundColor: markerColor }]}>
-                <Ionicons
-                  name={categoryDisplay[incident.category]?.mapIcon || 'help-circle'}
-                  size={16}
-                  color={theme.card}
-                />
-              </View>
-              <View style={[styles.markerArrow, { borderTopColor: markerColor }]} />
-            </View>
-            <Callout tooltip onPress={() => onMarkerPress(incident)}>
-              <View style={[styles.calloutContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
-                <AppText variant="label" style={[styles.calloutTitle, { color: theme.text }]} numberOfLines={2}>
-                  {incident.title}
-                </AppText>
-                <AppText variant="caption" style={[styles.calloutCategory, { color: theme.textSecondary }]}>
-                  {categoryLabel}
-                </AppText>
-                <AppText variant="small" style={[styles.calloutTime, { color: theme.textTertiary }]}>
-                  {incident.closedAt || incident.createdAt || incident.timestamp
-                    ? formatTimeAgo(incident.closedAt || incident.createdAt || incident.timestamp)
-                    : 'Just now'}
-                </AppText>
-                <AppText variant="small" style={[styles.calloutTap, { color: theme.mapMarkerDefault }]}>Tap for details</AppText>
-              </View>
-            </Callout>
-          </Marker>
-        );
-      })}
+      {markers}
     </MapView>
   );
 };
 
-export default MapCanvas;
+export default React.memo(MapCanvas);

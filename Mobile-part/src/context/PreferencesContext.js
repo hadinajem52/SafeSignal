@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import preferenceConstants from '../../../constants/preferences';
 import { useAuth } from './AuthContext';
@@ -89,13 +89,18 @@ export const PreferencesProvider = ({ children }) => {
     [persistPreferences, storageKey]
   );
 
-  const value = {
-    preferences,
-    isLoading,
-    updatePreference,
-    updatePreferences,
-    reloadPreferences: loadPreferences,
-  };
+  // Stable identity so consumers (every screen reading preferences) don't re-render
+  // on unrelated provider renders. The functions below are already useCallback'd.
+  const value = useMemo(
+    () => ({
+      preferences,
+      isLoading,
+      updatePreference,
+      updatePreferences,
+      reloadPreferences: loadPreferences,
+    }),
+    [preferences, isLoading, updatePreference, updatePreferences, loadPreferences],
+  );
 
   return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;
 };

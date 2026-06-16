@@ -1,10 +1,55 @@
 # Mobile App — FPS Optimization Plan
 
-> **Status:** Investigation complete. **No code has been changed.** This document is a prioritized,
-> low-risk plan to raise the app's sustained frame rate. Each item lists the exact location, why it
-> costs frames, the proposed fix, and a behavior-preservation note so nothing breaks.
+> **Status:** **APPLIED** (2026-06-15). Tiers A, B, and C1–C3 were implemented after two code
+> reviews (pragmatist: *execute with trims*; senior: *approve with follow-up*). C4, C5, C6 and all of
+> Tier D were intentionally **not** done (see §0). The sections below are the original plan, kept for
+> rationale; §0 records what actually shipped and the review corrections folded in.
 
 _Target: `Mobile-part/` — Expo SDK 54, React Native 0.81.5, React 19, Reanimated 4, react-native-maps._
+
+---
+
+## 0. Implementation status (what shipped)
+
+**Applied:**
+
+- **A1 — marker re-rasterization.** `MapView.js` resolved markers now use a `tracksViewChanges` state
+  that paints once on each `incidents` change, then freezes. Per the senior review, the freeze timer is
+  **900ms** (not 500ms) so it doesn't race `MapScreen`'s `fitToCoordinates` timer.
+- **A2 — marker recreation on pan.** Marker elements are built in a `useMemo` (keyed on
+  incidents/mode/categoryDisplay/theme/onMarkerPress/tracksViewChanges); `MapCanvas` is `React.memo`;
+  `onMarkerPress` is now a `useCallback` in `MapScreen`. _Note (senior review): the memo holds because
+  `theme` is a stable module-level reference — keep it that way or the memo silently stops working._
+- **B1 — My Reports list.** `ReportItem` is `React.memo`; handlers and `renderItem` are `useCallback`;
+  FlatList got `removeClippedSubviews` / `initialNumToRender` / `maxToRenderPerBatch` / `windowSize`.
+- **B2 — Map tab freezing.** Applied as **per-screen** `freezeOnBlur: true` on the Map tab only (narrow
+  blast radius, per senior review — not a global `enableFreeze`). **This is the one behavior-affecting
+  change: smoke-test on device** — switch away from Map and back, confirm map/markers/location resume,
+  and that the custom tab slide transition still looks right.
+- **C1 — context value memo.** `ThemeContext` and `PreferencesContext` `value` objects are `useMemo`'d
+  (`setThemeMode` is now `useCallback`'d). _Correction (both reviews): the earlier rationale wrongly
+  said this drives FeedCard re-renders via preferences — `useUserPreferences` reads PreferencesContext,
+  not Theme, and the functions were already `useCallback`'d. It's a trivial-but-free cleanup; impact is
+  small because these providers rarely change state._
+- **C2 — `NotificationItem`** wrapped in `React.memo`.
+- **C3 — Incident Detail.** `Divider`/`SectionHeader` hoisted to module scope (they read `useTheme`
+  internally, so no call sites changed) to stop remounting on every screen re-render.
+
+**Deliberately NOT applied (per verdict):**
+
+- **C4** (memoize FeedCard's `media`) and **C5** (`React.memo` on `AppText`) — cut as negligible; C5 is
+  defeated by inline `style={{…}}` call sites anyway.
+- **C6** (flatten list-item elevation) — visual change, needs design sign-off.
+- **Tier D** (`expo-image`, timeline virtualization, marker clustering) — deferred until measurement
+  shows it's still needed.
+
+**Scope note (senior review):** A1/A2 deliberately cover only the main Map screen. The other three
+MapViews (`IncidentLocationMap`, `IncidentLocationPicker`, `WitnessPromptScreen`) render 0–1 markers
+and are not a frame-rate concern.
+
+**Verification:** All 9 changed files parse-check clean through the project's Babel + Reanimated
+plugin. Runtime FPS should still be confirmed with the Perf Monitor on a release build (see §6),
+especially the Map in resolved mode with many markers, and the B2 resume smoke-test.
 
 ---
 

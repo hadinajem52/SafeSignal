@@ -222,6 +222,13 @@ const MapScreen = () => {
     setSelectedIncident(null);
   };
 
+  // Stable so the memoized MapCanvas isn't re-rendered by a fresh closure each render.
+  const handleMarkerPress = useCallback((incident) => {
+    setShowMapHint(false);
+    AsyncStorage.setItem(MAP_HINT_STORAGE_KEY, "1").catch(() => {});
+    setSelectedIncident(incident);
+  }, []);
+
   const handleCenterMap = (incident) => {
     const latitude = Number(incident?.location?.latitude);
     const longitude = Number(incident?.location?.longitude);
@@ -262,11 +269,7 @@ const MapScreen = () => {
         incidents={incidents}
         categoryDisplay={CATEGORY_DISPLAY}
         showActiveOverlays={mapMode === MAP_MODES.ACTIVE}
-        onMarkerPress={(incident) => {
-          setShowMapHint(false);
-          AsyncStorage.setItem(MAP_HINT_STORAGE_KEY, "1").catch(() => {});
-          setSelectedIncident(incident);
-        }}
+        onMarkerPress={handleMarkerPress}
       />
 
       <View

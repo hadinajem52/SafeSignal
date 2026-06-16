@@ -210,4 +210,7 @@ const ReportItem = ({ item, onPress, onLongPress }) => {
   );
 };
 
-export default ReportItem;
+// Memoized so an unrelated parent state change (e.g. opening the draft/delete
+// confirm modal) doesn't re-render every heavy row. Reads theme via context, so
+// memo guards props (item/onPress/onLongPress) — theme changes still flow through.
+export default React.memo(ReportItem);

@@ -162,7 +162,11 @@ const TabNavigator = () => {
         }}
       />
 
-      <Tab.Screen name="Map" component={MapScreen} />
+      {/* freezeOnBlur: the map stays mounted across tabs; freezing it while blurred
+          stops react-native-maps from consuming CPU/GPU in the background. Scoped to
+          this one screen to keep the blast radius small. NOTE: smoke-test on device —
+          switch away from Map and back, confirm the map, markers and location resume. */}
+      <Tab.Screen name="Map" component={MapScreen} options={{ freezeOnBlur: true }} />
       <Tab.Screen name="Account" component={AccountScreen} />
     </Tab.Navigator>
   );
