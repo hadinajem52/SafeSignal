@@ -32,6 +32,11 @@ export default function IncidentLocationMap({
       <MapView
         style={StyleSheet.absoluteFill}
         provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+        // Android lite mode renders a cheap static map snapshot instead of a live GL
+        // map — ideal here since the preview is fully non-interactive. Gated to the
+        // marker (exact) case: lite mode doesn't reliably draw the approximate-area
+        // Circle overlay, so fuzzed locations keep the full map.
+        liteMode={Platform.OS === 'android' && !approximate}
         region={{ latitude, longitude, latitudeDelta: delta, longitudeDelta: delta }}
         scrollEnabled={false}
         zoomEnabled={false}

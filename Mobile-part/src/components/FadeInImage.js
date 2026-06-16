@@ -1,33 +1,25 @@
 import React from 'react';
-import { Image } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-  useReducedMotion,
-} from 'react-native-reanimated';
+import { Image } from 'expo-image';
+import { useReducedMotion } from 'react-native-reanimated';
 import { DURATION } from '../theme/motion';
 
-const AnimatedImage = Animated.createAnimatedComponent(Image);
-
 /**
- * Image that fades in once decoded — kills the "pop" of remote media landing.
- * Best for network images; local `require()` assets load instantly so a fade
- * isn't needed there.
+ * Remote image that cross-fades in once decoded — kills the "pop" of remote media
+ * landing. Backed by expo-image for memory+disk caching and automatic downsampling,
+ * which scrolls smoother and uses far less memory than RN's <Image> in lists.
+ *
+ * Keeps the original API so call sites don't change: pass `source` + `style`, and
+ * either `resizeMode` (RN-style, mapped to expo-image's contentFit) or `contentFit`.
  */
-export default function FadeInImage({ style, onLoad, ...props }) {
-  const opacity = useSharedValue(0);
+export default function FadeInImage({ style, resizeMode, contentFit, transition, ...props }) {
   const reduceMotion = useReducedMotion();
-  const animatedStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
-
   return (
-    <AnimatedImage
+    <Image
       {...props}
-      style={[style, animatedStyle]}
-      onLoad={(e) => {
-        opacity.value = reduceMotion ? 1 : withTiming(1, { duration: DURATION.base });
-        onLoad?.(e);
-      }}
+      style={style}
+      contentFit={contentFit ?? resizeMode ?? 'cover'}
+      transition={reduceMotion ? 0 : transition ?? DURATION.base}
+      cachePolicy="memory-disk"
     />
   );
 }

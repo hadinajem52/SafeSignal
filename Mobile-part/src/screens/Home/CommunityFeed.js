@@ -5,6 +5,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { AppText, EmptyState, EMPTY_ART, PressableScale } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import useFeed from '../../hooks/useFeed';
@@ -159,7 +160,7 @@ const CommunityFeed = ({
   };
 
   return (
-    <FlatList
+    <FlashList
       data={incidents}
       keyExtractor={(item) => String(item.id)}
       renderItem={renderFeedItem}
@@ -172,17 +173,15 @@ const CommunityFeed = ({
       refreshing={isRefreshing}
       contentContainerStyle={[styles.wrapper, contentContainerStyle]}
       showsVerticalScrollIndicator={false}
-      removeClippedSubviews
-      initialNumToRender={6}
-      maxToRenderPerBatch={8}
-      windowSize={11}
     />
   );
 };
 
 const styles = StyleSheet.create({
   wrapper: {
-    marginTop: 20,
+    // paddingTop (not marginTop): FlashList's contentContainerStyle supports padding,
+    // not margin. Same visual top gap, FlashList-compatible.
+    paddingTop: 20,
     paddingHorizontal: 16,
   },
   header: {

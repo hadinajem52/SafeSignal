@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import { FlatList, View } from 'react-native';
+import { View } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppText, ConfirmModal, Skeleton } from '../../components';
@@ -88,7 +89,7 @@ const MyReportsScreen = ({ navigation }) => {
 
       <StatusFilterBar selectedFilter={selectedFilter} onSelectFilter={setSelectedFilter} />
 
-      <FlatList
+      <FlashList
         data={incidents}
         renderItem={renderItem}
         keyExtractor={(item, index) =>
@@ -98,10 +99,6 @@ const MyReportsScreen = ({ navigation }) => {
         refreshing={isRefreshing}
         onRefresh={handleRefresh}
         showsVerticalScrollIndicator={false}
-        removeClippedSubviews
-        initialNumToRender={6}
-        maxToRenderPerBatch={8}
-        windowSize={11}
         ListEmptyComponent={
           <EmptyReportsState
             selectedFilter={selectedFilter}

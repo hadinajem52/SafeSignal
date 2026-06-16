@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Modal, Pressable, ScrollView, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, ScrollView, TouchableOpacity, View } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -359,10 +360,11 @@ const IncidentDetailScreen = ({ route, navigation }) => {
           onPress={() => setFullscreenPhoto(null)}
         >
           {fullscreenPhoto ? (
-            <Image
+            <ExpoImage
               source={{ uri: fullscreenPhoto }}
               style={{ width: '100%', height: '82%' }}
-              resizeMode="contain"
+              contentFit="contain"
+              cachePolicy="memory-disk"
             />
           ) : null}
           <Pressable

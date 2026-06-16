@@ -51,6 +51,48 @@ and are not a frame-rate concern.
 plugin. Runtime FPS should still be confirmed with the Perf Monitor on a release build (see §6),
 especially the Map in resolved mode with many markers, and the B2 resume smoke-test.
 
+### Round 2 — additional FPS pass (applied)
+
+Follow-up work after the first round, again low-risk first:
+
+- **#1 — Android lite-map.** [IncidentLocationMap.js](src/components/IncidentLocationMap.js) renders a
+  static `liteMode` snapshot on Android for the exact-location (marker) case. _Gated off for the
+  approximate (Circle) case — lite mode doesn't reliably draw circle overlays._
+- **#2 — Map pan no longer re-renders the screen.** Region is tracked in a ref
+  ([MapScreen.js](src/screens/Map/MapScreen.js)) instead of `setState`; the map is uncontrolled
+  (`initialRegion`) so nothing reads it post-mount. Panning no longer re-renders the control panel,
+  filter bars, or controls. `setRegion` removed from `useMapRegion`'s consumed surface.
+- **#3 — Toast context value memoized.** [ToastContext.js](src/context/ToastContext.js) — consumers no
+  longer re-render every time a toast appears/auto-dismisses.
+- **#4 — expo-image (new dep `expo-image` ~3.0.11).** [FadeInImage.js](src/components/FadeInImage.js)
+  reimplemented on `expo-image` (memory+disk cache, downsampling, native cross-fade) keeping its API,
+  so [FeedCardMedia.js](src/screens/Home/FeedCardMedia.js) and the detail photo list are covered with
+  no call-site changes. The detail **fullscreen** viewer also uses `expo-image` (shows instantly from
+  the cache the feed warmed). _Local/static images (empty-state art, form thumbnails, the single
+  profile avatar) deliberately left on RN `Image` — no caching benefit, not scroll-critical._
+  **Device check:** confirm feed/detail images still load and fade in correctly.
+- **#5 — FlashList (new dep `@shopify/flash-list` 2.0.2).** Swapped the two high-value vertical lists:
+  [CommunityFeed.js](src/screens/Home/CommunityFeed.js) (feed `marginTop`→`paddingTop` since FlashList
+  contentContainerStyle is padding-only) and [MyReportsScreen.js](src/screens/MyReports/MyReportsScreen.js).
+  FlatList-only props (`removeClippedSubviews`/`initialNumToRender`/`maxToRenderPerBatch`/`windowSize`)
+  removed — FlashList recycles natively. **Notifications kept on FlatList** on purpose: it's a short
+  list and its empty state centers via `flexGrow`, which FlashList's contentContainerStyle doesn't
+  honor. **Device check:** confirm feed + My Reports scroll, pull-to-refresh, header, and empty states.
+- **#6 — Marker clustering: EVALUATED, NOT APPLIED.** After A1 the markers are frozen
+  (`tracksViewChanges=false`), so the per-frame cost that clustering would solve is already gone —
+  clustering's remaining benefit is memory/visual-clarity, not sustained FPS. `react-native-map-clustering`
+  replaces the MapView component and I can't verify here that it forwards the `ref` methods this screen
+  relies on (`animateToRegion`/`fitToCoordinates` for My Location and fit-to-incidents) or how it treats
+  the active-mode circles + invisible tap markers. Held to avoid an unverifiable regression to core map
+  controls; revisit as a dedicated, on-device-tested change only if the dense resolved map still drags.
+
+**Ruled out (already optimal):** Hermes is **on** (`android/gradle.properties: hermesEnabled=true`);
+Reanimated/worklets correct; Toast/Modal/auth-shake animations use the native driver. `CategoryFilter`'s
+`useNativeDriver: false` is **correct** (animates color, which can't be native-driven; 180ms on tap).
+
+**Still deferred:** C6 (flatten list-item elevation — visual, needs design sign-off), timeline
+virtualization (only if chat threads get long).
+
 ---
 
 ## 1. Executive summary

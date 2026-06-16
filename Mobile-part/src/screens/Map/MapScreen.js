@@ -37,6 +37,11 @@ const MapScreen = () => {
   const { preferences } = useUserPreferences();
   const mapRef = useRef(null);
   const activeRequestId = useRef(0);
+  // Latest region is tracked in a ref, not state: the map is uncontrolled (uses
+  // initialRegion), so nothing reads region after mount. Writing it to a ref on each
+  // pan avoids a full MapScreen re-render (control panel, filter bars, controls)
+  // every time the user moves the map.
+  const lastRegionRef = useRef(DEFAULT_REGION);
 
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -57,7 +62,6 @@ const MapScreen = () => {
 
   const {
     region,
-    setRegion,
     locationLoading,
     goToMyLocation,
     resetToDefaultRegion,
@@ -229,6 +233,11 @@ const MapScreen = () => {
     setSelectedIncident(incident);
   }, []);
 
+  // Record the region without re-rendering (see lastRegionRef note above).
+  const handleRegionChangeComplete = useCallback((nextRegion) => {
+    lastRegionRef.current = nextRegion;
+  }, []);
+
   const handleCenterMap = (incident) => {
     const latitude = Number(incident?.location?.latitude);
     const longitude = Number(incident?.location?.longitude);
@@ -264,7 +273,7 @@ const MapScreen = () => {
       <MapCanvas
         mapRef={mapRef}
         region={region}
-        onRegionChange={setRegion}
+        onRegionChange={handleRegionChangeComplete}
         showsUserLocation={preferences.locationServices}
         incidents={incidents}
         categoryDisplay={CATEGORY_DISPLAY}
