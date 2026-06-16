@@ -48,6 +48,9 @@ const mapStyles = StyleSheet.create({
   segmentLabel: {
     marginLeft: 6,
   },
+  viewModeSegment: {
+    marginTop: 4,
+  },
   filterRow: {
     marginTop: 4,
   },
@@ -172,6 +175,55 @@ const mapStyles = StyleSheet.create({
   },
   countText: {
     marginLeft: 6,
+    textTransform: 'capitalize',
+  },
+
+  listRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 10,
+  },
+  listIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  listRowBody: {
+    flex: 1,
+    marginRight: 8,
+  },
+  listTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  listMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 6,
+  },
+  listMetaText: {
+    flex: 1,
+  },
+  listOutcomePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginTop: 6,
+  },
+  listOutcomeText: {
+    marginLeft: 4,
     textTransform: 'capitalize',
   },
 

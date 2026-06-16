@@ -14,6 +14,7 @@ const IncidentMapDetail = ({
   onCenterMap,
   categoryDisplay,
   showResolvedDetails,
+  canCenter = true,
 }) => {
   const { theme } = useTheme();
   const translateY = useRef(new Animated.Value(280)).current;
@@ -140,7 +141,7 @@ const IncidentMapDetail = ({
           </>
         ) : null}
 
-        {showResolvedDetails ? (
+        {showResolvedDetails && canCenter ? (
           <View style={mapStyles.detailActions}>
             <Button
               title="Center on Map"

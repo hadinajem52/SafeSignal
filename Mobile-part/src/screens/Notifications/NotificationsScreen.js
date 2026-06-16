@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,6 +24,28 @@ const getVisual = (eventName, theme) => {
   }
   return { icon: ICON_BY_EVENT[eventName] || 'notifications', tint: theme.primary };
 };
+
+const TYPE_FILTERS = [
+  { label: 'All', value: null },
+  { label: 'Alerts', value: 'notification:report_alert' },
+  { label: 'Updates', value: 'notification:report_update' },
+  { label: 'Digest', value: 'notification:weekly_digest' },
+];
+
+const FilterChip = ({ label, active, onPress, theme }) => (
+  <PressableScale
+    accessibilityRole="button"
+    onPress={onPress}
+    style={[
+      styles.filterChip,
+      { borderColor: active ? theme.primary : theme.border, backgroundColor: active ? theme.primary : theme.card },
+    ]}
+  >
+    <AppText variant="caption" style={{ color: active ? '#fff' : theme.text }}>
+      {label}
+    </AppText>
+  </PressableScale>
+);
 
 const NotificationItem = React.memo(({ item, index, theme, onPress, onRemove }) => {
   const { icon, tint } = getVisual(item.eventName, theme);
@@ -86,6 +108,12 @@ const NotificationsScreen = ({ navigation }) => {
     remove,
   } = useNotifications();
   const [refreshing, setRefreshing] = useState(false);
+  const [activeType, setActiveType] = useState(null);
+
+  const filteredNotifications = useMemo(
+    () => (activeType ? notifications.filter((item) => item.eventName === activeType) : notifications),
+    [notifications, activeType],
+  );
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -153,18 +181,35 @@ const NotificationsScreen = ({ navigation }) => {
         ) : null}
       </View>
 
+      {!loading && notifications.length > 0 ? (
+        <View style={styles.filterRow}>
+          {TYPE_FILTERS.map((filter) => (
+            <FilterChip
+              key={filter.label}
+              label={filter.label}
+              active={activeType === filter.value}
+              onPress={() => {
+                haptics.selection();
+                setActiveType(filter.value);
+              }}
+              theme={theme}
+            />
+          ))}
+        </View>
+      ) : null}
+
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator color={theme.primary} />
         </View>
       ) : (
         <FlatList
-          data={notifications}
+          data={filteredNotifications}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           contentContainerStyle={[
             styles.listContent,
-            notifications.length === 0 && styles.emptyWrapper,
+            filteredNotifications.length === 0 && styles.emptyWrapper,
           ]}
           showsVerticalScrollIndicator={false}
           refreshControl={
@@ -178,8 +223,12 @@ const NotificationsScreen = ({ navigation }) => {
           ListEmptyComponent={
             <EmptyState
               illustration={EMPTY_ART.notifications}
-              title="No notifications yet"
-              message="Alerts about your reports and nearby activity will show up here."
+              title={activeType ? 'Nothing here' : 'No notifications yet'}
+              message={
+                activeType
+                  ? 'No notifications match this filter.'
+                  : 'Alerts about your reports and nearby activity will show up here.'
+              }
             />
           }
         />

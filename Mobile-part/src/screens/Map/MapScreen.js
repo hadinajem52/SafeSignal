@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, TouchableOpacity, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { incidentAPI } from "../../services/api";
 import { feedAPI } from "../../services/feedAPI";
@@ -15,6 +16,7 @@ import CategoryFilterBar from "./CategoryFilterBar";
 import IncidentMapDetail from "./IncidentMapDetail";
 import MapControls from "./MapControls";
 import MapCanvas from "./MapView";
+import MapList from "./MapList";
 import mapStyles from "./mapStyles";
 import TimeframeSelector from "./TimeframeSelector";
 
@@ -33,6 +35,7 @@ const DEFAULT_REGION = {
 
 const MapScreen = () => {
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight();
   const { theme } = useTheme();
   const { preferences } = useUserPreferences();
   const mapRef = useRef(null);
@@ -52,6 +55,7 @@ const MapScreen = () => {
   const [mapMode, setMapMode] = useState(MAP_MODES.ACTIVE);
   const [showMapHint, setShowMapHint] = useState(true);
   const [headerHeight, setHeaderHeight] = useState(150);
+  const [viewMode, setViewMode] = useState("map");
 
   const {
     selectedCategory,
@@ -187,6 +191,10 @@ const MapScreen = () => {
     setSelectedIncident(null);
   }, [mapMode]);
 
+  useEffect(() => {
+    setSelectedIncident(null);
+  }, [viewMode]);
+
 
 
   useEffect(() => {
@@ -270,6 +278,7 @@ const MapScreen = () => {
 
   return (
     <View style={mapStyles.container}>
+      {viewMode === "map" ?
       <MapCanvas
         mapRef={mapRef}
         region={region}
@@ -278,7 +287,18 @@ const MapScreen = () => {
         incidents={incidents}
         categoryDisplay={CATEGORY_DISPLAY}
         showActiveOverlays={mapMode === MAP_MODES.ACTIVE}
-        onMarkerPress={handleMarkerPress} />
+        onMarkerPress={handleMarkerPress} /> :
+
+      <MapList
+        incidents={incidents}
+        categoryDisplay={CATEGORY_DISPLAY}
+        showResolved={mapMode === MAP_MODES.RESOLVED}
+        onSelectIncident={handleMarkerPress}
+        refreshing={refreshing}
+        onRefresh={() => fetchIncidents(true)}
+        contentPaddingTop={headerHeight + 8}
+        contentPaddingBottom={tabBarHeight + 16} />
+      }
 
 
       <View
@@ -339,10 +359,39 @@ const MapScreen = () => {
             onSelectTimeframe={setSelectedTimeframe}
             includeAll={mapMode === MAP_MODES.RESOLVED} />
 
+          <View style={[mapStyles.segment, mapStyles.viewModeSegment, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <TouchableOpacity
+              style={[mapStyles.segmentItem, viewMode === "map" && { backgroundColor: theme.primary }]}
+              onPress={() => setViewMode("map")}
+              activeOpacity={0.85}>
+
+              <Ionicons name="map-outline" size={14} color={viewMode === "map" ? "#fff" : theme.textSecondary} />
+              <AppText
+                variant="caption"
+                style={[mapStyles.segmentLabel, { color: viewMode === "map" ? "#fff" : theme.textSecondary }]}>
+
+                Map
+              </AppText>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[mapStyles.segmentItem, viewMode === "list" && { backgroundColor: theme.primary }]}
+              onPress={() => setViewMode("list")}
+              activeOpacity={0.85}>
+
+              <Ionicons name="list-outline" size={14} color={viewMode === "list" ? "#fff" : theme.textSecondary} />
+              <AppText
+                variant="caption"
+                style={[mapStyles.segmentLabel, { color: viewMode === "list" ? "#fff" : theme.textSecondary }]}>
+
+                List
+              </AppText>
+            </TouchableOpacity>
+          </View>
+
         </View>
       </View>
 
-      {showMapHint ?
+      {showMapHint && viewMode === "map" ?
       <View
         style={[
         mapStyles.mapHintWrap,
@@ -365,6 +414,7 @@ const MapScreen = () => {
         </View> :
       null}
 
+      {viewMode === "map" ?
       <MapControls
         onShowLegend={() => setShowLegend(true)}
         onMyLocation={goToMyLocation}
@@ -372,7 +422,8 @@ const MapScreen = () => {
         onRefresh={() => fetchIncidents(true)}
         locationLoading={locationLoading}
         refreshing={refreshing}
-        incidentsCount={incidents.length} />
+        incidentsCount={incidents.length} /> :
+      null}
 
 
       {loading ?
@@ -410,7 +461,8 @@ const MapScreen = () => {
         onClose={clearSelectedIncident}
         onCenterMap={handleCenterMap}
         categoryDisplay={CATEGORY_DISPLAY}
-        showResolvedDetails={mapMode === MAP_MODES.RESOLVED} />
+        showResolvedDetails={mapMode === MAP_MODES.RESOLVED}
+        canCenter={viewMode === "map"} />
 
     </View>);
 
