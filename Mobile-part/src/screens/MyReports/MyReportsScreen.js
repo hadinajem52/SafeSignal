@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { LinearGradient } from 'expo-linear-gradient';
-import { AppText, ConfirmModal, Skeleton } from '../../components';
+import { AppText, ConfirmModal, Skeleton, SwipeableRow } from '../../components';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import useMyReports from '../../hooks/useMyReports';
@@ -46,10 +46,18 @@ const MyReportsScreen = ({ navigation }) => {
   }, []);
 
   const renderItem = useCallback(({ item }) =>
-  <ReportItem
-    item={item}
-    onPress={handleIncidentPress}
-    onLongPress={handleIncidentLongPress} />,
+  <SwipeableRow
+    enabled={!!item.isDraft}
+    rowGap={12}
+    resetKey={item.id}
+    onDelete={() => setDeleteModalIncident(item)}>
+
+      <ReportItem
+      item={item}
+      onPress={handleIncidentPress}
+      onLongPress={handleIncidentLongPress} />
+
+    </SwipeableRow>,
 
   [handleIncidentPress, handleIncidentLongPress]);
 

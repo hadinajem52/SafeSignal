@@ -235,11 +235,15 @@ const MapScreen = () => {
   };
 
 
+  const selectIncident = useCallback((incident) => {
+    setSelectedIncident(incident);
+  }, []);
+
   const handleMarkerPress = useCallback((incident) => {
     setShowMapHint(false);
     AsyncStorage.setItem(MAP_HINT_STORAGE_KEY, "1").catch(() => {});
-    setSelectedIncident(incident);
-  }, []);
+    selectIncident(incident);
+  }, [selectIncident]);
 
 
   const handleRegionChangeComplete = useCallback((nextRegion) => {
@@ -262,6 +266,12 @@ const MapScreen = () => {
     clearSelectedIncident();
   };
 
+  // List mode is only meaningful for resolved incidents. Active map incidents are
+  // intentionally privacy-stripped by the backend (no title/severity/locationName),
+  // so there is nothing useful to list — active mode always shows the map.
+  const listAvailable = mapMode === MAP_MODES.RESOLVED;
+  const showList = listAvailable && viewMode === "list";
+
   if (error && !loading && incidents.length === 0) {
     return (
       <View style={[mapStyles.centerContainer, { backgroundColor: theme.background }]}>
@@ -278,7 +288,16 @@ const MapScreen = () => {
 
   return (
     <View style={mapStyles.container}>
-      {viewMode === "map" ?
+      {showList ?
+      <MapList
+        incidents={incidents}
+        categoryDisplay={CATEGORY_DISPLAY}
+        onSelectIncident={selectIncident}
+        refreshing={refreshing}
+        onRefresh={() => fetchIncidents(true)}
+        contentPaddingTop={headerHeight + 8}
+        contentPaddingBottom={tabBarHeight + 16} /> :
+
       <MapCanvas
         mapRef={mapRef}
         region={region}
@@ -287,17 +306,7 @@ const MapScreen = () => {
         incidents={incidents}
         categoryDisplay={CATEGORY_DISPLAY}
         showActiveOverlays={mapMode === MAP_MODES.ACTIVE}
-        onMarkerPress={handleMarkerPress} /> :
-
-      <MapList
-        incidents={incidents}
-        categoryDisplay={CATEGORY_DISPLAY}
-        showResolved={mapMode === MAP_MODES.RESOLVED}
-        onSelectIncident={handleMarkerPress}
-        refreshing={refreshing}
-        onRefresh={() => fetchIncidents(true)}
-        contentPaddingTop={headerHeight + 8}
-        contentPaddingBottom={tabBarHeight + 16} />
+        onMarkerPress={handleMarkerPress} />
       }
 
 
@@ -359,6 +368,7 @@ const MapScreen = () => {
             onSelectTimeframe={setSelectedTimeframe}
             includeAll={mapMode === MAP_MODES.RESOLVED} />
 
+          {listAvailable ?
           <View style={[mapStyles.segment, mapStyles.viewModeSegment, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <TouchableOpacity
               style={[mapStyles.segmentItem, viewMode === "map" && { backgroundColor: theme.primary }]}
@@ -386,12 +396,13 @@ const MapScreen = () => {
                 List
               </AppText>
             </TouchableOpacity>
-          </View>
+          </View> :
+          null}
 
         </View>
       </View>
 
-      {showMapHint && viewMode === "map" ?
+      {showMapHint && !showList ?
       <View
         style={[
         mapStyles.mapHintWrap,
@@ -414,7 +425,7 @@ const MapScreen = () => {
         </View> :
       null}
 
-      {viewMode === "map" ?
+      {!showList ?
       <MapControls
         onShowLegend={() => setShowLegend(true)}
         onMyLocation={goToMyLocation}
@@ -462,7 +473,7 @@ const MapScreen = () => {
         onCenterMap={handleCenterMap}
         categoryDisplay={CATEGORY_DISPLAY}
         showResolvedDetails={mapMode === MAP_MODES.RESOLVED}
-        canCenter={viewMode === "map"} />
+        canCenter={!showList} />
 
     </View>);
 

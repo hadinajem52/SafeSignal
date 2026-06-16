@@ -3,7 +3,7 @@ import { ActivityIndicator, FlatList, RefreshControl, TouchableOpacity, View } f
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { AppText, EmptyState, EMPTY_ART, PressableScale } from '../../components';
+import { AppText, EmptyState, EMPTY_ART, PressableScale, SwipeableRow } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import useNotifications from '../../hooks/useNotifications';
 import haptics from '../../utils/haptics';
@@ -152,13 +152,15 @@ const NotificationsScreen = ({ navigation }) => {
 
   const renderItem = useCallback(
     ({ item, index }) => (
-      <NotificationItem
-        item={item}
-        index={index}
-        theme={theme}
-        onPress={handlePress}
-        onRemove={handleRemove}
-      />
+      <SwipeableRow rowGap={10} resetKey={item.id} onDelete={() => handleRemove(item.id)}>
+        <NotificationItem
+          item={item}
+          index={index}
+          theme={theme}
+          onPress={handlePress}
+          onRemove={handleRemove}
+        />
+      </SwipeableRow>
     ),
     [theme, handlePress, handleRemove],
   );

@@ -14,7 +14,10 @@ import { formatTimeAgo } from '../../utils/dateUtils';
 import { getCategoryLabel, getMarkerColor } from '../../utils/mapCategory';
 import mapStyles from './mapStyles';
 
-const IncidentListRow = ({ incident, categoryDisplay, showResolved, onPress, theme }) => {
+// Resolved-incident list view for the Map screen. Used only in resolved mode:
+// active map incidents are intentionally privacy-stripped by the backend (no
+// title/severity/locationName/outcome), so there is nothing meaningful to list.
+const IncidentListRow = ({ incident, categoryDisplay, onPress, theme }) => {
   const markerColor = getMarkerColor(incident.category, categoryDisplay, theme.mapMarkerDefault);
   const categoryLabel = getCategoryLabel(incident.category, categoryDisplay);
   const icon = categoryDisplay[incident.category]?.mapIcon || 'help-circle';
@@ -37,7 +40,7 @@ const IncidentListRow = ({ incident, categoryDisplay, showResolved, onPress, the
           <AppText variant="caption" style={{ color: markerColor, flex: 1 }} numberOfLines={1}>
             {categoryLabel}
           </AppText>
-          {!showResolved && incident.severity ? <SeverityBadge severity={incident.severity} /> : null}
+          {incident.severity ? <SeverityBadge severity={incident.severity} /> : null}
         </View>
 
         <AppText variant="label" style={{ color: theme.text }} numberOfLines={2}>
@@ -66,7 +69,7 @@ const IncidentListRow = ({ incident, categoryDisplay, showResolved, onPress, the
           null}
         </View>
 
-        {showResolved && outcome ?
+        {outcome ?
         <View style={[mapStyles.listOutcomePill, { backgroundColor: `${theme.success}1A` }]}>
             <Ionicons name="checkmark-circle-outline" size={12} color={theme.success} />
             <AppText variant="small" style={[mapStyles.listOutcomeText, { color: theme.success }]}>
@@ -84,7 +87,6 @@ const IncidentListRow = ({ incident, categoryDisplay, showResolved, onPress, the
 const MapList = ({
   incidents,
   categoryDisplay,
-  showResolved,
   onSelectIncident,
   refreshing,
   onRefresh,
@@ -98,11 +100,10 @@ const MapList = ({
     <IncidentListRow
       incident={item}
       categoryDisplay={categoryDisplay}
-      showResolved={showResolved}
       onPress={onSelectIncident}
       theme={theme} />,
 
-    [categoryDisplay, showResolved, onSelectIncident, theme]
+    [categoryDisplay, onSelectIncident, theme]
   );
 
   return (
@@ -120,14 +121,11 @@ const MapList = ({
         }}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-        <View style={{ paddingTop: contentPaddingTop }}>
-            <EmptyState
-            illustration={EMPTY_ART.map}
-            title="No incidents to list"
-            message="Try a different category or timeframe."
-            size={150} />
-
-          </View>
+        <EmptyState
+          illustration={EMPTY_ART.map}
+          title="No incidents to list"
+          message="Try a different category or timeframe."
+          size={150} />
         } />
 
     </View>);
