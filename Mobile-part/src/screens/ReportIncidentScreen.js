@@ -16,6 +16,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { AppText, Button, ConfirmModal, IncidentIllustration } from "../components";
 import haptics from "../utils/haptics";
 import { callEmergency, EMERGENCY_NUMBER } from "../utils/emergency";
+import { enqueueReport } from "../utils/offlineReportQueue";
 import { DURATION } from "../theme/motion";
 import {
   IncidentCategoryPicker,
@@ -25,7 +26,8 @@ import {
   IncidentPhotoUploader,
   IncidentTextFields,
   AnonymousToggle,
-  MlFeatureToggles } from
+  MlFeatureToggles,
+  AiClassificationPreview } from
 "../components/IncidentForm";
 import styles from "./reportIncidentStyles";
 
@@ -49,6 +51,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
   const hasAppliedDefaultAnonymous = useRef(false);
   const [enableMlClassification, setEnableMlClassification] = useState(true);
   const [enableMlRisk, setEnableMlRisk] = useState(true);
+  const [footerHeight, setFooterHeight] = useState(76);
   const showCategoryPicker = !enableMlClassification;
   const showSeverityPicker = !enableMlRisk;
 
@@ -354,24 +357,26 @@ const ReportIncidentScreen = ({ navigation, route }) => {
           result = await incidentAPI.submitIncident(incidentData);
         }
 
+        const resetAfterClear = () => {
+          resetForm();
+          setLocation(null);
+          setLocationName("");
+          setSelectedMapLocation(null);
+          setMapRegion(null);
+          setPhotos([]);
+          setVideo(null);
+          setDraftId(null);
+          setEnableMlClassification(true);
+          setEnableMlRisk(true);
+          setIsAnonymous(!!preferences.defaultAnonymous);
+          idempotencyKeyRef.current = createIncidentIdempotencyKey();
+        };
+
         if (result.success) {
 
           if (!asDraft) {
             await clearDraft();
-
-
-            resetForm();
-            setLocation(null);
-            setLocationName("");
-            setSelectedMapLocation(null);
-            setMapRegion(null);
-            setPhotos([]);
-            setVideo(null);
-            setDraftId(null);
-            setEnableMlClassification(true);
-            setEnableMlRisk(true);
-            setIsAnonymous(!!preferences.defaultAnonymous);
-            idempotencyKeyRef.current = createIncidentIdempotencyKey();
+            resetAfterClear();
             const successMessage = "Report submitted. Thanks for reporting this.";
             setSubmitSuccessMessage(successMessage);
             haptics.success();
@@ -389,6 +394,23 @@ const ReportIncidentScreen = ({ navigation, route }) => {
             haptics.light();
             showToast('Draft saved. You can continue editing anytime.', 'success');
           }
+        } else if (!asDraft && result.networkError) {
+          await enqueueReport(incidentData);
+          await clearDraft();
+          resetAfterClear();
+          const queuedMessage = "You're offline. Your report is saved and will send automatically.";
+          setSubmitSuccessMessage(queuedMessage);
+          haptics.light();
+          showToast(queuedMessage, 'success');
+
+          if (successNavigationTimerRef.current) {
+            clearTimeout(successNavigationTimerRef.current);
+          }
+
+          successNavigationTimerRef.current = setTimeout(() => {
+            setSubmitSuccessMessage("");
+            navigation.navigate("Dashboard", { screen: "Home" });
+          }, 1800);
         } else {
           haptics.error();
           if (
@@ -458,210 +480,241 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     callEmergency({ onError: (message) => showToast(message, "error") });
   }, [showToast]);
 
+  const handleApplyAiTags = useCallback((tags) => {
+    if (tags.category) {
+      setSelectedCategory(tags.category);
+      setEnableMlClassification(false);
+    }
+    if (tags.severity) {
+      setSeverity(tags.severity);
+      setEnableMlRisk(false);
+    }
+  }, [setSelectedCategory, setSeverity]);
+
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: theme.background }]}
-      contentContainerStyle={[
-        styles.contentContainer,
-        { paddingBottom: tabBarHeight + 8 },
-      ]}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={[styles.header, { backgroundColor: theme.primary }]}>
-        <AppText variant="h1" style={{ color: theme.card }}>
-          Report Incident
-        </AppText>
-        {hasDraft && (
-          <View style={[styles.draftBadge, { backgroundColor: theme.warning }]}>
-            <AppText
-              variant="caption"
-              style={{ color: theme.warningContrastText }}
-            >
-              Draft
-            </AppText>
-          </View>
-        )}
-      </View>
-      <TouchableOpacity
-        accessibilityRole="button"
-        accessibilityLabel={`Call emergency services (${EMERGENCY_NUMBER})`}
-        activeOpacity={0.85}
-        onPress={handleEmergencyCall}
-        style={[
-          styles.noticeContainer,
-          {
-            backgroundColor: theme.warningNoticeBg,
-            borderColor: theme.warning,
-          },
+    <View style={[styles.screen, { backgroundColor: theme.background }]}>
+      <ScrollView
+        style={[styles.container, { backgroundColor: theme.background }]}
+        contentContainerStyle={[
+          styles.contentContainer,
+          { paddingBottom: tabBarHeight + footerHeight + 8 },
         ]}
+        showsVerticalScrollIndicator={false}
       >
-        <Ionicons
-          name="warning-outline"
-          size={18}
-          color={theme.warning}
-          style={styles.noticeIcon}
-        />
-        <AppText
-          variant="body"
-          style={[styles.noticeText, { color: theme.warningNoticeText }]}
-        >
-          In immediate danger? Tap to call emergency services ({EMERGENCY_NUMBER}).
-        </AppText>
-        <View style={[styles.noticeCallPill, { backgroundColor: theme.error }]}>
-          <Ionicons name="call" size={14} color="#FFFFFF" />
-          <AppText variant="buttonSmall" style={styles.noticeCallPillText}>
-            Call
+        <View style={[styles.header, { backgroundColor: theme.primary }]}>
+          <AppText variant="h1" style={{ color: theme.card }}>
+            Report Incident
           </AppText>
+          {hasDraft && (
+            <View style={[styles.draftBadge, { backgroundColor: theme.warning }]}>
+              <AppText
+                variant="caption"
+                style={{ color: theme.warningContrastText }}
+              >
+                Draft
+              </AppText>
+            </View>
+          )}
         </View>
-      </TouchableOpacity>
-      <View style={styles.formContainer}>
-        {!!submitSuccessMessage && (
-          <View
-            style={[
-              styles.submitSuccessBanner,
-              {
-                borderColor: `${theme.success}40`,
-                backgroundColor: `${theme.success}14`,
-              },
-            ]}
-          >
-            <Ionicons name="checkmark-circle" size={16} color={theme.success} />
-            <AppText
-              variant="caption"
-              style={[styles.submitSuccessText, { color: theme.success }]}
-            >
-              {submitSuccessMessage}
-            </AppText>
-          </View>
-        )}
-
-        <AnonymousToggle isAnonymous={isAnonymous} onToggle={setIsAnonymous} />
-
-        <IncidentTextFields
-          title={title}
-          onTitleChange={handleTitleChange}
-          description={description}
-          onDescriptionChange={handleDescriptionChange}
-          errors={errors} />
-
-
-        {showCategoryPicker && (
-          <IncidentCategoryPicker
-            categories={INCIDENT_CATEGORIES}
-            selectedCategory={selectedCategory}
-            onSelect={handleCategorySelect}
-            error={errors.category}
-          />
-        )}
-
-        {showCategoryPicker && selectedCategory ? (
-          <Animated.View
-            key={selectedCategory}
-            entering={FadeInDown.duration(DURATION.base)}
-            style={{ alignItems: 'center', marginTop: -8, marginBottom: 20 }}
-          >
-            <IncidentIllustration category={selectedCategory} size={130} />
-          </Animated.View>
-        ) : null}
-
-        {showSeverityPicker && (
-          <IncidentSeverityPicker
-            levels={SEVERITY_LEVELS}
-            severity={severity}
-            onSelect={setSeverity}
-          />
-        )}
-
-        <MlFeatureToggles
-          enableClassification={enableMlClassification}
-          onToggleClassification={handleToggleMlClassification}
-          enableRisk={enableMlRisk}
-          onToggleRisk={handleToggleMlRisk} />
-        <IncidentDateTimePicker
-          incidentDate={incidentDate}
-          formatDate={formatDate}
-          onSetToNow={setDateToNow}
-          onDateChange={setIncidentDate} />
-        <IncidentLocationPicker
-          location={location}
-          locationName={locationName}
-          isLoadingLocation={isLoadingLocation}
-          onGetCurrentLocation={getCurrentLocation}
-          onOpenMap={openMapForSelection}
-          error={errors.location}
-          showMapModal={showMapModal}
-          onCloseMapModal={handleCloseMapModal}
-          onConfirmMapLocation={confirmMapLocation}
-          mapRegion={mapRegion}
-          onMapRegionChange={setMapRegion}
-          selectedMapLocation={selectedMapLocation}
-          onMapPress={handleMapPress}
-          mapRef={mapRef} />
-        <IncidentPhotoUploader
-          photos={photos}
-          video={video}
-          isVideoProcessing={isVideoProcessing}
-          videoProcessingProgress={videoProcessingProgress}
-          onTakePhoto={takePhoto}
-          onPickImage={pickImage}
-          onRemovePhoto={removePhoto}
-          onRecordVideo={recordVideo}
-          onPickVideo={pickVideo}
-          onRemoveVideo={removeVideo} />
-        <ConfirmModal
-          visible={!!pendingDraft}
-          title="Unsaved Draft"
-          message="You have an unsaved draft. Would you like to continue editing it?"
-          actions={[
-            { text: 'Discard', style: 'destructive', onPress: handleDiscardDraft },
-            { text: 'Continue', onPress: confirmDraft },
-          ]}
-          onRequestClose={handleDiscardDraft} />
-        <View
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={`Call emergency services (${EMERGENCY_NUMBER})`}
+          activeOpacity={0.85}
+          onPress={handleEmergencyCall}
           style={[
-            styles.privacyNote,
-            { borderColor: theme.border, backgroundColor: theme.surface },
+            styles.noticeContainer,
+            {
+              backgroundColor: theme.warningNoticeBg,
+              borderColor: theme.warning,
+            },
           ]}
         >
           <Ionicons
-            name="lock-closed-outline"
-            size={14}
-            color={theme.textSecondary}
-            style={styles.privacyNoteIcon}
+            name="warning-outline"
+            size={18}
+            color={theme.warning}
+            style={styles.noticeIcon}
           />
           <AppText
-            variant="caption"
-            style={[styles.privacyNoteText, { color: theme.textSecondary }]}
+            variant="body"
+            style={[styles.noticeText, { color: theme.warningNoticeText }]}
           >
-            {isAnonymous
-              ? "Reporting anonymously — your name won't be shown publicly. "
-              : "Posting with your account name. "}
-            Your exact location is randomized before it's shared.
+            In immediate danger? Tap to call emergency services ({EMERGENCY_NUMBER}).
           </AppText>
-        </View>
+          <View style={[styles.noticeCallPill, { backgroundColor: theme.error }]}>
+            <Ionicons name="call" size={14} color="#FFFFFF" />
+            <AppText variant="buttonSmall" style={styles.noticeCallPillText}>
+              Call
+            </AppText>
+          </View>
+        </TouchableOpacity>
+        <View style={styles.formContainer}>
+          {!!submitSuccessMessage && (
+            <View
+              style={[
+                styles.submitSuccessBanner,
+                {
+                  borderColor: `${theme.success}40`,
+                  backgroundColor: `${theme.success}14`,
+                },
+              ]}
+            >
+              <Ionicons name="checkmark-circle" size={16} color={theme.success} />
+              <AppText
+                variant="caption"
+                style={[styles.submitSuccessText, { color: theme.success }]}
+              >
+                {submitSuccessMessage}
+              </AppText>
+            </View>
+          )}
 
-        <View style={styles.actionButtonsContainer}>
-          <Button
-            title="Save Draft"
-            onPress={handleSaveDraftPress}
-            loading={isSavingDraft}
-            disabled={isSavingDraft || isVideoProcessing}
-            variant="secondary"
-            style={styles.draftButton} />
-          <Button
-            title="Submit Report"
-            onPress={handleSubmitPress}
-            loading={isSubmitting || isVideoProcessing}
-            disabled={isSubmitting || isVideoProcessing}
-            style={[
-              styles.submitButton,
-              { backgroundColor: theme.primary },
-              isSubmitting && styles.submitButtonDisabled,
+          <AnonymousToggle isAnonymous={isAnonymous} onToggle={setIsAnonymous} />
+
+          <IncidentTextFields
+            title={title}
+            onTitleChange={handleTitleChange}
+            description={description}
+            onDescriptionChange={handleDescriptionChange}
+            errors={errors} />
+
+
+          {showCategoryPicker && (
+            <IncidentCategoryPicker
+              categories={INCIDENT_CATEGORIES}
+              selectedCategory={selectedCategory}
+              onSelect={handleCategorySelect}
+              error={errors.category}
+            />
+          )}
+
+          {showCategoryPicker && selectedCategory ? (
+            <Animated.View
+              key={selectedCategory}
+              entering={FadeInDown.duration(DURATION.base)}
+              style={{ alignItems: 'center', marginTop: -8, marginBottom: 20 }}
+            >
+              <IncidentIllustration category={selectedCategory} size={130} />
+            </Animated.View>
+          ) : null}
+
+          {showSeverityPicker && (
+            <IncidentSeverityPicker
+              levels={SEVERITY_LEVELS}
+              severity={severity}
+              onSelect={setSeverity}
+            />
+          )}
+
+          <MlFeatureToggles
+            enableClassification={enableMlClassification}
+            onToggleClassification={handleToggleMlClassification}
+            enableRisk={enableMlRisk}
+            onToggleRisk={handleToggleMlRisk} />
+          {(enableMlClassification || enableMlRisk) && (
+            <AiClassificationPreview
+              title={title}
+              description={description}
+              onApply={handleApplyAiTags}
+            />
+          )}
+          <IncidentDateTimePicker
+            incidentDate={incidentDate}
+            formatDate={formatDate}
+            onSetToNow={setDateToNow}
+            onDateChange={setIncidentDate} />
+          <IncidentLocationPicker
+            location={location}
+            locationName={locationName}
+            isLoadingLocation={isLoadingLocation}
+            onGetCurrentLocation={getCurrentLocation}
+            onOpenMap={openMapForSelection}
+            error={errors.location}
+            showMapModal={showMapModal}
+            onCloseMapModal={handleCloseMapModal}
+            onConfirmMapLocation={confirmMapLocation}
+            mapRegion={mapRegion}
+            onMapRegionChange={setMapRegion}
+            selectedMapLocation={selectedMapLocation}
+            onMapPress={handleMapPress}
+            mapRef={mapRef} />
+          <IncidentPhotoUploader
+            photos={photos}
+            video={video}
+            isVideoProcessing={isVideoProcessing}
+            videoProcessingProgress={videoProcessingProgress}
+            onTakePhoto={takePhoto}
+            onPickImage={pickImage}
+            onRemovePhoto={removePhoto}
+            onRecordVideo={recordVideo}
+            onPickVideo={pickVideo}
+            onRemoveVideo={removeVideo} />
+          <ConfirmModal
+            visible={!!pendingDraft}
+            title="Unsaved Draft"
+            message="You have an unsaved draft. Would you like to continue editing it?"
+            actions={[
+              { text: 'Discard', style: 'destructive', onPress: handleDiscardDraft },
+              { text: 'Continue', onPress: confirmDraft },
             ]}
-          />
+            onRequestClose={handleDiscardDraft} />
+          <View
+            style={[
+              styles.privacyNote,
+              { borderColor: theme.border, backgroundColor: theme.surface },
+            ]}
+          >
+            <Ionicons
+              name="lock-closed-outline"
+              size={14}
+              color={theme.textSecondary}
+              style={styles.privacyNoteIcon}
+            />
+            <AppText
+              variant="caption"
+              style={[styles.privacyNoteText, { color: theme.textSecondary }]}
+            >
+              {isAnonymous
+                ? "Reporting anonymously — your name won't be shown publicly. "
+                : "Posting with your account name. "}
+              Your exact location is randomized before it's shared.
+            </AppText>
+          </View>
+
         </View>
+      </ScrollView>
+
+      <View
+        onLayout={(event) => setFooterHeight(event.nativeEvent.layout.height)}
+        style={[
+          styles.stickyFooter,
+          {
+            bottom: tabBarHeight,
+            backgroundColor: theme.card,
+            borderTopColor: theme.border,
+          },
+        ]}
+      >
+        <Button
+          title="Save Draft"
+          onPress={handleSaveDraftPress}
+          loading={isSavingDraft}
+          disabled={isSavingDraft || isVideoProcessing}
+          variant="secondary"
+          style={styles.footerDraftButton} />
+        <Button
+          title="Submit Report"
+          onPress={handleSubmitPress}
+          loading={isSubmitting || isVideoProcessing}
+          disabled={isSubmitting || isVideoProcessing}
+          style={[
+            styles.footerSubmitButton,
+            { backgroundColor: theme.primary },
+            isSubmitting && styles.submitButtonDisabled,
+          ]}
+        />
       </View>
-    </ScrollView>
+    </View>
   );
 
 };

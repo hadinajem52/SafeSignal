@@ -13,6 +13,8 @@ const { cleanupUploadedFiles, incidentUpload } = require('../middleware/incident
 const incidentService = require('../services/incidentService');
 const constellationService = require('../services/constellationService');
 const commentService = require('../services/commentService');
+const corroborationService = require('../services/corroborationService');
+const followService = require('../services/followService');
 const ServiceError = require('../utils/ServiceError');
 const logger = require('../utils/logger');
 const {
@@ -48,6 +50,11 @@ const videoDurationValidation = [
     .optional({ checkFalsy: true })
     .isFloat({ min: 0, max: LIMITS.MAX_VIDEO_MINUTES * 60 * 1000 })
     .withMessage(`Video must be ${LIMITS.MAX_VIDEO_MINUTES} minutes or shorter`),
+];
+
+const classifyPreviewValidation = [
+  body('title').optional({ checkFalsy: true }).isString().isLength({ max: LIMITS.TITLE.MAX }),
+  body('description').optional({ checkFalsy: true }).isString().isLength({ max: LIMITS.DESCRIPTION.MAX }),
 ];
 
 /**
@@ -203,6 +210,30 @@ router.post(
       });
     } catch (error) {
       handleIncidentWriteError(error, req, res, 'Failed to create incident');
+    }
+  }
+);
+
+/**
+ * @route   POST /api/incidents/classify-preview
+ * @desc    Preview AI-predicted category/severity for draft text (stateless, no writes)
+ * @access  Private
+ */
+router.post(
+  '/classify-preview',
+  authenticateToken,
+  classifyPreviewValidation,
+  async (req, res) => {
+    if (rejectValidationErrors(req, res)) return;
+
+    try {
+      const result = await incidentService.previewClassification({
+        title: req.body.title,
+        description: req.body.description,
+      });
+      res.json({ status: 'SUCCESS', data: result });
+    } catch (error) {
+      handleServiceError(error, res, 'Failed to preview classification');
     }
   }
 );
@@ -400,6 +431,7 @@ router.get(
     query('severity').optional().isString().trim().isIn(VALID_SEVERITIES),
     query('timeframe').optional().isString().trim().isIn(['24h', '7d', '30d', '90d']),
     query('sort').optional().isString().trim().isIn(['severity']),
+    query('search').optional().isString().trim().isLength({ max: 100 }),
     query('lat').optional().isFloat({ min: LIMITS.COORDINATES.LAT.MIN, max: LIMITS.COORDINATES.LAT.MAX }),
     query('lng').optional().isFloat({ min: LIMITS.COORDINATES.LNG.MIN, max: LIMITS.COORDINATES.LNG.MAX }),
     query('radius').optional().isFloat({ gt: 0 }),
@@ -420,7 +452,7 @@ router.get(
     if (handleValidationErrors(req, res)) return;
 
     try {
-      const { category, closure_outcome, severity, timeframe, lat, lng, radius, sort, limit = 20, offset = 0 } = req.query;
+      const { category, closure_outcome, severity, timeframe, lat, lng, radius, sort, search, limit = 20, offset = 0 } = req.query;
 
       const result = await incidentService.getPublicFeed({
         category,
@@ -431,6 +463,7 @@ router.get(
         lng,
         radius,
         sort,
+        search,
         limit,
         offset,
       });
@@ -502,6 +535,96 @@ router.get('/:id', optionalAuth, [param('id').isInt()], async (req, res) => {
     });
   } catch (error) {
     handleServiceError(error, res, 'Failed to fetch incident');
+  }
+});
+
+/**
+ * @route   GET /api/incidents/:id/corroboration
+ * @desc    Corroboration count + whether the current user has corroborated
+ * @access  Private
+ */
+router.get('/:id/corroboration', authenticateToken, [param('id').isInt()], async (req, res) => {
+  if (handleValidationErrors(req, res)) return;
+  try {
+    const data = await corroborationService.getCorroborationState(Number(req.params.id), req.user);
+    res.json({ status: 'SUCCESS', data });
+  } catch (error) {
+    handleServiceError(error, res, 'Failed to fetch corroboration');
+  }
+});
+
+/**
+ * @route   POST /api/incidents/:id/corroborate
+ * @desc    Mark "I saw this too" on an incident
+ * @access  Private
+ */
+router.post('/:id/corroborate', authenticateToken, [param('id').isInt()], async (req, res) => {
+  if (handleValidationErrors(req, res)) return;
+  try {
+    const data = await corroborationService.addCorroboration(Number(req.params.id), req.user);
+    res.json({ status: 'SUCCESS', data });
+  } catch (error) {
+    handleServiceError(error, res, 'Failed to corroborate incident');
+  }
+});
+
+/**
+ * @route   DELETE /api/incidents/:id/corroborate
+ * @desc    Remove a previous corroboration
+ * @access  Private
+ */
+router.delete('/:id/corroborate', authenticateToken, [param('id').isInt()], async (req, res) => {
+  if (handleValidationErrors(req, res)) return;
+  try {
+    const data = await corroborationService.removeCorroboration(Number(req.params.id), req.user);
+    res.json({ status: 'SUCCESS', data });
+  } catch (error) {
+    handleServiceError(error, res, 'Failed to remove corroboration');
+  }
+});
+
+/**
+ * @route   GET /api/incidents/:id/follow
+ * @desc    Whether the current user follows this incident
+ * @access  Private
+ */
+router.get('/:id/follow', authenticateToken, [param('id').isInt()], async (req, res) => {
+  if (handleValidationErrors(req, res)) return;
+  try {
+    const data = await followService.getFollowState(Number(req.params.id), req.user);
+    res.json({ status: 'SUCCESS', data });
+  } catch (error) {
+    handleServiceError(error, res, 'Failed to fetch follow state');
+  }
+});
+
+/**
+ * @route   POST /api/incidents/:id/follow
+ * @desc    Follow an incident
+ * @access  Private
+ */
+router.post('/:id/follow', authenticateToken, [param('id').isInt()], async (req, res) => {
+  if (handleValidationErrors(req, res)) return;
+  try {
+    const data = await followService.followIncident(Number(req.params.id), req.user);
+    res.json({ status: 'SUCCESS', data });
+  } catch (error) {
+    handleServiceError(error, res, 'Failed to follow incident');
+  }
+});
+
+/**
+ * @route   DELETE /api/incidents/:id/follow
+ * @desc    Unfollow an incident
+ * @access  Private
+ */
+router.delete('/:id/follow', authenticateToken, [param('id').isInt()], async (req, res) => {
+  if (handleValidationErrors(req, res)) return;
+  try {
+    const data = await followService.unfollowIncident(Number(req.params.id), req.user);
+    res.json({ status: 'SUCCESS', data });
+  } catch (error) {
+    handleServiceError(error, res, 'Failed to unfollow incident');
   }
 });
 

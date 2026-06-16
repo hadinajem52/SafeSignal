@@ -22,6 +22,7 @@ import DangerZone from './DangerZone';
 import EditNameModal from './EditNameModal';
 import PreferencesSection from './PreferencesSection';
 import ProfileHeader from './ProfileHeader';
+import SavedAreasSection from './SavedAreasSection';
 import SupportSection from './SupportSection';
 import styles from './accountStyles';
 import ThemeSection from './ThemeSection';
@@ -355,6 +356,8 @@ const AccountScreen = () => {
         isSendingFcmTest={isSendingFcmTest}
         feedbackMessage={inlinePreferenceFeedback} />
 
+
+      <SavedAreasSection />
 
       <AccessStatusSection accessStatus={accessStatus} onOpenSettings={() => Linking.openSettings?.()} />
 

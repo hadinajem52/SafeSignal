@@ -230,6 +230,53 @@ async function notifyReporterIncidentEvent(eventType, incident, metadata = {}) {
   return { sent: true, skipped: false };
 }
 
+const FOLLOWER_STATUS_NOTIFICATIONS = new Set([
+  'verified', 'dispatched', 'on_scene', 'investigating', 'police_closed', 'resolved', 'rejected', 'needs_info',
+]);
+
+async function notifyFollowersIncidentEvent(eventType, incident, metadata = {}) {
+  if (eventType !== 'incident:status_update' || !incident?.incident_id) {
+    return { notified: 0 };
+  }
+
+  const nextStatus = metadata.nextStatus || incident.status;
+  if (!FOLLOWER_STATUS_NOTIFICATIONS.has(nextStatus) || metadata.previousStatus === nextStatus) {
+    return { notified: 0 };
+  }
+
+  const followers = await db.manyOrNone(
+    'SELECT user_id FROM incident_follows WHERE incident_id = $1',
+    [incident.incident_id]
+  );
+  if (followers.length === 0) {
+    return { notified: 0 };
+  }
+
+  const actorId = metadata.actorUserId != null ? Number(metadata.actorUserId) : null;
+  const reporterId = incident.reporter_id != null ? Number(incident.reporter_id) : null;
+  const incidentRef = `#${incident.incident_id}`;
+  const statusLabel = formatStatusLabel(nextStatus);
+
+  const targets = followers
+    .map((row) => Number(row.user_id))
+    .filter((uid) => uid !== actorId && uid !== reporterId);
+
+  await Promise.all(
+    targets.map((uid) =>
+      dispatchToUser(uid, 'notification:report_update', {
+        incidentId: incident.incident_id,
+        title: incident.title,
+        status: nextStatus,
+        notificationTitle: `Update on ${incident.title || `report ${incidentRef}`}`,
+        message: `A report you're following is now ${statusLabel}.`,
+        timestamp: new Date().toISOString(),
+      })
+    )
+  );
+
+  return { notified: targets.length };
+}
+
 async function notifyStaffIncidentEvent(eventType, incident, metadata = {}) {
   if (!incident || !incident.incident_id) {
     return { notifiedUsers: 0, emailQueued: 0, reportAlertsSent: 0 };
@@ -482,6 +529,7 @@ function startWeeklyDigestScheduler() {
 
 module.exports = {
   notifyReporterIncidentEvent,
+  notifyFollowersIncidentEvent,
   notifyStaffIncidentEvent,
   sendWeeklyDigestForUser,
   startWeeklyDigestScheduler,

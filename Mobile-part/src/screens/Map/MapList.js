@@ -14,9 +14,6 @@ import { formatTimeAgo } from '../../utils/dateUtils';
 import { getCategoryLabel, getMarkerColor } from '../../utils/mapCategory';
 import mapStyles from './mapStyles';
 
-// Resolved-incident list view for the Map screen. Used only in resolved mode:
-// active map incidents are intentionally privacy-stripped by the backend (no
-// title/severity/locationName/outcome), so there is nothing meaningful to list.
 const IncidentListRow = ({ incident, categoryDisplay, onPress, theme }) => {
   const markerColor = getMarkerColor(incident.category, categoryDisplay, theme.mapMarkerDefault);
   const categoryLabel = getCategoryLabel(incident.category, categoryDisplay);

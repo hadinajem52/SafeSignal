@@ -8,15 +8,12 @@ import haptics from '../utils/haptics';
 const ACTION_WIDTH = 88;
 const OPEN_THRESHOLD = 44;
 
-// Swipe-left to reveal a Delete action, built on core PanResponder so it needs no
-// native gesture dependency. The action is revealed on release and deleting is a
-// second explicit tap, so a stray swipe can't destroy data.
-export default function SwipeableRow({
+export default function SwipeToDeleteRow({
   children,
   onDelete,
   deleteLabel = 'Delete',
   enabled = true,
-  rowGap = 0,
+  spacing = 0,
   resetKey,
 }) {
   const { theme } = useTheme();
@@ -35,7 +32,6 @@ export default function SwipeableRow({
 
   const panResponder = useRef(
     PanResponder.create({
-      // Only claim clearly-horizontal drags so vertical list scrolling still works.
       onMoveShouldSetPanResponder: (_evt, gesture) =>
         Math.abs(gesture.dx) > 12 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.5,
       onPanResponderMove: (_evt, gesture) => {
@@ -55,14 +51,13 @@ export default function SwipeableRow({
     })
   ).current;
 
-  // Reset position when this row is recycled onto a different item (FlashList reuse).
   useEffect(() => {
     translateX.setValue(0);
     openRef.current = false;
   }, [resetKey, translateX]);
 
   if (!enabled) {
-    return children;
+    return <View style={{ marginBottom: spacing }}>{children}</View>;
   }
 
   const handleDeletePress = () => {
@@ -71,8 +66,8 @@ export default function SwipeableRow({
   };
 
   return (
-    <View style={styles.wrap}>
-      <View style={[styles.actionLayer, { bottom: rowGap }]}>
+    <View style={[styles.wrap, { marginBottom: spacing }]}>
+      <View style={styles.actionLayer}>
         <TouchableOpacity
           style={[styles.action, { backgroundColor: theme.error }]}
           onPress={handleDeletePress}
@@ -96,10 +91,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   actionLayer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'flex-end',
     justifyContent: 'center',
   },

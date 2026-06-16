@@ -12,6 +12,10 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   shareButton: {
     paddingHorizontal: 8,
     paddingVertical: 4,

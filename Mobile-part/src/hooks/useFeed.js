@@ -12,6 +12,7 @@ export default function useFeed(filters = {}) {
     lng,
     radius,
     sort,
+    search,
   } = filters;
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,6 +50,7 @@ export default function useFeed(filters = {}) {
           lng,
           radius,
           sort,
+          search,
           limit: PAGE_SIZE,
           offset,
         });
@@ -74,7 +76,7 @@ export default function useFeed(filters = {}) {
         }
       }
     },
-    [category, closure_outcome, severity, lat, lng, radius, sort],
+    [category, closure_outcome, severity, lat, lng, radius, sort, search],
   );
 
   useEffect(() => {
@@ -88,9 +90,9 @@ export default function useFeed(filters = {}) {
   const refresh = useCallback(() => fetchPage(0, true), [fetchPage]);
 
   const loadMore = useCallback(() => {
-    if (loading || refreshing || loadingMore || incidents.length >= total) return;
+    if (loading || filtering || refreshing || loadingMore || incidents.length >= total) return;
     fetchPage(incidents.length);
-  }, [fetchPage, incidents.length, loading, loadingMore, refreshing, total]);
+  }, [fetchPage, incidents.length, loading, filtering, loadingMore, refreshing, total]);
 
   return { incidents, loading, filtering, refreshing, loadingMore, error, total, refresh, loadMore };
 }

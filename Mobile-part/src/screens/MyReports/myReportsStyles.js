@@ -84,15 +84,27 @@ const myReportsStyles = StyleSheet.create({
     textTransform: 'capitalize',
   },
 
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    marginHorizontal: 14,
+    marginTop: 12,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 8,
+    fontSize: 14,
+  },
   listContainer: {
     paddingHorizontal: 14,
     paddingTop: 14,
     paddingBottom: 24,
   },
 
-  incidentCard: {
-    marginBottom: 12,
-  },
   incidentCardInner: {
     borderWidth: 1.5,
   },

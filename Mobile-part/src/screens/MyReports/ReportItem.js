@@ -99,7 +99,7 @@ const ReportItem = ({ item, onPress, onLongPress }) => {
   null;
 
   return (
-    <PressableScale onPress={() => onPress(item)} onLongPress={() => onLongPress && onLongPress(item)} style={styles.incidentCard}>
+    <PressableScale onPress={() => onPress(item)} onLongPress={() => onLongPress && onLongPress(item)}>
         <Card
         style={[
         styles.incidentCardInner,

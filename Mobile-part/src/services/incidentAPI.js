@@ -119,7 +119,13 @@ export const incidentAPI = {
       });
       const message = error.response?.data?.message || 'Failed to submit incident';
       const errors = error.response?.data?.errors;
-      return { success: false, error: message, validationErrors: errors };
+      return {
+        success: false,
+        error: message,
+        validationErrors: errors,
+        networkError: !error.response,
+        status: error.response?.status,
+      };
     }
   },
 
@@ -303,6 +309,73 @@ export const incidentAPI = {
     } catch (error) {
       const message = error.response?.data?.message || 'Failed to fetch map incidents';
       return { success: false, error: message };
+    }
+  },
+
+  async previewClassification({ title, description }) {
+    try {
+      const response = await api.post('/incidents/classify-preview', { title, description });
+      if (response.data.status === 'SUCCESS') {
+        return { success: true, ...response.data.data };
+      }
+      return { success: false, error: response.data.message };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to preview AI tags',
+      };
+    }
+  },
+
+  async getCorroboration(incidentId) {
+    try {
+      const response = await api.get(`/incidents/${incidentId}/corroboration`);
+      if (response.data.status === 'SUCCESS') {
+        return { success: true, ...response.data.data };
+      }
+      return { success: false, error: response.data.message };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Failed to load corroboration' };
+    }
+  },
+
+  async setCorroboration(incidentId, corroborate) {
+    try {
+      const response = corroborate
+        ? await api.post(`/incidents/${incidentId}/corroborate`)
+        : await api.delete(`/incidents/${incidentId}/corroborate`);
+      if (response.data.status === 'SUCCESS') {
+        return { success: true, ...response.data.data };
+      }
+      return { success: false, error: response.data.message };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Failed to update corroboration' };
+    }
+  },
+
+  async getFollowState(incidentId) {
+    try {
+      const response = await api.get(`/incidents/${incidentId}/follow`);
+      if (response.data.status === 'SUCCESS') {
+        return { success: true, ...response.data.data };
+      }
+      return { success: false, error: response.data.message };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Failed to load follow state' };
+    }
+  },
+
+  async setFollow(incidentId, follow) {
+    try {
+      const response = follow
+        ? await api.post(`/incidents/${incidentId}/follow`)
+        : await api.delete(`/incidents/${incidentId}/follow`);
+      if (response.data.status === 'SUCCESS') {
+        return { success: true, ...response.data.data };
+      }
+      return { success: false, error: response.data.message };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Failed to update follow' };
     }
   },
 };

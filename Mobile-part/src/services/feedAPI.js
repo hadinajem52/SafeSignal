@@ -13,6 +13,7 @@ export const feedAPI = {
         lng,
         radius,
         sort,
+        search,
         limit = 20,
         offset = 0,
       } = params;
@@ -23,6 +24,7 @@ export const feedAPI = {
       if (closure_outcome) query.append('closure_outcome', closure_outcome);
       if (severity) query.append('severity', severity);
       if (timeframe) query.append('timeframe', timeframe);
+      if (search) query.append('search', search);
       if (lat !== undefined && lat !== null) query.append('lat', String(lat));
       if (lng !== undefined && lng !== null) query.append('lng', String(lng));
       if (radius !== undefined && radius !== null) query.append('radius', String(radius));

@@ -17,6 +17,8 @@ import {
   IncidentIllustration,
   IncidentLocationMap,
   IncidentStatusTracker,
+  IncidentCorroboration,
+  IncidentFollowButton,
   FadeInImage } from
 '../components';
 import { normalizeClosureDetails } from '../utils/incidentUtils';
@@ -193,15 +195,20 @@ const IncidentDetailScreen = ({ route, navigation }) => {
           <AppText variant="body" style={{ color: theme.text }}>Back</AppText>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.shareButton}
-          onPress={handleShare}
-          accessibilityRole="button"
-          accessibilityLabel="Share this incident"
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <View style={styles.headerActions}>
+          {showTimeline ? (
+            <IncidentFollowButton incidentId={getIncidentId(detailIncident)} />
+          ) : null}
+          <TouchableOpacity
+            style={styles.shareButton}
+            onPress={handleShare}
+            accessibilityRole="button"
+            accessibilityLabel="Share this incident"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
 
-          <Ionicons name="share-outline" size={22} color={theme.text} />
-        </TouchableOpacity>
+            <Ionicons name="share-outline" size={22} color={theme.text} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -251,6 +258,9 @@ const IncidentDetailScreen = ({ route, navigation }) => {
 
             {loadingDetail ? <ActivityIndicator color={theme.primary} style={{ marginTop: 12 }} /> : null}
           </LinearGradient>
+          {source === 'community_feed' ? (
+            <IncidentCorroboration incidentId={getIncidentId(detailIncident)} />
+          ) : null}
           {showTimeline ? (
             <>
               <Divider />

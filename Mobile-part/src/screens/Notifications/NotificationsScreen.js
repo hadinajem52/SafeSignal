@@ -3,7 +3,7 @@ import { ActivityIndicator, FlatList, RefreshControl, TouchableOpacity, View } f
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { AppText, EmptyState, EMPTY_ART, PressableScale, SwipeableRow } from '../../components';
+import { AppText, EmptyState, EMPTY_ART, PressableScale, SwipeToDeleteRow } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import useNotifications from '../../hooks/useNotifications';
 import haptics from '../../utils/haptics';
@@ -47,7 +47,7 @@ const FilterChip = ({ label, active, onPress, theme }) => (
   </PressableScale>
 );
 
-const NotificationItem = React.memo(({ item, index, theme, onPress, onRemove }) => {
+const NotificationItem = React.memo(({ item, index, theme, onPress }) => {
   const { icon, tint } = getVisual(item.eventName, theme);
   return (
     <Animated.View entering={FadeInDown.duration(DURATION.base).delay(stagger(index))}>
@@ -70,16 +70,6 @@ const NotificationItem = React.memo(({ item, index, theme, onPress, onRemove }) 
               {item.title}
             </AppText>
             {!item.read ? <View style={[styles.unreadDot, { backgroundColor: theme.primary }]} /> : null}
-            <TouchableOpacity
-              style={styles.removeButton}
-              onPress={(event) => {
-                event.stopPropagation?.();
-                onRemove(item.id);
-              }}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Ionicons name="close" size={16} color={theme.textSecondary} />
-            </TouchableOpacity>
           </View>
           {item.body ? (
             <AppText variant="bodySmall" style={[styles.cardMessage, { color: theme.textSecondary }]}>
@@ -152,15 +142,14 @@ const NotificationsScreen = ({ navigation }) => {
 
   const renderItem = useCallback(
     ({ item, index }) => (
-      <SwipeableRow rowGap={10} resetKey={item.id} onDelete={() => handleRemove(item.id)}>
+      <SwipeToDeleteRow spacing={10} resetKey={item.id} onDelete={() => handleRemove(item.id)}>
         <NotificationItem
           item={item}
           index={index}
           theme={theme}
           onPress={handlePress}
-          onRemove={handleRemove}
         />
-      </SwipeableRow>
+      </SwipeToDeleteRow>
     ),
     [theme, handlePress, handleRemove],
   );

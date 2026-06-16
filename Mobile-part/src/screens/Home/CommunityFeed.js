@@ -1,11 +1,14 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
   StyleSheet,
+  TextInput,
+  TouchableOpacity,
   View } from
 'react-native';
 import { FlashList } from '@shopify/flash-list';
+import { Ionicons } from '@expo/vector-icons';
 import { AppText, EmptyState, EMPTY_ART, PressableScale } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import useFeed from '../../hooks/useFeed';
@@ -40,6 +43,40 @@ const FilterChip = ({ item, active, onPress, theme }) =>
   </PressableScale>;
 
 
+const FeedSearchBar = React.memo(({ onChange, theme }) => {
+  const [value, setValue] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => onChange(value.trim()), 350);
+    return () => clearTimeout(timer);
+  }, [value, onChange]);
+
+  return (
+    <View style={[styles.searchBar, { backgroundColor: theme.card, borderColor: theme.border }]}>
+      <Ionicons name="search-outline" size={16} color={theme.textTertiary} />
+      <TextInput
+        value={value}
+        onChangeText={setValue}
+        placeholder="Search resolved reports"
+        placeholderTextColor={theme.inputPlaceholder}
+        style={[styles.searchInput, { color: theme.text }]}
+        returnKeyType="search"
+        autoCorrect={false}
+      />
+      {value ? (
+        <TouchableOpacity
+          onPress={() => setValue('')}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Clear search"
+        >
+          <Ionicons name="close-circle" size={16} color={theme.textTertiary} />
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  );
+});
+
 const CommunityFeed = ({
   navigation,
   ListHeaderComponent = null,
@@ -49,8 +86,13 @@ const CommunityFeed = ({
 }) => {
   const { theme } = useTheme();
   const [activeFilter, setActiveFilter] = useState(null);
+  const [search, setSearch] = useState('');
 
-  const filters = activeFilter ? { closure_outcome: activeFilter } : {};
+  const handleSearchChange = useCallback((next) => setSearch(next), []);
+
+  const filters = {};
+  if (activeFilter) filters.closure_outcome = activeFilter;
+  if (search) filters.search = search;
   const {
     incidents,
     loading,
@@ -94,6 +136,8 @@ const CommunityFeed = ({
         </AppText>
       </View>
 
+      <FeedSearchBar onChange={handleSearchChange} theme={theme} />
+
       <FlatList
       horizontal
       data={FILTERS}
@@ -117,7 +161,7 @@ const CommunityFeed = ({
         </View> :
     null}
     </>,
-  [ListHeaderComponent, theme, activeFilter, filtering]);
+  [ListHeaderComponent, theme, activeFilter, filtering, handleSearchChange]);
 
   const renderFooter = () => {
     if (!loadingMore) {
@@ -149,11 +193,12 @@ const CommunityFeed = ({
 
     }
 
+    const hasQuery = Boolean(activeFilter || search);
     return (
       <EmptyState
-        illustration={activeFilter ? EMPTY_ART.search : EMPTY_ART.feed}
-        title={activeFilter ? 'Nothing matches' : 'No community reports yet'}
-        message={activeFilter ? 'Try a different filter.' : 'Check back later.'}
+        illustration={hasQuery ? EMPTY_ART.search : EMPTY_ART.feed}
+        title={hasQuery ? 'Nothing matches' : 'No community reports yet'}
+        message={hasQuery ? 'Try a different search or filter.' : 'Check back later.'}
         size={160} />);
 
 
@@ -189,6 +234,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    marginBottom: 12
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 8,
+    fontSize: 14
   },
   chipList: {
     marginBottom: 12

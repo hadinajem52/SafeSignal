@@ -8,6 +8,7 @@ import useNotificationForegroundHandler from '../hooks/useNotificationForeground
 import useRealtimeNotifications from '../hooks/useRealtimeNotifications';
 import useWitnessPromptNotifications from '../hooks/useWitnessPromptNotifications';
 import useFirstLaunchLocationPrompt from '../hooks/useFirstLaunchLocationPrompt';
+import useOfflineReportSync from '../hooks/useOfflineReportSync';
 
 import LoginScreen from '../screens/Auth/LoginScreen';
 import RegisterScreen from '../screens/Auth/RegisterScreen';
@@ -74,6 +75,7 @@ const AppNavigator = () => {
   useRealtimeNotifications();
   useWitnessPromptNotifications({ navigationRef, isNavigationReady });
   useFirstLaunchLocationPrompt();
+  useOfflineReportSync();
 
   const navigationTheme = {
     ...(isDark ? DarkTheme : DefaultTheme),

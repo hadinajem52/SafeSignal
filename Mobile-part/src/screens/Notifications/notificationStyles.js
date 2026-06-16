@@ -54,7 +54,6 @@ const notificationStyles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     padding: 14,
-    marginBottom: 10,
   },
   iconWrap: {
     width: 42,
@@ -86,11 +85,6 @@ const notificationStyles = StyleSheet.create({
   },
   cardTime: {
     marginTop: 8,
-  },
-  removeButton: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    marginLeft: 6,
   },
   loadingContainer: {
     flex: 1,

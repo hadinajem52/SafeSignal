@@ -1772,6 +1772,30 @@ async function getIncidentForRequest(incidentId, user) {
   return getPublicIncidentById(incidentId);
 }
 
+const PUBLIC_INTERACTABLE_STATUSES = ['police_closed', 'resolved', 'published'];
+
+async function assertIncidentInteractable(incidentId, user) {
+  const row = await db.oneOrNone(
+    'SELECT reporter_id, is_draft, is_disclosed, status FROM incidents WHERE incident_id = $1',
+    [incidentId]
+  );
+  if (!row) {
+    throw ServiceError.notFound('Incident');
+  }
+  if (row.is_draft) {
+    throw ServiceError.forbidden('This incident is not available for that action');
+  }
+
+  const isStaff = Boolean(user && STAFF_ROLES.has(user.role));
+  const isOwner = Boolean(user && Number(user.userId) === Number(row.reporter_id));
+  const isPublic = row.is_disclosed === true && PUBLIC_INTERACTABLE_STATUSES.includes(row.status);
+
+  if (!isPublic && !isOwner && !isStaff) {
+    throw ServiceError.forbidden('This incident is not available for that action');
+  }
+  return row;
+}
+
 function formatLinkedDuplicateIncident(row) {
   return {
     incidentId: row.incident_id,
@@ -2506,6 +2530,12 @@ async function notifyReporterStatusUpdate(incident, metadata, context) {
   } catch (error) {
     logger.warn(`Failed to notify reporter for ${context} on incident ${incident.incident_id}: ${error.message}`);
   }
+
+  try {
+    await notificationService.notifyFollowersIncidentEvent('incident:status_update', incident, metadata);
+  } catch (error) {
+    logger.warn(`Failed to notify followers for ${context} on incident ${incident.incident_id}: ${error.message}`);
+  }
 }
 
 function validateLEIStatusTransition(currentStatus, nextStatus) {
@@ -2937,7 +2967,7 @@ async function escalateIncident(incidentId, requestingUser, reason) {
 // returns the full history (the community feed relies on that).
 const FEED_TIMEFRAME_DAYS = { '24h': 1, '7d': 7, '30d': 30, '90d': 90 };
 
-async function getPublicFeed({ category, closure_outcome, severity, timeframe, lat, lng, radius, sort, limit = 20, offset = 0 } = {}) {
+async function getPublicFeed({ category, closure_outcome, severity, timeframe, lat, lng, radius, sort, search, limit = 20, offset = 0 } = {}) {
   const parsedLimit = Number.parseInt(limit, 10);
   const parsedOffset = Number.parseInt(offset, 10);
   const safeLimit = Number.isInteger(parsedLimit) ? parsedLimit : 20;
@@ -2955,6 +2985,14 @@ async function getPublicFeed({ category, closure_outcome, severity, timeframe, l
   if (category)        { conditions.push(`i.category = $${p++}`);         params.push(category); }
   if (closure_outcome) { conditions.push(`i.closure_outcome = $${p++}`);  params.push(closure_outcome); }
   if (severity)        { conditions.push(`i.severity = $${p++}`);         params.push(severity); }
+
+  const searchTerm = typeof search === 'string' ? search.trim() : '';
+  if (searchTerm) {
+    const escaped = searchTerm.replace(/[\\%_]/g, (ch) => `\\${ch}`);
+    conditions.push(`(i.title ILIKE $${p} OR i.description ILIKE $${p} OR i.location_name ILIKE $${p})`);
+    params.push(`%${escaped}%`);
+    p += 1;
+  }
 
   // Optional recency window — filters on when the report was closed/resolved.
   // closed_at is only set for police_closed/resolved/archived; 'published' rows
@@ -3009,6 +3047,31 @@ async function getPublicFeed({ category, closure_outcome, severity, timeframe, l
   return { incidents: rows, total: parseInt(countResult.total, 10) };
 }
 
+async function previewClassification({ title, description }) {
+  const text = `${title || ''} ${description || ''}`.trim();
+  if (text.length < 6) {
+    return { available: false, reason: 'insufficient_text' };
+  }
+
+  const mlResults = await mlClient.analyzeIncident({ text });
+  if (!mlResults) {
+    return { available: false, reason: 'ml_unavailable' };
+  }
+
+  const predicted = mlResults.classification?.predictedCategory;
+  const category = predicted && VALID_CATEGORIES.includes(predicted) ? predicted : null;
+  const riskScore = mlResults.risk?.riskScore;
+  const severity =
+    riskScore === null || riskScore === undefined ? null : mapRiskToSeverity(riskScore);
+
+  return {
+    available: category !== null || severity !== null,
+    category,
+    severity,
+    confidence: mlResults.classification?.confidence ?? null,
+  };
+}
+
 module.exports = {
   // Constants
   VALID_CATEGORIES,
@@ -3023,6 +3086,7 @@ module.exports = {
   getPublicIncidentById,
   getStaffIncidentById,
   getIncidentForRequest,
+  assertIncidentInteractable,
   getIncidentDedupCandidates,
   getIncidentMlSummary,
   retryIncidentMediaJudgment,
@@ -3041,4 +3105,5 @@ module.exports = {
   updateLEIStatus,
   updateLEIDisclosureSettings,
   getPublicFeed,
+  previewClassification,
 };

@@ -1,9 +1,10 @@
-import React, { useCallback, useState } from 'react';
-import { View } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { TextInput, TouchableOpacity, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { LinearGradient } from 'expo-linear-gradient';
-import { AppText, ConfirmModal, Skeleton, SwipeableRow } from '../../components';
+import { Ionicons } from '@expo/vector-icons';
+import { AppText, ConfirmModal, EmptyState, EMPTY_ART, Skeleton, SwipeToDeleteRow } from '../../components';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import useMyReports from '../../hooks/useMyReports';
@@ -29,6 +30,16 @@ const MyReportsScreen = ({ navigation }) => {
 
   const [draftModalIncident, setDraftModalIncident] = useState(null);
   const [deleteModalIncident, setDeleteModalIncident] = useState(null);
+  const [search, setSearch] = useState('');
+
+  const filteredIncidents = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return incidents;
+    return incidents.filter((item) =>
+      [item.title, item.description, item.locationName || item.location_name]
+        .some((field) => (field || '').toLowerCase().includes(query))
+    );
+  }, [incidents, search]);
 
   const handleIncidentPress = useCallback((incident) => {
     if (incident.isDraft) {
@@ -46,9 +57,9 @@ const MyReportsScreen = ({ navigation }) => {
   }, []);
 
   const renderItem = useCallback(({ item }) =>
-  <SwipeableRow
+  <SwipeToDeleteRow
     enabled={!!item.isDraft}
-    rowGap={12}
+    spacing={12}
     resetKey={item.id}
     onDelete={() => setDeleteModalIncident(item)}>
 
@@ -57,7 +68,7 @@ const MyReportsScreen = ({ navigation }) => {
       onPress={handleIncidentPress}
       onLongPress={handleIncidentLongPress} />
 
-    </SwipeableRow>,
+    </SwipeToDeleteRow>,
 
   [handleIncidentPress, handleIncidentLongPress]);
 
@@ -97,8 +108,29 @@ const MyReportsScreen = ({ navigation }) => {
 
       <StatusFilterBar selectedFilter={selectedFilter} onSelectFilter={setSelectedFilter} />
 
+      <View style={[myReportsStyles.searchBar, { backgroundColor: theme.card, borderColor: theme.border }]}>
+        <Ionicons name="search-outline" size={16} color={theme.textTertiary} />
+        <TextInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search your reports"
+          placeholderTextColor={theme.inputPlaceholder}
+          style={[myReportsStyles.searchInput, { color: theme.text }]}
+          returnKeyType="search"
+          autoCorrect={false} />
+        {search ? (
+          <TouchableOpacity
+            onPress={() => setSearch('')}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Clear search">
+            <Ionicons name="close-circle" size={16} color={theme.textTertiary} />
+          </TouchableOpacity>
+        ) : null}
+      </View>
+
       <FlashList
-        data={incidents}
+        data={filteredIncidents}
         renderItem={renderItem}
         keyExtractor={(item, index) =>
         item.id ? item.id.toString() : `${item.createdAt || 'report'}-${item.status || 'status'}-${index}`
@@ -108,6 +140,13 @@ const MyReportsScreen = ({ navigation }) => {
         onRefresh={handleRefresh}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
+        search.trim() ?
+        <EmptyState
+          illustration={EMPTY_ART.search}
+          title="Nothing matches"
+          message="Try a different search."
+          size={150} /> :
+
         <EmptyReportsState
           selectedFilter={selectedFilter}
           onReportPress={() => navigation.navigate('ReportIncident')} />

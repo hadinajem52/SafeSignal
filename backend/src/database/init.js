@@ -369,6 +369,42 @@ const initDatabase = async () => {
       );
     `);
 
+    // Lightweight public "I saw this too" marks (distinct from the constellation
+    // witness table incident_corroborations, which is keyed on constellation_id).
+    await db.none(`
+      CREATE TABLE IF NOT EXISTS incident_seen_marks (
+        seen_mark_id SERIAL PRIMARY KEY,
+        incident_id INTEGER NOT NULL REFERENCES incidents(incident_id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (incident_id, user_id)
+      );
+    `);
+
+    // Follow an incident to receive status-change notifications
+    await db.none(`
+      CREATE TABLE IF NOT EXISTS incident_follows (
+        follow_id SERIAL PRIMARY KEY,
+        incident_id INTEGER NOT NULL REFERENCES incidents(incident_id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (incident_id, user_id)
+      );
+    `);
+
+    // Saved/watched areas for per-area activity scores
+    await db.none(`
+      CREATE TABLE IF NOT EXISTS saved_areas (
+        area_id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+        label VARCHAR(100) NOT NULL,
+        latitude DECIMAL(10, 8) NOT NULL,
+        longitude DECIMAL(11, 8) NOT NULL,
+        radius_km DECIMAL(5, 2) NOT NULL DEFAULT 1,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     // Create indexes for performance
     await db.none(`
       CREATE INDEX IF NOT EXISTS idx_incidents_location ON incidents (latitude, longitude);
@@ -400,6 +436,10 @@ const initDatabase = async () => {
       CREATE INDEX IF NOT EXISTS idx_moderator_settings_user_id ON moderator_settings (user_id);
       CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications (user_id, created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications (user_id) WHERE is_read = FALSE;
+      CREATE INDEX IF NOT EXISTS idx_incident_seen_marks_incident ON incident_seen_marks (incident_id);
+      CREATE INDEX IF NOT EXISTS idx_incident_follows_incident ON incident_follows (incident_id);
+      CREATE INDEX IF NOT EXISTS idx_incident_follows_user ON incident_follows (user_id);
+      CREATE INDEX IF NOT EXISTS idx_saved_areas_user ON saved_areas (user_id, created_at DESC);
     `);
 
     await db.none(`

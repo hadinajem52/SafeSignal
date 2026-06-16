@@ -80,14 +80,25 @@ const styles = StyleSheet.create({
   submitSuccessText: {
     flex: 1,
   },
-  actionButtonsContainer: {
-    marginTop: 20,
+  screen: {
+    flex: 1,
+  },
+  stickyFooter: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    flexDirection: "row",
     gap: 12,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
-  draftButton: {
-    marginBottom: 10,
+  footerDraftButton: {
+    flex: 1,
   },
-  submitButton: {
+  footerSubmitButton: {
+    flex: 1.4,
     borderWidth: 0,
   },
   submitButtonDisabled: {
