@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { View, ScrollView } from "react-native";
+import { View, ScrollView, TouchableOpacity } from "react-native";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { incidentAPI } from "../services/api";
@@ -15,6 +15,7 @@ import incidentConstants from "../../../constants/incident";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { AppText, Button, ConfirmModal, IncidentIllustration } from "../components";
 import haptics from "../utils/haptics";
+import { callEmergency, EMERGENCY_NUMBER } from "../utils/emergency";
 import { DURATION } from "../theme/motion";
 import {
   IncidentCategoryPicker,
@@ -453,6 +454,10 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     handleSubmit(false);
   }, [handleSubmit]);
 
+  const handleEmergencyCall = useCallback(() => {
+    callEmergency({ onError: (message) => showToast(message, "error") });
+  }, [showToast]);
+
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: theme.background }]}
@@ -477,7 +482,11 @@ const ReportIncidentScreen = ({ navigation, route }) => {
           </View>
         )}
       </View>
-      <View
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel={`Call emergency services (${EMERGENCY_NUMBER})`}
+        activeOpacity={0.85}
+        onPress={handleEmergencyCall}
         style={[
           styles.noticeContainer,
           {
@@ -496,10 +505,15 @@ const ReportIncidentScreen = ({ navigation, route }) => {
           variant="body"
           style={[styles.noticeText, { color: theme.warningNoticeText }]}
         >
-          If you are in immediate danger, call emergency services (911)
-          immediately.
+          In immediate danger? Tap to call emergency services ({EMERGENCY_NUMBER}).
         </AppText>
-      </View>
+        <View style={[styles.noticeCallPill, { backgroundColor: theme.error }]}>
+          <Ionicons name="call" size={14} color="#FFFFFF" />
+          <AppText variant="buttonSmall" style={styles.noticeCallPillText}>
+            Call
+          </AppText>
+        </View>
+      </TouchableOpacity>
       <View style={styles.formContainer}>
         {!!submitSuccessMessage && (
           <View
@@ -603,6 +617,29 @@ const ReportIncidentScreen = ({ navigation, route }) => {
             { text: 'Continue', onPress: confirmDraft },
           ]}
           onRequestClose={handleDiscardDraft} />
+        <View
+          style={[
+            styles.privacyNote,
+            { borderColor: theme.border, backgroundColor: theme.surface },
+          ]}
+        >
+          <Ionicons
+            name="lock-closed-outline"
+            size={14}
+            color={theme.textSecondary}
+            style={styles.privacyNoteIcon}
+          />
+          <AppText
+            variant="caption"
+            style={[styles.privacyNoteText, { color: theme.textSecondary }]}
+          >
+            {isAnonymous
+              ? "Reporting anonymously — your name won't be shown publicly. "
+              : "Posting with your account name. "}
+            Your exact location is randomized before it's shared.
+          </AppText>
+        </View>
+
         <View style={styles.actionButtonsContainer}>
           <Button
             title="Save Draft"

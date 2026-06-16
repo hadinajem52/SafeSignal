@@ -35,6 +35,35 @@ const styles = StyleSheet.create({
   noticeText: {
     flex: 1,
   },
+  noticeCallPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    marginLeft: 10,
+  },
+  noticeCallPillText: {
+    color: "#FFFFFF",
+  },
+  privacyNote: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginTop: 4,
+  },
+  privacyNoteIcon: {
+    marginTop: 1,
+  },
+  privacyNoteText: {
+    flex: 1,
+    lineHeight: 17,
+  },
   formContainer: {
     padding: 20,
   },

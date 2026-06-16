@@ -5,9 +5,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   backHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 8,
     paddingVertical: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  shareButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   backButton: {
     flexDirection: 'row',

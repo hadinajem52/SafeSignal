@@ -57,7 +57,7 @@ const getNotificationAccessStatus = (notificationPermission, pushNotificationsEn
 const AccountScreen = () => {
   const navigation = useNavigation();
   const { logout, user } = useAuth();
-  const { theme, isDark, setThemeMode } = useTheme();
+  const { theme, isDark, mode, setThemeMode } = useTheme();
   const { showToast } = useToast();
   const { preferences, updatePreference } = useUserPreferences();
   const { enableLocationSharing, disableLocationSharing } = useLocationConsent();
@@ -338,8 +338,9 @@ const AccountScreen = () => {
       }
 
       <ThemeSection
+        mode={mode}
         isDark={isDark}
-        onThemeToggle={(value) => setThemeMode(value ? 'dark' : 'light')} />
+        onSelectMode={setThemeMode} />
 
 
       <PreferencesSection

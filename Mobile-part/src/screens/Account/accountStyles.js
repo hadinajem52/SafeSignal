@@ -89,8 +89,19 @@ const accountStyles = StyleSheet.create({
     marginBottom: 10,
   },
 
+  themeAutoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 11,
+    marginBottom: 12,
+    borderBottomWidth: 1,
+  },
   themePreviewRow: {
     flexDirection: 'row',
+  },
+  themePreviewCardMuted: {
+    opacity: 0.6,
   },
   themePreviewCard: {
     flex: 1,

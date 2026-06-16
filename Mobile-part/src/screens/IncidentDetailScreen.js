@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, ScrollView, Share, TouchableOpacity, View } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -153,6 +153,31 @@ const IncidentDetailScreen = ({ route, navigation }) => {
   detailIncident.photoUrls :
   [];
 
+  const isAnonymousReport = Boolean(detailIncident.is_anonymous ?? detailIncident.isAnonymous);
+
+  const handleShare = async () => {
+    haptics.selection();
+    const severityText = detailIncident.severity ?
+    `${categoryConfig.label} · ${detailIncident.severity}` :
+    categoryConfig.label;
+    const statusText = closureOutcome ?
+    `Outcome: ${closureOutcome}` :
+    STATUS_LABELS[displayStatus] || 'Status update';
+    const message = [
+    detailIncident.title,
+    severityText,
+    statusText,
+    placeName ? `Near ${placeName}` : null,
+    'Shared via SafeSignal'].
+    filter(Boolean).join('\n');
+
+    try {
+      await Share.share({ message });
+    } catch {
+
+    }
+  };
+
   return (
     <View style={[styles.screenWrapper, { backgroundColor: theme.card, paddingTop: insets.top }]}>
       <View style={[styles.backHeader, { borderBottomColor: theme.border }]}>
@@ -166,6 +191,16 @@ const IncidentDetailScreen = ({ route, navigation }) => {
 
           <Ionicons name="chevron-back" size={24} color={theme.text} />
           <AppText variant="body" style={{ color: theme.text }}>Back</AppText>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.shareButton}
+          onPress={handleShare}
+          accessibilityRole="button"
+          accessibilityLabel="Share this incident"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+
+          <Ionicons name="share-outline" size={22} color={theme.text} />
         </TouchableOpacity>
       </View>
 
@@ -205,6 +240,13 @@ const IncidentDetailScreen = ({ route, navigation }) => {
             <View style={[styles.heroMetaRow, { borderTopColor: theme.border }]}>
               <Ionicons name="time-outline" size={14} color={theme.textTertiary} />
               <AppText variant="caption" style={{ color: theme.textSecondary }}>{reportedAtLabel}</AppText>
+              {isAnonymousReport ?
+              <>
+                  <AppText variant="caption" style={{ color: theme.textTertiary }}>·</AppText>
+                  <Ionicons name="eye-off-outline" size={14} color={theme.textTertiary} />
+                  <AppText variant="caption" style={{ color: theme.textSecondary }}>Reported anonymously</AppText>
+                </> :
+              null}
             </View>
 
             {loadingDetail ? <ActivityIndicator color={theme.primary} style={{ marginTop: 12 }} /> : null}
