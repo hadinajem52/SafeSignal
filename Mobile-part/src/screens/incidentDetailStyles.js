@@ -23,7 +23,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
 
-  // ---- Hero (full-bleed) ----
+
   heroGradient: {
     paddingTop: 24,
     paddingHorizontal: 18,
@@ -78,8 +78,8 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
   },
 
-  // ---- Divided sections ----
-  // Dividers are full-bleed (no horizontal inset); only content is padded.
+
+
   divider: {
     height: StyleSheet.hairlineWidth,
   },
@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
 
-  // ---- Location ----
+
   placeChip: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import haptics from '../utils/haptics';
 
-// Screens
+
 import HomeScreen from '../screens/Home/HomeScreen';
 import MyReportsScreen from '../screens/MyReports/MyReportsScreen';
 import ReportIncidentScreen from '../screens/ReportIncidentScreen';
@@ -21,68 +21,68 @@ const Stack = createNativeStackNavigator();
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
-// Directional full-width slide between tabs, based on each tab's position in the
-// bar. progress: -1 = tab is left of active, 0 = active, +1 = right of active —
-// so moving to a tab on the right slides in from the right, and vice-versa.
-// translateX runs on the native driver (Android), so it stays smooth.
+
+
+
+
 const slideTabTransition = {
   transitionSpec: {
     animation: 'timing',
-    config: { duration: 260, easing: Easing.out(Easing.cubic) },
+    config: { duration: 260, easing: Easing.out(Easing.cubic) }
   },
   sceneStyleInterpolator: ({ current }) => ({
     sceneStyle: {
       transform: [
-        {
-          translateX: current.progress.interpolate({
-            inputRange: [-1, 0, 1],
-            outputRange: [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
-          }),
-        },
-      ],
-    },
-  }),
+      {
+        translateX: current.progress.interpolate({
+          inputRange: [-1, 0, 1],
+          outputRange: [-SCREEN_WIDTH, 0, SCREEN_WIDTH]
+        })
+      }]
+
+    }
+  })
 };
 
-const CustomTabBarButton = ({ children, onPress, theme }) => (
-  <TouchableOpacity
-    style={styles.fabWrapper}
-    onPress={onPress}
-    activeOpacity={0.9}
-  >
-    <View style={[styles.fabButton, { 
-      backgroundColor: theme.primary,
-      borderColor: theme.tabBar 
-    }]}>
+const CustomTabBarButton = ({ children, onPress, theme }) =>
+<TouchableOpacity
+  style={styles.fabWrapper}
+  onPress={onPress}
+  activeOpacity={0.9}>
+
+    <View style={[styles.fabButton, {
+    backgroundColor: theme.primary,
+    borderColor: theme.tabBar
+  }]}>
       {children}
     </View>
-  </TouchableOpacity>
-);
+  </TouchableOpacity>;
+
 
 const stackScreenOptions = {
   headerShown: false,
-  animation: 'slide_from_right',
+  animation: 'slide_from_right'
 };
 
-const DashboardStack = () => (
-  <Stack.Navigator screenOptions={stackScreenOptions}>
+const DashboardStack = () =>
+<Stack.Navigator screenOptions={stackScreenOptions}>
     <Stack.Screen name="Home" component={HomeScreen} />
     <Stack.Screen name="Notifications" component={NotificationsScreen} />
     <Stack.Screen name="IncidentDetail" component={IncidentDetailScreen} />
-  </Stack.Navigator>
-);
+  </Stack.Navigator>;
 
-const ReportsStack = () => (
-  <Stack.Navigator screenOptions={stackScreenOptions}>
+
+const ReportsStack = () =>
+<Stack.Navigator screenOptions={stackScreenOptions}>
     <Stack.Screen name="MyReports" component={MyReportsScreen} />
     <Stack.Screen
-      name="ReportIncident"
-      component={ReportIncidentScreen}
-      options={{ animation: 'slide_from_bottom' }}
-    />
+    name="ReportIncident"
+    component={ReportIncidentScreen}
+    options={{ animation: 'slide_from_bottom' }} />
+
     <Stack.Screen name="IncidentDetail" component={IncidentDetailScreen} />
-  </Stack.Navigator>
-);
+  </Stack.Navigator>;
+
 
 const TabNavigator = () => {
   const { theme } = useTheme();
@@ -91,7 +91,7 @@ const TabNavigator = () => {
     <Tab.Navigator
       screenListeners={{ tabPress: () => haptics.selection() }}
       screenOptions={({ route }) => ({
-        ...slideTabTransition, // directional left/right slide based on tab position
+        ...slideTabTransition,
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
 
@@ -111,11 +111,11 @@ const TabNavigator = () => {
         tabBarInactiveTintColor: theme.tabBarInactive,
         headerShown: false,
         tabBarStyle: [styles.tabBar, { backgroundColor: 'transparent' }],
-        tabBarBackground: () => (
-          <View style={[styles.tabBarBackground, { backgroundColor: theme.tabBar }]} />
-        ),
-      })}
-    >
+        tabBarBackground: () =>
+        <View style={[styles.tabBarBackground, { backgroundColor: theme.tabBar }]} />
+
+      })}>
+
       <Tab.Screen name="Dashboard" component={DashboardStack} />
       <Tab.Screen
         name="Reports"
@@ -128,48 +128,42 @@ const TabNavigator = () => {
               const innerRoutes = reportsRoute?.state?.routes;
               const isDeep = innerRoutes && innerRoutes.length > 1;
 
-              // Already on MyReports root — just switch tabs without resetting
-              // so no skeleton/fade-in is triggered
+
+
               if (!isDeep) {
                 return CommonActions.navigate({ name: 'Reports' });
               }
 
-              // Deep in the stack (e.g. IncidentDetail) — reset back to MyReports
+
               const routes = state.routes.map((route) =>
-                route.name === 'Reports'
-                  ? { ...route, state: { index: 0, routes: [{ name: 'MyReports' }] } }
-                  : route
+              route.name === 'Reports' ?
+              { ...route, state: { index: 0, routes: [{ name: 'MyReports' }] } } :
+              route
               );
               const index = routes.findIndex((r) => r.name === 'Reports');
               return CommonActions.reset({ ...state, routes, index });
             });
-          },
-        })}
-      />
-      
-      <Tab.Screen 
-        name="SubmitReport" 
+          }
+        })} />
+
+
+      <Tab.Screen
+        name="SubmitReport"
         component={ReportIncidentScreen}
         options={{
-          tabBarIcon: () => (
-            <Ionicons name="add" size={28} color="white" style={styles.fabIcon} />
-          ),
-          tabBarButton: (props) => (
-            <CustomTabBarButton {...props} theme={theme} />
-          ),
+          tabBarIcon: () =>
+          <Ionicons name="add" size={28} color="white" style={styles.fabIcon} />,
+
+          tabBarButton: (props) =>
+          <CustomTabBarButton {...props} theme={theme} />,
+
           tabBarLabel: () => null,
           headerShown: false
-        }}
-      />
-
-      {/* freezeOnBlur: the map stays mounted across tabs; freezing it while blurred
-          stops react-native-maps from consuming CPU/GPU in the background. Scoped to
-          this one screen to keep the blast radius small. NOTE: smoke-test on device —
-          switch away from Map and back, confirm the map, markers and location resume. */}
+        }} />
       <Tab.Screen name="Map" component={MapScreen} options={{ freezeOnBlur: true }} />
       <Tab.Screen name="Account" component={AccountScreen} />
-    </Tab.Navigator>
-  );
+    </Tab.Navigator>);
+
 };
 
 const styles = StyleSheet.create({
@@ -187,21 +181,21 @@ const styles = StyleSheet.create({
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.15,
-        shadowRadius: 10,
+        shadowRadius: 10
       },
       android: {
-        elevation: 8,
-      },
-    }),
+        elevation: 8
+      }
+    })
   },
   tabBarBackground: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: 24,
+    borderRadius: 24
   },
   fabWrapper: {
     top: -28,
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   fabButton: {
     width: 64,
@@ -215,16 +209,16 @@ const styles = StyleSheet.create({
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.18,
-        shadowRadius: 8,
+        shadowRadius: 8
       },
       android: {
-        elevation: 10,
-      },
-    }),
+        elevation: 10
+      }
+    })
   },
   fabIcon: {
     textAlign: 'center',
-    textAlignVertical: 'center',
+    textAlignVertical: 'center'
   }
 });
 

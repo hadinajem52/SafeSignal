@@ -1,10 +1,10 @@
-/**
- * Converts closure_details (which may arrive as a raw object from the API)
- * to a human-readable string safe for rendering as a React child.
- *
- * @param {string|object|null|undefined} closureDetails
- * @returns {string}
- */
+
+
+
+
+
+
+
 export function normalizeClosureDetails(closureDetails) {
   if (!closureDetails) {
     return '';

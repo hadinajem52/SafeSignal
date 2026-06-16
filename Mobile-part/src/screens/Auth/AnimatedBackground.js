@@ -5,8 +5,8 @@ import {
   AppState,
   Dimensions,
   StyleSheet,
-  View,
-} from 'react-native';
+  View } from
+'react-native';
 import Animated, {
   Easing,
   cancelAnimation,
@@ -15,38 +15,38 @@ import Animated, {
   withDelay,
   withRepeat,
   withSequence,
-  withTiming,
-} from 'react-native-reanimated';
+  withTiming } from
+'react-native-reanimated';
 import { useTheme } from '../../context/ThemeContext';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
-// ─── Deterministic LCG ───────────────────────────────────────────────────────
+
 const makeLcg = (seed) => {
   let s = seed;
   return () => {
-    s = (s * 1664525 + 1013904223) & 0xffffffff;
+    s = s * 1664525 + 1013904223 & 0xffffffff;
     return (s >>> 0) / 0xffffffff;
   };
 };
 
-// ─── Grid geometry ────────────────────────────────────────────────────────────
+
 const COLS = 5;
 const ROWS = 9;
 const CELL_W = SCREEN_W / COLS;
 const CELL_H = SCREEN_H / ROWS;
 
-// ─── Pre-compute signal node positions at grid intersections ──────────────────
+
 const buildNodes = () => {
   const rand = makeLcg(71);
-  // Collect all inner intersections
+
   const pool = [];
   for (let r = 1; r < ROWS; r++) {
     for (let c = 1; c < COLS; c++) {
       pool.push({ x: c * CELL_W, y: r * CELL_H });
     }
   }
-  // Fisher-Yates with LCG
+
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(rand() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
@@ -55,16 +55,16 @@ const buildNodes = () => {
     id: i,
     x: pos.x,
     y: pos.y,
-    size: i < 2 ? 5 : 3,       // two larger "hot" nodes
+    size: i < 2 ? 5 : 3,
     isAccent: i < 2,
     delay: i * 540,
-    duration: 2600 + i * 180,
+    duration: 2600 + i * 180
   }));
 };
 
 const NODES = buildNodes();
 
-// ─── Signal node — opacity pulse only (compositor) ───────────────────────────
+
 const SignalNode = ({ config, primaryColor, accentColor, running }) => {
   const opacity = useSharedValue(0);
   const color = config.isAccent ? accentColor : primaryColor;
@@ -96,22 +96,22 @@ const SignalNode = ({ config, primaryColor, accentColor, running }) => {
   return (
     <Animated.View
       style={[
-        styles.node,
-        {
-          left: config.x - config.size / 2,
-          top: config.y - config.size / 2,
-          width: config.size,
-          height: config.size,
-          borderRadius: config.size / 2,
-          backgroundColor: color,
-        },
-        animStyle,
-      ]}
-    />
-  );
+      styles.node,
+      {
+        left: config.x - config.size / 2,
+        top: config.y - config.size / 2,
+        width: config.size,
+        height: config.size,
+        borderRadius: config.size / 2,
+        backgroundColor: color
+      },
+      animStyle]
+      } />);
+
+
 };
 
-// ─── Node halo ring — expands from accent nodes ───────────────────────────────
+
 const NodeHalo = ({ config, color, running }) => {
   const scale = useSharedValue(1);
   const opacity = useSharedValue(0);
@@ -125,16 +125,16 @@ const NodeHalo = ({ config, color, running }) => {
       return;
     }
     const dur = config.duration * 1.6;
-    // Hold at 0 for the last 22% of each cycle — scale resets invisibly during that window
-    const expandDur  = dur * 0.78;
-    const holdDur    = dur * 0.22;
+
+    const expandDur = dur * 0.78;
+    const holdDur = dur * 0.22;
     scale.value = withDelay(
       config.delay + 200,
       withRepeat(
         withSequence(
-          withTiming(1,   { duration: 0 }),
+          withTiming(1, { duration: 0 }),
           withTiming(2.8, { duration: expandDur, easing: Easing.out(Easing.cubic) }),
-          withTiming(2.8, { duration: holdDur })  // coast at final scale while opacity=0
+          withTiming(2.8, { duration: holdDur })
         ),
         -1,
         false
@@ -145,8 +145,8 @@ const NodeHalo = ({ config, color, running }) => {
       withRepeat(
         withSequence(
           withTiming(0.45, { duration: expandDur * 0.12 }),
-          withTiming(0,    { duration: expandDur * 0.88, easing: Easing.out(Easing.quad) }),
-          withTiming(0,    { duration: holdDur })  // hold invisible — sync'd with scale hold
+          withTiming(0, { duration: expandDur * 0.88, easing: Easing.out(Easing.quad) }),
+          withTiming(0, { duration: holdDur })
         ),
         -1,
         false
@@ -160,30 +160,30 @@ const NodeHalo = ({ config, color, running }) => {
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
-    opacity: opacity.value,
+    opacity: opacity.value
   }));
 
   return (
     <Animated.View
       pointerEvents="none"
       style={[
-        {
-          position: 'absolute',
-          left: config.x - haloR,
-          top: config.y - haloR,
-          width: haloR * 2,
-          height: haloR * 2,
-          borderRadius: haloR,
-          borderWidth: 1,
-          borderColor: color,
-        },
-        animStyle,
-      ]}
-    />
-  );
+      {
+        position: 'absolute',
+        left: config.x - haloR,
+        top: config.y - haloR,
+        width: haloR * 2,
+        height: haloR * 2,
+        borderRadius: haloR,
+        borderWidth: 1,
+        borderColor: color
+      },
+      animStyle]
+      } />);
+
+
 };
 
-// ─── Radar scan sweep — translateY only (compositor) ─────────────────────────
+
 const ScanLine = ({ primaryColor, running }) => {
   const translateY = useSharedValue(-2);
 
@@ -201,18 +201,18 @@ const ScanLine = ({ primaryColor, running }) => {
   }, [running]);
 
   const animStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
+    transform: [{ translateY: translateY.value }]
   }));
 
   return (
     <Animated.View
       pointerEvents="none"
-      style={[styles.scanLine, { backgroundColor: primaryColor }, animStyle]}
-    />
-  );
+      style={[styles.scanLine, { backgroundColor: primaryColor }, animStyle]} />);
+
+
 };
 
-// ─── Radar ring — scale + opacity only (compositor) ──────────────────────────
+
 const RadarRing = ({ cx, cy, maxR, color, delay, duration, running }) => {
   const scale = useSharedValue(0.04);
   const opacity = useSharedValue(0);
@@ -255,7 +255,7 @@ const RadarRing = ({ cx, cy, maxR, color, delay, duration, running }) => {
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
-    opacity: opacity.value,
+    opacity: opacity.value
   }));
 
   const size = maxR * 2;
@@ -263,50 +263,47 @@ const RadarRing = ({ cx, cy, maxR, color, delay, duration, running }) => {
     <Animated.View
       pointerEvents="none"
       style={[
-        {
-          position: 'absolute',
-          left: cx - maxR,
-          top: cy - maxR,
-          width: size,
-          height: size,
-          borderRadius: maxR,
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: color,
-        },
-        animStyle,
-      ]}
-    />
-  );
+      {
+        position: 'absolute',
+        left: cx - maxR,
+        top: cy - maxR,
+        width: size,
+        height: size,
+        borderRadius: maxR,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: color
+      },
+      animStyle]
+      } />);
+
+
 };
 
-// ─── Static corner reticle ────────────────────────────────────────────────────
+
 const CornerReticle = ({ top, right, bottom, left: leftProp, color }) => {
   const ARM = 18;
   const T = StyleSheet.hairlineWidth;
   return (
     <View
       pointerEvents="none"
-      style={[styles.reticle, { top, right, bottom, left: leftProp }]}
-    >
-      {/* horizontal */}
+      style={[styles.reticle, { top, right, bottom, left: leftProp }]}>
       <View style={[styles.reticleArm, { top: 0, left: 0, width: ARM, height: T, backgroundColor: color }]} />
-      {/* vertical */}
       <View style={[styles.reticleArm, { top: 0, left: 0, width: T, height: ARM, backgroundColor: color }]} />
-    </View>
-  );
+    </View>);
+
 };
 
-// ─── Main export ──────────────────────────────────────────────────────────────
+
 const AnimatedBackground = () => {
   const { theme, isDark } = useTheme();
   const [running, setRunning] = useState(true);
 
-  // Respect prefers-reduced-motion
+
   const [reduceMotion, setReduceMotion] = useState(false);
   useEffect(() => {
     AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
     const motionSub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
-    // Pause when app goes to background — battery / GPU savings
+
     const appSub = AppState.addEventListener('change', (next) => setRunning(next === 'active'));
     return () => {
       motionSub.remove();
@@ -317,17 +314,15 @@ const AnimatedBackground = () => {
   if (reduceMotion) return null;
 
   const primaryColor = theme.primary;
-  const accentColor  = theme.accentOrange;   // amber — vivid contrast node/detail
-  const gridOpacity  = isDark ? 0.045 : 0.055;
-  const scanOpacity  = isDark ? 0.07  : 0.06;
+  const accentColor = theme.accentOrange;
+  const gridOpacity = isDark ? 0.045 : 0.055;
+  const scanOpacity = isDark ? 0.07 : 0.06;
 
-  // Ring colors — primary for main focal, accent for secondary
+
   const ringColorB = isDark ? theme.accentBlue : theme.primaryDark;
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-
-      {/* ── Grid lines (static — no animation, pure compositor cost = zero) ── */}
       {Array.from({ length: COLS + 1 }, (_, i) => (
         <View
           key={`vl-${i}`}
@@ -354,13 +349,9 @@ const AnimatedBackground = () => {
           }]}
         />
       ))}
-
-      {/* ── Radar scan sweep ── */}
       <View style={[styles.scanWrap, { opacity: scanOpacity }]}>
         <ScanLine primaryColor={primaryColor} running={running} />
       </View>
-
-      {/* ── Signal nodes at grid intersections ── */}
       {NODES.map((node) => (
         <SignalNode
           key={node.id}
@@ -370,8 +361,6 @@ const AnimatedBackground = () => {
           running={running}
         />
       ))}
-
-      {/* ── Halo rings expand from the two accent nodes ── */}
       {NODES.filter((n) => n.isAccent).map((node) => (
         <NodeHalo
           key={`halo-${node.id}`}
@@ -380,22 +369,19 @@ const AnimatedBackground = () => {
           running={running}
         />
       ))}
-
-      {/* ── Secondary focal — bottom-left (accent) ── */}
-      <RadarRing cx={SCREEN_W * 0.18} cy={SCREEN_H * 0.78} maxR={70}  color={ringColorB} delay={1100} duration={7000} running={running} />
+      <RadarRing cx={SCREEN_W * 0.18} cy={SCREEN_H * 0.78} maxR={70} color={ringColorB} delay={1100} duration={7000} running={running} />
       <RadarRing cx={SCREEN_W * 0.18} cy={SCREEN_H * 0.78} maxR={120} color={ringColorB} delay={3200} duration={7000} running={running} />
-
-      {/* ── Corner targeting reticles (static) ── */}
-      <CornerReticle top={22}        left={22}        color={primaryColor} />
-      <CornerReticle bottom={22}     right={22}       color={primaryColor} />
+      <CornerReticle top={22} left={22} color={primaryColor} />
+      <CornerReticle bottom={22} right={22} color={primaryColor} />
 
     </View>
   );
+
 };
 
 const styles = StyleSheet.create({
   gridLine: {
-    position: 'absolute',
+    position: 'absolute'
   },
   scanWrap: {
     position: 'absolute',
@@ -403,27 +389,27 @@ const styles = StyleSheet.create({
     left: 0,
     width: SCREEN_W,
     height: SCREEN_H,
-    overflow: 'hidden',
+    overflow: 'hidden'
   },
   scanLine: {
     position: 'absolute',
     left: 0,
     top: 0,
     width: SCREEN_W,
-    height: 1.5,
+    height: 1.5
   },
   node: {
-    position: 'absolute',
+    position: 'absolute'
   },
   reticle: {
     position: 'absolute',
     width: 22,
     height: 22,
-    opacity: 0.25,
+    opacity: 0.25
   },
   reticleArm: {
-    position: 'absolute',
-  },
+    position: 'absolute'
+  }
 });
 
 export default AnimatedBackground;

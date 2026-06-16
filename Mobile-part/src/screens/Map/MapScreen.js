@@ -28,7 +28,7 @@ const DEFAULT_REGION = {
   latitude: 33.8938,
   longitude: 35.5018,
   latitudeDelta: 0.15,
-  longitudeDelta: 0.15,
+  longitudeDelta: 0.15
 };
 
 const MapScreen = () => {
@@ -37,10 +37,10 @@ const MapScreen = () => {
   const { preferences } = useUserPreferences();
   const mapRef = useRef(null);
   const activeRequestId = useRef(0);
-  // Latest region is tracked in a ref, not state: the map is uncontrolled (uses
-  // initialRegion), so nothing reads region after mount. Writing it to a ref on each
-  // pan avoids a full MapScreen re-render (control panel, filter bars, controls)
-  // every time the user moves the map.
+
+
+
+
   const lastRegionRef = useRef(DEFAULT_REGION);
 
   const [incidents, setIncidents] = useState([]);
@@ -57,17 +57,17 @@ const MapScreen = () => {
     selectedCategory,
     setSelectedCategory,
     selectedTimeframe,
-    setSelectedTimeframe,
+    setSelectedTimeframe
   } = useIncidentFilters({ defaultTimeframe: "30d" });
 
   const {
     region,
     locationLoading,
     goToMyLocation,
-    resetToDefaultRegion,
+    resetToDefaultRegion
   } = useMapRegion({
     defaultRegion: DEFAULT_REGION,
-    mapRef,
+    mapRef
   });
 
   const fetchIncidents = useCallback(
@@ -87,10 +87,10 @@ const MapScreen = () => {
 
         let result;
         if (mapMode === MAP_MODES.ACTIVE) {
-          // Active map requires a concrete window; 'all' only applies to resolved.
+
           const params = {
             timeframe: selectedTimeframe === 'all' ? '30d' : selectedTimeframe,
-            includeConstellation: true,
+            includeConstellation: true
           };
           if (selectedCategory) params.category = selectedCategory;
           result = await incidentAPI.getMapIncidents(params);
@@ -102,10 +102,10 @@ const MapScreen = () => {
           do {
             const page = await feedAPI.getPublicFeed({
               category: selectedCategory || undefined,
-              // 'all' omits the window so older resolved reports stay visible.
+
               timeframe: selectedTimeframe === 'all' ? undefined : selectedTimeframe,
               limit: RESOLVED_PAGE_SIZE,
-              offset,
+              offset
             });
 
             if (activeRequestId.current !== requestId) {
@@ -123,7 +123,7 @@ const MapScreen = () => {
             result = {
               success: true,
               incidents: resolvedIncidents,
-              total,
+              total
             };
           } while (offset > 0 && offset < total);
         }
@@ -137,7 +137,7 @@ const MapScreen = () => {
           return;
         }
 
-        // Client-side guard against invalid coordinates.
+
         const filteredIncidents = result.incidents.filter((incident) => {
           const latitude = Number(incident?.location?.latitude);
           const longitude = Number(incident?.location?.longitude);
@@ -146,20 +146,20 @@ const MapScreen = () => {
         setIncidents(filteredIncidents);
 
         if (
-          filteredIncidents.length > 0 &&
-          mapRef.current &&
-          !isRefresh &&
-          !preferences.locationServices
-        ) {
+        filteredIncidents.length > 0 &&
+        mapRef.current &&
+        !isRefresh &&
+        !preferences.locationServices)
+        {
           const coordinates = filteredIncidents.map((incident) => ({
             latitude: incident.location.latitude,
-            longitude: incident.location.longitude,
+            longitude: incident.location.longitude
           }));
 
           setTimeout(() => {
             mapRef.current?.fitToCoordinates(coordinates, {
               edgePadding: { top: 100, right: 50, bottom: 50, left: 50 },
-              animated: true,
+              animated: true
             });
           }, 500);
         }
@@ -176,7 +176,7 @@ const MapScreen = () => {
         }
       }
     },
-    [mapMode, preferences.locationServices, selectedCategory, selectedTimeframe],
+    [mapMode, preferences.locationServices, selectedCategory, selectedTimeframe]
   );
 
   useEffect(() => {
@@ -187,8 +187,8 @@ const MapScreen = () => {
     setSelectedIncident(null);
   }, [mapMode]);
 
-  // 'all' is a resolved-only window; if it carries over into Active, snap back
-  // to a concrete default so the Active query stays valid and a chip stays lit.
+
+
   useEffect(() => {
     if (mapMode === MAP_MODES.ACTIVE && selectedTimeframe === 'all') {
       setSelectedTimeframe('30d');
@@ -226,14 +226,14 @@ const MapScreen = () => {
     setSelectedIncident(null);
   };
 
-  // Stable so the memoized MapCanvas isn't re-rendered by a fresh closure each render.
+
   const handleMarkerPress = useCallback((incident) => {
     setShowMapHint(false);
     AsyncStorage.setItem(MAP_HINT_STORAGE_KEY, "1").catch(() => {});
     setSelectedIncident(incident);
   }, []);
 
-  // Record the region without re-rendering (see lastRegionRef note above).
+
   const handleRegionChangeComplete = useCallback((nextRegion) => {
     lastRegionRef.current = nextRegion;
   }, []);
@@ -249,7 +249,7 @@ const MapScreen = () => {
       latitude,
       longitude,
       latitudeDelta: 0.01,
-      longitudeDelta: 0.01,
+      longitudeDelta: 0.01
     });
     clearSelectedIncident();
   };
@@ -262,10 +262,10 @@ const MapScreen = () => {
           title="Connection lost"
           message={error}
           actionLabel="Retry"
-          onAction={() => fetchIncidents()}
-        />
-      </View>
-    );
+          onAction={() => fetchIncidents()} />
+
+      </View>);
+
   }
 
   return (
@@ -278,51 +278,51 @@ const MapScreen = () => {
         incidents={incidents}
         categoryDisplay={CATEGORY_DISPLAY}
         showActiveOverlays={mapMode === MAP_MODES.ACTIVE}
-        onMarkerPress={handleMarkerPress}
-      />
+        onMarkerPress={handleMarkerPress} />
+
 
       <View
         style={[mapStyles.filterHeader, { paddingTop: insets.top + 8 }]}
-        onLayout={(event) => setHeaderHeight(event.nativeEvent.layout.height)}
-      >
+        onLayout={(event) => setHeaderHeight(event.nativeEvent.layout.height)}>
+
         <View
           style={[
-            mapStyles.controlPanel,
-            { backgroundColor: `${theme.card}f0`, borderColor: theme.border, shadowColor: theme.shadow },
-          ]}
-        >
+          mapStyles.controlPanel,
+          { backgroundColor: `${theme.card}f0`, borderColor: theme.border, shadowColor: theme.shadow }]
+          }>
+
           <View style={[mapStyles.segment, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <TouchableOpacity
               style={[mapStyles.segmentItem, mapMode === MAP_MODES.ACTIVE && { backgroundColor: theme.primary }]}
               onPress={() => setMapMode(MAP_MODES.ACTIVE)}
-              activeOpacity={0.85}
-            >
+              activeOpacity={0.85}>
+
               <Ionicons
                 name="radio-button-on-outline"
                 size={14}
-                color={mapMode === MAP_MODES.ACTIVE ? '#fff' : theme.textSecondary}
-              />
+                color={mapMode === MAP_MODES.ACTIVE ? '#fff' : theme.textSecondary} />
+
               <AppText
                 variant="caption"
-                style={[mapStyles.segmentLabel, { color: mapMode === MAP_MODES.ACTIVE ? '#fff' : theme.textSecondary }]}
-              >
+                style={[mapStyles.segmentLabel, { color: mapMode === MAP_MODES.ACTIVE ? '#fff' : theme.textSecondary }]}>
+
                 Active
               </AppText>
             </TouchableOpacity>
             <TouchableOpacity
               style={[mapStyles.segmentItem, mapMode === MAP_MODES.RESOLVED && { backgroundColor: theme.primary }]}
               onPress={() => setMapMode(MAP_MODES.RESOLVED)}
-              activeOpacity={0.85}
-            >
+              activeOpacity={0.85}>
+
               <Ionicons
                 name="shield-checkmark-outline"
                 size={14}
-                color={mapMode === MAP_MODES.RESOLVED ? '#fff' : theme.textSecondary}
-              />
+                color={mapMode === MAP_MODES.RESOLVED ? '#fff' : theme.textSecondary} />
+
               <AppText
                 variant="caption"
-                style={[mapStyles.segmentLabel, { color: mapMode === MAP_MODES.RESOLVED ? '#fff' : theme.textSecondary }]}
-              >
+                style={[mapStyles.segmentLabel, { color: mapMode === MAP_MODES.RESOLVED ? '#fff' : theme.textSecondary }]}>
+
                 Resolved
               </AppText>
             </TouchableOpacity>
@@ -331,39 +331,39 @@ const MapScreen = () => {
           <CategoryFilterBar
             categoryDisplay={CATEGORY_DISPLAY}
             selectedCategory={selectedCategory}
-            onSelectCategory={setSelectedCategory}
-          />
+            onSelectCategory={setSelectedCategory} />
+
 
           <TimeframeSelector
             selectedTimeframe={selectedTimeframe}
             onSelectTimeframe={setSelectedTimeframe}
-            includeAll={mapMode === MAP_MODES.RESOLVED}
-          />
+            includeAll={mapMode === MAP_MODES.RESOLVED} />
+
         </View>
       </View>
 
-      {showMapHint ? (
-        <View
-          style={[
-            mapStyles.mapHintWrap,
-            { top: headerHeight + 6, backgroundColor: `${theme.card}e8`, borderColor: theme.border },
-          ]}
-        >
+      {showMapHint ?
+      <View
+        style={[
+        mapStyles.mapHintWrap,
+        { top: headerHeight + 6, backgroundColor: `${theme.card}e8`, borderColor: theme.border }]
+        }>
+
           <Ionicons
-            name="finger-print-outline"
-            size={16}
-            color={theme.primary}
-          />
+          name="finger-print-outline"
+          size={16}
+          color={theme.primary} />
+
           <AppText
-            variant="caption"
-            style={[mapStyles.mapHintText, { color: theme.textSecondary }]}
-          >
-            {mapMode === MAP_MODES.ACTIVE
-              ? "Tap a circle to view the report category."
-              : "Tap a marker to open incident details."}
+          variant="caption"
+          style={[mapStyles.mapHintText, { color: theme.textSecondary }]}>
+
+            {mapMode === MAP_MODES.ACTIVE ?
+          "Tap a circle to view the report category." :
+          "Tap a marker to open incident details."}
           </AppText>
-        </View>
-      ) : null}
+        </View> :
+      null}
 
       <MapControls
         onShowLegend={() => setShowLegend(true)}
@@ -372,48 +372,48 @@ const MapScreen = () => {
         onRefresh={() => fetchIncidents(true)}
         locationLoading={locationLoading}
         refreshing={refreshing}
-        incidentsCount={incidents.length}
-      />
+        incidentsCount={incidents.length} />
 
-      {loading ? (
-        <View
-          style={[
-            mapStyles.loadingOverlay,
-            { backgroundColor: `${theme.background}bf` },
-          ]}
-        >
+
+      {loading ?
+      <View
+        style={[
+        mapStyles.loadingOverlay,
+        { backgroundColor: `${theme.background}bf` }]
+        }>
+
           <View
-            style={[
-              mapStyles.loadingContainer,
-              { backgroundColor: theme.card },
-            ]}
-          >
+          style={[
+          mapStyles.loadingContainer,
+          { backgroundColor: theme.card }]
+          }>
+
             <ActivityIndicator size="large" color={theme.mapMarkerDefault} />
             <AppText
-              variant="body"
-              style={[mapStyles.loadingText, { color: theme.text }]}
-            >
+            variant="body"
+            style={[mapStyles.loadingText, { color: theme.text }]}>
+
               Loading incidents...
             </AppText>
           </View>
-        </View>
-      ) : null}
+        </View> :
+      null}
 
       <MapLegend
         visible={showLegend}
         onClose={() => setShowLegend(false)}
-        categoryDisplay={CATEGORY_DISPLAY}
-      />
+        categoryDisplay={CATEGORY_DISPLAY} />
+
 
       <IncidentMapDetail
         selectedIncident={selectedIncident}
         onClose={clearSelectedIncident}
         onCenterMap={handleCenterMap}
         categoryDisplay={CATEGORY_DISPLAY}
-        showResolvedDetails={mapMode === MAP_MODES.RESOLVED}
-      />
-    </View>
-  );
+        showResolvedDetails={mapMode === MAP_MODES.RESOLVED} />
+
+    </View>);
+
 };
 
 export default MapScreen;

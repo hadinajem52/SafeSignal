@@ -139,8 +139,8 @@ const useRealtimeNotifications = () => {
           const title = titleFromPayload(eventName, payload);
           const body = bodyFromPayload(eventName, payload);
 
-          // The server already persisted this to the inbox before emitting;
-          // refresh the inbox so it (and the home badge) update live.
+
+
           notificationStore.notifyRealtime(identity);
 
           await displayMobileNotification({

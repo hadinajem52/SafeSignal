@@ -28,7 +28,7 @@ const getNotificationAccessStatus = (notificationPermission, pushNotificationsEn
   if (notificationPermission.granted) {
     return {
       status: 'granted',
-      detail: 'System permission is granted',
+      detail: 'System permission is granted'
     };
   }
 
@@ -72,7 +72,7 @@ const AccountScreen = () => {
     location: { status: 'unknown', detail: '' },
     notifications: { status: 'unknown', detail: '' },
     camera: { status: 'unknown', detail: '' },
-    photos: { status: 'unknown', detail: '' },
+    photos: { status: 'unknown', detail: '' }
   });
 
   const displayName = useMemo(() => {
@@ -81,16 +81,16 @@ const AccountScreen = () => {
   }, [preferences.displayName, user]);
 
   const avatarUri = preferences.avatarUri || '';
-  const memberSince = user?.created_at
-    ? new Date(user.created_at).toLocaleString('en-US', { month: 'long', year: 'numeric' })
-    : 'January 2026';
+  const memberSince = user?.created_at ?
+  new Date(user.created_at).toLocaleString('en-US', { month: 'long', year: 'numeric' }) :
+  'January 2026';
   const initials =
-    displayName
-      .split(' ')
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase())
-      .join('') || 'U';
+  displayName.
+  split(' ').
+  filter(Boolean).
+  slice(0, 2).
+  map((part) => part[0]?.toUpperCase()).
+  join('') || 'U';
 
   const confirmDeleteAccount = () => {
     setShowDeleteModal(true);
@@ -136,7 +136,7 @@ const AccountScreen = () => {
         mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.8,
+        quality: 0.8
       });
 
       if (!result.canceled && result.assets[0]) {
@@ -243,19 +243,19 @@ const AccountScreen = () => {
   };
 
   const handleSimulateWitnessPrompt = () => {
-    // Local-only preview of the nearby-witness prompt — no backend or FCM involved.
-    // Navigate immediately; the prompt screen fills its coarse map anchor from the
-    // cached location, so there's no GPS-acquisition delay blocking the transition.
+
+
+
     navigation.navigate('WitnessPrompt', { simulation: true });
   };
 
   const refreshAccessStatus = useCallback(async () => {
     try {
       const [locationPermission, cameraPermission, mediaPermission] = await Promise.all([
-        Location.getForegroundPermissionsAsync(),
-        ImagePicker.getCameraPermissionsAsync(),
-        ImagePicker.getMediaLibraryPermissionsAsync(),
-      ]);
+      Location.getForegroundPermissionsAsync(),
+      ImagePicker.getCameraPermissionsAsync(),
+      ImagePicker.getMediaLibraryPermissionsAsync()]
+      );
 
       const notificationPermission = await getMobileNotificationStatus();
       const notificationsAccess = getNotificationAccessStatus(
@@ -267,35 +267,35 @@ const AccountScreen = () => {
         location: {
           status: locationPermission.status || 'unknown',
           detail:
-            locationPermission.status === 'granted'
-              ? 'Nearby safety scoring is available'
-              : 'Required for nearby safety score and map context',
+          locationPermission.status === 'granted' ?
+          'Nearby safety scoring is available' :
+          'Required for nearby safety score and map context'
         },
         notifications: {
           status: notificationsAccess.status,
-          detail: notificationsAccess.detail,
+          detail: notificationsAccess.detail
         },
         camera: {
           status: cameraPermission.status || 'unknown',
           detail:
-            cameraPermission.status === 'granted'
-              ? 'Camera can be used for incident photos'
-              : 'Required to capture incident photos',
+          cameraPermission.status === 'granted' ?
+          'Camera can be used for incident photos' :
+          'Required to capture incident photos'
         },
         photos: {
           status: mediaPermission.status || 'unknown',
           detail:
-            mediaPermission.status === 'granted'
-              ? 'Photo library access is available'
-              : 'Required to attach photos from your library',
-        },
+          mediaPermission.status === 'granted' ?
+          'Photo library access is available' :
+          'Required to attach photos from your library'
+        }
       });
     } catch {
       setAccessStatus({
         location: { status: 'unknown', detail: 'Could not read location permission status' },
         notifications: { status: 'unknown', detail: 'Could not read notification permission status' },
         camera: { status: 'unknown', detail: 'Could not read camera permission status' },
-        photos: { status: 'unknown', detail: 'Could not read media permission status' },
+        photos: { status: 'unknown', detail: 'Could not read media permission status' }
       });
     }
   }, [preferences.pushNotifications]);
@@ -310,8 +310,8 @@ const AccountScreen = () => {
     <ScrollView
       style={[styles.container, { backgroundColor: theme.background }]}
       contentContainerStyle={[styles.contentContainer, { paddingBottom: tabBarHeight + 8 }]}
-      showsVerticalScrollIndicator={false}
-    >
+      showsVerticalScrollIndicator={false}>
+
       <AppText variant="h1" style={[styles.title, { color: theme.text }]}>Account</AppText>
 
       <ProfileHeader
@@ -321,23 +321,23 @@ const AccountScreen = () => {
         memberSince={memberSince}
         email={user?.email || 'User'}
         onAvatarPress={handleAvatarPress}
-        onEditNamePress={openEditName}
-      />
+        onEditNamePress={openEditName} />
 
-      {userStatsLoading ? (
-        <ActivityIndicator color={theme.primary} style={{ marginBottom: 16 }} />
-      ) : userStatsError ? (
-        <AppText variant="bodySmall" style={{ color: theme.error, marginBottom: 16 }}>
+
+      {userStatsLoading ?
+      <ActivityIndicator color={theme.primary} style={{ marginBottom: 16 }} /> :
+      userStatsError ?
+      <AppText variant="bodySmall" style={{ color: theme.error, marginBottom: 16 }}>
           {userStatsError}
-        </AppText>
-      ) : (
-        <ContributionsGrid userStats={userStats} />
-      )}
+        </AppText> :
+
+      <ContributionsGrid userStats={userStats} />
+      }
 
       <ThemeSection
         isDark={isDark}
-        onThemeToggle={(value) => setThemeMode(value ? 'dark' : 'light')}
-      />
+        onThemeToggle={(value) => setThemeMode(value ? 'dark' : 'light')} />
+
 
       <PreferencesSection
         preferences={preferences}
@@ -349,70 +349,64 @@ const AccountScreen = () => {
         onSendFcmTestNotification={handleSendFcmTestNotification}
         onSimulateWitnessPrompt={handleSimulateWitnessPrompt}
         isSendingFcmTest={isSendingFcmTest}
-        feedbackMessage={inlinePreferenceFeedback}
-      />
+        feedbackMessage={inlinePreferenceFeedback} />
+
 
       <AccessStatusSection accessStatus={accessStatus} onOpenSettings={() => Linking.openSettings?.()} />
 
       <TouchableOpacity
         style={[styles.moreToggle, { borderColor: theme.border, backgroundColor: theme.card }]}
-        onPress={() => setShowMore((prev) => !prev)}
-      >
+        onPress={() => setShowMore((prev) => !prev)}>
+
         <AppText variant="label" style={{ color: theme.text }}>More settings</AppText>
         <Ionicons name={showMore ? 'chevron-up' : 'chevron-down'} size={16} color={theme.textSecondary} />
       </TouchableOpacity>
 
-      {showMore ? (
-        <>
+      {showMore ?
+      <>
           <SupportSection
-            onHelp={() => openLink('https://safesignal.org/help')}
-            onTerms={() => openLink('https://safesignal.org/terms')}
-            onPrivacy={() => openLink('https://safesignal.org/privacy')}
-            onContactSupport={contactSupport}
-          />
+          onHelp={() => openLink('https://safesignal.org/help')}
+          onTerms={() => openLink('https://safesignal.org/terms')}
+          onPrivacy={() => openLink('https://safesignal.org/privacy')}
+          onContactSupport={contactSupport} />
+
 
           <DangerZone onLogout={logout} onDeleteAccount={confirmDeleteAccount} />
-        </>
-      ) : null}
+        </> :
+      null}
 
       <EditNameModal
         visible={isEditingName}
         pendingName={pendingName}
         onChangeName={setPendingName}
         onCancel={() => setIsEditingName(false)}
-        onSave={handleSaveName}
-      />
-
-      {/* Avatar picker modal */}
+        onSave={handleSaveName} />
       <ConfirmModal
         visible={showAvatarModal}
         title="Profile Photo"
         message="Update your profile photo"
         actions={[
-          { text: 'Choose Photo', onPress: handleChoosePhoto },
-          {
-            text: 'Remove Photo',
-            style: 'destructive',
-            onPress: () => { setShowAvatarModal(false); updatePreference('avatarUri', ''); },
-          },
-          { text: 'Cancel', style: 'cancel', onPress: () => setShowAvatarModal(false) },
-        ]}
-        onRequestClose={() => setShowAvatarModal(false)}
-      />
-
-      {/* Delete account confirmation modal */}
+        { text: 'Choose Photo', onPress: handleChoosePhoto },
+        {
+          text: 'Remove Photo',
+          style: 'destructive',
+          onPress: () => {setShowAvatarModal(false);updatePreference('avatarUri', '');}
+        },
+        { text: 'Cancel', style: 'cancel', onPress: () => setShowAvatarModal(false) }]
+        }
+        onRequestClose={() => setShowAvatarModal(false)} />
       <ConfirmModal
         visible={showDeleteModal}
         title="Delete Account"
         message="This action is permanent and cannot be undone. Do you want to continue?"
         actions={[
-          { text: 'Cancel', style: 'cancel', onPress: () => setShowDeleteModal(false) },
-          { text: 'Delete', style: 'destructive', onPress: handleDeleteAccountConfirmed },
-        ]}
-        onRequestClose={() => setShowDeleteModal(false)}
-      />
-    </ScrollView>
-  );
+        { text: 'Cancel', style: 'cancel', onPress: () => setShowDeleteModal(false) },
+        { text: 'Delete', style: 'destructive', onPress: handleDeleteAccountConfirmed }]
+        }
+        onRequestClose={() => setShowDeleteModal(false)} />
+
+    </ScrollView>);
+
 };
 
 export default AccountScreen;

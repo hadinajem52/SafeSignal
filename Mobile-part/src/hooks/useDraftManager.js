@@ -72,8 +72,8 @@ const useDraftManager = ({ userId, onLoadDraft, getDraftPayload }) => {
 
         setHasDraft(true);
 
-        // Surface the draft to the consuming component via state so it can
-        // render its own confirmation UI instead of an OS alert dialog.
+
+
         setPendingDraft(draft);
       }
     } catch (error) {

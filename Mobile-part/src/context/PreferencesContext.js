@@ -20,13 +20,13 @@ const getPreferenceStorageKey = (user) => {
 
 const PreferencesContext = createContext(null);
 
-/**
- * Single source of truth for user preferences across the app. Previously each
- * screen mounted its own useUserPreferences() state, so the Map and Dashboard
- * could hold different values and reloaded (resetting to defaults) on every
- * focus — which momentarily flipped locationServices off. One shared provider
- * loads once and stays consistent.
- */
+
+
+
+
+
+
+
 export const PreferencesProvider = ({ children }) => {
   const { user } = useAuth();
   const { showToast } = useToast();
@@ -46,8 +46,8 @@ export const PreferencesProvider = ({ children }) => {
     [showToast]
   );
 
-  // Note: unlike the old hook, this does NOT reset to defaults before reading.
-  // Resetting caused a transient locationServices=false that disabled location.
+
+
   const loadPreferences = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -89,8 +89,8 @@ export const PreferencesProvider = ({ children }) => {
     [persistPreferences, storageKey]
   );
 
-  // Stable identity so consumers (every screen reading preferences) don't re-render
-  // on unrelated provider renders. The functions below are already useCallback'd.
+
+
   const value = useMemo(
     () => ({
       preferences,

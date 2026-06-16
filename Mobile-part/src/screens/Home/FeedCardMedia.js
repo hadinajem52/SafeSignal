@@ -5,16 +5,16 @@ import { useTheme } from '../../context/ThemeContext';
 import { resolveMediaUrl } from '../../utils/mediaUtils';
 import FeedVideo from './FeedVideo';
 
-/**
- * Instagram-style media block for a feed card: a single image, or a swipeable
- * carousel (with dots + counter) when several photos/a video are attached.
- * Tapping an image calls `onImagePress` (opens the detail screen); videos render
- * as a tappable poster that plays inline (see FeedVideo). A single item skips the
- * carousel ScrollView so the poster's tap isn't swallowed by a horizontal scroll
- * responder.
- *
- * `media` = [{ type: 'image' | 'video', url }]
- */
+
+
+
+
+
+
+
+
+
+
 export default function FeedCardMedia({ media, height = 210, autoplay = false, onImagePress }) {
   const { theme } = useTheme();
   const [index, setIndex] = useState(0);
@@ -28,72 +28,72 @@ export default function FeedCardMedia({ media, height = 210, autoplay = false, o
   };
 
   const renderItem = (item, i) =>
-    item.type === 'video' ? (
-      <FeedVideo url={item.url} autoplay={autoplay && i === index} width={width} height={height} />
-    ) : (
-      <Pressable
-        onPress={onImagePress}
-        disabled={!onImagePress}
-        accessibilityRole={onImagePress ? 'button' : undefined}
-        style={{ width, height }}
-      >
+  item.type === 'video' ?
+  <FeedVideo url={item.url} autoplay={autoplay && i === index} width={width} height={height} /> :
+
+  <Pressable
+    onPress={onImagePress}
+    disabled={!onImagePress}
+    accessibilityRole={onImagePress ? 'button' : undefined}
+    style={{ width, height }}>
+
         <FadeInImage source={{ uri: resolveMediaUrl(item.url) }} style={{ width, height }} resizeMode="cover" />
-      </Pressable>
-    );
+      </Pressable>;
+
 
   return (
     <View
       style={[styles.wrap, { height, backgroundColor: theme.surface }]}
-      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
-    >
-      {width > 0 ? (
-        many ? (
-          <ScrollView
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onScroll={onScroll}
-            scrollEventThrottle={16}
-          >
-            {media.map((item, i) => (
-              <View key={`${item.type}-${i}`} style={{ width, height }}>
+      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+
+      {width > 0 ?
+      many ?
+      <ScrollView
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onScroll={onScroll}
+        scrollEventThrottle={16}>
+
+            {media.map((item, i) =>
+        <View key={`${item.type}-${i}`} style={{ width, height }}>
                 {renderItem(item, i)}
               </View>
-            ))}
-          </ScrollView>
-        ) : (
-          // Single item: render directly, no horizontal ScrollView wrapping the
-          // video poster (a scroll responder can otherwise eat the play tap).
-          <View style={{ width, height }}>{renderItem(media[0], 0)}</View>
-        )
-      ) : null}
+        )}
+          </ScrollView> :
 
-      {many ? (
-        <>
+
+
+      <View style={{ width, height }}>{renderItem(media[0], 0)}</View> :
+
+      null}
+
+      {many ?
+      <>
           <View style={styles.counter}>
             <AppText variant="caption" style={styles.counterText}>
               {index + 1}/{media.length}
             </AppText>
           </View>
           <View style={styles.dots}>
-            {media.map((_, i) => (
-              <View
-                key={i}
-                style={[styles.dot, { opacity: i === index ? 1 : 0.45 }]}
-              />
-            ))}
+            {media.map((_, i) =>
+          <View
+            key={i}
+            style={[styles.dot, { opacity: i === index ? 1 : 0.45 }]} />
+
+          )}
           </View>
-        </>
-      ) : null}
-    </View>
-  );
+        </> :
+      null}
+    </View>);
+
 }
 
 const styles = StyleSheet.create({
   wrap: {
     borderRadius: 12,
     overflow: 'hidden',
-    marginBottom: 12,
+    marginBottom: 12
   },
   counter: {
     position: 'absolute',
@@ -102,10 +102,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.55)',
     borderRadius: 999,
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 2
   },
   counterText: {
-    color: '#fff',
+    color: '#fff'
   },
   dots: {
     position: 'absolute',
@@ -113,13 +113,13 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   dot: {
     width: 6,
     height: 6,
     borderRadius: 999,
     backgroundColor: '#fff',
-    marginHorizontal: 3,
-  },
+    marginHorizontal: 3
+  }
 });

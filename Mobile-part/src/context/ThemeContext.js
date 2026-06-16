@@ -7,21 +7,21 @@ import { buildRestyleTheme } from '../theme/restyleTheme';
 
 const ThemeContext = createContext(null);
 
-/**
- * Theme Provider Component
- * Manages theme state and provides theme + toggle globally
- */
+
+
+
+
 export const ThemeProvider = ({ children }) => {
   const systemColorScheme = useColorScheme();
-  const [mode, setMode] = useState('system'); // 'light' | 'dark' | 'system'
+  const [mode, setMode] = useState('system');
   const [isLoadingTheme, setIsLoadingTheme] = useState(true);
 
-  // Resolve actual theme based on mode
+
   const isDark = mode === 'system' ? systemColorScheme === 'dark' : mode === 'dark';
   const theme = isDark ? darkTheme : lightTheme;
   const restyleTheme = useMemo(() => buildRestyleTheme(theme), [theme]);
 
-  // Load theme preference from storage on app start
+
   useEffect(() => {
     const loadThemePreference = async () => {
       try {
@@ -39,9 +39,9 @@ export const ThemeProvider = ({ children }) => {
     loadThemePreference();
   }, []);
 
-  /**
-   * Set theme mode and persist to storage
-   */
+
+
+
   const setThemeMode = useCallback(async (newMode) => {
     try {
       setMode(newMode);
@@ -51,7 +51,7 @@ export const ThemeProvider = ({ children }) => {
     }
   }, []);
 
-  // Stable identity so consumers don't re-render on unrelated provider renders.
+
   const value = useMemo(
     () => ({ theme, mode, isDark, setThemeMode, isLoadingTheme }),
     [theme, mode, isDark, setThemeMode, isLoadingTheme],
@@ -64,9 +64,9 @@ export const ThemeProvider = ({ children }) => {
   );
 };
 
-/**
- * Custom hook to use theme context
- */
+
+
+
 export const useTheme = () => {
   const context = useContext(ThemeContext);
   if (!context) {

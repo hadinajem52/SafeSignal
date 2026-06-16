@@ -6,8 +6,8 @@ const useMapRegion = ({ defaultRegion, mapRef }) => {
   const { showToast } = useToast();
   const { coords, loading: locationLoading, locationServicesEnabled, refresh } = useLocation();
   const [region, setRegion] = useState(defaultRegion);
-  // Center on the first shared fix only, so foreground re-acquires don't yank
-  // the camera back while the user is panning the map.
+
+
   const hasCenteredRef = useRef(false);
 
   const centerMapToCoords = useCallback(

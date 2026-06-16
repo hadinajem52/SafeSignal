@@ -4,16 +4,16 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
-  useReducedMotion,
-} from 'react-native-reanimated';
+  useReducedMotion } from
+'react-native-reanimated';
 import { DURATION, DISTANCE } from '../theme/motion';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-/**
- * Tappable wrapper with a subtle UI-thread scale on press. Drop-in for
- * TouchableOpacity where you want a calmer, smoother press than opacity flicker.
- */
+
+
+
+
 export default function PressableScale({
   children,
   style,
@@ -29,7 +29,7 @@ export default function PressableScale({
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: reduceMotion ? 1 : 1 - pressed.value * (1 - scaleTo) }],
-    opacity: 1 - pressed.value * 0.05,
+    opacity: 1 - pressed.value * 0.05
   }));
 
   return (
@@ -45,9 +45,9 @@ export default function PressableScale({
         onPressOut?.(event);
       }}
       style={[style, animatedStyle]}
-      {...rest}
-    >
+      {...rest}>
+
       {children}
-    </AnimatedPressable>
-  );
+    </AnimatedPressable>);
+
 }

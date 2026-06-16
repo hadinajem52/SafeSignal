@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText, Button } from '../../components';
@@ -18,41 +18,51 @@ const IncidentMapDetail = ({
   const { theme } = useTheme();
   const translateY = useRef(new Animated.Value(280)).current;
   const opacity = useRef(new Animated.Value(0)).current;
+  // Keep the last incident on screen while the sheet animates out, so the close
+  // (slide-down + fade) actually plays before the component unmounts. Without this
+  // the parent clears selectedIncident, we return null immediately, and the exit
+  // animation never runs (the sheet just vanishes).
+  const [renderedIncident, setRenderedIncident] = useState(selectedIncident);
 
   useEffect(() => {
-    const isVisible = !!selectedIncident;
+    if (selectedIncident) {
+      setRenderedIncident(selectedIncident);
+      Animated.parallel([
+        Animated.timing(translateY, { toValue: 0, duration: 220, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 1, duration: 220, useNativeDriver: true }),
+      ]).start();
+      return;
+    }
+
     Animated.parallel([
-      Animated.timing(translateY, {
-        toValue: isVisible ? 0 : 280,
-        duration: isVisible ? 220 : 180,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: isVisible ? 1 : 0,
-        duration: isVisible ? 220 : 180,
-        useNativeDriver: true,
-      }),
-    ]).start();
+      Animated.timing(translateY, { toValue: 280, duration: 180, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 0, duration: 180, useNativeDriver: true }),
+    ]).start(({ finished }) => {
+      if (finished) {
+        setRenderedIncident(null);
+      }
+    });
   }, [selectedIncident, opacity, translateY]);
 
-  if (!selectedIncident) {
+  const incident = renderedIncident;
+
+  if (!incident) {
     return null;
   }
 
-  const markerColor = getMarkerColor(selectedIncident.category, categoryDisplay, theme.mapMarkerDefault);
-  const categoryLabel = getCategoryLabel(selectedIncident.category, categoryDisplay);
-  const incidentTime =
-    selectedIncident.closedAt || selectedIncident.createdAt || selectedIncident.timestamp;
-  const latitude = Number(selectedIncident?.location?.latitude);
-  const longitude = Number(selectedIncident?.location?.longitude);
+  const markerColor = getMarkerColor(incident.category, categoryDisplay, theme.mapMarkerDefault);
+  const categoryLabel = getCategoryLabel(incident.category, categoryDisplay);
+  const incidentTime = incident.closedAt || incident.createdAt || incident.timestamp;
+  const latitude = Number(incident?.location?.latitude);
+  const longitude = Number(incident?.location?.longitude);
   const hasValidCoordinates = Number.isFinite(latitude) && Number.isFinite(longitude);
   const corroboratedSignals =
-    selectedIncident.constellation?.confidenceState === 'corroborated'
-      ? Number(selectedIncident.constellation?.supportingSignals) || 0
+    incident.constellation?.confidenceState === 'corroborated'
+      ? Number(incident.constellation?.supportingSignals) || 0
       : 0;
 
   return (
-    <Animated.View style={[mapStyles.sheetBackdrop, { opacity }]}> 
+    <Animated.View style={[mapStyles.sheetBackdrop, { opacity }]}>
       <Pressable style={mapStyles.sheetBackDropTouchable} onPress={onClose} />
       <Animated.View
         style={[
@@ -67,89 +77,87 @@ const IncidentMapDetail = ({
       >
         <View style={[mapStyles.sheetHandle, { backgroundColor: theme.divider }]} />
 
-        <>
-            <View style={mapStyles.detailHeader}>
-              <View style={[mapStyles.detailCategoryBadge, { backgroundColor: markerColor }]}> 
-                <Ionicons
-                  name={categoryDisplay[selectedIncident.category]?.mapIcon || 'help-circle'}
-                  size={15}
-                  color="#fff"
-                />
-                <AppText variant="caption" style={mapStyles.detailCategoryText}>
-                  {categoryLabel}
-                </AppText>
-              </View>
-              {showResolvedDetails ? (
-                <AppText variant="caption" style={{ color: theme.textSecondary }}>
-                  {incidentTime ? formatTimeAgo(incidentTime) : 'Just now'}
-                </AppText>
-              ) : null}
+        <View style={mapStyles.detailHeader}>
+          <View style={[mapStyles.detailCategoryBadge, { backgroundColor: markerColor }]}>
+            <Ionicons
+              name={categoryDisplay[incident.category]?.mapIcon || 'help-circle'}
+              size={15}
+              color="#fff"
+            />
+            <AppText variant="caption" style={mapStyles.detailCategoryText}>
+              {categoryLabel}
+            </AppText>
+          </View>
+          {showResolvedDetails ? (
+            <AppText variant="caption" style={{ color: theme.textSecondary }}>
+              {incidentTime ? formatTimeAgo(incidentTime) : 'Just now'}
+            </AppText>
+          ) : null}
+        </View>
+
+        {/* Resolved mode: full details including optional closure fields */}
+        {showResolvedDetails ? (
+          <>
+            <AppText variant="h4" style={[mapStyles.detailTitle, { color: theme.text }]}>
+              {incident.title}
+            </AppText>
+
+            <View style={mapStyles.detailMetaRow}>
+              <Ionicons name="checkmark-circle-outline" size={17} color={theme.success} />
+              <AppText variant="caption" style={[mapStyles.detailMetaText, { color: theme.success }]}>
+                {String(incident.status || '').replace(/_/g, ' ')}
+              </AppText>
             </View>
 
-            {/* Resolved mode: full details including optional closure fields */}
-            {showResolvedDetails ? (
-              <>
-                <AppText variant="h4" style={[mapStyles.detailTitle, { color: theme.text }]}>
-                  {selectedIncident.title}
-                </AppText>
-
-                <View style={mapStyles.detailMetaRow}>
-                  <Ionicons name="checkmark-circle-outline" size={17} color={theme.success} />
-                  <AppText variant="caption" style={[mapStyles.detailMetaText, { color: theme.success }]}> 
-                    {String(selectedIncident.status || '').replace(/_/g, ' ')}
-                  </AppText>
-                </View>
-
-                {selectedIncident.closureOutcome ? (
-                  <View style={mapStyles.detailMetaRow}>
-                    <Ionicons name="shield-checkmark-outline" size={17} color={theme.primary} />
-                    <AppText variant="caption" style={[mapStyles.detailMetaText, { color: theme.primary }]}>
-                      {String(selectedIncident.closureOutcome).replace(/_/g, ' ')}
-                    </AppText>
-                  </View>
-                ) : null}
-
-                {selectedIncident.closureDetails ? (
-                  <AppText
-                    variant="caption"
-                    style={[mapStyles.detailMetaText, { color: theme.textSecondary, marginTop: 4 }]}
-                    numberOfLines={3}
-                  >
-                    {normalizeClosureDetails(selectedIncident.closureDetails)}
-                  </AppText>
-                ) : null}
-
-                <View style={mapStyles.detailMetaRow}>
-                  <Ionicons name="location-outline" size={17} color={theme.textSecondary} />
-                  <AppText variant="caption" style={[mapStyles.detailMetaText, { color: theme.textSecondary }]}> 
-                    {selectedIncident.locationName ||
-                      (hasValidCoordinates
-                        ? `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
-                        : 'Location unavailable')}
-                  </AppText>
-                </View>
-              </>
-            ) : null}
-
-            {showResolvedDetails ? (
-              <View style={mapStyles.detailActions}>
-                <Button
-                  title="Center on Map"
-                  onPress={() => onCenterMap(selectedIncident)}
-                  disabled={!hasValidCoordinates}
-                />
-              </View>
-            ) : null}
-
-            {!showResolvedDetails && corroboratedSignals > 0 ? (
+            {incident.closureOutcome ? (
               <View style={mapStyles.detailMetaRow}>
-                <Ionicons name="people-circle-outline" size={17} color={theme.primary} />
-                <AppText variant="caption" style={[mapStyles.detailMetaText, { color: theme.textSecondary }]}> 
-                  Community signals corroborate this report ({corroboratedSignals})
+                <Ionicons name="shield-checkmark-outline" size={17} color={theme.primary} />
+                <AppText variant="caption" style={[mapStyles.detailMetaText, { color: theme.primary }]}>
+                  {String(incident.closureOutcome).replace(/_/g, ' ')}
                 </AppText>
               </View>
             ) : null}
+
+            {incident.closureDetails ? (
+              <AppText
+                variant="caption"
+                style={[mapStyles.detailMetaText, { color: theme.textSecondary, marginTop: 4 }]}
+                numberOfLines={3}
+              >
+                {normalizeClosureDetails(incident.closureDetails)}
+              </AppText>
+            ) : null}
+
+            <View style={mapStyles.detailMetaRow}>
+              <Ionicons name="location-outline" size={17} color={theme.textSecondary} />
+              <AppText variant="caption" style={[mapStyles.detailMetaText, { color: theme.textSecondary }]}>
+                {incident.locationName ||
+                  (hasValidCoordinates
+                    ? `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+                    : 'Location unavailable')}
+              </AppText>
+            </View>
           </>
+        ) : null}
+
+        {showResolvedDetails ? (
+          <View style={mapStyles.detailActions}>
+            <Button
+              title="Center on Map"
+              onPress={() => onCenterMap(incident)}
+              disabled={!hasValidCoordinates}
+            />
+          </View>
+        ) : null}
+
+        {!showResolvedDetails && corroboratedSignals > 0 ? (
+          <View style={mapStyles.detailMetaRow}>
+            <Ionicons name="people-circle-outline" size={17} color={theme.primary} />
+            <AppText variant="caption" style={[mapStyles.detailMetaText, { color: theme.textSecondary }]}>
+              Community signals corroborate this report ({corroboratedSignals})
+            </AppText>
+          </View>
+        ) : null}
       </Animated.View>
     </Animated.View>
   );

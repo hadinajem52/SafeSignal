@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { Animated, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { AccessibilityInfo, Animated, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
@@ -12,18 +12,36 @@ const AuthHeader = ({
   titleColor,
   children,
   marginBottom = 32,
-  tagSubtitle = true,
+  tagSubtitle = true
 }) => {
   const { theme } = useTheme();
   const halo = useRef(new Animated.Value(0)).current;
+  const [reduceMotion, setReduceMotion] = useState(false);
 
   useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+      if (mounted) setReduceMotion(enabled);
+    });
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => {
+      mounted = false;
+      sub.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      halo.stopAnimation();
+      halo.setValue(0); // keep the halo invisible/static when reduced motion is on
+      return undefined;
+    }
     const haloLoop = Animated.loop(
       Animated.timing(halo, { toValue: 1, duration: 2600, useNativeDriver: true })
     );
     haloLoop.start();
     return () => haloLoop.stop();
-  }, [halo]);
+  }, [halo, reduceMotion]);
 
   const haloScale = halo.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1.5] });
   const haloOpacity = halo.interpolate({ inputRange: [0, 0.15, 1], outputRange: [0, 0.5, 0] });
@@ -31,27 +49,26 @@ const AuthHeader = ({
   return (
     <View style={[authStyles.headerWrap, { marginBottom }]}>
       <View style={authStyles.brandBadgeWrap}>
-        {/* Expanding halo ring — echoes the radar sweep in the background */}
         <Animated.View
           pointerEvents="none"
           style={[
-            authStyles.brandBadgeHalo,
-            {
-              borderColor: theme.primary,
-              opacity: haloOpacity,
-              transform: [{ scale: haloScale }],
-            },
-          ]}
-        />
+          authStyles.brandBadgeHalo,
+          {
+            borderColor: theme.primary,
+            opacity: haloOpacity,
+            transform: [{ scale: haloScale }]
+          }]
+          } />
+
         <View
           style={[
-            authStyles.brandBadge,
-            {
-              backgroundColor: theme.primary,
-              shadowColor: theme.primary,
-            },
-          ]}
-        >
+          authStyles.brandBadge,
+          {
+            backgroundColor: theme.primary,
+            shadowColor: theme.primary
+          }]
+          }>
+
           <Ionicons name={iconName} size={30} color="#FFFFFF" />
         </View>
       </View>
@@ -60,24 +77,24 @@ const AuthHeader = ({
         {title}
       </AppText>
 
-      {subtitle && tagSubtitle ? (
-        <View style={authStyles.brandTagRow}>
+      {subtitle && tagSubtitle ?
+      <View style={authStyles.brandTagRow}>
           <View style={[authStyles.brandTagDot, { backgroundColor: theme.accentOrange }]} />
           <AppText variant="small" style={[authStyles.brandTagText, { color: theme.textTertiary }]}>
             {subtitle}
           </AppText>
-        </View>
-      ) : null}
+        </View> :
+      null}
 
-      {subtitle && !tagSubtitle ? (
-        <AppText variant="body" style={[authStyles.brandSubtitle, { color: theme.textSecondary }]}>
+      {subtitle && !tagSubtitle ?
+      <AppText variant="body" style={[authStyles.brandSubtitle, { color: theme.textSecondary }]}>
           {subtitle}
-        </AppText>
-      ) : null}
+        </AppText> :
+      null}
 
       {children}
-    </View>
-  );
+    </View>);
+
 };
 
 export default AuthHeader;

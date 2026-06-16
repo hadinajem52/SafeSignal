@@ -4,7 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { statsAPI } from '../services/api';
 import { useLocation, LOCATION_STATUS } from '../context/LocationContext';
 
-// Round coords to roughly 100m precision to reduce cache churn without shifting a 1km score too much.
+
 const roundCoord = (n) => Math.round(n * 1000) / 1000;
 
 const useDashboardData = () => {
@@ -18,14 +18,14 @@ const useDashboardData = () => {
     refresh,
   } = useLocation();
 
-  // Stable rounded coords so cache key doesn't bust on GPS drift
+
   const roundedLat = coords ? roundCoord(coords.latitude) : undefined;
   const roundedLng = coords ? roundCoord(coords.longitude) : undefined;
   const hasCoords = locationStatus === LOCATION_STATUS.AVAILABLE && Boolean(coords);
   const queryKey = ['dashboard', locationStatus, roundedLat, roundedLng];
 
-  // On focus: invalidate stale data so React Query refetches if needed.
-  // Location itself is owned by LocationProvider, so no GPS re-trigger here.
+
+
   useFocusEffect(
     useCallback(() => {
       queryClient.invalidateQueries({ queryKey: ['dashboard'], refetchType: 'active' });
@@ -52,8 +52,8 @@ const useDashboardData = () => {
     queryFn,
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
-    // Fires with no coords for fast first paint, then re-fires once the shared
-    // location resolves and the query key picks up the rounded coords.
+
+
     enabled: !preferencesLoading,
   });
 

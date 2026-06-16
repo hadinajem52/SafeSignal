@@ -10,7 +10,7 @@ const IncidentDateTimePicker = ({
   incidentDate,
   formatDate,
   onSetToNow,
-  onDateChange,
+  onDateChange
 }) => {
   const { theme } = useTheme();
   const [showEditModal, setShowEditModal] = useState(false);
@@ -94,16 +94,12 @@ const IncidentDateTimePicker = ({
       <AppText variant="small" style={[styles.helperText, { color: theme.textSecondary }]}>
         Tap the date to edit manually, or use "Set to Now".
       </AppText>
-
-      {/* Manual date/time edit modal */}
       <Modal
         visible={showEditModal}
         onClose={() => setShowEditModal(false)}
-        contentStyle={[styles.modalContent, { backgroundColor: theme.card, borderColor: theme.border }]}
-      >
-        <AppText variant="h4" style={[styles.modalTitle, { color: theme.text }]}>Set Date &amp; Time</AppText>
+        contentStyle={[styles.modalContent, { backgroundColor: theme.card, borderColor: theme.border }]}>
 
-        {/* Date row */}
+        <AppText variant="h4" style={[styles.modalTitle, { color: theme.text }]}>Set Date &amp; Time</AppText>
         <AppText variant="label" style={[styles.fieldLabel, { color: theme.textSecondary }]}>Date (MM / DD / YYYY)</AppText>
         <View style={styles.dateRow}>
           <TextInput
@@ -113,8 +109,8 @@ const IncidentDateTimePicker = ({
             placeholder="MM"
             placeholderTextColor={theme.textSecondary}
             keyboardType="numeric"
-            maxLength={2}
-          />
+            maxLength={2} />
+
           <AppText style={[styles.dateSep, { color: theme.textSecondary }]}>/</AppText>
           <TextInput
             style={[styles.fieldShort, { backgroundColor: theme.input, borderColor: theme.inputBorder, color: theme.text }]}
@@ -123,8 +119,8 @@ const IncidentDateTimePicker = ({
             placeholder="DD"
             placeholderTextColor={theme.textSecondary}
             keyboardType="numeric"
-            maxLength={2}
-          />
+            maxLength={2} />
+
           <AppText style={[styles.dateSep, { color: theme.textSecondary }]}>/</AppText>
           <TextInput
             style={[styles.fieldYear, { backgroundColor: theme.input, borderColor: theme.inputBorder, color: theme.text }]}
@@ -133,11 +129,9 @@ const IncidentDateTimePicker = ({
             placeholder="YYYY"
             placeholderTextColor={theme.textSecondary}
             keyboardType="numeric"
-            maxLength={4}
-          />
-        </View>
+            maxLength={4} />
 
-        {/* Time row */}
+        </View>
         <AppText variant="label" style={[styles.fieldLabel, { color: theme.textSecondary }]}>Time (HH : MM)</AppText>
         <View style={styles.timeRow}>
           <TextInput
@@ -147,8 +141,8 @@ const IncidentDateTimePicker = ({
             placeholder="HH"
             placeholderTextColor={theme.textSecondary}
             keyboardType="numeric"
-            maxLength={2}
-          />
+            maxLength={2} />
+
           <AppText style={[styles.dateSep, { color: theme.textSecondary }]}>:</AppText>
           <TextInput
             style={[styles.fieldShort, { backgroundColor: theme.input, borderColor: theme.inputBorder, color: theme.text }]}
@@ -157,53 +151,53 @@ const IncidentDateTimePicker = ({
             placeholder="MM"
             placeholderTextColor={theme.textSecondary}
             keyboardType="numeric"
-            maxLength={2}
-          />
+            maxLength={2} />
+
           <View style={styles.ampmRow}>
             <TouchableOpacity
               style={[styles.ampmBtn, editAmPm === 'AM' && { backgroundColor: theme.primary }]}
-              onPress={() => setEditAmPm('AM')}
-            >
+              onPress={() => setEditAmPm('AM')}>
+
               <AppText variant="buttonSmall" style={{ color: editAmPm === 'AM' ? '#fff' : theme.textSecondary }}>AM</AppText>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.ampmBtn, editAmPm === 'PM' && { backgroundColor: theme.primary }]}
-              onPress={() => setEditAmPm('PM')}
-            >
+              onPress={() => setEditAmPm('PM')}>
+
               <AppText variant="buttonSmall" style={{ color: editAmPm === 'PM' ? '#fff' : theme.textSecondary }}>PM</AppText>
             </TouchableOpacity>
           </View>
         </View>
 
-        {!!editError && (
-          <AppText variant="small" style={[styles.errorText, { color: theme.error || '#ef4444' }]}>{editError}</AppText>
-        )}
+        {!!editError &&
+        <AppText variant="small" style={[styles.errorText, { color: theme.error || '#ef4444' }]}>{editError}</AppText>
+        }
 
         <View style={styles.modalActions}>
           <TouchableOpacity
             style={[styles.modalCancelBtn, { borderColor: theme.border }]}
-            onPress={() => setShowEditModal(false)}
-          >
+            onPress={() => setShowEditModal(false)}>
+
             <AppText variant="label" style={{ color: theme.textSecondary }}>Cancel</AppText>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.modalApplyBtn, { backgroundColor: theme.primary }]}
-            onPress={handleApply}
-          >
+            onPress={handleApply}>
+
             <AppText variant="label" style={{ color: '#fff' }}>Apply</AppText>
           </TouchableOpacity>
         </View>
       </Modal>
-    </View>
-  );
+    </View>);
+
 };
 
 const styles = StyleSheet.create({
   inputGroup: {
-    marginBottom: 24,
+    marginBottom: 24
   },
   label: {
-    marginBottom: 8,
+    marginBottom: 8
   },
   dateTimeContainer: {
     flexDirection: 'row',
@@ -211,55 +205,55 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     borderWidth: 1,
     borderRadius: 8,
-    padding: 12,
+    padding: 12
   },
   dateDisplay: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    flex: 1
   },
   dateIcon: {
-    marginRight: 8,
+    marginRight: 8
   },
   editIcon: {
-    marginLeft: 6,
+    marginLeft: 6
   },
   dateText: {},
   setNowButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 4,
-    marginLeft: 8,
+    marginLeft: 8
   },
   setNowButtonText: {},
   helperText: {
     marginTop: 6,
-    fontStyle: 'italic',
+    fontStyle: 'italic'
   },
-  // Modal styles
+
   modalContent: {
     borderRadius: 16,
     borderWidth: 1,
     padding: 20,
     width: '90%',
-    alignSelf: 'center',
+    alignSelf: 'center'
   },
   modalTitle: {
-    marginBottom: 16,
+    marginBottom: 16
   },
   fieldLabel: {
     marginBottom: 6,
-    marginTop: 8,
+    marginTop: 8
   },
   dateRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 4
   },
   timeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 8
   },
   fieldShort: {
     width: 48,
@@ -268,7 +262,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 10,
     textAlign: 'center',
-    fontSize: 15,
+    fontSize: 15
   },
   fieldYear: {
     width: 68,
@@ -277,45 +271,45 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 10,
     textAlign: 'center',
-    fontSize: 15,
+    fontSize: 15
   },
   dateSep: {
     marginHorizontal: 6,
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '600'
   },
   ampmRow: {
     flexDirection: 'row',
     marginLeft: 12,
     borderRadius: 6,
-    overflow: 'hidden',
+    overflow: 'hidden'
   },
   ampmBtn: {
     paddingHorizontal: 14,
     paddingVertical: 9,
-    borderRadius: 6,
+    borderRadius: 6
   },
   errorText: {
     marginTop: 6,
-    marginBottom: 2,
+    marginBottom: 2
   },
   modalActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     marginTop: 16,
-    gap: 10,
+    gap: 10
   },
   modalCancelBtn: {
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 18,
-    paddingVertical: 10,
+    paddingVertical: 10
   },
   modalApplyBtn: {
     borderRadius: 8,
     paddingHorizontal: 18,
-    paddingVertical: 10,
-  },
+    paddingVertical: 10
+  }
 });
 
 export default React.memo(IncidentDateTimePicker);

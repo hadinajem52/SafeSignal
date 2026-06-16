@@ -1,9 +1,15 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Animated, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, TextInput, View } from 'react-native';
+import Reanimated, { Easing, useAnimatedProps, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText, Button, Card } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
+import { fontFamilies } from '../../../../constants/typography';
 import styles from './homeStyles';
+
+// Non-editable animated TextInput: the supported way to animate displayed text on
+// the UI thread (Reanimated drives the `text` prop) without re-rendering per frame.
+const AnimatedTextInput = Reanimated.createAnimatedComponent(TextInput);
 
 const getSafetyScoreColor = (theme, score) => {
   if (score >= 80) return theme.safetyGood;
@@ -48,7 +54,6 @@ const buildSafetyNote = (safetyScore) => {
 
 const SafetyScoreCard = ({ safetyScore, location, unavailableReason, ctaLabel, onCtaPress }) => {
   const { theme } = useTheme();
-  const [displayScore, setDisplayScore] = useState(0);
   const enterAnim = useRef(new Animated.Value(0.94)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
@@ -59,37 +64,27 @@ const SafetyScoreCard = ({ safetyScore, location, unavailableReason, ctaLabel, o
     ]).start();
   }, [enterAnim, opacityAnim]);
 
+  // Score count-up, driven on the UI thread (no per-tick React re-render).
+  const targetScore = normalizeScore(safetyScore?.score);
+  const animatedScore = useSharedValue(0);
   useEffect(() => {
-    const target = normalizeScore(safetyScore?.score);
-    let current = 0;
-    if (target <= 0) {
-      setDisplayScore(0);
-      return undefined;
-    }
-
-    const timer = setInterval(() => {
-      current += Math.max(1, Math.ceil(target / 25));
-      if (current >= target) {
-        setDisplayScore(target);
-        clearInterval(timer);
-      } else {
-        setDisplayScore(current);
-      }
-    }, 30);
-    return () => clearInterval(timer);
-  }, [safetyScore?.score]);
+    animatedScore.value = withTiming(targetScore, { duration: 900, easing: Easing.out(Easing.cubic) });
+  }, [targetScore, animatedScore]);
+  const scoreAnimatedProps = useAnimatedProps(() => ({
+    text: `${Math.round(animatedScore.value)}`,
+  }));
 
   if (!safetyScore) {
     return (
       <Animated.View style={{ transform: [{ scale: enterAnim }], opacity: opacityAnim }}>
-        <Card style={[styles.safetyCard, { borderColor: theme.warning }]}> 
+        <Card style={[styles.safetyCard, { borderColor: theme.warning }]}>
           <View style={styles.safetyHeader}>
             <AppText variant="label" style={[styles.safetyTitle, { color: theme.text }]}>Area Activity Score</AppText>
           </View>
-          <AppText variant="body" style={[styles.safetyDescription, { color: theme.text }]}> 
+          <AppText variant="body" style={[styles.safetyDescription, { color: theme.text }]}>
             Activity score unavailable
           </AppText>
-          <AppText variant="bodySmall" style={[styles.safetyNote, { color: theme.textSecondary }]}> 
+          <AppText variant="bodySmall" style={[styles.safetyNote, { color: theme.textSecondary }]}>
             {unavailableReason || 'We could not determine safety conditions for your area right now.'}
           </AppText>
           {ctaLabel && onCtaPress ? (
@@ -127,7 +122,21 @@ const SafetyScoreCard = ({ safetyScore, location, unavailableReason, ctaLabel, o
         <View style={styles.safetyContent}>
           <View style={[styles.scoreRing, { borderColor: `${scoreColor}59` }]}>
             <View style={[styles.scoreCircle, { backgroundColor: theme.surface }]}>
-              <AppText variant="h1" style={[styles.scoreNumber, { color: scoreColor }]}>{displayScore}</AppText>
+              <AnimatedTextInput
+                editable={false}
+                caretHidden
+                underlineColorAndroid="transparent"
+                defaultValue="0"
+                animatedProps={scoreAnimatedProps}
+                style={{
+                  fontSize: 34,
+                  fontFamily: fontFamilies.display,
+                  color: scoreColor,
+                  textAlign: 'center',
+                  padding: 0,
+                  includeFontPadding: false,
+                }}
+              />
             </View>
           </View>
 

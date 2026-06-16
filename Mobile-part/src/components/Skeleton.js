@@ -10,10 +10,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useTheme } from '../context/ThemeContext';
 
-/**
- * Pulsing skeleton block. Opacity-only loop (UI thread) — cheap and smooth even
- * in a list of placeholders. Pass width/height/borderRadius via `style`.
- */
+
+
+
+
 export default function Skeleton({ style }) {
   const { theme } = useTheme();
   const pulse = useSharedValue(0.5);

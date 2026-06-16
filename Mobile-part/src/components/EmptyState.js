@@ -6,7 +6,7 @@ import Button from './Button';
 import { useTheme } from '../context/ThemeContext';
 import { DURATION } from '../theme/motion';
 
-// Unified (light + dark) empty / error illustrations, keyed for reuse across screens.
+
 export const EMPTY_ART = {
   reports: require('../../assets/illustrations/empty-states/empty-reports.png'),
   feed: require('../../assets/illustrations/empty-states/empty-feed.png'),
@@ -18,10 +18,10 @@ export const EMPTY_ART = {
   errorGeneric: require('../../assets/illustrations/empty-states/error-generic.png'),
 };
 
-/**
- * Shared empty / error state: illustration + title + message + optional action.
- * `illustration` is a required()'d image source (e.g. EMPTY_ART.reports).
- */
+
+
+
+
 export default function EmptyState({
   illustration,
   title,

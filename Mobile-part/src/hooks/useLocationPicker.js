@@ -10,8 +10,8 @@ const DEFAULT_REGION = {
   longitudeDelta: 0.05,
 };
 
-// expo-location v17+ dropped the 'timeout' option from getCurrentPositionAsync.
-// Use Promise.race to enforce a real timeout instead.
+
+
 const withTimeout = (promise, ms, code = 'E_LOCATION_TIMEOUT') =>
   Promise.race([
     promise,
@@ -50,12 +50,12 @@ const useLocationPicker = ({
     try {
       const servicesEnabled = await Location.hasServicesEnabledAsync();
       if (!servicesEnabled) {
-        // On Android, show the native Google "Turn on Location" in-app dialog.
-        // On iOS this is a no-op that resolves immediately.
+
+
         try {
           await Location.enableNetworkProviderAsync();
         } catch {
-          // User tapped "No, thanks" — stop silently.
+
           setIsLoadingLocation(false);
           return;
         }
@@ -76,7 +76,7 @@ const useLocationPicker = ({
 
       let position;
 
-      // Fast path: use a cached position if one exists (returns in < 1 s).
+
       const lastKnownFast = await withTimeout(
         Location.getLastKnownPositionAsync({
           maxAge: 10 * 60 * 1000,
@@ -88,15 +88,15 @@ const useLocationPicker = ({
       if (lastKnownFast?.coords) {
         position = lastKnownFast;
       } else {
-        // No cache — request a live fix. Use Balanced (network + GPS) rather
-        // than High (GPS-only) so it resolves in seconds instead of minutes.
+
+
         try {
           position = await withTimeout(
             Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
             12000
           );
         } catch (positionError) {
-          // One last attempt: accept any cached position regardless of age/accuracy.
+
           const lastKnownStale = await withTimeout(
             Location.getLastKnownPositionAsync({
               maxAge: 60 * 60 * 1000,
@@ -153,7 +153,7 @@ const useLocationPicker = ({
   }, [locationServicesEnabled, onClearLocationError, onLocationError, showToast]);
 
   const openMapForSelection = useCallback(async () => {
-    // If there is already a confirmed location, center on it and open immediately.
+
     if (location) {
       setMapRegion({
         latitude: location.latitude,
@@ -166,8 +166,8 @@ const useLocationPicker = ({
       return;
     }
 
-    // No existing location — open immediately with a sensible default so the
-    // modal is never blocked on a slow / missing GPS fix.
+
+
     if (!locationServicesEnabled) {
       setMapRegion(DEFAULT_REGION);
       setSelectedMapLocation(null);
@@ -179,11 +179,11 @@ const useLocationPicker = ({
     setSelectedMapLocation(null);
     setShowMapModal(true);
 
-    // After the modal is open, quietly try to center on the user's position.
+
     try {
       const servicesEnabled = await Location.hasServicesEnabledAsync();
       if (!servicesEnabled) {
-        // Show the native Google dialog; if the user declines, bail out quietly.
+
         try {
           await Location.enableNetworkProviderAsync();
         } catch {
@@ -212,12 +212,12 @@ const useLocationPicker = ({
           lastKnown = await withTimeout(
             Location.getLastKnownPositionAsync({
               maxAge: 5 * 60 * 1000,
-              requiredAccuracy: 1000, // relaxed from 100m — accepts network-based cached positions
+              requiredAccuracy: 1000,
             }),
             3000
           );
         } catch {
-          // getLastKnownPositionAsync timed out — fall through
+
         }
         if (!lastKnown?.coords) {
           return;

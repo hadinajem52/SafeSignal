@@ -4,11 +4,11 @@ import notificationStore from '../services/notificationStore';
 
 const userKey = (user) => user?.user_id || user?.userId || user?.email || null;
 
-/**
- * Reads the server-backed notification inbox and stays in sync with the store.
- * Fetches on mount, re-fetches/re-scopes when the signed-in user changes, and
- * applies optimistic updates for read/remove/clear actions.
- */
+
+
+
+
+
 const useNotifications = () => {
   const { user, isAuthenticated } = useAuth();
   const identity = userKey(user);

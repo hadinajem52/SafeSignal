@@ -30,7 +30,7 @@ export default function useFeed(filters = {}) {
         if (isRefresh) {
           setRefreshing(true);
         } else if (offset === 0) {
-          // First ever load → full loading state; subsequent filter changes → subtle inline indicator
+
           if (isFirstLoad.current) {
             setLoading(true);
           } else {

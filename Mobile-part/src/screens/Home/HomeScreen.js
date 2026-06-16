@@ -2,8 +2,8 @@ import React, { useCallback, useMemo, useState } from 'react';
 import {
   Linking,
   TouchableOpacity,
-  View,
-} from 'react-native';
+  View } from
+'react-native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -32,7 +32,7 @@ const normalizeSafetyScore = (safetyScore) => {
 
   return {
     ...safetyScore,
-    score: Math.max(0, Math.min(100, Math.round(score))),
+    score: Math.max(0, Math.min(100, Math.round(score)))
   };
 };
 
@@ -53,7 +53,7 @@ const HomeScreen = ({ navigation }) => {
     locationIssue,
     dashboardData,
     error,
-    onRefresh,
+    onRefresh
   } = useDashboardData();
   const { insight: areaInsight, loading: areaInsightLoading } = useAreaInsights();
   const safetyScore = normalizeSafetyScore(dashboardData?.safetyScore);
@@ -62,12 +62,12 @@ const HomeScreen = ({ navigation }) => {
   const witnessPromptCount = witnessPrompts.count || 0;
   const firstNearbyConstellationId = witnessPrompts.firstNearbyConstellationId;
   const showEnableLocationCta =
-    !locationLoading &&
-    LOCATION_ENABLE_STATUSES.includes(locationStatus);
+  !locationLoading &&
+  LOCATION_ENABLE_STATUSES.includes(locationStatus);
 
-  // Turn on location right from the dashboard instead of sending the user to a
-  // confusingly-named switch in Account. Flipping the preference inside
-  // enableLocationSharing makes LocationContext re-acquire automatically.
+
+
+
   const handleEnableLocation = useCallback(async () => {
     if (enablingLocation) return;
     setEnablingLocation(true);
@@ -85,26 +85,26 @@ const HomeScreen = ({ navigation }) => {
       setEnablingLocation(false);
     }
   }, [enablingLocation, enableLocationSharing, showToast]);
-  const safetyScoreUnavailableReason = error
-    ? `We could not load safety data right now. ${error}`
-    : locationLoading || locationStatus === 'pending'
-      ? 'Detecting your current location...'
-    : locationIssue
-      ? locationIssue
-      : locationStatus === 'available'
-        ? 'Reported activity data for your current area is temporarily unavailable from the server.'
-        : 'Location is temporarily unavailable, so nearby safety cannot be calculated right now.';
+  const safetyScoreUnavailableReason = error ?
+  `We could not load safety data right now. ${error}` :
+  locationLoading || locationStatus === 'pending' ?
+  'Detecting your current location...' :
+  locationIssue ?
+  locationIssue :
+  locationStatus === 'available' ?
+  'Reported activity data for your current area is temporarily unavailable from the server.' :
+  'Location is temporarily unavailable, so nearby safety cannot be calculated right now.';
 
-  // useMemo must be declared before any early returns (Rules of Hooks)
-  const homeHeader = useMemo(() => (
-    <>
+
+  const homeHeader = useMemo(() =>
+  <>
       <View style={[styles.header, { borderColor: theme.border }]}>
         <LinearGradient
-          colors={[theme.primaryLight || 'rgba(29,78,216,0.14)', 'rgba(255,255,255,0)']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.headerGradient}
-        >
+        colors={[theme.primaryLight || 'rgba(29,78,216,0.14)', 'rgba(255,255,255,0)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.headerGradient}>
+
           <View>
             <AppText variant="h2" style={[styles.greeting, { color: theme.text }]}>Hello, {user?.username || 'there'}!</AppText>
             <AppText variant="body" style={[styles.subtitle, { color: theme.textSecondary }]}>
@@ -112,82 +112,82 @@ const HomeScreen = ({ navigation }) => {
             </AppText>
           </View>
           <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={() => navigation.navigate('Notifications')}
-            accessibilityRole="button"
-            accessibilityLabel={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
-            style={[styles.logoContainer, { backgroundColor: theme.primary }]}
-          >
+          activeOpacity={0.85}
+          onPress={() => navigation.navigate('Notifications')}
+          accessibilityRole="button"
+          accessibilityLabel={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
+          style={[styles.logoContainer, { backgroundColor: theme.primary }]}>
+
             <Ionicons name="notifications" size={24} color="#FFFFFF" />
-            {unreadCount > 0 ? (
-              <View style={[styles.notifBadge, { backgroundColor: theme.error, borderColor: theme.primary }]} />
-            ) : null}
+            {unreadCount > 0 ?
+          <View style={[styles.notifBadge, { backgroundColor: theme.error, borderColor: theme.primary }]} /> :
+          null}
           </TouchableOpacity>
         </LinearGradient>
       </View>
 
-      {activeNearbyCount > 0 ? (
-        <Card style={[styles.alertBanner, { backgroundColor: `${theme.warning}18`, borderColor: `${theme.warning}40` }]}> 
+      {activeNearbyCount > 0 ?
+    <Card style={[styles.alertBanner, { backgroundColor: `${theme.warning}18`, borderColor: `${theme.warning}40` }]}>
           <View style={styles.alertBannerRow}>
             <Ionicons name="warning-outline" size={16} color={theme.warning} />
-            <AppText variant="bodySmall" style={[styles.alertBannerText, { color: theme.warningNoticeText || theme.warning }]}> 
+            <AppText variant="bodySmall" style={[styles.alertBannerText, { color: theme.warningNoticeText || theme.warning }]}>
               {activeNearbyCount} active incident{activeNearbyCount > 1 ? 's' : ''} nearby. Review map details now.
             </AppText>
           </View>
-        </Card>
-      ) : null}
+        </Card> :
+    null}
 
       <SafetyScoreCard
-        safetyScore={safetyScore}
-        location={location}
-        unavailableReason={safetyScoreUnavailableReason}
-        ctaLabel={showEnableLocationCta ? (enablingLocation ? 'Enabling…' : 'Enable Location') : undefined}
-        onCtaPress={showEnableLocationCta ? handleEnableLocation : undefined}
-      />
+      safetyScore={safetyScore}
+      location={location}
+      unavailableReason={safetyScoreUnavailableReason}
+      ctaLabel={showEnableLocationCta ? enablingLocation ? 'Enabling…' : 'Enable Location' : undefined}
+      onCtaPress={showEnableLocationCta ? handleEnableLocation : undefined} />
+
 
       <AreaInsightsCard insight={areaInsight} loading={areaInsightLoading} />
 
-      {witnessPromptCount > 0 && firstNearbyConstellationId ? (
-        <TouchableOpacity
-          activeOpacity={0.9}
-          onPress={() => navigation.navigate('WitnessPrompt', {
-            constellationId: firstNearbyConstellationId,
-            coarseLatitude: witnessPrompts.coarseLatitude,
-            coarseLongitude: witnessPrompts.coarseLongitude,
-          })}
-        >
-          <Card style={[styles.witnessPromptCard, { backgroundColor: `${theme.primary}12`, borderColor: `${theme.primary}33` }]}> 
-            <View style={[styles.witnessPromptIcon, { backgroundColor: `${theme.primary}18` }]}> 
+      {witnessPromptCount > 0 && firstNearbyConstellationId ?
+    <TouchableOpacity
+      activeOpacity={0.9}
+      onPress={() => navigation.navigate('WitnessPrompt', {
+        constellationId: firstNearbyConstellationId,
+        coarseLatitude: witnessPrompts.coarseLatitude,
+        coarseLongitude: witnessPrompts.coarseLongitude
+      })}>
+
+          <Card style={[styles.witnessPromptCard, { backgroundColor: `${theme.primary}12`, borderColor: `${theme.primary}33` }]}>
+            <View style={[styles.witnessPromptIcon, { backgroundColor: `${theme.primary}18` }]}>
               <Ionicons name="radio-outline" size={20} color={theme.primary} />
             </View>
             <View style={styles.witnessPromptContent}>
               <AppText variant="label" style={{ color: theme.text }}>
                 Help clarify nearby activity
               </AppText>
-              <AppText variant="bodySmall" style={[styles.witnessPromptText, { color: theme.textSecondary }]}> 
+              <AppText variant="bodySmall" style={[styles.witnessPromptText, { color: theme.textSecondary }]}>
                 {witnessPromptCount} private witness prompt{witnessPromptCount > 1 ? 's' : ''} nearby. Share whether you noticed anything.
               </AppText>
             </View>
             <Ionicons name="chevron-forward" size={18} color={theme.primary} />
           </Card>
-        </TouchableOpacity>
-      ) : null}
+        </TouchableOpacity> :
+    null}
 
       <QuickStatsRow
-        quickStats={dashboardData?.quickStats}
-        onMapPress={() => navigation.navigate('Map')}
-      />
+      quickStats={dashboardData?.quickStats}
+      onMapPress={() => navigation.navigate('Map')} />
 
-      {error ? (
-        <Card style={[styles.errorContainer, { backgroundColor: `${theme.error}15` }]}>
+
+      {error ?
+    <Card style={[styles.errorContainer, { backgroundColor: `${theme.error}15` }]}>
           <AppText variant="bodySmall" style={[styles.errorText, { color: theme.error }]}>{error}</AppText>
           <TouchableOpacity onPress={onRefresh}>
             <AppText variant="label" style={[styles.retryText, { color: theme.primary }]}>Tap to retry</AppText>
           </TouchableOpacity>
-        </Card>
-      ) : null}
-    </>
-  ), [user, theme, activeNearbyCount, safetyScore, location, safetyScoreUnavailableReason, showEnableLocationCta, enablingLocation, handleEnableLocation, areaInsight, areaInsightLoading, dashboardData, error, onRefresh, navigation, refreshing, witnessPromptCount, firstNearbyConstellationId, witnessPrompts, unreadCount]);
+        </Card> :
+    null}
+    </>,
+  [user, theme, activeNearbyCount, safetyScore, location, safetyScoreUnavailableReason, showEnableLocationCta, enablingLocation, handleEnableLocation, areaInsight, areaInsightLoading, dashboardData, error, onRefresh, navigation, refreshing, witnessPromptCount, firstNearbyConstellationId, witnessPrompts, unreadCount]);
 
   if (loading) {
     return (
@@ -203,8 +203,8 @@ const HomeScreen = ({ navigation }) => {
         <AppText variant="bodySmall" style={[styles.loadingText, { color: theme.textSecondary }]}>
           Building your dashboard...
         </AppText>
-      </View>
-    );
+      </View>);
+
   }
 
   return (
@@ -214,10 +214,10 @@ const HomeScreen = ({ navigation }) => {
         ListHeaderComponent={homeHeader}
         externalRefreshing={refreshing}
         onExternalRefresh={onRefresh}
-        contentContainerStyle={{ paddingBottom: tabBarHeight + 8 }}
-      />
-    </View>
-  );
+        contentContainerStyle={{ paddingBottom: tabBarHeight + 8 }} />
+
+    </View>);
+
 };
 
 export default HomeScreen;

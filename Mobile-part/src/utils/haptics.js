@@ -1,12 +1,12 @@
 import * as Haptics from 'expo-haptics';
 
-// Thin, crash-safe wrapper. No-ops if the native module isn't available yet
-// (e.g. before an Android rebuild) or if haptics are unsupported.
+
+
 const safe = (fn) => () => {
   try {
     fn()?.catch?.(() => {});
   } catch {
-    /* ignore */
+
   }
 };
 

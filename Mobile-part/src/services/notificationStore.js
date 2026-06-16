@@ -1,8 +1,8 @@
 import { notificationAPI } from './notificationAPI';
 
-// In-memory sync layer over the backend notification inbox. The server is the
-// source of truth; this caches the last fetch, applies optimistic updates, and
-// notifies subscribers (the home badge + the Notifications screen) of changes.
+
+
+
 
 const emptyCache = () => ({ notifications: [], unreadCount: 0, loaded: false });
 
@@ -20,7 +20,7 @@ const emit = () => {
     try {
       listener(cache);
     } catch {
-      // ignore listener errors
+
     }
   });
 };
@@ -76,7 +76,7 @@ const notificationStore = {
     return Boolean(userKey) && ownerKey === userKey;
   },
 
-  /** Fetch from the server. Concurrent calls share one request. */
+
   fetch(userKey) {
     if (!ensureOwner(userKey)) {
       return Promise.resolve(cache);
@@ -111,7 +111,7 @@ const notificationStore = {
     return promise;
   },
 
-  /** A live socket notification arrived — refresh from the server (debounced). */
+
   notifyRealtime(userKey) {
     if (!ensureOwner(userKey)) {
       return;
@@ -179,7 +179,7 @@ const notificationStore = {
     }
   },
 
-  /** Drop cached state (call on login/logout) so the next fetch is fresh. */
+
   reset(nextOwnerKey = null) {
     resetForOwner(nextOwnerKey);
   },

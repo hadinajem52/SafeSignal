@@ -114,6 +114,28 @@ nothing animates layout props, and `CategoryFilter`'s `useNativeDriver:false` is
 `FadeInDown` stagger is fine because it stayed on **FlatList** (not recycled) — another reason that list
 wasn't migrated to FlashList.
 
+### Round 4 — full animation sweep findings (applied)
+
+Swept all 23 files that use any animation primitive. Result: ~20 already run on the UI thread
+(Reanimated) or native driver (Animated), nothing uses `LayoutAnimation`, and no scroll-driven
+`Animated.event`. Fixed the three sub-optimal/polish spots found:
+
+- **SafetyScoreCard count-up removed** ([SafetyScoreCard.js](src/screens/Home/SafetyScoreCard.js)) — was the
+  only "animation by re-render" (`setInterval(30ms)` + `setState` ~25×, JS thread, during dashboard load).
+  Now shows the final score directly; the card's existing native-driver spring/opacity entrance still
+  animates it in. Zero JS-thread re-render churn, no visual-fidelity risk. _(A Reanimated UI-thread
+  count-up was considered but the animated-`TextInput` approach was disproportionate for the gain.)_
+- **Map detail sheet exit animation fixed** ([IncidentMapDetail.js](src/screens/Map/IncidentMapDetail.js)) — the
+  sheet returned `null` the instant `selectedIncident` cleared, so the slide-down/​fade never played. Now
+  retains the last incident in local state and unmounts only after the close animation finishes (the same
+  pattern `Modal.js` uses). Native-driver; entry was already smooth.
+- **AuthHeader halo respects reduce-motion** ([AuthHeader.js](src/screens/Auth/AuthHeader.js)) — the infinite
+  brand-badge halo loop now disables when the OS "reduce motion" setting is on (via `AccessibilityInfo`),
+  consistent with `AnimatedBackground`. Accessibility consistency.
+
+**Not actionable:** the full-width tab slide briefly showing the Map render on entry is inherent to the
+transition design (native-driven; `freezeOnBlur` covers the resource side) — left as-is.
+
 ---
 
 ## 1. Executive summary

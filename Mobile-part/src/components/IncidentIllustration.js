@@ -2,7 +2,7 @@ import React from 'react';
 import { Image } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 
-// Category illustrations, keyed by incident.category, with light + dark (night) variants.
+
 const LIGHT = {
   theft: require('../../assets/illustrations/emergencies/theft.png'),
   assault: require('../../assets/illustrations/emergencies/assault.png'),

@@ -3,8 +3,8 @@ import {
   ActivityIndicator,
   FlatList,
   StyleSheet,
-  View,
-} from 'react-native';
+  View } from
+'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { AppText, EmptyState, EMPTY_ART, PressableScale } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
@@ -13,39 +13,39 @@ import FeedCard from './FeedCard';
 import haptics from '../../utils/haptics';
 
 const FILTERS = [
-  { label: 'All',         value: null              },
-  { label: 'Resolved',    value: 'resolved_handled' },
-  { label: 'Arrest',      value: 'arrest_made'      },
-  { label: 'False Alarm', value: 'false_alarm'      },
-  { label: 'Filed',       value: 'report_filed'     },
-];
+{ label: 'All', value: null },
+{ label: 'Resolved', value: 'resolved_handled' },
+{ label: 'Arrest', value: 'arrest_made' },
+{ label: 'False Alarm', value: 'false_alarm' },
+{ label: 'Filed', value: 'report_filed' }];
 
-const FilterChip = ({ item, active, onPress, theme }) => (
-  <PressableScale
-    style={[
-      styles.chip,
-      {
-        borderColor: active ? theme.primary : theme.border,
-        backgroundColor: active ? theme.primary : theme.card,
-      },
-    ]}
-    onPress={() => {
-      haptics.selection();
-      onPress(item.value);
-    }}
-  >
+
+const FilterChip = ({ item, active, onPress, theme }) =>
+<PressableScale
+  style={[
+  styles.chip,
+  {
+    borderColor: active ? theme.primary : theme.border,
+    backgroundColor: active ? theme.primary : theme.card
+  }]
+  }
+  onPress={() => {
+    haptics.selection();
+    onPress(item.value);
+  }}>
+
     <AppText variant="caption" style={{ color: active ? '#fff' : theme.text }}>
       {item.label}
     </AppText>
-  </PressableScale>
-);
+  </PressableScale>;
+
 
 const CommunityFeed = ({
   navigation,
   ListHeaderComponent = null,
   contentContainerStyle,
   externalRefreshing = false,
-  onExternalRefresh,
+  onExternalRefresh
 }) => {
   const { theme } = useTheme();
   const [activeFilter, setActiveFilter] = useState(null);
@@ -59,7 +59,7 @@ const CommunityFeed = ({
     loadingMore,
     error,
     refresh,
-    loadMore,
+    loadMore
   } = useFeed(filters);
   const isRefreshing = refreshing || externalRefreshing;
 
@@ -67,25 +67,25 @@ const CommunityFeed = ({
     navigation.navigate('IncidentDetail', { incident, source: 'community_feed' });
   }, [navigation]);
 
-  const renderFeedItem = useCallback(({ item }) => (
-    <FeedCard incident={item} onPress={handleCardPress} />
-  ), [handleCardPress]);
+  const renderFeedItem = useCallback(({ item }) =>
+  <FeedCard incident={item} onPress={handleCardPress} />,
+  [handleCardPress]);
 
   const handleRefresh = useCallback(async () => {
     haptics.light();
     await Promise.all([
-      refresh(),
-      Promise.resolve(onExternalRefresh?.()),
-    ]);
+    refresh(),
+    Promise.resolve(onExternalRefresh?.())]
+    );
   }, [onExternalRefresh, refresh]);
 
-  // Use useMemo to produce a React element (not a callback function).
-  // Passing a function as ListHeaderComponent causes FlatList to treat each new
-  // function reference as a different component type → full unmount+remount of the
-  // header (and SafetyScoreCard) every time activeFilter or filtering changes.
-  // A React element is reconciled in-place so the dashboard cards are never remounted.
-  const headerElement = useMemo(() => (
-    <>
+
+
+
+
+
+  const headerElement = useMemo(() =>
+  <>
       {ListHeaderComponent}
 
       <View style={styles.header}>
@@ -95,29 +95,29 @@ const CommunityFeed = ({
       </View>
 
       <FlatList
-        horizontal
-        data={FILTERS}
-        keyExtractor={(item) => item.label}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chips}
-        renderItem={({ item }) => (
-          <FilterChip
-            item={item}
-            active={activeFilter === item.value}
-            onPress={setActiveFilter}
-            theme={theme}
-          />
-        )}
-        style={styles.chipList}
-      />
+      horizontal
+      data={FILTERS}
+      keyExtractor={(item) => item.label}
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.chips}
+      renderItem={({ item }) =>
+      <FilterChip
+        item={item}
+        active={activeFilter === item.value}
+        onPress={setActiveFilter}
+        theme={theme} />
 
-      {filtering ? (
-        <View style={styles.filteringBar}>
+      }
+      style={styles.chipList} />
+
+
+      {filtering ?
+    <View style={styles.filteringBar}>
           <ActivityIndicator size="small" color={theme.primary} />
-        </View>
-      ) : null}
-    </>
-  ), [ListHeaderComponent, theme, activeFilter, filtering]);
+        </View> :
+    null}
+    </>,
+  [ListHeaderComponent, theme, activeFilter, filtering]);
 
   const renderFooter = () => {
     if (!loadingMore) {
@@ -127,8 +127,8 @@ const CommunityFeed = ({
     return (
       <View style={styles.footerLoader}>
         <ActivityIndicator color={theme.primary} />
-      </View>
-    );
+      </View>);
+
   };
 
   const renderEmpty = () => {
@@ -144,9 +144,9 @@ const CommunityFeed = ({
           message={error}
           actionLabel="Try again"
           onAction={refresh}
-          size={160}
-        />
-      );
+          size={160} />);
+
+
     }
 
     return (
@@ -154,9 +154,9 @@ const CommunityFeed = ({
         illustration={activeFilter ? EMPTY_ART.search : EMPTY_ART.feed}
         title={activeFilter ? 'Nothing matches' : 'No community reports yet'}
         message={activeFilter ? 'Try a different filter.' : 'Check back later.'}
-        size={160}
-      />
-    );
+        size={160} />);
+
+
   };
 
   return (
@@ -172,51 +172,51 @@ const CommunityFeed = ({
       onRefresh={handleRefresh}
       refreshing={isRefreshing}
       contentContainerStyle={[styles.wrapper, contentContainerStyle]}
-      showsVerticalScrollIndicator={false}
-    />
-  );
+      showsVerticalScrollIndicator={false} />);
+
+
 };
 
 const styles = StyleSheet.create({
   wrapper: {
-    // paddingTop (not marginTop): FlashList's contentContainerStyle supports padding,
-    // not margin. Same visual top gap, FlashList-compatible.
+
+
     paddingTop: 20,
-    paddingHorizontal: 16,
+    paddingHorizontal: 16
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 12
   },
   chipList: {
-    marginBottom: 12,
+    marginBottom: 12
   },
   filteringBar: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
-    marginBottom: 4,
+    marginBottom: 4
   },
   chips: {
-    gap: 8,
+    gap: 8
   },
   chip: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
-    borderWidth: 1,
+    borderWidth: 1
   },
   loadingIndicator: {
-    marginTop: 24,
+    marginTop: 24
   },
   footerLoader: {
-    paddingVertical: 12,
+    paddingVertical: 12
   },
   footerSpacing: {
-    height: 8,
-  },
+    height: 8
+  }
 });
 
 export default CommunityFeed;

@@ -4,8 +4,8 @@ import Animated, {
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+  withTiming } from
+'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText, SeverityBadge, IncidentIllustration } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
@@ -18,10 +18,10 @@ import FeedCardMedia from './FeedCardMedia';
 const { CATEGORY_DISPLAY } = incidentConstants;
 
 const OUTCOME_STYLES = {
-  resolved_handled: { label: 'Resolved',     colorKey: 'safetyGood' },
-  arrest_made:      { label: 'Arrest Made',  colorKey: 'error'      },
-  false_alarm:      { label: 'False Alarm',  colorKey: 'textSecondary' },
-  report_filed:     { label: 'Report Filed', colorKey: 'primary'    },
+  resolved_handled: { label: 'Resolved', colorKey: 'safetyGood' },
+  arrest_made: { label: 'Arrest Made', colorKey: 'error' },
+  false_alarm: { label: 'False Alarm', colorKey: 'textSecondary' },
+  report_filed: { label: 'Report Filed', colorKey: 'primary' }
 };
 
 const FeedCard = ({ incident, onPress }) => {
@@ -30,31 +30,31 @@ const FeedCard = ({ incident, onPress }) => {
   const cat = CATEGORY_DISPLAY[incident.category] || CATEGORY_DISPLAY.other;
   const outcome = OUTCOME_STYLES[incident.closureOutcome] || {
     label: incident.closureOutcome || 'Closed',
-    colorKey: 'textSecondary',
+    colorKey: 'textSecondary'
   };
   const outcomeColor = theme[outcome.colorKey] || theme.textSecondary;
   const videoUrl = incident.video_url || incident.videoUrl;
   const hasVideo = Boolean(videoUrl);
-  const photoUrls = Array.isArray(incident.photo_urls)
-    ? incident.photo_urls
-    : Array.isArray(incident.photoUrls)
-      ? incident.photoUrls
-      : [];
+  const photoUrls = Array.isArray(incident.photo_urls) ?
+  incident.photo_urls :
+  Array.isArray(incident.photoUrls) ?
+  incident.photoUrls :
+  [];
   const media = [
-    ...photoUrls.filter(Boolean).map((url) => ({ type: 'image', url })),
-    ...(videoUrl ? [{ type: 'video', url: videoUrl }] : []),
-  ];
+  ...photoUrls.filter(Boolean).map((url) => ({ type: 'image', url })),
+  ...(videoUrl ? [{ type: 'video', url: videoUrl }] : [])];
 
-  // Whole-card press-scale, shared by the tappable text zones. The media block
-  // is intentionally OUTSIDE these zones: a tap on a photo/video drives the
-  // carousel / inline player and must not scale the card or open the detail
-  // screen. (Nesting media inside the card Pressable made the two fight for the
-  // touch — the card ate the press feedback and the video tap did nothing.)
+
+
+
+
+
+
   const pressed = useSharedValue(0);
   const reduceMotion = useReducedMotion();
   const cardStyle = useAnimatedStyle(() => ({
     transform: [{ scale: reduceMotion ? 1 : 1 - pressed.value * (1 - DISTANCE.press) }],
-    opacity: 1 - pressed.value * 0.05,
+    opacity: 1 - pressed.value * 0.05
   }));
   const onPressIn = () => {
     pressed.value = withTiming(1, { duration: DURATION.micro });
@@ -64,20 +64,16 @@ const FeedCard = ({ incident, onPress }) => {
   };
   const openDetail = () => onPress?.(incident);
 
-  // No `entering` animation here: this card is recycled by FlashList, where
-  // Reanimated entering/layout animations re-fire on recycled cells (fade-flicker
-  // on scroll). The media still fades in via expo-image's transition.
   return (
     <Animated.View
       style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }, cardStyle]}
     >
-        <Pressable
-          accessibilityRole="button"
-          onPress={openDetail}
-          onPressIn={onPressIn}
-          onPressOut={onPressOut}
-        >
-          {/* Category + Severity row */}
+      <Pressable
+        accessibilityRole="button"
+        onPress={openDetail}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+      >
           <View style={styles.topRow}>
             <View style={[styles.categoryChip, { backgroundColor: `${cat.mapColor}22` }]}>
               <Ionicons name={cat.mapIcon} size={13} color={cat.mapColor} />
@@ -87,8 +83,6 @@ const FeedCard = ({ incident, onPress }) => {
             </View>
             <SeverityBadge severity={incident.severity} />
           </View>
-
-          {/* Title */}
           <AppText
             variant="body"
             style={[styles.title, { color: theme.text }]}
@@ -96,67 +90,63 @@ const FeedCard = ({ incident, onPress }) => {
           >
             {incident.title}
           </AppText>
-        </Pressable>
+      </Pressable>
 
-        {/* Media (Instagram-style) when present, else the category illustration.
-            Media owns its own touches (carousel swipe + inline video playback). */}
-        {media.length > 0 ? (
-          <FeedCardMedia
-            media={media}
-            autoplay={preferences.feedVideoAutoplay}
-            onImagePress={openDetail}
-          />
-        ) : (
-          <Pressable
-            accessibilityRole="button"
-            style={styles.illustrationWrap}
-            onPress={openDetail}
-            onPressIn={onPressIn}
-            onPressOut={onPressOut}
-          >
-            <IncidentIllustration category={incident.category} size={150} />
-          </Pressable>
-        )}
-
+      {media.length > 0 ? (
+        <FeedCardMedia
+          media={media}
+          autoplay={preferences.feedVideoAutoplay}
+          onImagePress={openDetail}
+        />
+      ) : (
         <Pressable
-          accessibilityRole="button"
-          onPress={openDetail}
-          onPressIn={onPressIn}
-          onPressOut={onPressOut}
-        >
-          {/* Outcome + meta row */}
-          <View style={styles.metaRow}>
-            <View style={styles.mediaStatusRow}>
-              <View style={[styles.outcomePill, { backgroundColor: `${outcomeColor}22` }]}>
-                <AppText variant="caption" style={{ color: outcomeColor }}>
-                  {outcome.label}
-                </AppText>
-              </View>
-              {hasVideo ? (
-                <View style={[styles.videoPill, { backgroundColor: `${theme.primary}18` }]}>
+        accessibilityRole="button"
+        style={styles.illustrationWrap}
+        onPress={openDetail}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+      >
+          <IncidentIllustration category={incident.category} size={150} />
+        </Pressable>
+      )}
+
+      <Pressable
+        accessibilityRole="button"
+        onPress={openDetail}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+      >
+        <View style={styles.metaRow}>
+          <View style={styles.mediaStatusRow}>
+            <View style={[styles.outcomePill, { backgroundColor: `${outcomeColor}22` }]}>
+              <AppText variant="caption" style={{ color: outcomeColor }}>
+                {outcome.label}
+              </AppText>
+            </View>
+            {hasVideo ? (
+              <View style={[styles.videoPill, { backgroundColor: `${theme.primary}18` }]}>
                   <Ionicons name="videocam-outline" size={11} color={theme.primary} />
                   <AppText variant="caption" style={{ color: theme.primary, marginLeft: 3 }}>
                     Video
                   </AppText>
-                </View>
-              ) : null}
-            </View>
-            <View style={styles.metaRight}>
-              <View style={styles.statusRow}>
-                <Ionicons name="shield-checkmark-outline" size={11} color={theme.textSecondary} />
-                <AppText variant="caption" style={[styles.metaText, { color: theme.textSecondary }]}>
-                  Closed by Law Enforcement
-                </AppText>
               </View>
-              <AppText variant="caption" style={{ color: theme.textSecondary }}>
-                {formatTimeAgo(incident.closedAt)}
+            ) : null}
+          </View>
+          <View style={styles.metaRight}>
+            <View style={styles.statusRow}>
+              <Ionicons name="shield-checkmark-outline" size={11} color={theme.textSecondary} />
+              <AppText variant="caption" style={[styles.metaText, { color: theme.textSecondary }]}>
+                Closed by Law Enforcement
               </AppText>
             </View>
+            <AppText variant="caption" style={{ color: theme.textSecondary }}>
+              {formatTimeAgo(incident.closedAt)}
+            </AppText>
           </View>
+        </View>
 
-          {/* Location */}
-          {incident.locationName ? (
-            <View style={styles.locationRow}>
+        {incident.locationName ? (
+          <View style={styles.locationRow}>
               <Ionicons name="location-outline" size={11} color={theme.textSecondary} />
               <AppText
                 variant="caption"
@@ -165,11 +155,12 @@ const FeedCard = ({ incident, onPress }) => {
               >
                 {incident.locationName}
               </AppText>
-            </View>
-          ) : null}
-        </Pressable>
+          </View>
+        ) : null}
+      </Pressable>
     </Animated.View>
   );
+
 };
 
 const styles = StyleSheet.create({
@@ -177,45 +168,45 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 14,
     marginBottom: 10,
-    borderWidth: 1,
+    borderWidth: 1
   },
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 8
   },
   categoryChip: {
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 20,
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 3
   },
   title: {
     marginBottom: 10,
-    lineHeight: 20,
+    lineHeight: 20
   },
   illustrationWrap: {
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
-    paddingVertical: 4,
+    paddingVertical: 4
   },
   metaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   mediaStatusRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexShrink: 1,
+    flexShrink: 1
   },
   outcomePill: {
     borderRadius: 20,
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 3
   },
   videoPill: {
     borderRadius: 20,
@@ -223,26 +214,26 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 6,
+    marginLeft: 6
   },
   metaRight: {
-    alignItems: 'flex-end',
+    alignItems: 'flex-end'
   },
   metaText: {
-    marginLeft: 2,
+    marginLeft: 2
   },
   statusRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 6,
+    marginTop: 6
   },
   locationText: {
-    marginLeft: 3,
-  },
+    marginLeft: 3
+  }
 });
 
 export default React.memo(FeedCard);

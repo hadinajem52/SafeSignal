@@ -6,12 +6,12 @@ import * as Location from 'expo-location';
 import preferenceConstants from '../../../constants/preferences';
 import { authAPI, tokenStorage, userAPI } from '../services/api';
 
-// Create Auth Context
+
 const AuthContext = createContext(null);
 
-/**
- * Get user-specific draft storage key
- */
+
+
+
 const getDraftStorageKey = (userId) => `safesignal_incident_draft_${userId}`;
 const { DEFAULT_PREFERENCES, PREFERENCE_KEYS } = preferenceConstants;
 
@@ -30,16 +30,16 @@ const loadPreferences = async (user) => {
   return stored ? { ...DEFAULT_PREFERENCES, ...JSON.parse(stored) } : DEFAULT_PREFERENCES;
 };
 
-/**
- * Auth Provider Component
- * Manages authentication state throughout the app
- */
+
+
+
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Check authentication status on app load
+
   useEffect(() => {
     checkAuthStatus();
   }, []);
@@ -85,9 +85,9 @@ export const AuthProvider = ({ children }) => {
     return () => subscription.remove();
   }, [syncConsentedLocation]);
 
-  /**
-   * Check if user is already authenticated
-   */
+
+
+
   const checkAuthStatus = async () => {
     try {
       setIsLoading(true);
@@ -95,13 +95,13 @@ export const AuthProvider = ({ children }) => {
       const token = await tokenStorage.getToken();
 
       if (storedUser && token) {
-        // Verify token is still valid by fetching profile
+
         const result = await authAPI.getProfile();
         if (result.success) {
           setUser(result.user);
           setIsAuthenticated(true);
         } else {
-          // Token invalid, clear storage
+
           await tokenStorage.clearAll();
           setUser(null);
           setIsAuthenticated(false);
@@ -116,9 +116,9 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  /**
-   * Login user
-   */
+
+
+
   const login = async (email, password) => {
     const result = await authAPI.login(email, password);
     if (result.success) {
@@ -128,12 +128,12 @@ export const AuthProvider = ({ children }) => {
     return result;
   };
 
-  /**
-   * Register a new user.
-   * If the backend requires email verification, the caller routes to the
-   * verification screen. Otherwise the account is active immediately, so we
-   * log the user in right away to land them on the dashboard.
-   */
+
+
+
+
+
+
   const register = async (username, email, password) => {
     const result = await authAPI.register(username, email, password);
 
@@ -144,9 +144,9 @@ export const AuthProvider = ({ children }) => {
     return result;
   };
 
-  /**
-   * Sign in with Google
-   */
+
+
+
   const googleSignIn = async (idToken, email, name) => {
     const result = await authAPI.googleSignIn(idToken, email, name);
     if (result.success) {
@@ -156,12 +156,12 @@ export const AuthProvider = ({ children }) => {
     return result;
   };
 
-  /**
-   * Logout user
-   */
+
+
+
   const logout = async () => {
     try {
-      // Clear user's draft before logging out
+
       if (user?.user_id || user?.userId) {
         const userId = user.user_id || user.userId;
         const draftKey = getDraftStorageKey(userId);
@@ -173,15 +173,15 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Error clearing draft on logout:', error);
     }
-    
+
     await authAPI.logout();
     setUser(null);
     setIsAuthenticated(false);
   };
 
-  /**
-   * Refresh user profile
-   */
+
+
+
   const refreshProfile = async () => {
     const result = await authAPI.getProfile();
     if (result.success) {
@@ -206,9 +206,9 @@ export const AuthProvider = ({ children }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-/**
- * Custom hook to use auth context
- */
+
+
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {

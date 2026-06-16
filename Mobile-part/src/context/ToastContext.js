@@ -8,16 +8,16 @@ const ERROR_DURATION = 4500;
 
 const TOAST_CONFIG = {
   success: { bg: '#16a34a', icon: 'checkmark-circle' },
-  error:   { bg: '#dc2626', icon: 'alert-circle' },
+  error: { bg: '#dc2626', icon: 'alert-circle' },
   warning: { bg: '#d97706', icon: 'warning' },
-  info:    { bg: '#2563eb', icon: 'information-circle' },
+  info: { bg: '#2563eb', icon: 'information-circle' }
 };
 
 const ToastContext = createContext(null);
 
-// ---------------------------------------------------------------------------
-// Provider
-// ---------------------------------------------------------------------------
+
+
+
 export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
 
@@ -36,53 +36,53 @@ export const ToastProvider = ({ children }) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  // Stable identity so useToast() consumers don't re-render every time a toast
-  // appears or auto-dismisses (which re-renders this provider).
+
+
   const value = useMemo(() => ({ showToast }), [showToast]);
 
   return (
     <ToastContext.Provider value={value}>
       {children}
       <ToastContainer toasts={toasts} onDismiss={dismiss} />
-    </ToastContext.Provider>
-  );
+    </ToastContext.Provider>);
+
 };
 
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
+
+
+
 export const useToast = () => {
   const ctx = useContext(ToastContext);
   if (!ctx) {
-    // Graceful fallback outside provider (e.g. unit tests)
+
     return { showToast: () => {} };
   }
   return ctx;
 };
 
-// ---------------------------------------------------------------------------
-// UI – container
-// ---------------------------------------------------------------------------
+
+
+
 const ToastContainer = ({ toasts, onDismiss }) => {
   const insets = useSafeAreaInsets();
 
   if (!toasts.length) return null;
 
-  // Sit above tab bar (≈58 px) + safe-area bottom + a small gap
+
   const bottomOffset = Math.max(insets.bottom, 8) + 66;
 
   return (
     <View style={[styles.container, { bottom: bottomOffset }]} pointerEvents="box-none">
-      {toasts.map((toast) => (
-        <ToastItem key={toast.id} toast={toast} onDismiss={onDismiss} />
-      ))}
-    </View>
-  );
+      {toasts.map((toast) =>
+      <ToastItem key={toast.id} toast={toast} onDismiss={onDismiss} />
+      )}
+    </View>);
+
 };
 
-// ---------------------------------------------------------------------------
-// UI – individual toast
-// ---------------------------------------------------------------------------
+
+
+
 const ToastItem = ({ toast, onDismiss }) => {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(16)).current;
@@ -91,37 +91,37 @@ const ToastItem = ({ toast, onDismiss }) => {
 
   React.useEffect(() => {
     Animated.parallel([
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 190,
-        useNativeDriver: true,
-      }),
-      Animated.timing(translateY, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    Animated.timing(opacity, {
+      toValue: 1,
+      duration: 190,
+      useNativeDriver: true
+    }),
+    Animated.timing(translateY, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true
+    })]
+    ).start();
   }, [opacity, translateY]);
 
   return (
     <TouchableOpacity onPress={() => onDismiss(id)} activeOpacity={0.85}>
       <Animated.View
         style={[
-          styles.toast,
-          { backgroundColor: config.bg, opacity, transform: [{ translateY }] },
-        ]}
-      >
+        styles.toast,
+        { backgroundColor: config.bg, opacity, transform: [{ translateY }] }]
+        }>
+
         <Ionicons name={config.icon} size={20} color="#fff" style={styles.icon} />
         <Text style={styles.message}>{message}</Text>
       </Animated.View>
-    </TouchableOpacity>
-  );
+    </TouchableOpacity>);
+
 };
 
-// ---------------------------------------------------------------------------
-// Styles
-// ---------------------------------------------------------------------------
+
+
+
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
     right: 16,
     zIndex: 9999,
     elevation: 9999,
-    rowGap: 8,
+    rowGap: 8
   },
   toast: {
     flexDirection: 'row',
@@ -141,17 +141,17 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.18,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 8
   },
   icon: {
     marginRight: 10,
-    flexShrink: 0,
+    flexShrink: 0
   },
   message: {
     color: '#fff',
     fontSize: 14,
     fontFamily: 'SourceSans3_500Medium',
     flex: 1,
-    lineHeight: 20,
-  },
+    lineHeight: 20
+  }
 });

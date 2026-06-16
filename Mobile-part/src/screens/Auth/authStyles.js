@@ -35,13 +35,13 @@ const authStyles = StyleSheet.create({
     paddingBottom: 40,
   },
 
-  // ── Sticky brand lockup region (pinned above the scrolling form) ──
+
   stickyHeader: {
     paddingHorizontal: 28,
     paddingBottom: 8,
   },
 
-  // ── Full-bleed brand lockup (no card chrome) ──
+
   headerWrap: {
     alignItems: 'center',
   },
@@ -94,7 +94,7 @@ const authStyles = StyleSheet.create({
     marginTop: 8,
   },
 
-  // ── Form area floats directly over the animated background ──
+
   formContainer: {
     width: '100%',
   },

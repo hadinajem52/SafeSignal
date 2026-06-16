@@ -139,7 +139,7 @@ const useMyReports = ({ user }) => {
     try {
       const id = incident?.id ? String(incident.id) : '';
       if (id.startsWith('draft-')) {
-        // Local draft stored in SecureStore
+
         if (user?.user_id || user?.userId) {
           const userId = user.user_id || user.userId;
           const draftKey = getDraftStorageKey(userId);
@@ -147,7 +147,7 @@ const useMyReports = ({ user }) => {
           await AsyncStorage.removeItem(draftKey);
         }
       } else if (id) {
-        // API-backed draft
+
         const result = await incidentAPI.deleteIncident(id);
         if (!result.success) {
           showToast(result.error || 'Failed to delete draft', 'error');

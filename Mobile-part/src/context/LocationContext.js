@@ -18,7 +18,7 @@ export const LOCATION_STATUS = {
   UNAVAILABLE: 'unavailable',
 };
 
-// expo-location v17+ dropped the 'timeout' option, so enforce one with a race.
+
 const withTimeout = (promise, ms) =>
   Promise.race([
     promise,
@@ -30,8 +30,8 @@ const withTimeout = (promise, ms) =>
     ),
   ]);
 
-// Resolve the best available coords: cached (instant) → live Balanced fix
-// (network + GPS, resolves in 1-3s, unlike High which is GPS-only).
+
+
 const fetchCoords = async () => {
   const lastKnown = await withTimeout(
     Location.getLastKnownPositionAsync({ maxAge: 10 * 60 * 1000, requiredAccuracy: 5000 }),
@@ -48,12 +48,12 @@ const fetchCoords = async () => {
 
 const LocationContext = createContext(null);
 
-/**
- * Single device-location source shared by the Map and Dashboard so they can
- * never disagree. Auto-acquires (without prompting) once preferences load and
- * whenever locationServices flips; the Map's "My Location" button calls
- * refresh({ prompt: true }) to actively request permission / turn on GPS.
- */
+
+
+
+
+
+
 export const LocationProvider = ({ children }) => {
   const { preferences, isLoading: preferencesLoading } = usePreferences();
   const locationServices = preferences.locationServices;
@@ -62,7 +62,7 @@ export const LocationProvider = ({ children }) => {
   const [status, setStatus] = useState(LOCATION_STATUS.PENDING);
   const [issue, setIssue] = useState('');
   const [loading, setLoading] = useState(false);
-  // Guards against an earlier, slower acquire overwriting a newer one.
+
   const runIdRef = useRef(0);
 
   const acquire = useCallback(
@@ -83,22 +83,22 @@ export const LocationProvider = ({ children }) => {
       setIssue('');
 
       try {
-        // Only the explicit-prompt path (e.g. map "My Location") may open the
-        // native "Turn on Location" dialog; startup must stay silent.
+
+
         if (prompt) {
           const servicesEnabled = await Location.hasServicesEnabledAsync();
           if (!servicesEnabled) {
             try {
               await Location.enableNetworkProviderAsync();
             } catch {
-              // User declined the turn-on dialog — stop without an error state.
+
               setLoading(false);
               return null;
             }
           }
         }
 
-        // Non-prompting check first; only prompt when explicitly allowed.
+
         const { status: existing } = await Location.getForegroundPermissionsAsync();
         let permission = existing;
         if (existing !== 'granted' && prompt) {
@@ -133,14 +133,14 @@ export const LocationProvider = ({ children }) => {
     [locationServices]
   );
 
-  // Acquire once preferences are known, and again whenever the toggle flips.
+
   useEffect(() => {
     if (preferencesLoading) return;
     acquire({ prompt: false });
   }, [preferencesLoading, acquire]);
 
-  // Re-acquire when the app returns to the foreground — GPS may have warmed up
-  // or the user may have changed permission in system settings.
+
+
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active' && !preferencesLoading && locationServices) {

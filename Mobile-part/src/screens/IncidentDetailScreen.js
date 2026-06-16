@@ -17,8 +17,8 @@ import {
   IncidentIllustration,
   IncidentLocationMap,
   IncidentStatusTracker,
-  FadeInImage,
-} from '../components';
+  FadeInImage } from
+'../components';
 import { normalizeClosureDetails } from '../utils/incidentUtils';
 import { resolveMediaUrl } from '../utils/mediaUtils';
 import { useTheme } from '../context/ThemeContext';
@@ -39,18 +39,18 @@ const getConstellationCopy = (constellation) => {
   if (constellation.status === 'flagged') {
     return {
       title: 'Under review',
-      body: 'Nearby witness activity is being reviewed before more detail is shown.',
+      body: 'Nearby witness activity is being reviewed before more detail is shown.'
     };
   }
 
   return {
     title: 'Nearby witness signal',
-    body: constellation.summary || 'Awaiting nearby responses from eligible witnesses.',
+    body: constellation.summary || 'Awaiting nearby responses from eligible witnesses.'
   };
 };
 
-// Defined at module scope (not inside the screen) so they aren't remounted on every
-// screen re-render, e.g. when toggling the fullscreen photo. They read theme directly.
+
+
 const Divider = () => {
   const { theme } = useTheme();
   return <View style={[styles.divider, { backgroundColor: theme.border }]} />;
@@ -65,12 +65,12 @@ const SectionHeader = ({ icon, color, title, subtitle }) => {
       </View>
       <View style={{ flex: 1 }}>
         <AppText variant="label" style={{ color: theme.text }}>{title}</AppText>
-        {subtitle ? (
-          <AppText variant="small" style={{ color: theme.textTertiary, marginTop: 1 }}>{subtitle}</AppText>
-        ) : null}
+        {subtitle ?
+        <AppText variant="small" style={{ color: theme.textTertiary, marginTop: 1 }}>{subtitle}</AppText> :
+        null}
       </View>
-    </View>
-  );
+    </View>);
+
 };
 
 const IncidentDetailScreen = ({ route, navigation }) => {
@@ -113,8 +113,8 @@ const IncidentDetailScreen = ({ route, navigation }) => {
     return (
       <View style={[styles.emptyContainer, { backgroundColor: theme.card, paddingTop: insets.top }]}>
         <AppText variant="body" style={{ color: theme.textSecondary }}>Incident details not available.</AppText>
-      </View>
-    );
+      </View>);
+
   }
 
   const categoryConfig = CATEGORY_DISPLAY[detailIncident.category] || CATEGORY_DISPLAY.other;
@@ -126,32 +126,32 @@ const IncidentDetailScreen = ({ route, navigation }) => {
   const reportedAtRaw = detailIncident.createdAt || detailIncident.created_at || detailIncident.incident_date || detailIncident.closedAt;
   const reportedAtDate = reportedAtRaw ? new Date(reportedAtRaw) : null;
   const reportedAtLabel =
-    reportedAtDate && !Number.isNaN(reportedAtDate.getTime())
-      ? formatDate(reportedAtDate)
-      : 'Date unavailable';
+  reportedAtDate && !Number.isNaN(reportedAtDate.getTime()) ?
+  formatDate(reportedAtDate) :
+  'Date unavailable';
   const closureOutcomeValue = detailIncident.closure_outcome || detailIncident.closureOutcome;
-  const closureOutcome = closureOutcomeValue
-    ? closureOutcomeValue.replace(/_/g, ' ')
-    : null;
+  const closureOutcome = closureOutcomeValue ?
+  closureOutcomeValue.replace(/_/g, ' ') :
+  null;
   const rawClosureDetails = detailIncident.closure_details || detailIncident.closureDetails;
   const closureDetails = normalizeClosureDetails(rawClosureDetails);
   const description = detailIncident.description || closureDetails || 'No description available.';
   const locationLabel = detailIncident.locationName || detailIncident.location_name || 'Location not set';
   const placeName = detailIncident.locationName || detailIncident.location_name || '';
-  // Coordinates already arrive fuzzed-or-exact (decided server-side). If the fuzz
-  // flag is present, show an approximate-area circle instead of a precise pin.
+
+
   const isApproximateLocation = Boolean(
-    detailIncident?.is_location_fuzzed ?? detailIncident?.isLocationFuzzed,
+    detailIncident?.is_location_fuzzed ?? detailIncident?.isLocationFuzzed
   );
   const showTimeline = source !== 'community_feed';
   const constellationCopy = getConstellationCopy(detailIncident.constellation);
   const isFlagged = detailIncident.constellation?.status === 'flagged';
   const videoUrl = detailIncident.video_url || detailIncident.videoUrl;
-  const photoUrls = Array.isArray(detailIncident.photo_urls)
-    ? detailIncident.photo_urls
-    : Array.isArray(detailIncident.photoUrls)
-      ? detailIncident.photoUrls
-      : [];
+  const photoUrls = Array.isArray(detailIncident.photo_urls) ?
+  detailIncident.photo_urls :
+  Array.isArray(detailIncident.photoUrls) ?
+  detailIncident.photoUrls :
+  [];
 
   return (
     <View style={[styles.screenWrapper, { backgroundColor: theme.card, paddingTop: insets.top }]}>
@@ -162,8 +162,8 @@ const IncidentDetailScreen = ({ route, navigation }) => {
             haptics.selection();
             navigation.goBack();
           }}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+
           <Ionicons name="chevron-back" size={24} color={theme.text} />
           <AppText variant="body" style={{ color: theme.text }}>Back</AppText>
         </TouchableOpacity>
@@ -172,15 +172,14 @@ const IncidentDetailScreen = ({ route, navigation }) => {
       <ScrollView
         style={styles.container}
         contentContainerStyle={[styles.contentContainer, { paddingBottom: tabBarHeight + 96 }]}
-        showsVerticalScrollIndicator={false}
-      >
+        showsVerticalScrollIndicator={false}>
+
         <Animated.View entering={FadeInDown.duration(DURATION.page)}>
-          {/* ---- Hero ---- */}
           <LinearGradient
             colors={[`${accent}2E`, `${accent}0F`, theme.card]}
             locations={[0, 0.5, 1]}
-            style={styles.heroGradient}
-          >
+            style={styles.heroGradient}>
+
             <View style={styles.medallion}>
               <IncidentIllustration category={detailIncident.category} size={146} />
             </View>
@@ -196,12 +195,12 @@ const IncidentDetailScreen = ({ route, navigation }) => {
 
             <AppText variant="h2" style={[styles.heroTitle, { color: theme.text }]}>{detailIncident.title}</AppText>
 
-            {closureOutcome ? (
-              <View style={[styles.outcomePill, { backgroundColor: `${theme.success}1A`, borderColor: `${theme.success}40` }]}>
+            {closureOutcome ?
+            <View style={[styles.outcomePill, { backgroundColor: `${theme.success}1A`, borderColor: `${theme.success}40` }]}>
                 <Ionicons name="checkmark-circle" size={14} color={theme.success} />
                 <AppText variant="caption" style={{ color: theme.success, textTransform: 'capitalize' }}>{closureOutcome}</AppText>
-              </View>
-            ) : null}
+              </View> :
+            null}
 
             <View style={[styles.heroMetaRow, { borderTopColor: theme.border }]}>
               <Ionicons name="time-outline" size={14} color={theme.textTertiary} />
@@ -210,8 +209,6 @@ const IncidentDetailScreen = ({ route, navigation }) => {
 
             {loadingDetail ? <ActivityIndicator color={theme.primary} style={{ marginTop: 12 }} /> : null}
           </LinearGradient>
-
-          {/* ---- Status workflow ---- */}
           {showTimeline ? (
             <>
               <Divider />
@@ -226,15 +223,11 @@ const IncidentDetailScreen = ({ route, navigation }) => {
               </View>
             </>
           ) : null}
-
-          {/* ---- Description ---- */}
           <Divider />
           <View style={styles.section}>
             <SectionHeader icon="document-text-outline" color={theme.primary} title="Description" />
             <AppText variant="body" style={[styles.sectionText, { color: theme.textSecondary }]}>{description}</AppText>
           </View>
-
-          {/* ---- Video evidence ---- */}
           {videoUrl ? (
             <>
               <Divider />
@@ -244,8 +237,6 @@ const IncidentDetailScreen = ({ route, navigation }) => {
               </View>
             </>
           ) : null}
-
-          {/* ---- Photo evidence ---- */}
           {photoUrls.length > 0 ? (
             <>
               <Divider />
@@ -255,6 +246,7 @@ const IncidentDetailScreen = ({ route, navigation }) => {
                   color={theme.info}
                   title={photoUrls.length > 1 ? `Photo Evidence (${photoUrls.length})` : 'Photo Evidence'}
                 />
+
                 <View style={{ gap: 10 }}>
                   {photoUrls.filter(Boolean).map((url, i) => (
                     <Pressable
@@ -273,8 +265,6 @@ const IncidentDetailScreen = ({ route, navigation }) => {
               </View>
             </>
           ) : null}
-
-          {/* ---- Nearby witness signal ---- */}
           {constellationCopy ? (
             <>
               <Divider />
@@ -293,8 +283,6 @@ const IncidentDetailScreen = ({ route, navigation }) => {
               </View>
             </>
           ) : null}
-
-          {/* ---- Closure details ---- */}
           {closureDetails ? (
             <>
               <Divider />
@@ -304,8 +292,6 @@ const IncidentDetailScreen = ({ route, navigation }) => {
               </View>
             </>
           ) : null}
-
-          {/* ---- Location ---- */}
           <Divider />
           <View style={styles.section}>
             <SectionHeader icon="location-outline" color={accent} title="Location" />
@@ -317,7 +303,8 @@ const IncidentDetailScreen = ({ route, navigation }) => {
                   color={categoryConfig.mapColor}
                   approximate={isApproximateLocation}
                 />
-                {(placeName || isApproximateLocation) ? (
+
+                {placeName || isApproximateLocation ? (
                   <View style={styles.placeChip}>
                     <Ionicons
                       name={isApproximateLocation ? 'navigate-circle-outline' : 'pin-outline'}
@@ -340,44 +327,42 @@ const IncidentDetailScreen = ({ route, navigation }) => {
         </Animated.View>
       </ScrollView>
 
-      {showTimeline ? (
-        <IncidentChatFab incidentId={getIncidentId(detailIncident)} accent={accent} />
-      ) : null}
+      {showTimeline ? <IncidentChatFab incidentId={getIncidentId(detailIncident)} accent={accent} /> : null}
 
       <Modal
         visible={Boolean(fullscreenPhoto)}
         transparent
         animationType="fade"
-        onRequestClose={() => setFullscreenPhoto(null)}
-      >
+        onRequestClose={() => setFullscreenPhoto(null)}>
+
         <Pressable
           style={{
             flex: 1,
             backgroundColor: 'rgba(0,0,0,0.92)',
             alignItems: 'center',
-            justifyContent: 'center',
+            justifyContent: 'center'
           }}
-          onPress={() => setFullscreenPhoto(null)}
-        >
-          {fullscreenPhoto ? (
-            <ExpoImage
-              source={{ uri: fullscreenPhoto }}
-              style={{ width: '100%', height: '82%' }}
-              contentFit="contain"
-              cachePolicy="memory-disk"
-            />
-          ) : null}
+          onPress={() => setFullscreenPhoto(null)}>
+
+          {fullscreenPhoto ?
+          <ExpoImage
+            source={{ uri: fullscreenPhoto }}
+            style={{ width: '100%', height: '82%' }}
+            contentFit="contain"
+            cachePolicy="memory-disk" /> :
+
+          null}
           <Pressable
             onPress={() => setFullscreenPhoto(null)}
             hitSlop={12}
-            style={{ position: 'absolute', top: insets.top + 12, right: 16, padding: 8 }}
-          >
+            style={{ position: 'absolute', top: insets.top + 12, right: 16, padding: 8 }}>
+
             <Ionicons name="close" size={30} color="#fff" />
           </Pressable>
         </Pressable>
       </Modal>
-    </View>
-  );
+    </View>);
+
 };
 
 export default IncidentDetailScreen;

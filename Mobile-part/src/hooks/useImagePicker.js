@@ -48,9 +48,9 @@ const useImagePicker = () => {
   const [video, setVideo] = useState(null);
   const [isVideoProcessing, setIsVideoProcessing] = useState(false);
   const [videoProcessingProgress, setVideoProcessingProgress] = useState(0);
-  // Tracks whether we launched the camera so the AppState listener knows
-  // to call getPendingResultAsync on Android (MainActivity can be destroyed
-  // while the camera is open, which causes launchCameraAsync to never resolve).
+
+
+
   const cameraActiveRef = useRef(false);
 
   useEffect(() => {
@@ -131,16 +131,16 @@ const useImagePicker = () => {
         return;
       }
 
-      // Mark camera as active BEFORE launching so the AppState listener can
-      // retrieve the result via getPendingResultAsync if the activity is
-      // destroyed and recreated on Android while the camera is open.
+
+
+
       cameraActiveRef.current = true;
       let result;
       try {
         result = await ImagePicker.launchCameraAsync({
-          // allowsEditing is intentionally omitted for camera:
-          // on Android it triggers a crop intent that many devices don't support,
-          // causing the result to silently return { canceled: true }.
+
+
+
           quality: 0.7,
         });
       } finally {

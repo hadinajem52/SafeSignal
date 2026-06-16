@@ -24,14 +24,14 @@ import {
   IncidentPhotoUploader,
   IncidentTextFields,
   AnonymousToggle,
-  MlFeatureToggles,
-} from "../components/IncidentForm";
+  MlFeatureToggles } from
+"../components/IncidentForm";
 import styles from "./reportIncidentStyles";
 
 const { INCIDENT_CATEGORIES, SEVERITY_LEVELS } = incidentConstants;
 
 const createIncidentIdempotencyKey = () =>
-  `incident_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+`incident_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 
 const ReportIncidentScreen = ({ navigation, route }) => {
   const { user } = useAuth();
@@ -51,7 +51,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
   const showCategoryPicker = !enableMlClassification;
   const showSeverityPicker = !enableMlRisk;
 
-  // Form State Hook
+
   const {
     title,
     setTitle,
@@ -71,7 +71,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     setDateToNow,
     validateForm,
     resetForm,
-    applyDraftForm,
+    applyDraftForm
   } = useIncidentForm();
 
   const clearLocationError = useCallback(() => {
@@ -82,10 +82,10 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     (message) => {
       setErrors((prev) => ({ ...prev, location: message }));
     },
-    [setErrors],
+    [setErrors]
   );
 
-  // Location Hook
+
   const {
     location,
     setLocation,
@@ -103,14 +103,14 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     openMapForSelection,
     handleMapPress,
     confirmMapLocation,
-    applyDraftLocation,
+    applyDraftLocation
   } = useLocationPicker({
     onClearLocationError: clearLocationError,
     onLocationError: setLocationError,
-    locationServicesEnabled: preferences.locationServices,
+    locationServicesEnabled: preferences.locationServices
   });
 
-  // Image Picker Hook
+
   const {
     photos,
     setPhotos,
@@ -123,10 +123,10 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     pickImage,
     takePhoto,
     pickVideo,
-    recordVideo,
+    recordVideo
   } = useImagePicker();
 
-  // Draft Management Logic
+
   const applyDraft = (draft) => {
     applyDraftForm(draft);
     applyDraftLocation(draft);
@@ -155,22 +155,22 @@ const ReportIncidentScreen = ({ navigation, route }) => {
       enableMlRisk,
       photos,
       video,
-      idempotencyKey: idempotencyKeyRef.current,
+      idempotencyKey: idempotencyKeyRef.current
     }),
     [
-      description,
-      enableMlClassification,
-      enableMlRisk,
-      incidentDate,
-      isAnonymous,
-      location,
-      locationName,
-      photos,
-      selectedCategory,
-      severity,
-      title,
-      video,
-    ],
+    description,
+    enableMlClassification,
+    enableMlRisk,
+    incidentDate,
+    isAnonymous,
+    location,
+    locationName,
+    photos,
+    selectedCategory,
+    severity,
+    title,
+    video]
+
   );
 
   const {
@@ -183,10 +183,10 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     discardDraft,
     loadDraft,
     saveDraft,
-    clearDraft,
+    clearDraft
   } = useDraftManager({ userId, onLoadDraft: applyDraft, getDraftPayload });
 
-  // Effects
+
   useEffect(() => {
     loadDraft();
     return () => {
@@ -220,11 +220,11 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     setIsAnonymous(!!preferences.defaultAnonymous);
     hasAppliedDefaultAnonymous.current = true;
   }, [
-    isLoadingPreferences,
-    preferences.defaultAnonymous,
-    route?.params?.draft,
-    setIsAnonymous,
-  ]);
+  isLoadingPreferences,
+  preferences.defaultAnonymous,
+  route?.params?.draft,
+  setIsAnonymous]
+  );
 
   useEffect(() => {
     if (enableMlClassification && !selectedCategory) {
@@ -235,11 +235,11 @@ const ReportIncidentScreen = ({ navigation, route }) => {
       setErrors((prev) => ({ ...prev, category: null }));
     }
   }, [
-    enableMlClassification,
-    selectedCategory,
-    setErrors,
-    setSelectedCategory,
-  ]);
+  enableMlClassification,
+  selectedCategory,
+  setErrors,
+  setSelectedCategory]
+  );
 
   const handleToggleMlClassification = useCallback((value) => {
     setEnableMlClassification(value);
@@ -254,7 +254,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
       setTitle(text);
       setErrors((prev) => ({ ...prev, title: null }));
     },
-    [setErrors, setTitle],
+    [setErrors, setTitle]
   );
 
   const handleDescriptionChange = useCallback(
@@ -262,7 +262,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
       setDescription(text);
       setErrors((prev) => ({ ...prev, description: null }));
     },
-    [setDescription, setErrors],
+    [setDescription, setErrors]
   );
 
   const handleCategorySelect = useCallback(
@@ -270,7 +270,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
       setSelectedCategory(value);
       setErrors((prev) => ({ ...prev, category: null }));
     },
-    [setErrors, setSelectedCategory],
+    [setErrors, setSelectedCategory]
   );
 
   const handleCloseMapModal = useCallback(() => {
@@ -286,12 +286,12 @@ const ReportIncidentScreen = ({ navigation, route }) => {
     idempotencyKeyRef.current = createIncidentIdempotencyKey();
   }, [discardDraft]);
 
-  /**
-   * Handle incident submission
-   */
+
+
+
   const handleSubmit = useCallback(
     async (asDraft = false) => {
-      // Use ref to prevent race conditions from rapid clicks
+
       if (isSubmittingRef.current) {
         return;
       }
@@ -302,12 +302,12 @@ const ReportIncidentScreen = ({ navigation, route }) => {
       }
 
       if (!asDraft && !validateForm(location)) {
-        // Inline errors are shown on each field — scroll to top to see them
+
         showToast('Please fill in all required fields correctly.', 'warning');
         return;
       }
 
-      // Prevent multiple submissions
+
       if (isSubmitting) {
         return;
       }
@@ -316,7 +316,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
       setIsSubmitting(true);
 
       try {
-        // Validate location is set for non-draft submissions
+
         if (!asDraft && !location) {
           showToast('Please set a location for your incident report.', 'warning');
           return;
@@ -337,28 +337,28 @@ const ReportIncidentScreen = ({ navigation, route }) => {
           isDraft: asDraft,
           photoUrls: photos,
           video,
-          idempotencyKey: asDraft ? undefined : idempotencyKeyRef.current,
+          idempotencyKey: asDraft ? undefined : idempotencyKeyRef.current
         };
 
         let result;
         const draftIdValue = draftId != null ? String(draftId) : "";
 
-        // For drafts stored locally (with temp ID like "draft-123"), always submit as new
-        // For drafts stored in DB (with numeric ID), update if submitting with isDraft=false, otherwise submit new
+
+
         if (draftIdValue && !draftIdValue.startsWith("draft-") && !asDraft) {
-          // Update existing database draft to submitted status
+
           result = await incidentAPI.updateIncident(draftIdValue, incidentData);
         } else {
-          // Create new incident (handles both new reports and local draft submissions)
+
           result = await incidentAPI.submitIncident(incidentData);
         }
 
         if (result.success) {
-          // Clear the local draft only on successful submission (not when saving as draft)
+
           if (!asDraft) {
             await clearDraft();
 
-            // Reset form state immediately so returning to this screen starts clean
+
             resetForm();
             setLocation(null);
             setLocationName("");
@@ -391,15 +391,15 @@ const ReportIncidentScreen = ({ navigation, route }) => {
         } else {
           haptics.error();
           if (
-            result.validationErrors &&
-            Array.isArray(result.validationErrors)
-          ) {
-            // Extract error messages from validation error objects
+          result.validationErrors &&
+          Array.isArray(result.validationErrors))
+          {
+
             const errorMessages = result.validationErrors.map((err) => {
               if (typeof err === "string") {
                 return err;
               }
-              // Handle express-validator error objects { param, msg, value }
+
               return err.msg || JSON.stringify(err);
             });
             showToast(errorMessages.join(' · '), 'error');
@@ -417,36 +417,36 @@ const ReportIncidentScreen = ({ navigation, route }) => {
       }
     },
     [
-      clearDraft,
-      description,
-      draftId,
-      enableMlClassification,
-      enableMlRisk,
-      isAnonymous,
-      isSubmitting,
-      isVideoProcessing,
-      location,
-      locationName,
-      navigation,
-      photos,
-      preferences.defaultAnonymous,
-      resetForm,
-      selectedCategory,
-      severity,
-      setDraftId,
-      setIsAnonymous,
-      setLocation,
-      setLocationName,
-      setMapRegion,
-      setPhotos,
-      setSelectedMapLocation,
-      setVideo,
-      title,
-      validateForm,
-      incidentDate,
-      showToast,
-      video,
-    ],
+    clearDraft,
+    description,
+    draftId,
+    enableMlClassification,
+    enableMlRisk,
+    isAnonymous,
+    isSubmitting,
+    isVideoProcessing,
+    location,
+    locationName,
+    navigation,
+    photos,
+    preferences.defaultAnonymous,
+    resetForm,
+    selectedCategory,
+    severity,
+    setDraftId,
+    setIsAnonymous,
+    setLocation,
+    setLocationName,
+    setMapRegion,
+    setPhotos,
+    setSelectedMapLocation,
+    setVideo,
+    title,
+    validateForm,
+    incidentDate,
+    showToast,
+    video]
+
   );
 
   const handleSubmitPress = useCallback(() => {
@@ -462,7 +462,6 @@ const ReportIncidentScreen = ({ navigation, route }) => {
       ]}
       showsVerticalScrollIndicator={false}
     >
-      {/* Header */}
       <View style={[styles.header, { backgroundColor: theme.primary }]}>
         <AppText variant="h1" style={{ color: theme.card }}>
           Report Incident
@@ -478,8 +477,6 @@ const ReportIncidentScreen = ({ navigation, route }) => {
           </View>
         )}
       </View>
-
-      {/* Safety Notice */}
       <View
         style={[
           styles.noticeContainer,
@@ -503,8 +500,6 @@ const ReportIncidentScreen = ({ navigation, route }) => {
           immediately.
         </AppText>
       </View>
-
-      {/* Form */}
       <View style={styles.formContainer}>
         {!!submitSuccessMessage && (
           <View
@@ -533,8 +528,8 @@ const ReportIncidentScreen = ({ navigation, route }) => {
           onTitleChange={handleTitleChange}
           description={description}
           onDescriptionChange={handleDescriptionChange}
-          errors={errors}
-        />
+          errors={errors} />
+
 
         {showCategoryPicker && (
           <IncidentCategoryPicker
@@ -567,16 +562,12 @@ const ReportIncidentScreen = ({ navigation, route }) => {
           enableClassification={enableMlClassification}
           onToggleClassification={handleToggleMlClassification}
           enableRisk={enableMlRisk}
-          onToggleRisk={handleToggleMlRisk}
-        />
-
+          onToggleRisk={handleToggleMlRisk} />
         <IncidentDateTimePicker
           incidentDate={incidentDate}
           formatDate={formatDate}
           onSetToNow={setDateToNow}
-          onDateChange={setIncidentDate}
-        />
-
+          onDateChange={setIncidentDate} />
         <IncidentLocationPicker
           location={location}
           locationName={locationName}
@@ -591,9 +582,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
           onMapRegionChange={setMapRegion}
           selectedMapLocation={selectedMapLocation}
           onMapPress={handleMapPress}
-          mapRef={mapRef}
-        />
-
+          mapRef={mapRef} />
         <IncidentPhotoUploader
           photos={photos}
           video={video}
@@ -604,10 +593,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
           onRemovePhoto={removePhoto}
           onRecordVideo={recordVideo}
           onPickVideo={pickVideo}
-          onRemoveVideo={removeVideo}
-        />
-
-        {/* Unsaved draft restore modal */}
+          onRemoveVideo={removeVideo} />
         <ConfirmModal
           visible={!!pendingDraft}
           title="Unsaved Draft"
@@ -616,22 +602,15 @@ const ReportIncidentScreen = ({ navigation, route }) => {
             { text: 'Discard', style: 'destructive', onPress: handleDiscardDraft },
             { text: 'Continue', onPress: confirmDraft },
           ]}
-          onRequestClose={handleDiscardDraft}
-        />
-
-        {/* Action Buttons */}
+          onRequestClose={handleDiscardDraft} />
         <View style={styles.actionButtonsContainer}>
-          {/* Save Draft Button */}
           <Button
             title="Save Draft"
             onPress={handleSaveDraftPress}
             loading={isSavingDraft}
             disabled={isSavingDraft || isVideoProcessing}
             variant="secondary"
-            style={styles.draftButton}
-          />
-
-          {/* Submit Button */}
+            style={styles.draftButton} />
           <Button
             title="Submit Report"
             onPress={handleSubmitPress}
@@ -647,6 +626,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
       </View>
     </ScrollView>
   );
+
 };
 
 export default ReportIncidentScreen;

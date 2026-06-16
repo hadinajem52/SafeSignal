@@ -2,7 +2,7 @@ import api from './apiClient';
 
 const isOk = (status) => status === 'OK' || status === 'SUCCESS';
 
-// Normalize a server notification row into the shape the UI consumes.
+
 const mapNotification = (n) => ({
   id: String(n.id),
   eventName: n.eventName,

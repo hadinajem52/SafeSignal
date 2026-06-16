@@ -17,25 +17,25 @@ const formatTime = (value) => {
   return `${m}:${sec < 10 ? '0' : ''}${sec}`;
 };
 
-/**
- * Custom themed control overlay for an expo-video player (replaces nativeControls).
- * Drop it as a sibling on top of <VideoView/> inside a relative/absolute container.
- *
- *  - Tap the video to toggle the chrome; it auto-hides ~3s into playback and
- *    stays up while paused.
- *  - `compact` (feed): chrome starts hidden, a persistent corner mute stays
- *    visible (so muted autoplay can be unmuted), and the ±10s skips are dropped.
- *
- * The high-frequency `timeUpdate` subscription lives in <Scrubber/>, which is
- * only mounted while the chrome is visible — so an off-screen / hidden feed
- * player isn't re-rendering several times a second.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
 export default function VideoControls({
   player,
   videoRef,
   compact = false,
   showSkip = !compact,
-  showFullscreen = true,
+  showFullscreen = true
 }) {
   const { theme } = useTheme();
 
@@ -63,11 +63,11 @@ export default function VideoControls({
 
   const reveal = useCallback(() => {
     setVisible(true);
-    if (isPlaying) scheduleHide();
-    else clearHide();
+    if (isPlaying) scheduleHide();else
+    clearHide();
   }, [isPlaying, scheduleHide, clearHide]);
 
-  // Auto-hide once playback starts; surface (and keep) the chrome when paused.
+
   useEffect(() => {
     if (isPlaying) {
       scheduleHide();
@@ -88,9 +88,9 @@ export default function VideoControls({
   }, [visible, reveal, clearHide]);
 
   const togglePlay = useCallback(() => {
-    if (isPlaying) player.pause();
-    else if (ended) player.replay();
-    else player.play();
+    if (isPlaying) player.pause();else
+    if (ended) player.replay();else
+    player.play();
     reveal();
   }, [isPlaying, ended, player, reveal]);
 
@@ -104,7 +104,7 @@ export default function VideoControls({
       player.seekBy(seconds);
       reveal();
     },
-    [player, reveal],
+    [player, reveal]
   );
 
   const goFullscreen = useCallback(() => {
@@ -115,96 +115,87 @@ export default function VideoControls({
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-      {/* Tap layer: toggles the chrome. */}
       <Pressable style={StyleSheet.absoluteFill} onPress={onTapSurface} />
-
-      {/* Buffering / loading. */}
-      {status === 'loading' ? (
-        <View style={styles.centerFill} pointerEvents="none">
+      {status === 'loading' ?
+      <View style={styles.centerFill} pointerEvents="none">
           <ActivityIndicator color="#fff" size={compact ? 'small' : 'large'} />
-        </View>
-      ) : null}
-
-      {/* Persistent corner mute for the feed while the chrome is hidden. */}
-      {compact && !visible ? (
-        <Pressable style={styles.cornerMute} onPress={toggleMute} hitSlop={8}>
+        </View> :
+      null}
+      {compact && !visible ?
+      <Pressable style={styles.cornerMute} onPress={toggleMute} hitSlop={8}>
           <Ionicons name={muted ? 'volume-mute' : 'volume-high'} size={16} color="#fff" />
-        </Pressable>
-      ) : null}
+        </Pressable> :
+      null}
 
-      {visible ? (
-        <Animated.View
-          entering={FadeIn.duration(DURATION.micro)}
-          exiting={FadeOut.duration(DURATION.micro)}
-          style={StyleSheet.absoluteFill}
-          pointerEvents="box-none"
-        >
-          {/* Center transport (hidden while buffering so it doesn't sit on the spinner). */}
-          {status !== 'loading' ? (
-            <View style={styles.centerFill} pointerEvents="box-none">
-              {showSkip ? (
-                <Pressable onPress={() => skip(-10)} hitSlop={10} style={styles.skipBtn}>
+      {visible ?
+      <Animated.View
+        entering={FadeIn.duration(DURATION.micro)}
+        exiting={FadeOut.duration(DURATION.micro)}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="box-none">
+          {status !== 'loading' ?
+        <View style={styles.centerFill} pointerEvents="box-none">
+              {showSkip ?
+          <Pressable onPress={() => skip(-10)} hitSlop={10} style={styles.skipBtn}>
                   <MaterialIcons name="replay-10" size={30} color="#fff" />
-                </Pressable>
-              ) : null}
+                </Pressable> :
+          null}
               <Pressable
-                onPress={togglePlay}
-                style={[styles.playBtn, compact && styles.playBtnCompact]}
-              >
-                <Ionicons
-                  name={playIcon}
-                  size={compact ? 26 : 32}
-                  color="#fff"
-                  style={playIcon === 'play' ? styles.playGlyph : null}
-                />
-              </Pressable>
-              {showSkip ? (
-                <Pressable onPress={() => skip(10)} hitSlop={10} style={styles.skipBtn}>
-                  <MaterialIcons name="forward-10" size={30} color="#fff" />
-                </Pressable>
-              ) : null}
-            </View>
-          ) : null}
+            onPress={togglePlay}
+            style={[styles.playBtn, compact && styles.playBtnCompact]}>
 
-          {/* Bottom bar. */}
+                <Ionicons
+              name={playIcon}
+              size={compact ? 26 : 32}
+              color="#fff"
+              style={playIcon === 'play' ? styles.playGlyph : null} />
+
+              </Pressable>
+              {showSkip ?
+          <Pressable onPress={() => skip(10)} hitSlop={10} style={styles.skipBtn}>
+                  <MaterialIcons name="forward-10" size={30} color="#fff" />
+                </Pressable> :
+          null}
+            </View> :
+        null}
           <View style={styles.bottom} pointerEvents="box-none">
             <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.55)']}
-              style={StyleSheet.absoluteFill}
-              pointerEvents="none"
-            />
+            colors={['transparent', 'rgba(0,0,0,0.55)']}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none" />
+
             <View style={styles.barRow} pointerEvents="box-none">
               <Scrubber
-                player={player}
-                accent={theme.primary}
-                onScrubStart={clearHide}
-                onScrubEnd={reveal}
-              />
+              player={player}
+              accent={theme.primary}
+              onScrubStart={clearHide}
+              onScrubEnd={reveal} />
+
               <Pressable onPress={toggleMute} hitSlop={8} style={styles.iconBtn}>
                 <Ionicons name={muted ? 'volume-mute' : 'volume-high'} size={18} color="#fff" />
               </Pressable>
-              {showFullscreen ? (
-                <Pressable onPress={goFullscreen} hitSlop={8} style={styles.iconBtn}>
+              {showFullscreen ?
+            <Pressable onPress={goFullscreen} hitSlop={8} style={styles.iconBtn}>
                   <Ionicons name="expand" size={18} color="#fff" />
-                </Pressable>
-              ) : null}
+                </Pressable> :
+            null}
             </View>
           </View>
-        </Animated.View>
-      ) : null}
-    </View>
-  );
+        </Animated.View> :
+      null}
+    </View>);
+
 }
 
-/**
- * Time labels + draggable seek bar. Subscribes to `timeUpdate` (which the player
- * only emits when `timeUpdateEventInterval > 0` — set in the player setup), so
- * it re-renders a few times a second. Mounted only while the chrome is visible.
- */
+
+
+
+
+
 function Scrubber({ player, accent, onScrubStart, onScrubEnd }) {
   const time = useEvent(player, 'timeUpdate', {
     currentTime: player.currentTime,
-    bufferedPosition: player.bufferedPosition,
+    bufferedPosition: player.bufferedPosition
   });
   const duration = player.duration > 0 ? player.duration : 0;
 
@@ -213,33 +204,33 @@ function Scrubber({ player, accent, onScrubStart, onScrubEnd }) {
   const [scrubFraction, setScrubFraction] = useState(0);
 
   const fractionFromX = useCallback(
-    (x) => (trackWidth > 0 ? Math.max(0, Math.min(1, x / trackWidth)) : 0),
-    [trackWidth],
+    (x) => trackWidth > 0 ? Math.max(0, Math.min(1, x / trackWidth)) : 0,
+    [trackWidth]
   );
 
   const panResponder = useMemo(
     () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
-        onPanResponderGrant: (e) => {
-          onScrubStart();
-          setScrubbing(true);
-          setScrubFraction(fractionFromX(e.nativeEvent.locationX));
-        },
-        onPanResponderMove: (e) => setScrubFraction(fractionFromX(e.nativeEvent.locationX)),
-        onPanResponderRelease: (e) => {
-          const f = fractionFromX(e.nativeEvent.locationX);
-          if (duration > 0) player.currentTime = f * duration;
-          setScrubbing(false);
-          onScrubEnd();
-        },
-        onPanResponderTerminate: () => {
-          setScrubbing(false);
-          onScrubEnd();
-        },
-      }),
-    [fractionFromX, duration, player, onScrubStart, onScrubEnd],
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: (e) => {
+        onScrubStart();
+        setScrubbing(true);
+        setScrubFraction(fractionFromX(e.nativeEvent.locationX));
+      },
+      onPanResponderMove: (e) => setScrubFraction(fractionFromX(e.nativeEvent.locationX)),
+      onPanResponderRelease: (e) => {
+        const f = fractionFromX(e.nativeEvent.locationX);
+        if (duration > 0) player.currentTime = f * duration;
+        setScrubbing(false);
+        onScrubEnd();
+      },
+      onPanResponderTerminate: () => {
+        setScrubbing(false);
+        onScrubEnd();
+      }
+    }),
+    [fractionFromX, duration, player, onScrubStart, onScrubEnd]
   );
 
   const liveFraction = duration > 0 ? Math.min(time.currentTime / duration, 1) : 0;
@@ -255,24 +246,24 @@ function Scrubber({ player, accent, onScrubStart, onScrubEnd }) {
       <View
         style={styles.scrubHit}
         onLayout={(e) => setTrackWidth(e.nativeEvent.layout.width)}
-        {...panResponder.panHandlers}
-      >
+        {...panResponder.panHandlers}>
+
         <View style={styles.track}>
           <View style={[styles.buffered, { width: `${buffered * 100}%` }]} />
           <View style={[styles.fill, { width: `${fraction * 100}%`, backgroundColor: accent }]} />
         </View>
         <View
           style={[
-            styles.thumb,
-            { left: `${fraction * 100}%`, backgroundColor: accent, transform: [{ scale: scrubbing ? 1.3 : 1 }] },
-          ]}
-        />
+          styles.thumb,
+          { left: `${fraction * 100}%`, backgroundColor: accent, transform: [{ scale: scrubbing ? 1.3 : 1 }] }]
+          } />
+
       </View>
       <AppText variant="caption" style={styles.time}>
         {formatTime(duration)}
       </AppText>
-    </>
-  );
+    </>);
+
 }
 
 const styles = StyleSheet.create({
@@ -281,7 +272,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 24,
+    gap: 24
   },
   playBtn: {
     width: 64,
@@ -289,62 +280,62 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: 'rgba(0,0,0,0.45)'
   },
   playBtnCompact: {
     width: 52,
     height: 52,
-    borderRadius: 26,
+    borderRadius: 26
   },
   playGlyph: {
-    marginLeft: 3, // optically center the play triangle
+    marginLeft: 3
   },
   skipBtn: {
-    padding: 6,
+    padding: 6
   },
   bottom: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    paddingTop: 28,
+    paddingTop: 28
   },
   barRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
     paddingBottom: 8,
-    gap: 8,
+    gap: 8
   },
   time: {
     color: '#fff',
     minWidth: 36,
     textAlign: 'center',
-    fontVariant: ['tabular-nums'],
+    fontVariant: ['tabular-nums']
   },
   scrubHit: {
     flex: 1,
     height: 26,
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   track: {
     height: 3,
     borderRadius: 2,
     backgroundColor: 'rgba(255,255,255,0.28)',
-    overflow: 'hidden',
+    overflow: 'hidden'
   },
   buffered: {
     position: 'absolute',
     left: 0,
     top: 0,
     bottom: 0,
-    backgroundColor: 'rgba(255,255,255,0.45)',
+    backgroundColor: 'rgba(255,255,255,0.45)'
   },
   fill: {
     position: 'absolute',
     left: 0,
     top: 0,
-    bottom: 0,
+    bottom: 0
   },
   thumb: {
     position: 'absolute',
@@ -352,10 +343,10 @@ const styles = StyleSheet.create({
     height: 12,
     borderRadius: 6,
     marginLeft: -6,
-    top: 7,
+    top: 7
   },
   iconBtn: {
-    padding: 4,
+    padding: 4
   },
   cornerMute: {
     position: 'absolute',
@@ -366,6 +357,6 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
+    backgroundColor: 'rgba(0,0,0,0.5)'
+  }
 });

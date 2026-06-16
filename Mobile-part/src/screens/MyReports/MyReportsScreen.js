@@ -24,7 +24,7 @@ const MyReportsScreen = ({ navigation }) => {
     setSelectedFilter,
     pagination,
     handleRefresh,
-    deleteDraft,
+    deleteDraft
   } = useMyReports({ user });
 
   const [draftModalIncident, setDraftModalIncident] = useState(null);
@@ -45,41 +45,41 @@ const MyReportsScreen = ({ navigation }) => {
     }
   }, []);
 
-  const renderItem = useCallback(({ item }) => (
-    <ReportItem
-      item={item}
-      onPress={handleIncidentPress}
-      onLongPress={handleIncidentLongPress}
-    />
-  ), [handleIncidentPress, handleIncidentLongPress]);
+  const renderItem = useCallback(({ item }) =>
+  <ReportItem
+    item={item}
+    onPress={handleIncidentPress}
+    onLongPress={handleIncidentLongPress} />,
+
+  [handleIncidentPress, handleIncidentLongPress]);
 
   if (isLoading) {
     return (
       <View style={[myReportsStyles.loadingContainer, { backgroundColor: theme.background }]}>
         <Skeleton style={myReportsStyles.skeletonHeader} />
         <Skeleton style={[myReportsStyles.skeletonFilterRow, { borderColor: theme.border }]} />
-        {[1, 2, 3].map((item) => (
-          <View key={item} style={[myReportsStyles.skeletonCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+        {[1, 2, 3].map((item) =>
+        <View key={item} style={[myReportsStyles.skeletonCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
             <Skeleton style={myReportsStyles.skeletonLineWide} />
             <Skeleton style={myReportsStyles.skeletonLineMid} />
             <Skeleton style={myReportsStyles.skeletonLineShort} />
           </View>
-        ))}
-      </View>
-    );
+        )}
+      </View>);
+
   }
 
   const totalReports = pagination?.total ?? incidents.length;
 
   return (
-    <View style={[myReportsStyles.container, { backgroundColor: theme.background }]}> 
+    <View style={[myReportsStyles.container, { backgroundColor: theme.background }]}>
       <View style={[myReportsStyles.headerBand, { borderColor: theme.border }]}>
         <LinearGradient
           colors={[theme.primaryLight || 'rgba(29,78,216,0.14)', 'rgba(255,255,255,0)']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
-          style={myReportsStyles.headerBandGradient}
-        >
+          style={myReportsStyles.headerBandGradient}>
+
           <AppText variant="h4" style={[myReportsStyles.headerTitle, { color: theme.text }]}>My reports</AppText>
           <AppText variant="caption" style={[myReportsStyles.headerCount, { color: theme.textSecondary }]}>
             {totalReports} total
@@ -93,60 +93,54 @@ const MyReportsScreen = ({ navigation }) => {
         data={incidents}
         renderItem={renderItem}
         keyExtractor={(item, index) =>
-          item.id ? item.id.toString() : `${item.createdAt || 'report'}-${item.status || 'status'}-${index}`
+        item.id ? item.id.toString() : `${item.createdAt || 'report'}-${item.status || 'status'}-${index}`
         }
         contentContainerStyle={[myReportsStyles.listContainer, { paddingBottom: tabBarHeight + 8 }]}
         refreshing={isRefreshing}
         onRefresh={handleRefresh}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <EmptyReportsState
-            selectedFilter={selectedFilter}
-            onReportPress={() => navigation.navigate('ReportIncident')}
-          />
-        }
-      />
+        <EmptyReportsState
+          selectedFilter={selectedFilter}
+          onReportPress={() => navigation.navigate('ReportIncident')} />
 
-      {/* Long-press delete draft confirmation */}
+        } />
       <ConfirmModal
         visible={!!deleteModalIncident}
         title="Delete Draft"
         message={`Delete "${deleteModalIncident?.title || 'this draft'}"? This cannot be undone.`}
         actions={[
-          { text: 'Cancel', style: 'cancel', onPress: () => setDeleteModalIncident(null) },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: () => {
-              const d = deleteModalIncident;
-              setDeleteModalIncident(null);
-              deleteDraft(d);
-            },
-          },
-        ]}
-        onRequestClose={() => setDeleteModalIncident(null)}
-      />
-
-      {/* Draft continue confirmation */}
+        { text: 'Cancel', style: 'cancel', onPress: () => setDeleteModalIncident(null) },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            const d = deleteModalIncident;
+            setDeleteModalIncident(null);
+            deleteDraft(d);
+          }
+        }]
+        }
+        onRequestClose={() => setDeleteModalIncident(null)} />
       <ConfirmModal
         visible={!!draftModalIncident}
         title={draftModalIncident?.title || 'Draft Report'}
         message="This is a draft report. Continue editing?"
         actions={[
-          { text: 'Cancel', style: 'cancel', onPress: () => setDraftModalIncident(null) },
-          {
-            text: 'Continue Editing',
-            onPress: () => {
-              const d = draftModalIncident;
-              setDraftModalIncident(null);
-              navigation.navigate('ReportIncident', { draft: d.draftData });
-            },
-          },
-        ]}
-        onRequestClose={() => setDraftModalIncident(null)}
-      />
-    </View>
-  );
+        { text: 'Cancel', style: 'cancel', onPress: () => setDraftModalIncident(null) },
+        {
+          text: 'Continue Editing',
+          onPress: () => {
+            const d = draftModalIncident;
+            setDraftModalIncident(null);
+            navigation.navigate('ReportIncident', { draft: d.draftData });
+          }
+        }]
+        }
+        onRequestClose={() => setDraftModalIncident(null)} />
+
+    </View>);
+
 };
 
 export default MyReportsScreen;
