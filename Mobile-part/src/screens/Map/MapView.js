@@ -41,6 +41,9 @@ const MapCanvas = ({
   const [tracksViewChanges, setTracksViewChanges] = useState(true);
   useEffect(() => {
     setTracksViewChanges(true);
+    if (!mapReady) {
+      return undefined;
+    }
     const timer = setTimeout(() => setTracksViewChanges(false), 900);
     return () => clearTimeout(timer);
   }, [incidents, mapReady]);

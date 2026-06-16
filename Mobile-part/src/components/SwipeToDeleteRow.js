@@ -7,6 +7,10 @@ import haptics from '../utils/haptics';
 
 const ACTION_WIDTH = 88;
 const OPEN_THRESHOLD = 44;
+const TAP_TOLERANCE = 6;
+
+const isHorizontalSwipe = (_evt, gesture) =>
+  Math.abs(gesture.dx) > 12 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.5;
 
 export default function SwipeToDeleteRow({
   children,
@@ -32,14 +36,23 @@ export default function SwipeToDeleteRow({
 
   const panResponder = useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponder: (_evt, gesture) =>
-        Math.abs(gesture.dx) > 12 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.5,
+      onStartShouldSetPanResponder: () => openRef.current,
+      onMoveShouldSetPanResponder: isHorizontalSwipe,
+      onMoveShouldSetPanResponderCapture: isHorizontalSwipe,
       onPanResponderMove: (_evt, gesture) => {
         const base = openRef.current ? -ACTION_WIDTH : 0;
         const next = Math.min(0, Math.max(-ACTION_WIDTH, base + gesture.dx));
         translateX.setValue(next);
       },
       onPanResponderRelease: (_evt, gesture) => {
+        if (
+          openRef.current &&
+          Math.abs(gesture.dx) < TAP_TOLERANCE &&
+          Math.abs(gesture.dy) < TAP_TOLERANCE
+        ) {
+          settle(false);
+          return;
+        }
         const base = openRef.current ? -ACTION_WIDTH : 0;
         const shouldOpen = base + gesture.dx < -OPEN_THRESHOLD;
         if (shouldOpen && !openRef.current) {
@@ -79,7 +92,10 @@ export default function SwipeToDeleteRow({
           <AppText variant="caption" style={styles.actionText}>{deleteLabel}</AppText>
         </TouchableOpacity>
       </View>
-      <Animated.View style={{ transform: [{ translateX }] }} {...panResponder.panHandlers}>
+      <Animated.View
+        style={{ backgroundColor: theme.background, transform: [{ translateX }] }}
+        {...panResponder.panHandlers}
+      >
         {children}
       </Animated.View>
     </View>

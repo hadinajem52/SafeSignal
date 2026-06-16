@@ -7,6 +7,10 @@ import { useLocation, LOCATION_STATUS } from '../context/LocationContext';
 
 const roundCoord = (n) => Math.round(n * 1000) / 1000;
 
+// Matches the 1 km area-insights window so Active Nearby and the safety score
+// reflect the same neighborhood scope (wider than the 0.5 km service default).
+const DASHBOARD_NEARBY_RADIUS_KM = 1;
+
 const useDashboardData = () => {
   const queryClient = useQueryClient();
   const {
@@ -33,7 +37,7 @@ const useDashboardData = () => {
   );
 
   const queryFn = useCallback(async () => {
-    const params = hasCoords ? { latitude: roundedLat, longitude: roundedLng, radius: 1 } : {};
+    const params = hasCoords ? { latitude: roundedLat, longitude: roundedLng, radius: DASHBOARD_NEARBY_RADIUS_KM } : {};
 
     const result = await statsAPI.getDashboardStats(params);
     if (result.success) {
