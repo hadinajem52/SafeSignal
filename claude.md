@@ -148,6 +148,12 @@ Rules:
 - Summarize what changed and why.
 - Give the reviewer a clean mental model of the change.
 
+## 5. Comments — MEDIUM
+
+Don't put comments  while writing code unless its necessary
+
+
+
 ---
 
 # Part 2: Structured Reasoning Pipeline
