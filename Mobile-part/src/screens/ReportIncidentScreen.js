@@ -51,7 +51,6 @@ const ReportIncidentScreen = ({ navigation, route }) => {
   const hasAppliedDefaultAnonymous = useRef(false);
   const [enableMlClassification, setEnableMlClassification] = useState(true);
   const [enableMlRisk, setEnableMlRisk] = useState(true);
-  const [footerHeight, setFooterHeight] = useState(76);
   const showCategoryPicker = !enableMlClassification;
   const showSeverityPicker = !enableMlRisk;
 
@@ -497,7 +496,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
         style={[styles.container, { backgroundColor: theme.background }]}
         contentContainerStyle={[
           styles.contentContainer,
-          { paddingBottom: tabBarHeight + footerHeight + 8 },
+          { paddingBottom: tabBarHeight + 24 },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -681,39 +680,27 @@ const ReportIncidentScreen = ({ navigation, route }) => {
             </AppText>
           </View>
 
+          <View style={styles.formActions}>
+            <Button
+              title="Submit Report"
+              onPress={handleSubmitPress}
+              loading={isSubmitting || isVideoProcessing}
+              disabled={isSubmitting || isVideoProcessing}
+              style={[
+                { backgroundColor: theme.primary },
+                isSubmitting && styles.submitButtonDisabled,
+              ]}
+            />
+            <Button
+              title="Save Draft"
+              onPress={handleSaveDraftPress}
+              loading={isSavingDraft}
+              disabled={isSavingDraft || isVideoProcessing}
+              variant="secondary" />
+          </View>
+
         </View>
       </ScrollView>
-
-      <View
-        onLayout={(event) => setFooterHeight(event.nativeEvent.layout.height)}
-        style={[
-          styles.stickyFooter,
-          {
-            bottom: tabBarHeight,
-            backgroundColor: theme.card,
-            borderTopColor: theme.border,
-          },
-        ]}
-      >
-        <Button
-          title="Save Draft"
-          onPress={handleSaveDraftPress}
-          loading={isSavingDraft}
-          disabled={isSavingDraft || isVideoProcessing}
-          variant="secondary"
-          style={styles.footerDraftButton} />
-        <Button
-          title="Submit Report"
-          onPress={handleSubmitPress}
-          loading={isSubmitting || isVideoProcessing}
-          disabled={isSubmitting || isVideoProcessing}
-          style={[
-            styles.footerSubmitButton,
-            { backgroundColor: theme.primary },
-            isSubmitting && styles.submitButtonDisabled,
-          ]}
-        />
-      </View>
     </View>
   );
 

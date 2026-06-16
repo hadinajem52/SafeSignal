@@ -5,12 +5,7 @@ import { AppText } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import { getMediaUri } from '../../utils/mediaUtils';
 
-
-
-
-
-
-
+const MAX_PHOTOS = 5;
 
 const IncidentPhotoUploader = ({
   photos,
@@ -25,55 +20,75 @@ const IncidentPhotoUploader = ({
   onRemoveVideo
 }) => {
   const { theme } = useTheme();
-  const canAddMore = photos.length < 5;
+  const canAddMore = photos.length < MAX_PHOTOS;
   const videoUri = getMediaUri(video);
 
   return (
     <View style={styles.inputGroup}>
-      <AppText variant="label" style={[styles.label, { color: theme.text }]}>Photos (Optional)</AppText>
-      <AppText variant="small" style={[styles.subLabel, { color: theme.textSecondary }]}>
-        Add up to 5 photos to support your report
-      </AppText>
-      <View style={styles.photosContainer}>
+      <View style={styles.sectionHeader}>
+        <AppText variant="label" style={{ color: theme.text }}>Photos (optional)</AppText>
+        <AppText variant="caption" style={{ color: theme.textSecondary }}>
+          {photos.length}/{MAX_PHOTOS}
+        </AppText>
+      </View>
+
+      <View style={styles.mediaGrid}>
         {photos.map((photo, index) =>
-        <View key={index} style={styles.photoWrapper}>
-            <Image source={{ uri: getMediaUri(photo) }} style={[styles.photoThumbnail, { backgroundColor: theme.surface }]} />
+        <View key={index} style={styles.tile}>
+            <Image source={{ uri: getMediaUri(photo) }} style={[styles.tileImage, { backgroundColor: theme.surface }]} />
             <TouchableOpacity
-            style={styles.removePhotoButton}
-            onPress={() => onRemovePhoto(index)}>
+            style={styles.removeBadge}
+            onPress={() => onRemovePhoto(index)}
+            accessibilityRole="button"
+            accessibilityLabel={`Remove photo ${index + 1}`}>
 
               <Ionicons name="close" size={12} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         )}
+
+        {canAddMore &&
+        <>
+            <TouchableOpacity
+            style={[styles.addTile, { borderColor: theme.inputBorder, backgroundColor: theme.surface }]}
+            onPress={onTakePhoto}
+            activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityLabel="Take photo">
+
+              <Ionicons name="camera-outline" size={20} color={theme.primary} />
+              <AppText variant="small" style={{ color: theme.primary }}>Camera</AppText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+            style={[styles.addTile, { borderColor: theme.inputBorder, backgroundColor: theme.surface }]}
+            onPress={onPickImage}
+            activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityLabel="Choose photo from gallery">
+
+              <Ionicons name="image-outline" size={20} color={theme.primary} />
+              <AppText variant="small" style={{ color: theme.primary }}>Gallery</AppText>
+            </TouchableOpacity>
+          </>
+        }
       </View>
-      {canAddMore &&
-      <View style={styles.actionRow}>
-          <TouchableOpacity
-          style={[styles.actionBtn, { borderColor: theme.inputBorder, backgroundColor: theme.surface }]}
-          onPress={onTakePhoto}
-          activeOpacity={0.75}>
 
-            <Ionicons name="camera-outline" size={18} color={theme.primary} style={styles.actionIcon} />
-            <AppText variant="small" style={[styles.actionText, { color: theme.primary }]}>Take Photo</AppText>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-          style={[styles.actionBtn, { borderColor: theme.inputBorder, backgroundColor: theme.surface }]}
-          onPress={onPickImage}
-          activeOpacity={0.75}>
-
-            <Ionicons name="image-outline" size={18} color={theme.primary} style={styles.actionIcon} />
-            <AppText variant="small" style={[styles.actionText, { color: theme.primary }]}>Choose from Gallery</AppText>
-          </TouchableOpacity>
-        </View>
+      {!canAddMore &&
+      <AppText variant="caption" style={[styles.helper, { color: theme.textSecondary }]}>
+          Maximum of {MAX_PHOTOS} photos added.
+        </AppText>
       }
 
-      <AppText variant="small" style={[styles.subLabel, { color: theme.textSecondary }]}>
-        Optional video evidence: 1 clip, up to 10 minutes
+      <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+      <AppText variant="label" style={{ color: theme.text }}>Video (optional)</AppText>
+      <AppText variant="caption" style={[styles.helper, { color: theme.textSecondary }]}>
+        1 clip, up to 10 minutes
       </AppText>
+
       {isVideoProcessing ?
-      <View style={[styles.videoProcessing, { borderColor: theme.inputBorder, backgroundColor: theme.surface }]}>
+      <View style={[styles.videoCard, { borderColor: theme.inputBorder, backgroundColor: theme.surface }]}>
           <Ionicons name="sync-outline" size={18} color={theme.primary} />
           <View style={styles.videoProcessingContent}>
             <AppText variant="small" style={[styles.videoText, { color: theme.text }]}>Preparing video for upload</AppText>
@@ -94,43 +109,38 @@ const IncidentPhotoUploader = ({
           </View>
         </View> :
       videoUri ?
-      <View style={[styles.videoPreview, { borderColor: theme.inputBorder, backgroundColor: theme.surface }]}>
+      <View style={[styles.videoCard, { borderColor: theme.inputBorder, backgroundColor: theme.surface }]}>
           <Ionicons name="videocam-outline" size={18} color={theme.primary} />
           <AppText variant="small" style={[styles.videoText, { color: theme.text }]} numberOfLines={1}>
             {video?.name || 'Selected video'}
           </AppText>
-          <TouchableOpacity style={styles.removeVideoButton} onPress={onRemoveVideo}>
+          <TouchableOpacity
+          style={styles.removeVideoButton}
+          onPress={onRemoveVideo}
+          accessibilityRole="button"
+          accessibilityLabel="Remove video">
+
             <Ionicons name="close" size={14} color="#FFFFFF" />
           </TouchableOpacity>
         </View> :
 
       <View style={styles.actionRow}>
           <TouchableOpacity
-          style={[
-          styles.actionBtn,
-          { borderColor: theme.inputBorder, backgroundColor: theme.surface },
-          isVideoProcessing && styles.disabledAction]
-          }
+          style={[styles.actionBtn, { borderColor: theme.inputBorder, backgroundColor: theme.surface }]}
           onPress={onRecordVideo}
-          disabled={isVideoProcessing}
           activeOpacity={0.75}>
 
             <Ionicons name="videocam-outline" size={18} color={theme.primary} style={styles.actionIcon} />
-            <AppText variant="small" style={[styles.actionText, { color: theme.primary }]}>Record Video</AppText>
+            <AppText variant="small" style={{ color: theme.primary }}>Record Video</AppText>
           </TouchableOpacity>
 
           <TouchableOpacity
-          style={[
-          styles.actionBtn,
-          { borderColor: theme.inputBorder, backgroundColor: theme.surface },
-          isVideoProcessing && styles.disabledAction]
-          }
+          style={[styles.actionBtn, { borderColor: theme.inputBorder, backgroundColor: theme.surface }]}
           onPress={onPickVideo}
-          disabled={isVideoProcessing}
           activeOpacity={0.75}>
 
             <Ionicons name="film-outline" size={18} color={theme.primary} style={styles.actionIcon} />
-            <AppText variant="small" style={[styles.actionText, { color: theme.primary }]}>Choose Video</AppText>
+            <AppText variant="small" style={{ color: theme.primary }}>Choose Video</AppText>
           </TouchableOpacity>
         </View>
       }
@@ -142,45 +152,60 @@ const styles = StyleSheet.create({
   inputGroup: {
     marginBottom: 24
   },
-  label: {
-    marginBottom: 4
-  },
-  subLabel: {
-    marginBottom: 12,
-    fontStyle: 'italic'
-  },
-  photosContainer: {
+  sectionHeader: {
     flexDirection: 'row',
-    flexWrap: 'wrap'
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12
   },
-  photoWrapper: {
+  helper: {
+    marginBottom: 12
+  },
+  mediaGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10
+  },
+  tile: {
     width: 80,
     height: 80,
-    marginRight: 10,
-    marginBottom: 10,
-    borderRadius: 8,
+    borderRadius: 10,
     overflow: 'hidden',
     position: 'relative'
   },
-  photoThumbnail: {
+  tileImage: {
     width: '100%',
     height: '100%'
   },
-  removePhotoButton: {
+  removeBadge: {
     position: 'absolute',
     top: 4,
     right: 4,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.55)',
     width: 20,
     height: 20,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center'
   },
+  addTile: {
+    width: 80,
+    height: 80,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    marginTop: 16,
+    marginBottom: 16
+  },
   actionRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 4
+    gap: 10
   },
   actionBtn: {
     flex: 1,
@@ -188,35 +213,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 8
   },
   actionIcon: {
     marginRight: 6
   },
-  actionText: {},
-  videoPreview: {
+  videoCard: {
     minHeight: 44,
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 10,
     paddingHorizontal: 10,
+    paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8
   },
   videoText: {
     flex: 1
-  },
-  videoProcessing: {
-    minHeight: 72,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8
   },
   videoProcessingContent: {
     flex: 1
@@ -232,11 +247,8 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 999
   },
-  disabledAction: {
-    opacity: 0.5
-  },
   removeVideoButton: {
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.55)',
     width: 24,
     height: 24,
     borderRadius: 12,

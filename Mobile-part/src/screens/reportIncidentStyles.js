@@ -83,23 +83,9 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
   },
-  stickyFooter: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    flexDirection: "row",
+  formActions: {
+    marginTop: 20,
     gap: 12,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  footerDraftButton: {
-    flex: 1,
-  },
-  footerSubmitButton: {
-    flex: 1.4,
-    borderWidth: 0,
   },
   submitButtonDisabled: {
     opacity: 0.7,
