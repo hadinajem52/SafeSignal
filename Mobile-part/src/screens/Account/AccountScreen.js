@@ -4,11 +4,13 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
+import ImageCropPicker from 'react-native-image-crop-picker';
 import * as Location from 'expo-location';
 import { AppText, ConfirmModal } from '../../components';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
+import { buildCropperOptions, isCropperCancelled, toFileUri } from '../../utils/imageCropper';
 import useUserPreferences from '../../hooks/useUserPreferences';
 import useUserStats from '../../hooks/useUserStats';
 import { getMobileNotificationStatus, sendTestNotification } from '../../services/mobileNotifications';
@@ -132,17 +134,18 @@ const AccountScreen = () => {
         return;
       }
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8
+      const image = await ImageCropPicker.openPicker({
+        ...buildCropperOptions(theme),
+        width: 512,
+        height: 512,
+        cropperCircleOverlay: true,
+        compressImageQuality: 0.8,
+        cropperToolbarTitle: 'Crop photo',
       });
 
-      if (!result.canceled && result.assets[0]) {
-        updatePreference('avatarUri', result.assets[0].uri);
-      }
+      updatePreference('avatarUri', toFileUri(image.path));
     } catch (error) {
+      if (isCropperCancelled(error)) return;
       console.error('Error picking avatar:', error);
       showToast('Failed to update profile photo.', 'error');
     }

@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import ImageCropPicker from 'react-native-image-crop-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Video } from 'react-native-compressor';
 import limits from '../../../constants/limits';
 import { useToast } from '../context/ToastContext';
+import { useTheme } from '../context/ThemeContext';
+import { buildCropperOptions, isCropperCancelled, toFileUri } from '../utils/imageCropper';
 
 const { LIMITS } = limits;
 const { MAX_PHOTOS, MAX_PHOTO_BYTES, MAX_VIDEO_BYTES, MAX_VIDEO_MINUTES } = LIMITS;
@@ -44,6 +47,7 @@ const createMedia = (asset, fallbackType) => {
 
 const useImagePicker = () => {
   const { showToast } = useToast();
+  const { theme } = useTheme();
   const [photos, setPhotos] = useState([]);
   const [video, setVideo] = useState(null);
   const [isVideoProcessing, setIsVideoProcessing] = useState(false);
@@ -99,24 +103,33 @@ const useImagePicker = () => {
         return;
       }
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.7,
+      const image = await ImageCropPicker.openPicker({
+        ...buildCropperOptions(theme),
+        width: 2400,
+        height: 1800,
+        compressImageQuality: 0.7,
+        cropperToolbarTitle: 'Crop photo',
       });
 
-      if (!result.canceled && result.assets[0] && validatePhoto(result.assets[0])) {
-        const photo = createMedia(result.assets[0], 'image/jpeg');
+      const asset = {
+        uri: toFileUri(image.path),
+        fileName: image.filename,
+        mimeType: image.mime,
+        fileSize: image.size,
+      };
+
+      if (validatePhoto(asset)) {
+        const photo = createMedia(asset, 'image/jpeg');
         if (photo) {
           setPhotos((prev) => [...prev, photo]);
         }
       }
     } catch (error) {
+      if (isCropperCancelled(error)) return;
       console.error('Error picking image:', error);
       showToast('Failed to pick image. Please try again.', 'error');
     }
-  }, [photos.length, showToast, validatePhoto]);
+  }, [photos.length, showToast, validatePhoto, theme]);
 
   const takePhoto = useCallback(async () => {
     if (photos.length >= MAX_PHOTOS) {
