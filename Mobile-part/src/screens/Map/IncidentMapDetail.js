@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { AppText, Button } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import { formatTimeAgo } from '../../utils/dateUtils';
@@ -17,6 +18,7 @@ const IncidentMapDetail = ({
   canCenter = true,
 }) => {
   const { theme } = useTheme();
+  const tabBarHeight = useBottomTabBarHeight();
   const translateY = useRef(new Animated.Value(280)).current;
   const opacity = useRef(new Animated.Value(0)).current;
   // Keep the last incident on screen while the sheet animates out, so the close
@@ -72,6 +74,7 @@ const IncidentMapDetail = ({
             backgroundColor: theme.card,
             borderColor: theme.border,
             shadowColor: theme.shadow,
+            paddingBottom: tabBarHeight + 16,
             transform: [{ translateY }],
           },
         ]}
