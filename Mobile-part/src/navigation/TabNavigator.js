@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, TouchableOpacity, StyleSheet, Platform, Dimensions, Easing } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -87,6 +87,12 @@ const ReportsStack = () =>
 const TabNavigator = () => {
   const { theme } = useTheme();
 
+  const renderTabBarBackground = useCallback(
+    () =>
+    <View style={[styles.tabBarBackground, { backgroundColor: theme.tabBar, borderColor: theme.primary }]} />,
+    [theme.tabBar, theme.primary]
+  );
+
   return (
     <Tab.Navigator
       screenListeners={{ tabPress: () => haptics.selection() }}
@@ -110,10 +116,8 @@ const TabNavigator = () => {
         tabBarActiveTintColor: theme.tabBarActive,
         tabBarInactiveTintColor: theme.tabBarInactive,
         headerShown: false,
-        tabBarStyle: [styles.tabBar, { backgroundColor: 'transparent' }],
-        tabBarBackground: () =>
-        <View style={[styles.tabBarBackground, { backgroundColor: theme.tabBar, borderColor: theme.primary }]} />
-
+        tabBarStyle: styles.tabBar,
+        tabBarBackground: renderTabBarBackground
       })}>
 
       <Tab.Screen name="Dashboard" component={DashboardStack} />
@@ -176,6 +180,7 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     borderRadius: 24,
     borderTopWidth: 0,
+    backgroundColor: 'transparent',
     ...Platform.select({
       ios: {
         shadowColor: '#000',

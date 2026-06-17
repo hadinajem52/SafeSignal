@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, LayoutAnimation, Platform, TouchableOpacity, UIManager, View } from "react-native";
+import { ActivityIndicator, InteractionManager, LayoutAnimation, Platform, TouchableOpacity, UIManager, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
@@ -61,6 +61,7 @@ const MapScreen = () => {
   const [headerHeight, setHeaderHeight] = useState(150);
   const [viewMode, setViewMode] = useState("map");
   const [filtersExpanded, setFiltersExpanded] = useState(true);
+  const [canRenderMap, setCanRenderMap] = useState(false);
 
   const toggleFilters = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -194,6 +195,11 @@ const MapScreen = () => {
   );
 
   useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => setCanRenderMap(true));
+    return () => task.cancel();
+  }, []);
+
+  useEffect(() => {
     fetchIncidents();
   }, [fetchIncidents]);
 
@@ -307,7 +313,7 @@ const MapScreen = () => {
         onRefresh={() => fetchIncidents(true)}
         contentPaddingTop={headerHeight + 8}
         contentPaddingBottom={tabBarHeight + 16} /> :
-
+      canRenderMap ?
       <MapCanvas
         mapRef={mapRef}
         region={region}
@@ -316,7 +322,8 @@ const MapScreen = () => {
         incidents={incidents}
         categoryDisplay={CATEGORY_DISPLAY}
         showActiveOverlays={mapMode === MAP_MODES.ACTIVE}
-        onMarkerPress={handleMarkerPress} />
+        onMarkerPress={handleMarkerPress} /> :
+      null
       }
 
 
