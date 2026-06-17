@@ -1,12 +1,21 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
+import MapView, { Marker } from 'react-native-maps';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText, Button, Card, ConfirmModal, Modal as AppModal } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
 import { savedAreaAPI, statsAPI } from '../../services/api';
 import accountStyles from './accountStyles';
+
+const DEFAULT_REGION = {
+  latitude: 33.8938,
+  longitude: 35.5018,
+  latitudeDelta: 0.05,
+  longitudeDelta: 0.05,
+};
 
 const clampScore = (value) => {
   const score = Number(value);
@@ -15,8 +24,9 @@ const clampScore = (value) => {
 };
 
 const SavedAreasSection = () => {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const { showToast } = useToast();
+  const insets = useSafeAreaInsets();
   const [areas, setAreas] = useState([]);
   const [scores, setScores] = useState({});
   const [loading, setLoading] = useState(true);
@@ -26,6 +36,9 @@ const SavedAreasSection = () => {
   const [saving, setSaving] = useState(false);
   const [locating, setLocating] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [mapVisible, setMapVisible] = useState(false);
+  const [mapRegion, setMapRegion] = useState(DEFAULT_REGION);
+  const [mapSelection, setMapSelection] = useState(null);
 
   const scoreColor = (score) =>
     score >= 80 ? theme.safetyGood : score >= 60 ? theme.safetyModerate : theme.safetyPoor;
@@ -55,7 +68,13 @@ const SavedAreasSection = () => {
     loadAreas();
   }, [loadAreas]);
 
-  const handleAddPress = async () => {
+  const openNamingModal = (coords) => {
+    setPendingCoords(coords);
+    setLabel('');
+    setAddVisible(true);
+  };
+
+  const handleUseCurrentLocation = async () => {
     if (locating) return;
     setLocating(true);
     try {
@@ -65,14 +84,43 @@ const SavedAreasSection = () => {
         return;
       }
       const position = await Location.getCurrentPositionAsync({});
-      setPendingCoords({ latitude: position.coords.latitude, longitude: position.coords.longitude });
-      setLabel('');
-      setAddVisible(true);
+      openNamingModal({ latitude: position.coords.latitude, longitude: position.coords.longitude });
     } catch {
       showToast('Could not get your current location.', 'error');
     } finally {
       setLocating(false);
     }
+  };
+
+  const handleChooseOnMap = async () => {
+    let region = DEFAULT_REGION;
+    let selection = null;
+    try {
+      const { status } = await Location.getForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const last = await Location.getLastKnownPositionAsync();
+        if (last?.coords) {
+          const { latitude, longitude } = last.coords;
+          region = { latitude, longitude, latitudeDelta: 0.01, longitudeDelta: 0.01 };
+          selection = { latitude, longitude };
+        }
+      }
+    } catch {
+      // fall back to the default region
+    }
+    setMapRegion(region);
+    setMapSelection(selection);
+    setMapVisible(true);
+  };
+
+  const handleMapPress = (event) => {
+    setMapSelection(event.nativeEvent.coordinate);
+  };
+
+  const handleConfirmMapLocation = () => {
+    if (!mapSelection) return;
+    setMapVisible(false);
+    openNamingModal(mapSelection);
   };
 
   const handleSave = async () => {
@@ -153,11 +201,18 @@ const SavedAreasSection = () => {
 
       <Button
         title={locating ? 'Getting location…' : 'Add current location'}
-        onPress={handleAddPress}
+        onPress={handleUseCurrentLocation}
         loading={locating}
         disabled={locating}
         variant="secondary"
         style={styles.addButton}
+      />
+      <Button
+        title="Choose on map"
+        onPress={handleChooseOnMap}
+        disabled={locating}
+        variant="secondary"
+        style={styles.mapButton}
       />
 
       <AppModal
@@ -179,6 +234,51 @@ const SavedAreasSection = () => {
           <Button title="Save" onPress={handleSave} loading={saving} disabled={saving} style={accountStyles.modalButton} />
         </View>
       </AppModal>
+
+      <Modal visible={mapVisible} animationType="slide" onRequestClose={() => setMapVisible(false)}>
+        <View style={[styles.mapModalContainer, { backgroundColor: theme.background }]}>
+          <View style={[styles.mapModalHeader, { backgroundColor: theme.card, borderBottomColor: theme.border, paddingTop: insets.top + 12 }]}>
+            <TouchableOpacity onPress={() => setMapVisible(false)}>
+              <AppText variant="body" style={{ color: theme.textSecondary }}>Cancel</AppText>
+            </TouchableOpacity>
+            <AppText variant="h4" style={{ color: theme.text }}>Choose location</AppText>
+            <TouchableOpacity onPress={handleConfirmMapLocation} disabled={!mapSelection}>
+              <AppText variant="label" style={{ color: mapSelection ? theme.primary : theme.textTertiary }}>Confirm</AppText>
+            </TouchableOpacity>
+          </View>
+
+          <MapView
+            style={styles.fullMap}
+            region={mapRegion}
+            onRegionChangeComplete={setMapRegion}
+            onPress={handleMapPress}
+          >
+            {mapSelection && (
+              <Marker coordinate={mapSelection} draggable onDragEnd={handleMapPress} />
+            )}
+          </MapView>
+
+          <View
+            style={[
+              styles.mapInstructions,
+              {
+                backgroundColor: isDark ? 'rgba(17,24,39,0.9)' : 'rgba(255,255,255,0.9)',
+                shadowColor: theme.shadow,
+                bottom: insets.bottom + 20,
+              },
+            ]}
+          >
+            <AppText variant="caption" style={[styles.mapInstructionsText, { color: theme.text }]}>
+              Tap the map or drag the marker to choose an area to watch
+            </AppText>
+            {mapSelection && (
+              <AppText variant="small" style={[styles.mapInstructionsText, { color: theme.primary }]}>
+                {mapSelection.latitude.toFixed(5)}, {mapSelection.longitude.toFixed(5)}
+              </AppText>
+            )}
+          </View>
+        </View>
+      </Modal>
 
       <ConfirmModal
         visible={!!deleteTarget}
@@ -230,6 +330,38 @@ const styles = StyleSheet.create({
   },
   addButton: {
     marginTop: 14,
+  },
+  mapButton: {
+    marginTop: 10,
+  },
+  mapModalContainer: {
+    flex: 1,
+  },
+  mapModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    zIndex: 10,
+  },
+  fullMap: {
+    flex: 1,
+  },
+  mapInstructions: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    padding: 15,
+    borderRadius: 12,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  mapInstructionsText: {
+    textAlign: 'center',
   },
 });
 
