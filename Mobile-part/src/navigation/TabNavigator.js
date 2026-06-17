@@ -112,7 +112,7 @@ const TabNavigator = () => {
         headerShown: false,
         tabBarStyle: [styles.tabBar, { backgroundColor: 'transparent' }],
         tabBarBackground: () =>
-        <View style={[styles.tabBarBackground, { backgroundColor: theme.tabBar }]} />
+        <View style={[styles.tabBarBackground, { backgroundColor: theme.tabBar, borderColor: theme.primary }]} />
 
       })}>
 
@@ -190,7 +190,8 @@ const styles = StyleSheet.create({
   },
   tabBarBackground: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: 24
+    borderRadius: 24,
+    borderWidth: 1
   },
   fabWrapper: {
     top: -28,
