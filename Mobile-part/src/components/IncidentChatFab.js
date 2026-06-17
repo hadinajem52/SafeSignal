@@ -29,6 +29,10 @@ const readableOn = (hex) => {
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.62 ? '#0B1220' : '#FFFFFF';
 };
 
+// The center "+" tab button overflows ~28px above the tab bar (top: -28 in
+// TabNavigator), so the composer must clear the button, not just the bar height.
+const TAB_FAB_OVERFLOW = 28;
+
 
 
 
@@ -126,7 +130,7 @@ export default function IncidentChatFab({ incidentId, accent }) {
         styles.panel,
         {
           height: panelHeight,
-          paddingBottom: tabBarHeight + 10,
+          paddingBottom: tabBarHeight + TAB_FAB_OVERFLOW + 10,
           backgroundColor: theme.card,
           borderColor: theme.border,
           shadowColor: theme.shadow
