@@ -29,7 +29,7 @@ describe('statsService safety score', () => {
       confidence: 'low',
       incidentCount: 0,
       radiusKm: 1,
-      windowDays: 30,
+      windowDays: 7,
     });
     expect(score.description).toContain('not a safety guarantee');
   });
@@ -98,7 +98,7 @@ describe('statsService safety score', () => {
     expect(result.safetyScoreDetails).toMatchObject({
       incidentCount: 1,
       radiusKm: 1,
-      windowDays: 30,
+      windowDays: 7,
     });
     expect(db.manyOrNone.mock.calls[0][0]).toContain('i.status = ANY');
     expect(db.manyOrNone.mock.calls[0][0]).toContain('i.created_at >= NOW()');
@@ -107,7 +107,7 @@ describe('statsService safety score', () => {
       33.8938,
       1,
       expect.arrayContaining(['verified', 'resolved', 'police_closed']),
-      30,
+      7,
     ]);
   });
 

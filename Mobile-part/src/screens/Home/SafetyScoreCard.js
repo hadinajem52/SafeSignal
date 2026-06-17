@@ -40,16 +40,13 @@ const formatRadius = (radiusKm) => {
 const buildSafetyNote = (safetyScore) => {
   const incidentCount = Number(safetyScore?.incidentCount);
   const windowDays = Number(safetyScore?.windowDays);
-  const confidence = safetyScore?.confidence;
 
   if (!Number.isFinite(incidentCount) || !Number.isFinite(windowDays)) {
     return 'Based on recent verified incident reports';
   }
 
   const incidentWord = incidentCount === 1 ? 'incident' : 'incidents';
-  const note = `Based on ${incidentCount} verified ${incidentWord} within ${formatRadius(safetyScore.radiusKm)} over ${windowDays} days`;
-
-  return confidence ? `${note}. Confidence: ${confidence}` : note;
+  return `Based on ${incidentCount} verified ${incidentWord} within ${formatRadius(safetyScore.radiusKm)} over ${windowDays} days`;
 };
 
 const SafetyScoreCard = ({ safetyScore, location, unavailableReason, ctaLabel, onCtaPress }) => {

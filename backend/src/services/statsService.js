@@ -12,7 +12,7 @@ const { LIMITS } = require('../../../constants/limits');
 
 const DEFAULT_SAFETY_RADIUS_KM = 0.5;
 const MAX_SAFETY_RADIUS_KM = 1;
-const SAFETY_SCORE_WINDOW_DAYS = 30;
+const SAFETY_SCORE_WINDOW_DAYS = 7;
 // Reports needed before accumulated risk is trusted at full weight. Below this,
 // risk is damped toward the neutral baseline (see calculateSafetyScore) so a
 // single noisy report can't dominate the score.
@@ -1106,8 +1106,8 @@ async function getAreaSafetyStats(latitude, longitude, radius = DEFAULT_SAFETY_R
 }
 
 // ── Area AI insights ──────────────────────────────────────────────────────────
-// Citizen-facing read of recent nearby activity. Scope is intentionally tighter
-// than the safety score: a 1 km / 7 day window of "what's been happening near me".
+// Citizen-facing read of recent nearby activity: a 1 km / 7 day window of
+// "what's been happening near me".
 const AREA_INSIGHTS_RADIUS_KM = 1;
 const AREA_INSIGHTS_WINDOW_DAYS = 7;
 const AREA_RESOLVED_STATUSES = ['resolved', 'police_closed'];

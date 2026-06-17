@@ -47,7 +47,7 @@ const InsightLoading = ({ theme }) => {
   }, [pulse]);
 
   return (
-    <Card style={[styles.card, { borderColor: theme.border }]}>
+    <Card style={[styles.card, { borderColor: `${theme.primary}55` }]}>
       <CardHeader
         theme={theme}
         right={<Animated.View style={[styles.skeletonChip, { backgroundColor: theme.surface2, opacity: pulse }]} />}
@@ -94,7 +94,7 @@ const AreaInsightsCard = ({ insight, loading }) => {
 
   return (
     <Animated.View style={{ transform: [{ scale: enterAnim }], opacity: opacityAnim }}>
-      <Card style={[styles.card, { borderColor: `${accent}55` }]}>
+      <Card style={[styles.card, { borderColor: `${theme.primary}55` }]}>
         <CardHeader
           theme={theme}
           right={
