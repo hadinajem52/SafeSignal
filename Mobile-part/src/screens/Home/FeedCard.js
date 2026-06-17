@@ -35,6 +35,7 @@ const FeedCard = ({ incident, onPress }) => {
   const outcomeColor = theme[outcome.colorKey] || theme.textSecondary;
   const videoUrl = incident.video_url || incident.videoUrl;
   const hasVideo = Boolean(videoUrl);
+  const corroborationCount = incident.corroborationCount || 0;
   const photoUrls = Array.isArray(incident.photo_urls) ?
   incident.photo_urls :
   Array.isArray(incident.photoUrls) ?
@@ -131,6 +132,14 @@ const FeedCard = ({ incident, onPress }) => {
                   </AppText>
               </View>
             ) : null}
+            {corroborationCount > 0 ? (
+              <View style={[styles.seenPill, { backgroundColor: `${theme.textSecondary}18` }]}>
+                  <Ionicons name="eye-outline" size={11} color={theme.textSecondary} />
+                  <AppText variant="caption" style={{ color: theme.textSecondary, marginLeft: 3 }}>
+                    {corroborationCount}
+                  </AppText>
+              </View>
+            ) : null}
           </View>
           <View style={styles.metaRight}>
             <View style={styles.statusRow}>
@@ -209,6 +218,14 @@ const styles = StyleSheet.create({
     paddingVertical: 3
   },
   videoPill: {
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 6
+  },
+  seenPill: {
     borderRadius: 20,
     paddingHorizontal: 8,
     paddingVertical: 3,

@@ -3034,7 +3034,8 @@ async function getPublicFeed({ category, closure_outcome, severity, timeframe, l
        CASE WHEN i.is_location_fuzzed
          THEN i.longitude + (random() - 0.5) * 0.0027
          ELSE i.longitude
-       END AS longitude
+       END AS longitude,
+       (SELECT COUNT(*) FROM incident_seen_marks m WHERE m.incident_id = i.incident_id)::int AS corroboration_count
      FROM incidents i
      WHERE ${conditions.join(' AND ')} ${geoJoin}
      ORDER BY ${orderBy}

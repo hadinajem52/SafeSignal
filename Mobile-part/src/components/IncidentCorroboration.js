@@ -12,23 +12,51 @@ export default function IncidentCorroboration({ incidentId }) {
   const { theme } = useTheme();
   const { showToast } = useToast();
   const [state, setState] = useState(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!incidentId) return undefined;
+    if (!incidentId) {
+      setState(null);
+      setLoadFailed(false);
+      return undefined;
+    }
     let active = true;
+    setState(null);
+    setLoadFailed(false);
     incidentAPI.getCorroboration(incidentId).then((res) => {
-      if (active && res.success) {
+      if (!active) return;
+      if (res.success) {
         setState({ count: res.count, hasCorroborated: res.hasCorroborated });
+      } else {
+        setLoadFailed(true);
       }
     });
     return () => {
       active = false;
     };
-  }, [incidentId]);
+  }, [incidentId, reloadKey]);
 
   if (!state) {
-    return null;
+    if (!loadFailed) {
+      return null;
+    }
+    return (
+      <View style={styles.wrap}>
+        <PressableScale
+          onPress={() => setReloadKey((k) => k + 1)}
+          accessibilityRole="button"
+          accessibilityLabel="Retry loading corroboration"
+          style={[styles.pill, { borderColor: theme.border, backgroundColor: theme.card }]}
+        >
+          <Ionicons name="refresh-outline" size={16} color={theme.textSecondary} />
+          <AppText variant="label" style={{ color: theme.text }}>
+            Couldn't load · Retry
+          </AppText>
+        </PressableScale>
+      </View>
+    );
   }
 
   const active = state.hasCorroborated;
@@ -84,6 +112,7 @@ const styles = StyleSheet.create({
   wrap: {
     paddingHorizontal: 18,
     paddingTop: 16,
+    paddingBottom: 18,
   },
   pill: {
     flexDirection: 'row',
@@ -104,6 +133,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   hint: {
-    marginTop: 6,
+    marginTop: 8,
   },
 });

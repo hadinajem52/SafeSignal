@@ -72,5 +72,6 @@ function normalizeIncident(i) {
     closure_details: normalizeClosureDetails(i.closure_details),
     videoUrl: i.video_url,
     video_url: i.video_url,
+    corroborationCount: Number(i.corroboration_count) || 0,
   };
 }
