@@ -1670,7 +1670,7 @@ const formatIncidentWithStaffConstellation = (row) => {
   return incident;
 };
 
-const formatIncidentDetail = (row, includeStaffDetails) => {
+const formatIncidentDetail = (row, includeStaffDetails, viewerUserId = null) => {
   const {
     constellation_constellation_id,
     constellation_status,
@@ -1687,6 +1687,9 @@ const formatIncidentDetail = (row, includeStaffDetails) => {
     constellation_ongoing_assessment,
     ...incident
   } = row;
+
+  incident.is_owner =
+    viewerUserId != null && Number(viewerUserId) === Number(incident.reporter_id);
 
   if (!includeStaffDetails) {
     incident.username = null;
@@ -1754,22 +1757,23 @@ async function getIncidentDetailRow(incidentId) {
   );
 }
 
-async function getPublicIncidentById(incidentId) {
+async function getPublicIncidentById(incidentId, viewerUserId = null) {
   const row = await getIncidentDetailRow(incidentId);
-  return row ? formatIncidentDetail(row, false) : null;
+  return row ? formatIncidentDetail(row, false, viewerUserId) : null;
 }
 
-async function getStaffIncidentById(incidentId) {
+async function getStaffIncidentById(incidentId, viewerUserId = null) {
   const row = await getIncidentDetailRow(incidentId);
-  return row ? formatIncidentDetail(row, true) : null;
+  return row ? formatIncidentDetail(row, true, viewerUserId) : null;
 }
 
 async function getIncidentForRequest(incidentId, user) {
+  const viewerUserId = user?.userId ?? null;
   if (user && STAFF_ROLES.has(user.role)) {
-    return getStaffIncidentById(incidentId);
+    return getStaffIncidentById(incidentId, viewerUserId);
   }
 
-  return getPublicIncidentById(incidentId);
+  return getPublicIncidentById(incidentId, viewerUserId);
 }
 
 const PUBLIC_INTERACTABLE_STATUSES = ['police_closed', 'resolved', 'published'];

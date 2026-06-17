@@ -49,6 +49,31 @@ describe('incident detail privacy', () => {
     expect(incident.reporter_id).toBeNull();
   });
 
+  it('marks is_owner true for the reporter without exposing reporter identity', async () => {
+    db.oneOrNone.mockResolvedValue(incidentRow());
+
+    const incident = await incidentService.getPublicIncidentById(10, 7);
+
+    expect(incident.is_owner).toBe(true);
+    expect(incident.reporter_id).toBeNull();
+  });
+
+  it('marks is_owner false for a non-reporter viewer', async () => {
+    db.oneOrNone.mockResolvedValue(incidentRow());
+
+    const incident = await incidentService.getPublicIncidentById(10, 999);
+
+    expect(incident.is_owner).toBe(false);
+  });
+
+  it('marks is_owner false when there is no authenticated viewer', async () => {
+    db.oneOrNone.mockResolvedValue(incidentRow());
+
+    const incident = await incidentService.getPublicIncidentById(10);
+
+    expect(incident.is_owner).toBe(false);
+  });
+
   it('includes username and email for staff incident reads', async () => {
     db.oneOrNone.mockResolvedValue(incidentRow());
 

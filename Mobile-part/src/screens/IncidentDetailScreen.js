@@ -196,7 +196,7 @@ const IncidentDetailScreen = ({ route, navigation }) => {
         </TouchableOpacity>
 
         <View style={styles.headerActions}>
-          {showTimeline ? (
+          {showTimeline && !detailIncident.is_owner ? (
             <IncidentFollowButton incidentId={getIncidentId(detailIncident)} />
           ) : null}
           <TouchableOpacity
