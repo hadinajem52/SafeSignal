@@ -23,20 +23,22 @@ const MapLegend = ({ visible, onClose, categoryDisplay }) => {
         },
       ]}
     >
-      <AppText variant="h5" style={[styles.legendTitle, { color: theme.text }]}>Incident Categories</AppText>
-      {Object.entries(categoryDisplay).map(([key, config]) => {
-        const markerColor = getMarkerColor(key, categoryDisplay, theme.mapMarkerDefault);
-        return (
-          <View key={key} style={styles.legendItem}>
-            <View style={[styles.legendSwatch, { backgroundColor: `${markerColor}22`, borderColor: `${markerColor}66` }]}>
-              <Ionicons name={config.mapIcon} size={16} color={markerColor} />
+      <View style={styles.legendBody}>
+        <AppText variant="h5" style={[styles.legendTitle, { color: theme.text }]}>Incident Categories</AppText>
+        {Object.entries(categoryDisplay).map(([key, config]) => {
+          const markerColor = getMarkerColor(key, categoryDisplay, theme.mapMarkerDefault);
+          return (
+            <View key={key} style={styles.legendItem}>
+              <View style={[styles.legendSwatch, { backgroundColor: `${markerColor}22`, borderColor: `${markerColor}66` }]}>
+                <Ionicons name={config.mapIcon} size={16} color={markerColor} />
+              </View>
+              <AppText variant="body" style={[styles.legendText, { color: theme.text }]}>
+                {config.label}
+              </AppText>
             </View>
-            <AppText variant="body" style={[styles.legendText, { color: theme.text }]}>
-              {config.label}
-            </AppText>
-          </View>
-        );
-      })}
+          );
+        })}
+      </View>
     </Modal>
   );
 };
@@ -46,9 +48,11 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     padding: 16,
-    gap: 14,
     maxWidth: 360,
     alignSelf: 'center',
+  },
+  legendBody: {
+    gap: 14,
   },
   legendTitle: {
     marginBottom: 4,

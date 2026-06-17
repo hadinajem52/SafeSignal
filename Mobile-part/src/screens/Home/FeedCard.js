@@ -141,31 +141,27 @@ const FeedCard = ({ incident, onPress }) => {
               </View>
             ) : null}
           </View>
-          <View style={styles.metaRight}>
-            <View style={styles.statusRow}>
-              <Ionicons name="shield-checkmark-outline" size={11} color={theme.textSecondary} />
-              <AppText variant="caption" style={[styles.metaText, { color: theme.textSecondary }]}>
-                Closed by Law Enforcement
-              </AppText>
-            </View>
-            <AppText variant="caption" style={{ color: theme.textSecondary }}>
-              {formatTimeAgo(incident.closedAt)}
-            </AppText>
-          </View>
         </View>
 
-        {incident.locationName ? (
-          <View style={styles.locationRow}>
-              <Ionicons name="location-outline" size={11} color={theme.textSecondary} />
-              <AppText
-                variant="caption"
-                style={[styles.locationText, { color: theme.textSecondary }]}
-                numberOfLines={1}
-              >
-                {incident.locationName}
-              </AppText>
+        <View style={styles.locationRow}>
+          <View style={styles.locationLeft}>
+            {incident.locationName ? (
+              <>
+                <Ionicons name="location-outline" size={11} color={theme.textSecondary} />
+                <AppText
+                  variant="caption"
+                  style={[styles.locationText, { color: theme.textSecondary }]}
+                  numberOfLines={1}
+                >
+                  {incident.locationName}
+                </AppText>
+              </>
+            ) : null}
           </View>
-        ) : null}
+          <AppText variant="caption" style={[styles.metaTime, { color: theme.textSecondary }]}>
+            {formatTimeAgo(incident.closedAt)}
+          </AppText>
+        </View>
       </Pressable>
     </Animated.View>
   );
@@ -233,23 +229,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: 6
   },
-  metaRight: {
-    alignItems: 'flex-end'
-  },
-  metaText: {
-    marginLeft: 2
-  },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center'
-  },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginTop: 6
   },
+  locationLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1
+  },
   locationText: {
-    marginLeft: 3
+    marginLeft: 3,
+    flexShrink: 1
+  },
+  metaTime: {
+    marginLeft: 8
   }
 });
 
