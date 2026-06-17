@@ -3,6 +3,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -152,16 +153,19 @@ export const LocationProvider = ({ children }) => {
 
   const refresh = useCallback((options) => acquire({ prompt: true, ...options }), [acquire]);
 
-  const value = {
-    coords,
-    status,
-    issue,
-    loading,
-    locationServicesEnabled: locationServices,
-    preferencesLoading,
-    refresh,
-    acquire,
-  };
+  const value = useMemo(
+    () => ({
+      coords,
+      status,
+      issue,
+      loading,
+      locationServicesEnabled: locationServices,
+      preferencesLoading,
+      refresh,
+      acquire,
+    }),
+    [coords, status, issue, loading, locationServices, preferencesLoading, refresh, acquire],
+  );
 
   return <LocationContext.Provider value={value}>{children}</LocationContext.Provider>;
 };

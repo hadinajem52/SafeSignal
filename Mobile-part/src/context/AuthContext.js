@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useState, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useState, useEffect } from 'react';
 import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
@@ -39,56 +39,7 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-
-  useEffect(() => {
-    checkAuthStatus();
-  }, []);
-
-  const syncConsentedLocation = useCallback(async () => {
-    if (!user || !isAuthenticated) {
-      return;
-    }
-
-    try {
-      const preferences = await loadPreferences(user);
-      if (!preferences.locationServices) {
-        return;
-      }
-
-      const { status } = await Location.getForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        return;
-      }
-
-      const position = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-
-      await userAPI.updateLocation({
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-      });
-    } catch (error) {
-      console.log('Location sync skipped:', error?.message || error);
-    }
-  }, [isAuthenticated, user]);
-
-  useEffect(() => {
-    syncConsentedLocation();
-
-    const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') {
-        syncConsentedLocation();
-      }
-    });
-
-    return () => subscription.remove();
-  }, [syncConsentedLocation]);
-
-
-
-
-  const checkAuthStatus = async () => {
+  const checkAuthStatus = useCallback(async () => {
     try {
       setIsLoading(true);
       const storedUser = await tokenStorage.getUser();
@@ -114,19 +65,70 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    checkAuthStatus();
+  }, [checkAuthStatus]);
+
+  const syncConsentedLocation = useCallback(async () => {
+    if (!user || !isAuthenticated) {
+      return;
+    }
+
+    try {
+      const preferences = await loadPreferences(user);
+      if (!preferences.locationServices) {
+        return;
+      }
+
+      const { status } = await Location.getForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        return;
+      }
+
+      const lastKnown = await Location.getLastKnownPositionAsync({
+        maxAge: 10 * 60 * 1000,
+        requiredAccuracy: 5000,
+      }).catch(() => null);
+      const position =
+        lastKnown ||
+        (await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        }));
+
+      await userAPI.updateLocation({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      });
+    } catch (error) {
+      console.log('Location sync skipped:', error?.message || error);
+    }
+  }, [isAuthenticated, user]);
+
+  useEffect(() => {
+    syncConsentedLocation();
+
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        syncConsentedLocation();
+      }
+    });
+
+    return () => subscription.remove();
+  }, [syncConsentedLocation]);
 
 
 
 
-  const login = async (email, password) => {
+  const login = useCallback(async (email, password) => {
     const result = await authAPI.login(email, password);
     if (result.success) {
       setUser(result.user);
       setIsAuthenticated(true);
     }
     return result;
-  };
+  }, []);
 
 
 
@@ -134,7 +136,7 @@ export const AuthProvider = ({ children }) => {
 
 
 
-  const register = async (username, email, password) => {
+  const register = useCallback(async (username, email, password) => {
     const result = await authAPI.register(username, email, password);
 
     if (result.success && !result.requiresVerification) {
@@ -142,24 +144,24 @@ export const AuthProvider = ({ children }) => {
     }
 
     return result;
-  };
+  }, [login]);
 
 
 
 
-  const googleSignIn = async (idToken, email, name) => {
+  const googleSignIn = useCallback(async (idToken, email, name) => {
     const result = await authAPI.googleSignIn(idToken, email, name);
     if (result.success) {
       setUser(result.user);
       setIsAuthenticated(true);
     }
     return result;
-  };
+  }, []);
 
 
 
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
 
       if (user?.user_id || user?.userId) {
@@ -177,31 +179,34 @@ export const AuthProvider = ({ children }) => {
     await authAPI.logout();
     setUser(null);
     setIsAuthenticated(false);
-  };
+  }, [user]);
 
 
 
 
-  const refreshProfile = async () => {
+  const refreshProfile = useCallback(async () => {
     const result = await authAPI.getProfile();
     if (result.success) {
       setUser(result.user);
       await tokenStorage.setUser(result.user);
     }
     return result;
-  };
+  }, []);
 
-  const value = {
-    user,
-    isLoading,
-    isAuthenticated,
-    register,
-    login,
-    googleSignIn,
-    logout,
-    refreshProfile,
-    checkAuthStatus,
-  };
+  const value = useMemo(
+    () => ({
+      user,
+      isLoading,
+      isAuthenticated,
+      register,
+      login,
+      googleSignIn,
+      logout,
+      refreshProfile,
+      checkAuthStatus,
+    }),
+    [user, isLoading, isAuthenticated, register, login, googleSignIn, logout, refreshProfile, checkAuthStatus],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
