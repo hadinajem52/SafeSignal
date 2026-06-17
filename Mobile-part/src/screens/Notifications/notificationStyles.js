@@ -48,12 +48,27 @@ const notificationStyles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
   },
+  sectionHeader: {
+    marginTop: 8,
+    marginBottom: 10,
+  },
   card: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     borderRadius: 16,
     borderWidth: 1,
     padding: 14,
+    marginBottom: 10,
+  },
+  cardContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  closeButton: {
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    marginLeft: 8,
   },
   iconWrap: {
     width: 42,

@@ -1,9 +1,9 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, SectionList, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { AppText, EmptyState, EMPTY_ART, PressableScale, SwipeToDeleteRow } from '../../components';
+import { AppText, EmptyState, EMPTY_ART, PressableScale } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import useNotifications from '../../hooks/useNotifications';
 import haptics from '../../utils/haptics';
@@ -32,6 +32,41 @@ const TYPE_FILTERS = [
   { label: 'Digest', value: 'notification:weekly_digest' },
 ];
 
+const startOfDay = (date) => {
+  const result = new Date(date);
+  result.setHours(0, 0, 0, 0);
+  return result;
+};
+
+const groupByDate = (items) => {
+  const todayStart = startOfDay(new Date());
+  const yesterdayStart = new Date(todayStart);
+  yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+  const last7Start = new Date(todayStart);
+  last7Start.setDate(last7Start.getDate() - 7);
+  const last30Start = new Date(todayStart);
+  last30Start.setDate(last30Start.getDate() - 30);
+
+  const buckets = { today: [], yesterday: [], last7: [], last30: [], older: [] };
+
+  items.forEach((item) => {
+    const time = new Date(item.timestamp);
+    if (time >= todayStart) buckets.today.push(item);
+    else if (time >= yesterdayStart) buckets.yesterday.push(item);
+    else if (time >= last7Start) buckets.last7.push(item);
+    else if (time >= last30Start) buckets.last30.push(item);
+    else buckets.older.push(item);
+  });
+
+  return [
+    { key: 'today', title: 'Today', data: buckets.today },
+    { key: 'yesterday', title: 'Yesterday', data: buckets.yesterday },
+    { key: 'last7', title: 'Last 7 days', data: buckets.last7 },
+    { key: 'last30', title: 'Last 30 days', data: buckets.last30 },
+    { key: 'older', title: 'Earlier', data: buckets.older },
+  ].filter((section) => section.data.length > 0);
+};
+
 const FilterChip = ({ label, active, onPress, theme }) => (
   <PressableScale
     accessibilityRole="button"
@@ -47,12 +82,11 @@ const FilterChip = ({ label, active, onPress, theme }) => (
   </PressableScale>
 );
 
-const NotificationItem = React.memo(({ item, index, theme, onPress }) => {
+const NotificationItem = React.memo(({ item, index, theme, onPress, onRemove }) => {
   const { icon, tint } = getVisual(item.eventName, theme);
   return (
     <Animated.View entering={FadeInDown.duration(DURATION.base).delay(stagger(index))}>
-      <PressableScale
-        onPress={() => onPress(item)}
+      <View
         style={[
           styles.card,
           {
@@ -61,26 +95,37 @@ const NotificationItem = React.memo(({ item, index, theme, onPress }) => {
           },
         ]}
       >
-        <View style={[styles.iconWrap, { backgroundColor: `${tint}1F` }]}>
-          <Ionicons name={icon} size={20} color={tint} />
-        </View>
-        <View style={styles.cardBody}>
-          <View style={styles.cardTitleRow}>
-            <AppText variant="label" numberOfLines={2} style={[styles.cardTitle, { color: theme.text }]}>
-              {item.title}
-            </AppText>
-            {!item.read ? <View style={[styles.unreadDot, { backgroundColor: theme.primary }]} /> : null}
+        <PressableScale style={styles.cardContent} onPress={() => onPress(item)} accessibilityRole="button">
+          <View style={[styles.iconWrap, { backgroundColor: `${tint}1F` }]}>
+            <Ionicons name={icon} size={20} color={tint} />
           </View>
-          {item.body ? (
-            <AppText variant="bodySmall" style={[styles.cardMessage, { color: theme.textSecondary }]}>
-              {item.body}
+          <View style={styles.cardBody}>
+            <View style={styles.cardTitleRow}>
+              <AppText variant="label" numberOfLines={2} style={[styles.cardTitle, { color: theme.text }]}>
+                {item.title}
+              </AppText>
+              {!item.read ? <View style={[styles.unreadDot, { backgroundColor: theme.primary }]} /> : null}
+            </View>
+            {item.body ? (
+              <AppText variant="bodySmall" style={[styles.cardMessage, { color: theme.textSecondary }]}>
+                {item.body}
+              </AppText>
+            ) : null}
+            <AppText variant="caption" style={[styles.cardTime, { color: theme.textSecondary }]}>
+              {formatTimeAgo(item.timestamp)}
             </AppText>
-          ) : null}
-          <AppText variant="caption" style={[styles.cardTime, { color: theme.textSecondary }]}>
-            {formatTimeAgo(item.timestamp)}
-          </AppText>
-        </View>
-      </PressableScale>
+          </View>
+        </PressableScale>
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={() => onRemove(item.id)}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel="Delete notification"
+        >
+          <Ionicons name="close" size={18} color={theme.textSecondary} />
+        </TouchableOpacity>
+      </View>
     </Animated.View>
   );
 });
@@ -104,6 +149,8 @@ const NotificationsScreen = ({ navigation }) => {
     () => (activeType ? notifications.filter((item) => item.eventName === activeType) : notifications),
     [notifications, activeType],
   );
+
+  const sections = groupByDate(filteredNotifications);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -142,16 +189,24 @@ const NotificationsScreen = ({ navigation }) => {
 
   const renderItem = useCallback(
     ({ item, index }) => (
-      <SwipeToDeleteRow spacing={10} resetKey={item.id} onDelete={() => handleRemove(item.id)}>
-        <NotificationItem
-          item={item}
-          index={index}
-          theme={theme}
-          onPress={handlePress}
-        />
-      </SwipeToDeleteRow>
+      <NotificationItem
+        item={item}
+        index={index}
+        theme={theme}
+        onPress={handlePress}
+        onRemove={handleRemove}
+      />
     ),
     [theme, handlePress, handleRemove],
+  );
+
+  const renderSectionHeader = useCallback(
+    ({ section }) => (
+      <AppText variant="h5" style={[styles.sectionHeader, { color: theme.text }]}>
+        {section.title}
+      </AppText>
+    ),
+    [theme],
   );
 
   return (
@@ -194,10 +249,12 @@ const NotificationsScreen = ({ navigation }) => {
           <ActivityIndicator color={theme.primary} />
         </View>
       ) : (
-        <FlatList
-          data={filteredNotifications}
+        <SectionList
+          sections={sections}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
+          renderSectionHeader={renderSectionHeader}
+          stickySectionHeadersEnabled={false}
           contentContainerStyle={[
             styles.listContent,
             filteredNotifications.length === 0 && styles.emptyWrapper,
