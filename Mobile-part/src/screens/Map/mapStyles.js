@@ -31,11 +31,27 @@ const mapStyles = StyleSheet.create({
     shadowRadius: 14,
     elevation: 6,
   },
+  panelHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   segment: {
     flexDirection: 'row',
     borderRadius: 12,
     borderWidth: 1,
     padding: 3,
+  },
+  segmentFlex: {
+    flex: 1,
+  },
+  collapseToggle: {
+    width: 38,
+    height: 38,
+    borderRadius: 11,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   segmentItem: {
     flex: 1,

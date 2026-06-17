@@ -27,7 +27,7 @@ const MapLegend = ({ visible, onClose, categoryDisplay }) => {
       {Object.entries(categoryDisplay).map(([key, config]) => {
         const markerColor = getMarkerColor(key, categoryDisplay, theme.mapMarkerDefault);
         return (
-          <View key={key} style={[styles.legendItem, { borderBottomColor: theme.divider }]}>
+          <View key={key} style={styles.legendItem}>
             <View style={[styles.legendSwatch, { backgroundColor: `${markerColor}22`, borderColor: `${markerColor}66` }]}>
               <Ionicons name={config.mapIcon} size={16} color={markerColor} />
             </View>
@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     padding: 16,
-    gap: 10,
+    gap: 14,
     maxWidth: 360,
     alignSelf: 'center',
   },
@@ -56,8 +56,6 @@ const styles = StyleSheet.create({
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingBottom: 10,
-    borderBottomWidth: 1,
   },
   legendSwatch: {
     width: 30,

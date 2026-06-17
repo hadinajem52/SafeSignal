@@ -74,7 +74,8 @@ const IncidentMapDetail = ({
             backgroundColor: theme.card,
             borderColor: theme.border,
             shadowColor: theme.shadow,
-            paddingBottom: tabBarHeight + 16,
+            // Extra clearance so the centered "+" tab FAB (it overhangs the bar) never covers the button
+            paddingBottom: tabBarHeight + 44,
             transform: [{ translateY }],
           },
         ]}

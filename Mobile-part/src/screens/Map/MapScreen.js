@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, LayoutAnimation, Platform, TouchableOpacity, UIManager, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
@@ -25,6 +25,10 @@ const MAP_HINT_STORAGE_KEY = "map_first_visit_hint_seen";
 
 const MAP_MODES = { ACTIVE: 'active', RESOLVED: 'resolved' };
 const RESOLVED_PAGE_SIZE = 100;
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 const DEFAULT_REGION = {
   latitude: 33.8938,
@@ -56,6 +60,12 @@ const MapScreen = () => {
   const [showMapHint, setShowMapHint] = useState(true);
   const [headerHeight, setHeaderHeight] = useState(150);
   const [viewMode, setViewMode] = useState("map");
+  const [filtersExpanded, setFiltersExpanded] = useState(true);
+
+  const toggleFilters = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setFiltersExpanded((prev) => !prev);
+  };
 
   const {
     selectedCategory,
@@ -320,83 +330,99 @@ const MapScreen = () => {
           { backgroundColor: `${theme.card}f0`, borderColor: theme.border, shadowColor: theme.shadow }]
           }>
 
-          <View style={[mapStyles.segment, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <View style={mapStyles.panelHeaderRow}>
+            <View style={[mapStyles.segment, mapStyles.segmentFlex, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+              <TouchableOpacity
+                style={[mapStyles.segmentItem, mapMode === MAP_MODES.ACTIVE && { backgroundColor: theme.primary }]}
+                onPress={() => setMapMode(MAP_MODES.ACTIVE)}
+                activeOpacity={0.85}>
+
+                <Ionicons
+                  name="radio-button-on-outline"
+                  size={14}
+                  color={mapMode === MAP_MODES.ACTIVE ? '#fff' : theme.textSecondary} />
+
+                <AppText
+                  variant="caption"
+                  style={[mapStyles.segmentLabel, { color: mapMode === MAP_MODES.ACTIVE ? '#fff' : theme.textSecondary }]}>
+
+                  Active
+                </AppText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[mapStyles.segmentItem, mapMode === MAP_MODES.RESOLVED && { backgroundColor: theme.primary }]}
+                onPress={() => setMapMode(MAP_MODES.RESOLVED)}
+                activeOpacity={0.85}>
+
+                <Ionicons
+                  name="shield-checkmark-outline"
+                  size={14}
+                  color={mapMode === MAP_MODES.RESOLVED ? '#fff' : theme.textSecondary} />
+
+                <AppText
+                  variant="caption"
+                  style={[mapStyles.segmentLabel, { color: mapMode === MAP_MODES.RESOLVED ? '#fff' : theme.textSecondary }]}>
+
+                  Resolved
+                </AppText>
+              </TouchableOpacity>
+            </View>
             <TouchableOpacity
-              style={[mapStyles.segmentItem, mapMode === MAP_MODES.ACTIVE && { backgroundColor: theme.primary }]}
-              onPress={() => setMapMode(MAP_MODES.ACTIVE)}
-              activeOpacity={0.85}>
+              style={[mapStyles.collapseToggle, { backgroundColor: theme.surface, borderColor: theme.border }]}
+              onPress={toggleFilters}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel={filtersExpanded ? 'Collapse filters' : 'Expand filters'}
+              accessibilityState={{ expanded: filtersExpanded }}>
 
-              <Ionicons
-                name="radio-button-on-outline"
-                size={14}
-                color={mapMode === MAP_MODES.ACTIVE ? '#fff' : theme.textSecondary} />
-
-              <AppText
-                variant="caption"
-                style={[mapStyles.segmentLabel, { color: mapMode === MAP_MODES.ACTIVE ? '#fff' : theme.textSecondary }]}>
-
-                Active
-              </AppText>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[mapStyles.segmentItem, mapMode === MAP_MODES.RESOLVED && { backgroundColor: theme.primary }]}
-              onPress={() => setMapMode(MAP_MODES.RESOLVED)}
-              activeOpacity={0.85}>
-
-              <Ionicons
-                name="shield-checkmark-outline"
-                size={14}
-                color={mapMode === MAP_MODES.RESOLVED ? '#fff' : theme.textSecondary} />
-
-              <AppText
-                variant="caption"
-                style={[mapStyles.segmentLabel, { color: mapMode === MAP_MODES.RESOLVED ? '#fff' : theme.textSecondary }]}>
-
-                Resolved
-              </AppText>
+              <Ionicons name={filtersExpanded ? 'chevron-up' : 'chevron-down'} size={18} color={theme.textSecondary} />
             </TouchableOpacity>
           </View>
 
-          <CategoryFilterBar
-            categoryDisplay={CATEGORY_DISPLAY}
-            selectedCategory={selectedCategory}
-            onSelectCategory={setSelectedCategory} />
+          {filtersExpanded ?
+          <>
+            <CategoryFilterBar
+              categoryDisplay={CATEGORY_DISPLAY}
+              selectedCategory={selectedCategory}
+              onSelectCategory={setSelectedCategory} />
 
 
-          <TimeframeSelector
-            selectedTimeframe={selectedTimeframe}
-            onSelectTimeframe={setSelectedTimeframe}
-            includeAll={mapMode === MAP_MODES.RESOLVED} />
+            <TimeframeSelector
+              selectedTimeframe={selectedTimeframe}
+              onSelectTimeframe={setSelectedTimeframe}
+              includeAll={mapMode === MAP_MODES.RESOLVED} />
 
-          {listAvailable ?
-          <View style={[mapStyles.segment, mapStyles.viewModeSegment, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <TouchableOpacity
-              style={[mapStyles.segmentItem, viewMode === "map" && { backgroundColor: theme.primary }]}
-              onPress={() => setViewMode("map")}
-              activeOpacity={0.85}>
+            {listAvailable ?
+            <View style={[mapStyles.segment, mapStyles.viewModeSegment, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+              <TouchableOpacity
+                style={[mapStyles.segmentItem, viewMode === "map" && { backgroundColor: theme.primary }]}
+                onPress={() => setViewMode("map")}
+                activeOpacity={0.85}>
 
-              <Ionicons name="map-outline" size={14} color={viewMode === "map" ? "#fff" : theme.textSecondary} />
-              <AppText
-                variant="caption"
-                style={[mapStyles.segmentLabel, { color: viewMode === "map" ? "#fff" : theme.textSecondary }]}>
+                <Ionicons name="map-outline" size={14} color={viewMode === "map" ? "#fff" : theme.textSecondary} />
+                <AppText
+                  variant="caption"
+                  style={[mapStyles.segmentLabel, { color: viewMode === "map" ? "#fff" : theme.textSecondary }]}>
 
-                Map
-              </AppText>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[mapStyles.segmentItem, viewMode === "list" && { backgroundColor: theme.primary }]}
-              onPress={() => setViewMode("list")}
-              activeOpacity={0.85}>
+                  Map
+                </AppText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[mapStyles.segmentItem, viewMode === "list" && { backgroundColor: theme.primary }]}
+                onPress={() => setViewMode("list")}
+                activeOpacity={0.85}>
 
-              <Ionicons name="list-outline" size={14} color={viewMode === "list" ? "#fff" : theme.textSecondary} />
-              <AppText
-                variant="caption"
-                style={[mapStyles.segmentLabel, { color: viewMode === "list" ? "#fff" : theme.textSecondary }]}>
+                <Ionicons name="list-outline" size={14} color={viewMode === "list" ? "#fff" : theme.textSecondary} />
+                <AppText
+                  variant="caption"
+                  style={[mapStyles.segmentLabel, { color: viewMode === "list" ? "#fff" : theme.textSecondary }]}>
 
-                List
-              </AppText>
-            </TouchableOpacity>
-          </View> :
+                  List
+                </AppText>
+              </TouchableOpacity>
+            </View> :
+            null}
+          </> :
           null}
 
         </View>
