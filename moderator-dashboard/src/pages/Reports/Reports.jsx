@@ -11,6 +11,9 @@ import ReportFilters from "./ReportFilters";
 import ReportList from "./ReportList";
 import useAwaitingReply from "../../hooks/useAwaitingReply";
 import useIsMobile from "../../hooks/useIsMobile";
+import { useSearchParamState } from "../../hooks/useSearchParamState";
+import { SUBNAV } from "../../constants/subnav";
+import { ROUTES } from "../../constants/routes";
 import { useReportPanelResize } from "./hooks/useReportPanelResize";
 import { useReportSelection } from "./hooks/useReportSelection";
 import { useReportActions } from "./hooks/useReportActions";
@@ -50,8 +53,9 @@ function normalizeReport(incident) {
 function Reports() {
   // Default to the combined 'Needs Review' view so auto_flagged reports are visible
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState(
-    "submitted,auto_flagged,auto_processed",
+  const [statusFilter, setStatusFilter] = useSearchParamState(
+    SUBNAV[ROUTES.REPORTS].paramKey,
+    SUBNAV[ROUTES.REPORTS].defaultValue,
   );
   const [sortMode, setSortMode] = useState("urgency"); // 'urgency' | 'time'
   const [toasts, setToasts] = useState([]);

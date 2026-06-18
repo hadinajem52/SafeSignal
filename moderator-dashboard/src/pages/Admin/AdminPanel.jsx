@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Database, ShieldCheck, UserCheck } from 'lucide-react'
 import { adminAPI } from '../../services/api'
+import { useSearchParamState } from '../../hooks/useSearchParamState'
+import { SUBNAV } from '../../constants/subnav'
+import { ROUTES } from '../../constants/routes'
 import ApplicationsTab from './ApplicationsTab'
 import DatabaseTab from './DatabaseTab'
 
@@ -9,7 +12,10 @@ const ROWS_PER_PAGE = 50
 
 function AdminPanel() {
   const queryClient = useQueryClient()
-  const [activeTab, setActiveTab] = useState('applications')
+  const [activeTab, setActiveTab] = useSearchParamState(
+    SUBNAV[ROUTES.ADMIN].paramKey,
+    SUBNAV[ROUTES.ADMIN].defaultValue,
+  )
   const [selectedTable, setSelectedTable] = useState('')
   const [page, setPage] = useState(0)
   const [allDataConfirmation, setAllDataConfirmation] = useState('')

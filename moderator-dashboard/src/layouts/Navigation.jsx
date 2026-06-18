@@ -1,5 +1,7 @@
+import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { SUBNAV, subnavPath, isSubnavItemActive } from '../constants/subnav'
 import {
   Home,
   FileText,
@@ -11,6 +13,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   LayoutDashboard,
+  ChevronDown,
   X,
 } from 'lucide-react'
 
@@ -60,6 +63,122 @@ function NavItem({ path, label, icon: Icon, active, collapsed, mobile, onNavigat
   )
 }
 
+// Expanded-sidebar parent with an accordion of sub-sections. The label area
+// navigates to the base route; the chevron toggles the submenu independently.
+function ExpandableNavItem({
+  path,
+  label,
+  icon: Icon,
+  active,
+  open,
+  onToggle,
+  mobile,
+  onNavigate,
+  search,
+}) {
+  const config = SUBNAV[path]
+
+  return (
+    <div>
+      <div className="relative">
+        <Link
+          to={path}
+          onClick={onNavigate}
+          className={`flex items-center gap-2.5 transition-colors w-full border-l-2 font-[500] ${
+            mobile ? 'px-4 py-3 pr-10 text-sm' : 'px-[10px] py-2 pr-9 text-[13px]'
+          } ${
+            active
+              ? 'border-l-primary bg-primary/[0.08] text-primary'
+              : 'border-l-transparent text-muted/80 hover:bg-card hover:text-text'
+          }`}
+        >
+          <Icon size={mobile ? 17 : 14} className="flex-shrink-0" />
+          <span className="truncate">{label}</span>
+        </Link>
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-label={`${open ? 'Collapse' : 'Expand'} ${label} menu`}
+          aria-expanded={open}
+          className={`absolute right-0 top-0 h-full flex items-center justify-center transition-colors ${
+            mobile ? 'w-10' : 'w-9'
+          } ${active ? 'text-primary' : 'text-muted/70 hover:text-text'}`}
+        >
+          <ChevronDown
+            size={14}
+            className={`transition-transform duration-150 ${open ? '' : '-rotate-90'}`}
+          />
+        </button>
+      </div>
+
+      {open && (
+        <div className={`mb-1 mt-0.5 border-l border-border/50 ${mobile ? 'ml-5' : 'ml-[18px]'}`}>
+          {config.items.map((item) => {
+            const itemActive = isSubnavItemActive(path, item.value, search)
+            return (
+              <Link
+                key={item.value}
+                to={subnavPath(path, config.paramKey, item.value)}
+                onClick={onNavigate}
+                className={`flex items-center -ml-px border-l-2 transition-colors ${
+                  mobile ? 'pl-4 pr-3 py-2.5 text-[13px]' : 'pl-4 pr-2.5 py-[7px] text-[12px]'
+                } ${
+                  itemActive
+                    ? 'border-l-primary text-primary bg-primary/[0.07]'
+                    : 'border-l-transparent text-muted/70 hover:text-text hover:bg-card'
+                }`}
+              >
+                <span className="truncate">{item.label}</span>
+              </Link>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Hover flyout shown for collapsed-rail items that have sub-sections. Fixed
+// positioning escapes the nav's vertical scroll clipping.
+function CollapsedFlyout({ item, top, left, search, onClose, onCloseAfterDelay, onCancelClose }) {
+  const config = SUBNAV[item.path]
+  const Icon = item.icon
+
+  return (
+    <div
+      style={{ position: 'fixed', top, left, zIndex: 60, paddingLeft: 6 }}
+      onMouseEnter={onCancelClose}
+      onMouseLeave={onCloseAfterDelay}
+    >
+      <div className="min-w-[184px] bg-card border border-border shadow-soft py-1">
+        <div className="flex items-center gap-2 px-3 py-2 border-b border-border/60">
+          <Icon size={13} className="text-primary flex-shrink-0" />
+          <span className="text-[11px] font-bold uppercase tracking-[0.04em] text-text">
+            {item.label}
+          </span>
+        </div>
+        {config.items.map((sub) => {
+          const subActive = isSubnavItemActive(item.path, sub.value, search)
+          return (
+            <Link
+              key={sub.value}
+              to={subnavPath(item.path, config.paramKey, sub.value)}
+              onClick={onClose}
+              className={`block px-3 py-2 text-[12px] border-l-2 transition-colors ${
+                subActive
+                  ? 'border-l-primary text-primary bg-primary/[0.07]'
+                  : 'border-l-transparent text-muted/80 hover:text-text hover:bg-surface'
+              }`}
+            >
+              {sub.label}
+            </Link>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function Navigation({ collapsed, onToggle, mobile = false, onNavigate }) {
   const { logout, user } = useAuth()
   const location = useLocation()
@@ -68,6 +187,40 @@ function Navigation({ collapsed, onToggle, mobile = false, onNavigate }) {
   // desktop collapse preference.
   const isCollapsed = mobile ? false : collapsed
   const isActive = (path) => location.pathname === path
+
+  // Per-parent expand overrides; when unset, a parent is open iff it's the
+  // active route (so the current section's sub-items are visible by default).
+  const [openOverrides, setOpenOverrides] = useState({})
+  const isOpen = (path) => openOverrides[path] ?? isActive(path)
+  const toggleOpen = (path) =>
+    setOpenOverrides((prev) => ({ ...prev, [path]: !isOpen(path) }))
+
+  // Collapsed-rail flyout state.
+  const [flyout, setFlyout] = useState(null) // { path, top, left }
+  const closeTimer = useRef(null)
+
+  const cancelClose = () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current)
+  }
+  const closeAfterDelay = () => {
+    cancelClose()
+    closeTimer.current = setTimeout(() => setFlyout(null), 120)
+  }
+  const openFlyout = (path, el) => {
+    cancelClose()
+    const rect = el.getBoundingClientRect()
+    setFlyout({ path, top: rect.top, left: rect.right })
+  }
+  const closeFlyout = () => {
+    cancelClose()
+    setFlyout(null)
+  }
+
+  // Drop any open flyout when collapsing/expanding, and clear the timer on unmount.
+  useEffect(() => {
+    setFlyout(null)
+  }, [isCollapsed])
+  useEffect(() => () => cancelClose(), [])
 
   const navGroup = [
     { path: '/', label: 'Dashboard', icon: Home },
@@ -89,6 +242,61 @@ function Navigation({ collapsed, onToggle, mobile = false, onNavigate }) {
       : []),
     { path: '/settings', label: 'Settings', icon: Settings },
   ]
+
+  const renderOpsItem = (item) => {
+    const hasSubnav = Boolean(SUBNAV[item.path])
+
+    if (hasSubnav && isCollapsed) {
+      return (
+        <div
+          key={item.path}
+          onMouseEnter={(event) => openFlyout(item.path, event.currentTarget)}
+          onMouseLeave={closeAfterDelay}
+        >
+          <NavItem
+            path={item.path}
+            label={item.label}
+            icon={item.icon}
+            active={isActive(item.path)}
+            collapsed
+            onNavigate={onNavigate}
+          />
+        </div>
+      )
+    }
+
+    if (hasSubnav) {
+      return (
+        <ExpandableNavItem
+          key={item.path}
+          path={item.path}
+          label={item.label}
+          icon={item.icon}
+          active={isActive(item.path)}
+          open={isOpen(item.path)}
+          onToggle={() => toggleOpen(item.path)}
+          mobile={mobile}
+          onNavigate={onNavigate}
+          search={location.search}
+        />
+      )
+    }
+
+    return (
+      <NavItem
+        key={item.path}
+        path={item.path}
+        label={item.label}
+        icon={item.icon}
+        active={isActive(item.path)}
+        collapsed={isCollapsed}
+        mobile={mobile}
+        onNavigate={onNavigate}
+      />
+    )
+  }
+
+  const flyoutItem = flyout ? opsGroup.find((item) => item.path === flyout.path) : null
 
   return (
     <div
@@ -130,10 +338,7 @@ function Navigation({ collapsed, onToggle, mobile = false, onNavigate }) {
         ))}
 
         <NavSection label="Operations" collapsed={isCollapsed} />
-        {opsGroup.map(({ path, label, icon }) => (
-          <NavItem key={path} path={path} label={label} icon={icon}
-            active={isActive(path)} collapsed={isCollapsed} mobile={mobile} onNavigate={onNavigate} />
-        ))}
+        {opsGroup.map(renderOpsItem)}
       </nav>
 
       {/* Logout */}
@@ -151,6 +356,18 @@ function Navigation({ collapsed, onToggle, mobile = false, onNavigate }) {
           {!isCollapsed && <span>Logout</span>}
         </button>
       </div>
+
+      {flyoutItem && (
+        <CollapsedFlyout
+          item={flyoutItem}
+          top={flyout.top}
+          left={flyout.left}
+          search={location.search}
+          onClose={closeFlyout}
+          onCloseAfterDelay={closeAfterDelay}
+          onCancelClose={cancelClose}
+        />
+      )}
     </div>
   )
 }

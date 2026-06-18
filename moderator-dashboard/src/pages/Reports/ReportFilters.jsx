@@ -1,12 +1,10 @@
 import { Clock, Search, Zap } from 'lucide-react'
+import { SUBNAV } from '../../constants/subnav'
+import { ROUTES } from '../../constants/routes'
 
-// Simplified tabs matching the moderator workflow screenshot.
-const STATUS_TABS = [
-  { value: 'all', label: 'All Reports' },
-  { value: 'submitted,auto_flagged,auto_processed', label: 'Pending' },
-  { value: 'rejected', label: 'Rejected' },
-  { value: 'police_closed', label: 'Closed' },
-]
+// Shared with the sidebar sub-navigation so the in-page tabs and the sidebar
+// can't drift apart.
+const STATUS_TABS = SUBNAV[ROUTES.REPORTS].items
 
 function ReportFilters({
   searchTerm,

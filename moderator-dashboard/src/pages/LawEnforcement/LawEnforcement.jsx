@@ -7,6 +7,9 @@ import IncidentTimeline from "../../components/IncidentTimeline";
 import { useAuth } from "../../context/AuthContext";
 import useAwaitingReply from "../../hooks/useAwaitingReply";
 import useIsMobile from "../../hooks/useIsMobile";
+import { useSearchParamState } from "../../hooks/useSearchParamState";
+import { SUBNAV } from "../../constants/subnav";
+import { ROUTES } from "../../constants/routes";
 import leStyles from "./styles";
 import {
   LEI_COMMS_WIDTH,
@@ -33,7 +36,10 @@ function LawEnforcement() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const [activeView, setActiveView] = useState("queue");
+  const [activeView, setActiveView] = useSearchParamState(
+    SUBNAV[ROUTES.LEI].paramKey,
+    SUBNAV[ROUTES.LEI].defaultValue,
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("verified");
   const [sortMode, setSortMode] = useState("urgency");

@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { usersAPI } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
+import { useSearchParamState } from "../../hooks/useSearchParamState";
+import { SUBNAV } from "../../constants/subnav";
+import { ROUTES } from "../../constants/routes";
 import { USERS_CSS } from "./usersStyles";
 import { isLowSignal } from "./usersHelpers";
 import UsersView from "./UsersView";
@@ -17,7 +20,10 @@ function Users() {
 
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useSearchParamState(
+    SUBNAV[ROUTES.USERS].paramKey,
+    SUBNAV[ROUTES.USERS].defaultValue,
+  );
   const [selectedId, setSelectedId] = useState(null);
   const [promoteRole, setPromoteRole] = useState("moderator");
   const [inviteDialog, setInviteDialog] = useState(false);
