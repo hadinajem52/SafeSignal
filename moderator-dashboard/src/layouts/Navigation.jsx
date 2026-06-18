@@ -14,6 +14,7 @@ import {
   PanelLeftOpen,
   LayoutDashboard,
   ChevronDown,
+  ChevronRight,
   X,
 } from 'lucide-react'
 
@@ -34,7 +35,6 @@ function NavItem({ path, label, icon: Icon, active, collapsed, mobile, onNavigat
       <Link
         to={path}
         onClick={onNavigate}
-        title={label}
         className={`flex items-center justify-center h-10 w-10 mx-auto transition-colors w-full ${
           active ? 'text-primary' : 'text-muted/80 hover:bg-card hover:text-text'
         }`}
@@ -138,43 +138,43 @@ function ExpandableNavItem({
   )
 }
 
-// Hover flyout shown for collapsed-rail items that have sub-sections. Fixed
-// positioning escapes the nav's vertical scroll clipping.
 function CollapsedFlyout({ item, top, left, search, onClose, onCloseAfterDelay, onCancelClose }) {
   const config = SUBNAV[item.path]
-  const Icon = item.icon
 
   return (
     <div
-      style={{ position: 'fixed', top, left, zIndex: 60, paddingLeft: 6 }}
+      style={{ position: 'fixed', top, left, zIndex: 60, paddingLeft: 8 }}
       onMouseEnter={onCancelClose}
       onMouseLeave={onCloseAfterDelay}
     >
-      <div className="min-w-[184px] bg-card border border-border shadow-soft py-1">
-        <div className="flex items-center gap-2 px-3 py-2 border-b border-border/60">
-          <Icon size={13} className="text-primary flex-shrink-0" />
-          <span className="text-[11px] font-bold uppercase tracking-[0.04em] text-text">
-            {item.label}
-          </span>
-        </div>
-        {config.items.map((sub) => {
-          const subActive = isSubnavItemActive(item.path, sub.value, search)
-          return (
-            <Link
-              key={sub.value}
-              to={subnavPath(item.path, config.paramKey, sub.value)}
-              onClick={onClose}
-              className={`block px-3 py-2 text-[12px] border-l-2 transition-colors ${
-                subActive
-                  ? 'border-l-primary text-primary bg-primary/[0.07]'
-                  : 'border-l-transparent text-muted/80 hover:text-text hover:bg-surface'
-              }`}
-            >
-              {sub.label}
-            </Link>
-          )
-        })}
+      <div className="h-10 inline-flex items-center px-3 bg-surface border border-border shadow-soft text-[12px] font-semibold text-text whitespace-nowrap">
+        {item.label}
       </div>
+
+      {config && (
+        <div className="mt-1 min-w-[196px] bg-card border border-border shadow-soft py-1.5">
+          <div className="ml-3 border-l border-border/50">
+            {config.items.map((sub) => {
+              const subActive = isSubnavItemActive(item.path, sub.value, search)
+              return (
+                <Link
+                  key={sub.value}
+                  to={subnavPath(item.path, config.paramKey, sub.value)}
+                  onClick={onClose}
+                  className={`flex items-center -ml-px border-l-2 pl-3 pr-2.5 py-2 text-[12px] transition-colors ${
+                    subActive
+                      ? 'border-l-primary text-primary bg-primary/[0.08] font-semibold'
+                      : 'border-l-transparent text-muted/80 hover:text-text hover:bg-surface'
+                  }`}
+                >
+                  <span className="flex-1 truncate">{sub.label}</span>
+                  {subActive && <ChevronRight size={13} className="flex-shrink-0" />}
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -243,10 +243,8 @@ function Navigation({ collapsed, onToggle, mobile = false, onNavigate }) {
     { path: '/settings', label: 'Settings', icon: Settings },
   ]
 
-  const renderOpsItem = (item) => {
-    const hasSubnav = Boolean(SUBNAV[item.path])
-
-    if (hasSubnav && isCollapsed) {
+  const renderNavItem = (item) => {
+    if (isCollapsed) {
       return (
         <div
           key={item.path}
@@ -265,7 +263,7 @@ function Navigation({ collapsed, onToggle, mobile = false, onNavigate }) {
       )
     }
 
-    if (hasSubnav) {
+    if (SUBNAV[item.path]) {
       return (
         <ExpandableNavItem
           key={item.path}
@@ -289,14 +287,15 @@ function Navigation({ collapsed, onToggle, mobile = false, onNavigate }) {
         label={item.label}
         icon={item.icon}
         active={isActive(item.path)}
-        collapsed={isCollapsed}
         mobile={mobile}
         onNavigate={onNavigate}
       />
     )
   }
 
-  const flyoutItem = flyout ? opsGroup.find((item) => item.path === flyout.path) : null
+  const flyoutItem = flyout
+    ? [...navGroup, ...opsGroup].find((item) => item.path === flyout.path)
+    : null
 
   return (
     <div
@@ -332,13 +331,10 @@ function Navigation({ collapsed, onToggle, mobile = false, onNavigate }) {
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-1">
         <NavSection label="Navigation" collapsed={isCollapsed} />
-        {navGroup.map(({ path, label, icon }) => (
-          <NavItem key={path} path={path} label={label} icon={icon}
-            active={isActive(path)} collapsed={isCollapsed} mobile={mobile} onNavigate={onNavigate} />
-        ))}
+        {navGroup.map(renderNavItem)}
 
         <NavSection label="Operations" collapsed={isCollapsed} />
-        {opsGroup.map(renderOpsItem)}
+        {opsGroup.map(renderNavItem)}
       </nav>
 
       {/* Logout */}
