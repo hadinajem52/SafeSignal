@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Database, ShieldCheck, UserCheck } from 'lucide-react'
 import { adminAPI } from '../../services/api'
 import ApplicationsTab from './ApplicationsTab'
 import DatabaseTab from './DatabaseTab'
 
+const ROWS_PER_PAGE = 50
+
 function AdminPanel() {
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState('applications')
   const [selectedTable, setSelectedTable] = useState('')
+  const [page, setPage] = useState(0)
   const [allDataConfirmation, setAllDataConfirmation] = useState('')
   const [reportsResetConfirmation, setReportsResetConfirmation] = useState('')
   const [actionError, setActionError] = useState('')
@@ -44,19 +47,32 @@ function AdminPanel() {
   }, [selectedTable, tables])
 
   const { data: tableRowsData, isLoading: rowsLoading } = useQuery({
-    queryKey: ['admin-table-rows', selectedTable],
+    queryKey: ['admin-table-rows', selectedTable, page],
     queryFn: async () => {
-      const result = await adminAPI.getTableRows(selectedTable, 50)
+      const result = await adminAPI.getTableRows(selectedTable, ROWS_PER_PAGE, page * ROWS_PER_PAGE)
       if (result.success) return result.data
       throw new Error(result.error)
     },
     enabled: Boolean(selectedTable),
+    placeholderData: keepPreviousData,
   })
 
   const selectedTableMeta = useMemo(
     () => tables.find((table) => table.tableName === selectedTable),
     [tables, selectedTable]
   )
+
+  const totalRows = selectedTableMeta?.rowCount || 0
+  const totalPages = Math.max(1, Math.ceil(totalRows / ROWS_PER_PAGE))
+
+  useEffect(() => {
+    if (page > totalPages - 1) setPage(totalPages - 1)
+  }, [page, totalPages])
+
+  const handleSelectTable = (tableName) => {
+    setSelectedTable(tableName)
+    setPage(0)
+  }
 
   const approveMutation = useMutation({
     mutationFn: async (userId) =>
@@ -234,11 +250,16 @@ function AdminPanel() {
           tables={tables}
           tablesLoading={tablesLoading}
           selectedTable={selectedTable}
-          onSelectTable={setSelectedTable}
+          onSelectTable={handleSelectTable}
           onRefreshTables={() => queryClient.invalidateQueries({ queryKey: ['admin-database-tables'] })}
           rows={rows}
           rowsLoading={rowsLoading}
           primaryKey={primaryKey}
+          page={page}
+          totalPages={totalPages}
+          totalRows={totalRows}
+          rowsPerPage={ROWS_PER_PAGE}
+          onPageChange={setPage}
           onRefreshRows={() => queryClient.invalidateQueries({ queryKey: ['admin-table-rows', selectedTable] })}
           onClearTable={(tableName) => clearTableMutation.mutate(tableName)}
           clearTablePending={clearTableMutation.isPending}

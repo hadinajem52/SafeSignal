@@ -23,11 +23,11 @@ export const adminAPI = {
   getDatabaseTables: async () =>
     requestData(() => api.get("/admin/database/tables"), "Failed to fetch database tables"),
 
-  getTableRows: async (tableName, limit = 50) =>
+  getTableRows: async (tableName, limit = 50, offset = 0) =>
     requestData(
       () =>
         api.get(`/admin/database/tables/${encodeURIComponent(tableName)}/rows`, {
-          params: { limit },
+          params: { limit, offset },
         }),
       "Failed to fetch table rows",
     ),

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { AlertTriangle, ChevronDown, ChevronRight, RefreshCw, Trash2 } from 'lucide-react'
+import { AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, RefreshCw, Trash2 } from 'lucide-react'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import DangerActionPanel from './DangerActionPanel'
 
@@ -108,6 +108,11 @@ function DatabaseTab({
   rows,
   rowsLoading,
   primaryKey,
+  page,
+  totalPages,
+  totalRows,
+  rowsPerPage,
+  onPageChange,
   onRefreshRows,
   onClearTable,
   clearTablePending,
@@ -252,6 +257,35 @@ function DatabaseTab({
               ))
             )}
           </div>
+
+          {selectedTable && totalRows > 0 && (
+            <div className="flex items-center justify-between px-4 py-2 border-t border-border bg-surface flex-shrink-0">
+              <span className="text-[10px] text-muted tabular-nums">
+                {page * rowsPerPage + 1}–{page * rowsPerPage + rows.length} of {totalRows}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => onPageChange(page - 1)}
+                  disabled={page <= 0}
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-[9px] font-bold tracking-wider uppercase border border-border text-muted hover:text-text hover:border-muted transition-colors disabled:opacity-40 disabled:hover:text-muted disabled:hover:border-border"
+                >
+                  <ChevronLeft size={11} />
+                  Prev
+                </button>
+                <span className="text-[10px] font-bold text-muted tabular-nums">
+                  Page {page + 1} / {totalPages}
+                </span>
+                <button
+                  onClick={() => onPageChange(page + 1)}
+                  disabled={page >= totalPages - 1}
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-[9px] font-bold tracking-wider uppercase border border-border text-muted hover:text-text hover:border-muted transition-colors disabled:opacity-40 disabled:hover:text-muted disabled:hover:border-border"
+                >
+                  Next
+                  <ChevronRight size={11} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

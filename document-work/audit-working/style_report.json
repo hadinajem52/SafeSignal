@@ -1,0 +1,171 @@
+{
+  "input": "C:\\projects\\FinalProject\\document-work\\FYP Report_Rabih hajj hassan_Latest_consistency_audited.docx",
+  "fonts_by_char_count": {
+    "Aptos": 53,
+    "Symbol": 38
+  },
+  "direct_run_formatting_runs": 300,
+  "direct_paragraph_formatting_paragraphs": 174,
+  "heading_like_paragraphs_not_heading_style": [
+    {
+      "para_index": 1,
+      "text": "ANTONINE UNIVERSITY",
+      "style": "Normal"
+    },
+    {
+      "para_index": 2,
+      "text": "Faculty of Engineering and Technology",
+      "style": "Body Text"
+    },
+    {
+      "para_index": 3,
+      "text": "Department of Technology in Computer Science ",
+      "style": "Body Text"
+    },
+    {
+      "para_index": 9,
+      "text": "SafeSignal",
+      "style": "Body Text"
+    },
+    {
+      "para_index": 18,
+      "text": "Spring 2026",
+      "style": "Body Text"
+    },
+    {
+      "para_index": 46,
+      "text": "ACKNOWLEDGMENT",
+      "style": "Normal"
+    },
+    {
+      "para_index": 53,
+      "text": "ABSTRACT",
+      "style": "Normal"
+    },
+    {
+      "para_index": 305,
+      "text": "Comparative Analysis Table",
+      "style": "Normal"
+    },
+    {
+      "para_index": 451,
+      "text": "Table 6.1: Application areas evaluated in the experiment",
+      "style": "Normal"
+    },
+    {
+      "para_index": 458,
+      "text": "Table 6.2: Evidence sources used for Chapter VI",
+      "style": "Normal"
+    },
+    {
+      "para_index": 463,
+      "text": "Table 6.3: Overall testcase result summary",
+      "style": "Normal"
+    },
+    {
+      "para_index": 465,
+      "text": "Table 6.4: Result distribution by functional area",
+      "style": "Normal"
+    },
+    {
+      "para_index": 480,
+      "text": "Table 6.5: Representative testcase outcomes",
+      "style": "Normal"
+    },
+    {
+      "para_index": 614,
+      "text": "APPENDICES",
+      "style": "Normal"
+    },
+    {
+      "para_index": 675,
+      "text": "Student(s)  ",
+      "style": "Normal"
+    },
+    {
+      "para_index": 678,
+      "text": "Major",
+      "style": "Normal"
+    },
+    {
+      "para_index": 680,
+      "text": "Campus",
+      "style": "Normal"
+    },
+    {
+      "para_index": 682,
+      "text": "Supervisor(s) ",
+      "style": "Normal"
+    },
+    {
+      "para_index": 796,
+      "text": "Area",
+      "style": "Normal"
+    },
+    {
+      "para_index": 797,
+      "text": "Purpose in SafeSignal",
+      "style": "Normal"
+    }
+  ],
+  "examples": {
+    "direct_paragraph_formatting": [
+      {
+        "para_index": 1,
+        "text": "ANTONINE UNIVERSITY",
+        "style": "Normal"
+      },
+      {
+        "para_index": 46,
+        "text": "ACKNOWLEDGMENT",
+        "style": "Normal"
+      },
+      {
+        "para_index": 47,
+        "text": "",
+        "style": "Normal"
+      },
+      {
+        "para_index": 48,
+        "text": "I would like to express my sincere gratitude to my supervisor,Dr. Youssef Keryakos, from the Faculty of Engineering \u2013 De",
+        "style": "Normal"
+      },
+      {
+        "para_index": 49,
+        "text": "",
+        "style": "Normal"
+      }
+    ],
+    "direct_run_formatting": [
+      {
+        "para_index": 1,
+        "run_text": "ANTONINE UNIVERSITY",
+        "style": "Normal"
+      },
+      {
+        "para_index": 2,
+        "run_text": "Faculty of Engineering",
+        "style": "Body Text"
+      },
+      {
+        "para_index": 2,
+        "run_text": " and Technology",
+        "style": "Body Text"
+      },
+      {
+        "para_index": 3,
+        "run_text": "Department of Technology in Computer Science",
+        "style": "Body Text"
+      },
+      {
+        "para_index": 3,
+        "run_text": " ",
+        "style": "Body Text"
+      }
+    ]
+  },
+  "notes": [
+    "Direct formatting is not always wrong, but it often causes inconsistent output when templates change.",
+    "Heading-like paragraphs not using Heading styles can break TOC and accessibility."
+  ]
+}

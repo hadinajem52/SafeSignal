@@ -1,0 +1,187 @@
+{
+  "file": "C:\\projects\\FinalProject\\document-work\\FYP Report_Rabih hajj hassan_Latest_consistency_audited.docx",
+  "counts": {
+    "high": 0,
+    "medium": 21,
+    "low": 0
+  },
+  "findings": [
+    {
+      "severity": "medium",
+      "kind": "heading_skip",
+      "message": "Heading level jumped from 2 to 30",
+      "context": {
+        "part": "word/document.xml",
+        "text": "Team management"
+      }
+    },
+    {
+      "severity": "medium",
+      "kind": "heading_skip",
+      "message": "Heading level jumped from 4 to 30",
+      "context": {
+        "part": "word/document.xml",
+        "text": "Budget"
+      }
+    },
+    {
+      "severity": "medium",
+      "kind": "heading_skip",
+      "message": "Heading level jumped from 2 to 30",
+      "context": {
+        "part": "word/document.xml",
+        "text": "Technical constraints"
+      }
+    },
+    {
+      "severity": "medium",
+      "kind": "heading_skip",
+      "message": "Heading level jumped from 2 to 30",
+      "context": {
+        "part": "word/document.xml",
+        "text": "First category of methods /Solutions /Algorithms"
+      }
+    },
+    {
+      "severity": "medium",
+      "kind": "heading_skip",
+      "message": "Heading level jumped from 4 to 30",
+      "context": {
+        "part": "word/document.xml",
+        "text": "Second category of methods /Solutions /Algorithms"
+      }
+    },
+    {
+      "severity": "medium",
+      "kind": "heading_skip",
+      "message": "Heading level jumped from 2 to 30",
+      "context": {
+        "part": "word/document.xml",
+        "text": "Solution architecture (project architecture)"
+      }
+    },
+    {
+      "severity": "medium",
+      "kind": "heading_skip",
+      "message": "Heading level jumped from 2 to 30",
+      "context": {
+        "part": "word/document.xml",
+        "text": "Input block"
+      }
+    },
+    {
+      "severity": "medium",
+      "kind": "heading_skip",
+      "message": "Heading level jumped from 2 to 30",
+      "context": {
+        "part": "word/document.xml",
+        "text": "Database structure"
+      }
+    },
+    {
+      "severity": "medium",
+      "kind": "heading_skip",
+      "message": "Heading level jumped from 2 to 30",
+      "context": {
+        "part": "word/document.xml",
+        "text": "Authentication and access control"
+      }
+    },
+    {
+      "severity": "medium",
+      "kind": "table_no_header_row",
+      "message": "Table first row is not marked as header (w:tblHeader missing)",
+      "context": {
+        "part": "word/document.xml"
+      }
+    },
+    {
+      "severity": "medium",
+      "kind": "table_no_header_row",
+      "message": "Table first row is not marked as header (w:tblHeader missing)",
+      "context": {
+        "part": "word/document.xml"
+      }
+    },
+    {
+      "severity": "medium",
+      "kind": "table_no_header_row",
+      "message": "Table first row is not marked as header (w:tblHeader missing)",
+      "context": {
+        "part": "word/document.xml"
+      }
+    },
+    {
+      "severity": "medium",
+      "kind": "table_no_header_row",
+      "message": "Table first row is not marked as header (w:tblHeader missing)",
+      "context": {
+        "part": "word/document.xml"
+      }
+    },
+    {
+      "severity": "medium",
+      "kind": "table_no_header_row",
+      "message": "Table first row is not marked as header (w:tblHeader missing)",
+      "context": {
+        "part": "word/document.xml"
+      }
+    },
+    {
+      "severity": "medium",
+      "kind": "table_no_header_row",
+      "message": "Table first row is not marked as header (w:tblHeader missing)",
+      "context": {
+        "part": "word/document.xml"
+      }
+    },
+    {
+      "severity": "medium",
+      "kind": "table_no_header_row",
+      "message": "Table first row is not marked as header (w:tblHeader missing)",
+      "context": {
+        "part": "word/document.xml"
+      }
+    },
+    {
+      "severity": "medium",
+      "kind": "table_no_header_row",
+      "message": "Table first row is not marked as header (w:tblHeader missing)",
+      "context": {
+        "part": "word/document.xml"
+      }
+    },
+    {
+      "severity": "medium",
+      "kind": "table_no_header_row",
+      "message": "Table first row is not marked as header (w:tblHeader missing)",
+      "context": {
+        "part": "word/document.xml"
+      }
+    },
+    {
+      "severity": "medium",
+      "kind": "table_no_header_row",
+      "message": "Table first row is not marked as header (w:tblHeader missing)",
+      "context": {
+        "part": "word/document.xml"
+      }
+    },
+    {
+      "severity": "medium",
+      "kind": "table_no_header_row",
+      "message": "Table first row is not marked as header (w:tblHeader missing)",
+      "context": {
+        "part": "word/document.xml"
+      }
+    },
+    {
+      "severity": "medium",
+      "kind": "table_no_header_row",
+      "message": "Table first row is not marked as header (w:tblHeader missing)",
+      "context": {
+        "part": "word/document.xml"
+      }
+    }
+  ]
+}

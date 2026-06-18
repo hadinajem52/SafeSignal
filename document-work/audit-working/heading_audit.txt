@@ -1,0 +1,29 @@
+HEADING STYLE COUNTS
+- Heading 1: 15
+- Heading 2: 39
+
+NUMBERING WITHOUT HEADING STYLE (common TOC issue)
+- p#168: style='Normal' text='Public safety and civic technology have become increasingly important domains th'
+- p#170: style='Normal' text='Despite the growing global adoption of smart city solutions, community-based inc'
+- p#172: style='Normal' text='From a technical perspective, building a real-time incident reporting system rep'
+- p#174: style='Normal' text='Another challenge lies in ensuring data credibility and user trust. Many existin'
+- p#176: style='Normal' text='Within this context, there is a need for an academically grounded project that d'
+- p#179: style='Normal' text='The problem addressed in this project is the lack of effective technology-driven'
+- p#181: style='Normal' text='The objective of this project is to develop a functional mobile-based applicatio'
+- p#183: style='Normal' text='The methodology adopted in this project follows an engineering design approach, '
+- p#185: style='Normal' text='The development process began with identifying functional requirements, includin'
+- p#187: style='Normal' text='Implementation was carried out incrementally, with each subsystem developed, tes'
+- p#201: style='Heading3' text='Team management'
+- p#206: style='Heading3' text='Time management'
+- p#208: style='Heading4' text='Gantt Chart'
+- p#209: style='Normal' text='A Gantt chart was used to visualize the project timeline and monitor progress ac'
+- p#212: style='Heading3' text='Budget'
+- p#219: style='Normal' text='The system shall allow users to register, authenticate, and securely access the '
+- p#220: style='Normal' text='The system shall allow users to submit incident reports including text descripti'
+- p#221: style='Normal' text='The system shall support anonymous report submission while preserving user priva'
+- p#222: style='Normal' text='The system shall implement automated machine-learning processing for incident ca'
+- p#223: style='Normal' text='The system shall include a duplicate detection mechanism to identify and group s'
+- ... (75 more)
+
+REMINDER
+- TOC relies on Heading styles (Heading 1/2/3...). Avoid manual numbering + direct formatting for headings.

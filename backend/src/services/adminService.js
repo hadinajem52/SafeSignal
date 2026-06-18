@@ -162,14 +162,15 @@ async function getDatabaseTables() {
   return tableStats;
 }
 
-async function getTableRows(tableName, limit = 50) {
+async function getTableRows(tableName, limit = 50, offset = 0) {
   const normalizedTable = assertManagedTable(tableName);
   const safeLimit = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 200);
+  const safeOffset = Math.max(parseInt(offset, 10) || 0, 0);
   const primaryKey = await getPrimaryKeyColumn(normalizedTable);
 
   const rows = await db.manyOrNone(
-    'SELECT * FROM $1~ ORDER BY $2~ DESC LIMIT $3',
-    [normalizedTable, primaryKey, safeLimit]
+    'SELECT * FROM $1~ ORDER BY $2~ DESC LIMIT $3 OFFSET $4',
+    [normalizedTable, primaryKey, safeLimit, safeOffset]
   );
 
   return {

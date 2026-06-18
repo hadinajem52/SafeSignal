@@ -115,14 +115,15 @@ router.get(
     ...requireAdmin,
     param('table').matches(/^[a-z_][a-z0-9_]*$/i),
     query('limit').optional().isInt({ min: 1, max: 200 }),
+    query('offset').optional().isInt({ min: 0 }),
   ],
   async (req, res) => {
     if (handleValidationErrors(req, res)) return;
 
     try {
       const { table } = req.params;
-      const { limit = 50 } = req.query;
-      const result = await adminService.getTableRows(table, limit);
+      const { limit = 50, offset = 0 } = req.query;
+      const result = await adminService.getTableRows(table, limit, offset);
       res.json({
         status: 'OK',
         data: result,
