@@ -613,35 +613,37 @@ function Dashboard() {
               All users {IC.arrow}
             </a>
           </div>
-          {topReporters.length === 0 ? (
-            <div
-              style={{ padding: "16px 14px", fontSize: 11, color: "#3D4F65" }}
-            >
-              No reporter data
-            </div>
-          ) : (
-            topReporters.map((u, i) => {
+          <div className="dash-reporters">
+            {topReporters.length === 0 ? (
+              <div
+                style={{ padding: "16px 14px", fontSize: 11, color: "#3D4F65" }}
+              >
+                No reporter data
+              </div>
+            ) : (
+              topReporters.map((u, i) => {
               const initials = u.name
                 .split(" ")
                 .map((p) => p[0])
                 .join("")
                 .slice(0, 2)
                 .toUpperCase();
-              return (
-                <div key={i} className="dash-user-row">
-                  <div className="dash-user-avatar">{initials}</div>
-                  <div>
-                    <div className="dash-user-name">{u.name}</div>
-                    <div className="dash-user-meta">Reporter</div>
+                return (
+                  <div key={i} className="dash-user-row">
+                    <div className="dash-user-avatar">{initials}</div>
+                    <div>
+                      <div className="dash-user-name">{u.name}</div>
+                      <div className="dash-user-meta">Reporter</div>
+                    </div>
+                    <div className="dash-user-right">
+                      <div className="dash-user-count">{u.count}</div>
+                      <div className="dash-user-label">reports</div>
+                    </div>
                   </div>
-                  <div className="dash-user-right">
-                    <div className="dash-user-count">{u.count}</div>
-                    <div className="dash-user-label">reports</div>
-                  </div>
-                </div>
-              );
-            })
-          )}
+                );
+              })
+            )}
+          </div>
         </div>
       </div>
     </>

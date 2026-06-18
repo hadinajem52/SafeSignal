@@ -43,6 +43,8 @@ firebase-service-account*.json
 Artifacts
 backend/uploads/
 
+document-work
+
 # Environments
 .env
 .env.*

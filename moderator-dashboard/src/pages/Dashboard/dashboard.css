@@ -100,6 +100,7 @@ text-decoration: none;
 }
 
 .dash-feed-list { overflow-y: auto; max-height: 320px; }
+.dash-two-col .dash-feed-list { flex: 1; max-height: none; }
 .dash-feed-list::-webkit-scrollbar { width: 2px; }
 .dash-feed-list::-webkit-scrollbar-thumb { background: var(--border2, #243040); }
 .dash-feed-item {
@@ -114,6 +115,14 @@ border-bottom: 1px solid var(--border, #1C2430); align-items: flex-start;
 .dash-feed-meta { font-size: 10px; font-weight: 500; color: var(--muted, #3D4F65); font-variant-numeric: tabular-nums; }
 
 .dash-bottom-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+
+/* Cards fill the row height and distribute their rows evenly */
+.dash-bottom-row .dash-card { display: flex; flex-direction: column; }
+.dash-bottom-row .dash-mini-table { flex: 1; height: 100%; }
+.dash-bottom-row .dash-bar-chart,
+.dash-bottom-row .dash-reporters { flex: 1; display: flex; flex-direction: column; }
+.dash-bottom-row .dash-bar-row { flex: 1; margin-bottom: 0; }
+.dash-bottom-row .dash-user-row { flex: 1; }
 
 .dash-mini-table { width: 100%; border-collapse: collapse; }
 .dash-mini-table th {
