@@ -30,6 +30,9 @@ const LIMITS = {
     PUSH_HOURLY_LIMIT: 3,
     NOTE_MAX_LENGTH: 280,
   },
+  SAVED_AREAS: {
+    MAX_AREAS: 5,
+  },
 };
 
 module.exports = {

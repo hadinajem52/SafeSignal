@@ -3,8 +3,9 @@ import { ActivityIndicator, InteractionManager, LayoutAnimation, Platform, Touch
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
-import { incidentAPI } from "../../services/api";
+import { incidentAPI, savedAreaAPI } from "../../services/api";
 import { feedAPI } from "../../services/feedAPI";
 import { useTheme } from "../../context/ThemeContext";
 import useUserPreferences from "../../hooks/useUserPreferences";
@@ -47,6 +48,7 @@ const MapScreen = () => {
   const lastRegionRef = useRef(DEFAULT_REGION);
 
   const [incidents, setIncidents] = useState([]);
+  const [savedAreas, setSavedAreas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
@@ -194,6 +196,20 @@ const MapScreen = () => {
     fetchIncidents();
   }, [fetchIncidents]);
 
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      savedAreaAPI.list().then((res) => {
+        if (active) {
+          setSavedAreas(res.success ? res.areas : []);
+        }
+      });
+      return () => {
+        active = false;
+      };
+    }, [])
+  );
+
   useEffect(() => {
     setSelectedIncident(null);
   }, [mapMode]);
@@ -306,6 +322,7 @@ const MapScreen = () => {
         onRegionChange={handleRegionChangeComplete}
         showsUserLocation={preferences.locationServices}
         incidents={incidents}
+        savedAreas={savedAreas}
         categoryDisplay={CATEGORY_DISPLAY}
         showActiveOverlays={mapMode === MAP_MODES.ACTIVE}
         onMarkerPress={handleMarkerPress} /> :

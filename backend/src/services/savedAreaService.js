@@ -5,8 +5,9 @@
 
 const db = require('../config/database');
 const ServiceError = require('../utils/ServiceError');
+const { LIMITS } = require('../../../constants/limits');
 
-const MAX_AREAS = 10;
+const MAX_AREAS = LIMITS.SAVED_AREAS.MAX_AREAS;
 
 async function listAreas(userId) {
   return db.manyOrNone(

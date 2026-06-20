@@ -8,7 +8,10 @@ import { AppText, Button, Card, ConfirmModal, Modal as AppModal } from '../../co
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
 import { savedAreaAPI, statsAPI } from '../../services/api';
+import { LIMITS } from '../../../../constants/limits';
 import accountStyles from './accountStyles';
+
+const MAX_AREAS = LIMITS.SAVED_AREAS.MAX_AREAS;
 
 const DEFAULT_REGION = {
   latitude: 33.8938,
@@ -197,21 +200,29 @@ const SavedAreasSection = () => {
         })
       )}
 
-      <Button
-        title={locating ? 'Getting location…' : 'Add current location'}
-        onPress={handleUseCurrentLocation}
-        loading={locating}
-        disabled={locating}
-        variant="secondary"
-        style={styles.addButton}
-      />
-      <Button
-        title="Choose on map"
-        onPress={handleChooseOnMap}
-        disabled={locating}
-        variant="secondary"
-        style={styles.mapButton}
-      />
+      {areas.length >= MAX_AREAS ? (
+        <AppText variant="caption" style={[styles.limitHint, { color: theme.textSecondary }]}>
+          You've reached the limit of {MAX_AREAS} saved areas. Delete one to add another.
+        </AppText>
+      ) : (
+        <>
+          <Button
+            title={locating ? 'Getting location…' : 'Add current location'}
+            onPress={handleUseCurrentLocation}
+            loading={locating}
+            disabled={locating}
+            variant="secondary"
+            style={styles.addButton}
+          />
+          <Button
+            title="Choose on map"
+            onPress={handleChooseOnMap}
+            disabled={locating}
+            variant="secondary"
+            style={styles.mapButton}
+          />
+        </>
+      )}
 
       <AppModal
         visible={addVisible}
@@ -325,6 +336,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     marginLeft: 8,
+  },
+  limitHint: {
+    marginTop: 14,
+    lineHeight: 18,
   },
   addButton: {
     marginTop: 14,

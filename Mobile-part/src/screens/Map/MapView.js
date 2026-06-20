@@ -24,6 +24,7 @@ const MapCanvas = ({
   onRegionChange,
   showsUserLocation,
   incidents,
+  savedAreas = [],
   categoryDisplay,
   showActiveOverlays,
   onMarkerPress
@@ -46,7 +47,7 @@ const MapCanvas = ({
     }
     const timer = setTimeout(() => setTracksViewChanges(false), 900);
     return () => clearTimeout(timer);
-  }, [incidents, mapReady]);
+  }, [incidents, savedAreas, mapReady]);
 
 
 
@@ -144,6 +145,59 @@ const MapCanvas = ({
     [incidents, categoryDisplay, showActiveOverlays, onMarkerPress, theme, tracksViewChanges]
   );
 
+  const savedMarkers = useMemo(
+    () =>
+    savedAreas.
+    map((area) => {
+      const latitude = Number(area.latitude);
+      const longitude = Number(area.longitude);
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        return null;
+      }
+
+      const coordinate = { latitude, longitude };
+      const parsedRadiusKm = Number(area.radius_km);
+      const radiusKm = Number.isFinite(parsedRadiusKm) && parsedRadiusKm > 0 ? parsedRadiusKm : 1;
+      const radiusMeters = radiusKm * 1000;
+      const color = theme.accentPurple;
+
+      return (
+        <React.Fragment key={`saved-${area.area_id}`}>
+              <Circle
+            center={coordinate}
+            radius={radiusMeters}
+            strokeColor={`${color}99`}
+            fillColor={`${color}1f`}
+            strokeWidth={2} />
+
+              <Marker
+            coordinate={coordinate}
+            anchor={{ x: 0.5, y: 1 }}
+            tracksViewChanges={tracksViewChanges}>
+
+                <View style={styles.markerContainer}>
+                  <View style={[styles.markerIconContainer, { backgroundColor: color }]}>
+                    <Ionicons name="bookmark" size={16} color={theme.card} />
+                  </View>
+                  <View style={[styles.markerArrow, { borderTopColor: color }]} />
+                </View>
+                <Callout tooltip>
+                  <View style={[styles.calloutContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                    <AppText variant="label" style={[styles.calloutTitle, { color: theme.text }]} numberOfLines={2}>
+                      {area.label}
+                    </AppText>
+                    <AppText variant="caption" style={[styles.calloutCategory, { color: theme.textSecondary }]}>
+                      Saved area · {radiusKm} km radius
+                    </AppText>
+                  </View>
+                </Callout>
+              </Marker>
+            </React.Fragment>);
+
+    }),
+    [savedAreas, theme, tracksViewChanges]
+  );
+
   return (
     <MapView
       ref={mapRef}
@@ -163,6 +217,7 @@ const MapCanvas = ({
       loadingBackgroundColor={theme.card}>
 
       {mapReady ? markers : null}
+      {mapReady ? savedMarkers : null}
     </MapView>);
 
 };
