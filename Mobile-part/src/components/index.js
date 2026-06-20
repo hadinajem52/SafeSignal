@@ -7,7 +7,6 @@ export { default as StatusBadge } from './StatusBadge';
 export { default as SeverityBadge } from './SeverityBadge';
 export { default as CategoryFilter } from './CategoryFilter';
 export { default as MapLegend } from './MapLegend';
-export { default as IncidentTimeline } from './IncidentTimeline';
 export { default as IncidentStatusTracker } from './IncidentStatusTracker';
 export { default as IncidentChatFab } from './IncidentChatFab';
 export { default as IncidentVideoPlayer } from './IncidentVideoPlayer';

@@ -15,7 +15,7 @@ import { userAPI } from '../services/userAPI';
 
 
 
-export const useLocationConsent = () => {
+const useLocationConsent = () => {
   const { updatePreference } = usePreferences();
 
   const disableLocationSharing = useCallback(async () => {

@@ -28,7 +28,7 @@ export async function enqueueReport(incidentData) {
   return items.length;
 }
 
-export async function getQueuedCount() {
+async function getQueuedCount() {
   return (await readQueue()).length;
 }
 

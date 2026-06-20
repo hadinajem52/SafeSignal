@@ -178,10 +178,3 @@ export const sendTestNotification = async () => {
     },
   });
 };
-
-export default {
-  initializeMobileNotifications,
-  displayMobileNotification,
-  getMobileNotificationStatus,
-  sendTestNotification,
-};

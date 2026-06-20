@@ -312,16 +312,6 @@ const mapStyles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
   },
-  errorText: {
-    textAlign: 'center',
-    marginTop: 16,
-    marginBottom: 20,
-  },
-  retryButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 10,
-  },
 });
 
 export default mapStyles;

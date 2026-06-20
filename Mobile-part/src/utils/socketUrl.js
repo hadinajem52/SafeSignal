@@ -25,7 +25,7 @@ const getConfiguredSocketUrl = () => {
   return apiBaseUrl?.replace(/\/api$/, '') || null;
 };
 
-export const getSocketUrl = () => {
+const getSocketUrl = () => {
   const configuredUrl = getConfiguredSocketUrl();
 
   if (configuredUrl) {

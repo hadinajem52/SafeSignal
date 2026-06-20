@@ -228,32 +228,6 @@ const myReportsStyles = StyleSheet.create({
   dateText: {
     textTransform: 'lowercase',
   },
-
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 70,
-    paddingHorizontal: 28,
-  },
-  emptyIconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    marginBottom: 8,
-  },
-  emptyText: {
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  reportButton: {
-    alignSelf: 'center',
-    minWidth: 230,
-  },
 });
 
 export default myReportsStyles;

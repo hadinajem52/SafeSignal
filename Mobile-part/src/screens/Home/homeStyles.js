@@ -120,10 +120,6 @@ const homeStyles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  scoreNumber: {
-    fontSize: 34,
-    lineHeight: 40,
-  },
   safetyInfo: {
     flex: 1,
   },
@@ -241,39 +237,6 @@ const homeStyles = StyleSheet.create({
     marginRight: 8,
     marginBottom: 10,
   },
-
-  trendingScrollContent: {
-    paddingRight: 6,
-  },
-  trendingItem: {
-    width: 250,
-    marginRight: 10,
-    padding: 12,
-    borderWidth: 1.5,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  trendingIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  trendingInfo: {
-    flex: 1,
-  },
-  trendingCategory: {},
-  trendingCount: {
-    marginTop: 2,
-  },
-  trendBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-  },
-  trendText: {},
 
   contributionsGrid: {
     flexDirection: 'row',

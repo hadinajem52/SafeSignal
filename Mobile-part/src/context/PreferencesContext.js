@@ -112,5 +112,3 @@ export const usePreferences = () => {
   }
   return context;
 };
-
-export default PreferencesContext;
