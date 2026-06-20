@@ -79,12 +79,6 @@ const authStyles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 8,
   },
-  brandTagDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 999,
-    marginRight: 7,
-  },
   brandTagText: {
     textTransform: 'uppercase',
     letterSpacing: 1.4,

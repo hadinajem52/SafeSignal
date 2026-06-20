@@ -79,7 +79,6 @@ const AuthHeader = ({
 
       {subtitle && tagSubtitle ?
       <View style={authStyles.brandTagRow}>
-          <View style={[authStyles.brandTagDot, { backgroundColor: theme.accentOrange }]} />
           <AppText variant="small" style={[authStyles.brandTagText, { color: theme.textTertiary }]}>
             {subtitle}
           </AppText>

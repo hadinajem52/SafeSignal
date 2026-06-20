@@ -5,6 +5,45 @@ import { useTheme } from '../context/ThemeContext';
 
 const { STATUS_LABELS } = incidentConstants;
 
+const getStatusIcon = (status) => {
+  switch (status) {
+    case 'submitted':
+      return 'paper-plane-outline';
+    case 'auto_processed':
+      return 'sparkles-outline';
+    case 'in_review':
+      return 'time-outline';
+    case 'needs_info':
+      return 'help-circle-outline';
+    case 'verified':
+      return 'checkmark-circle-outline';
+    case 'dispatched':
+      return 'send-outline';
+    case 'on_scene':
+      return 'location-outline';
+    case 'investigating':
+      return 'search-outline';
+    case 'police_closed':
+      return 'shield-checkmark-outline';
+    case 'resolved':
+      return 'checkmark-done-outline';
+    case 'archived':
+      return 'archive-outline';
+    case 'rejected':
+      return 'close-circle-outline';
+    case 'auto_flagged':
+      return 'flag-outline';
+    case 'merged':
+      return 'git-merge-outline';
+    case 'published':
+      return 'megaphone-outline';
+    case 'draft':
+      return 'create-outline';
+    default:
+      return 'ellipse-outline';
+  }
+};
+
 const getStatusColor = (status, theme) => {
   switch (status) {
     case 'submitted':
@@ -53,8 +92,9 @@ const StatusBadge = ({ status, style, textStyle }) => {
     <Badge
       label={label}
       color={badgeColor}
+      icon={getStatusIcon(status)}
       style={style}
-      textStyle={[{ color: badgeColor }, textStyle]}
+      textStyle={textStyle}
     />
   );
 };

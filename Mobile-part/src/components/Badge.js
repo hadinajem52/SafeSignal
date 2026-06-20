@@ -1,6 +1,7 @@
 import React from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { createBox, createText } from '@shopify/restyle';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 
 const Box = createBox();
@@ -24,27 +25,32 @@ const hexToRgba = (hexColor, alpha) => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
-const Badge = ({ label, color, style, textStyle }) => {
+const Badge = ({ label, color, icon, style, textStyle }) => {
   const { theme } = useTheme();
-  const tintBackground = hexToRgba(color, 0.16);
-  const tintBorder = hexToRgba(color, 0.34);
-  const textColor = color || theme.text;
+  const tint = color || theme.text;
 
   return (
     <Box
-      paddingHorizontal="md"
-      paddingVertical="xs"
       borderRadius="pill"
       style={[
         styles.badge,
-        {
-          backgroundColor: tintBackground,
-          borderColor: tintBorder,
-        },
+        icon
+          ? { backgroundColor: hexToRgba(tint, 0.14), paddingLeft: 8 }
+          : {
+              backgroundColor: hexToRgba(tint, 0.16),
+              borderColor: hexToRgba(tint, 0.34),
+              borderWidth: 1,
+              paddingLeft: 12,
+            },
         style,
       ]}
     >
-      <ThemedText variant="caption" style={[styles.text, { color: textColor }, textStyle]}>
+      {icon ? (
+        <View style={[styles.iconWrap, { backgroundColor: hexToRgba(tint, 0.22) }]}>
+          <Ionicons name={icon} size={12} color={tint} />
+        </View>
+      ) : null}
+      <ThemedText variant="caption" style={[styles.text, { color: tint }, textStyle]}>
         {label}
       </ThemedText>
     </Box>
@@ -54,7 +60,18 @@ const Badge = ({ label, color, style, textStyle }) => {
 const styles = StyleSheet.create({
   badge: {
     alignSelf: 'flex-start',
-    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 5,
+    paddingRight: 12,
+  },
+  iconWrap: {
+    width: 20,
+    height: 20,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 6,
   },
   text: {
     includeFontPadding: false,
