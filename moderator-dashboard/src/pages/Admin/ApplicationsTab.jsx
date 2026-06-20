@@ -13,7 +13,6 @@ import ConfirmDialog from "../../components/ConfirmDialog";
 import LoadingState from "../../components/LoadingState";
 import useIsMobile from "../../hooks/useIsMobile";
 
-// ── Risk assessment ──────────────────────────────────────────────────────────
 
 const DISPOSABLE_DOMAINS = [
   "tempmail.io",
@@ -80,7 +79,6 @@ function assessRisk(email, role) {
   };
 }
 
-// ── Sub-components ───────────────────────────────────────────────────────────
 
 const RISK_STYLES = {
   low: {
@@ -132,7 +130,6 @@ function RoleChip({ role }) {
   );
 }
 
-// ── Main component ───────────────────────────────────────────────────────────
 
 function ApplicationsTab({
   applications,
@@ -149,7 +146,6 @@ function ApplicationsTab({
   const [mobileShowDetail, setMobileShowDetail] = useState(false);
   const isMobile = useIsMobile();
 
-  // Auto-select first pending on load
   const firstPending = applications.find((a) => !a.isVerified);
   const effectiveSelected =
     selectedId ?? firstPending?.id ?? applications[0]?.id ?? null;
@@ -171,13 +167,11 @@ function ApplicationsTab({
 
   return (
     <div className="flex flex-1 overflow-hidden min-h-0 border border-border">
-      {/* ── Left panel: list ── */}
       <div
         className={`flex-shrink-0 flex-col border-r border-border overflow-hidden ${
           isMobile ? "w-full" : "w-[340px]"
         } ${isMobile && mobileShowDetail ? "hidden" : "flex"}`}
       >
-        {/* Header */}
         <div className="px-4 pt-3 pb-2 border-b border-border flex-shrink-0">
           <p className="text-[10px] font-bold tracking-widest uppercase text-muted mb-2">
             Staff Access Requests
@@ -193,7 +187,6 @@ function ApplicationsTab({
           </div>
         </div>
 
-        {/* List */}
         <div className="flex-1 overflow-y-auto">
           {filtered.length === 0 ? (
             <div className="flex items-center justify-center h-full">
@@ -253,7 +246,6 @@ function ApplicationsTab({
         </div>
       </div>
 
-      {/* ── Right panel: detail ── */}
       <div
         className={`flex-col overflow-hidden min-w-0 ${
           isMobile ? "w-full" : "flex-1"
@@ -261,7 +253,6 @@ function ApplicationsTab({
       >
       {selected && selectedRisk ? (
         <div className="flex flex-col flex-1 overflow-hidden">
-          {/* Detail topbar */}
           <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-5 h-12 border-b border-border bg-card flex-shrink-0">
             {isMobile && (
               <button
@@ -293,9 +284,7 @@ function ApplicationsTab({
             </button>
           </div>
 
-          {/* Scrollable detail body */}
           <div className="flex-1 overflow-y-auto p-5 space-y-5">
-            {/* Profile block */}
             <div className="flex items-center gap-3.5 p-4 bg-surface border border-border">
               <div className="w-11 h-11 flex-shrink-0 bg-card border border-border flex items-center justify-center text-base font-extrabold text-muted uppercase">
                 {selected.username.slice(0, 2)}
@@ -314,7 +303,6 @@ function ApplicationsTab({
               </div>
             </div>
 
-            {/* Application details grid */}
             <div>
               <SectionLabel label="Application Details" />
               <div className="grid grid-cols-2 border border-border">
@@ -334,7 +322,6 @@ function ApplicationsTab({
               </div>
             </div>
 
-            {/* Risk assessment */}
             <div>
               <SectionLabel label="Risk Assessment" />
               <RiskBlock level={selectedRisk.level} note={selectedRisk.note} />
@@ -351,7 +338,6 @@ function ApplicationsTab({
       )}
       </div>
 
-      {/* ── Dialogs ── */}
       <ConfirmDialog
         visible={Boolean(confirmApprove)}
         title="Approve Application?"
@@ -386,7 +372,6 @@ function ApplicationsTab({
   );
 }
 
-// ── Helper components ────────────────────────────────────────────────────────
 
 function SectionLabel({ label }) {
   return (

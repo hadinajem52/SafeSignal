@@ -1,12 +1,5 @@
 import { ROUTES } from './routes'
 
-// Single source of truth for the sidebar sub-navigation.
-//
-// Each entry maps a parent route to the page's internal sections. `paramKey`
-// and `defaultValue` are the deep-link contract the target page reads via
-// useSearchParamState; `items` drive the sidebar sub-links. Values match the
-// page's existing in-page tab/filter values so the URL stays the single source
-// of truth for the active section.
 export const SUBNAV = {
   [ROUTES.REPORTS]: {
     paramKey: 'status',
@@ -47,15 +40,12 @@ export const SUBNAV = {
   },
 }
 
-// Build the path + query string a sidebar sub-link points to.
 export function subnavPath(route, paramKey, value) {
   const params = new URLSearchParams()
   params.set(paramKey, value)
   return `${route}?${params.toString()}`
 }
 
-// Whether `value` is the active section for `route`, given the current search
-// string. Falls back to the section's default when the param is absent.
 export function isSubnavItemActive(route, value, search) {
   const config = SUBNAV[route]
   if (!config) return false

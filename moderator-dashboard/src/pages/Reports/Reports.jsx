@@ -23,15 +23,12 @@ import {
   canRejectReport,
 } from "./reportStatusRules";
 
-// Priority score: severity is the primary sort key; age (log-scaled) is a
-// tiebreaker within the same tier so stale reports don't beat newer ones.
 const SEVERITY_RANK = { critical: 4, high: 3, medium: 2, low: 1 };
 
 function getPriorityScore(report) {
   const rank = SEVERITY_RANK[report.severity] || 0;
   const ageHours =
     (Date.now() - new Date(report.createdAt).getTime()) / 3_600_000;
-  // Multiply rank by 1000 so no age difference can push a lower tier above a higher one
   return (
     rank * 1000 +
     getConstellationPriorityBoost(report.constellation) +
@@ -51,19 +48,17 @@ function normalizeReport(incident) {
 }
 
 function Reports() {
-  // Default to the combined 'Needs Review' view so auto_flagged reports are visible
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useSearchParamState(
     SUBNAV[ROUTES.REPORTS].paramKey,
     SUBNAV[ROUTES.REPORTS].defaultValue,
   );
-  const [sortMode, setSortMode] = useState("urgency"); // 'urgency' | 'time'
+  const [sortMode, setSortMode] = useState("urgency");
   const [toasts, setToasts] = useState([]);
   const [isTimelineCollapsed, setIsTimelineCollapsed] = useState(false);
   const [parentReportReturn, setParentReportReturn] = useState(null);
-  // Mobile single-column navigation: list <-> detail, with a detail/messages tab.
-  const [mobileView, setMobileView] = useState("list"); // 'list' | 'detail'
-  const [mobileTab, setMobileTab] = useState("detail"); // 'detail' | 'messages'
+  const [mobileView, setMobileView] = useState("list");
+  const [mobileTab, setMobileTab] = useState("detail");
   const isMobile = useIsMobile();
 
   const queryClient = useQueryClient();
@@ -93,7 +88,6 @@ function Reports() {
 
   const filteredReports = useMemo(() => {
     const q = searchTerm.toLowerCase();
-    // Build a set so multi-value filters like 'submitted,auto_flagged' work correctly
     const activeStatuses =
       statusFilter === "all"
         ? null
@@ -116,8 +110,6 @@ function Reports() {
       );
   }, [reports, searchTerm, statusFilter, sortMode]);
 
-  // Pool the merge picker searches over: every loaded report (current status filter),
-  // independent of the top search box.
   const mergeTargets = useMemo(() => reports.map(normalizeReport), [reports]);
 
   const {
@@ -164,16 +156,11 @@ function Reports() {
       query.state.data?.mediaJudgmentStatus === "pending" ? 3000 : false,
   });
 
-  // While a constellation is active for the selected report, poll its corroboration
-  // results so the moderator sees the witness feedback update in place.
   const { data: liveConstellation } = useQuery({
     queryKey: ["report-constellation", selectedReport?.id],
     queryFn: async () => {
       if (!selectedReport?.id) return null;
       const result = await reportsAPI.getById(selectedReport.id);
-      // Throw on failure so a transient error keeps the last-known constellation
-      // instead of collapsing to null (which would hide an active one and wrongly
-      // re-show the activation CTA).
       if (!result.success) {
         throw new Error(result.error || "Failed to load constellation");
       }
@@ -311,7 +298,6 @@ function Reports() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden bg-bg">
-      {/* Toast stack */}
       <div className="fixed bottom-6 right-6 z-50 space-y-2 pointer-events-none">
         {toasts.map((toast) => (
           <div
@@ -329,7 +315,6 @@ function Reports() {
         ))}
       </div>
 
-      {/* ── Topbar ── */}
       <div className="flex-shrink-0 flex items-center h-[61px] px-6 bg-surface border-b border-border">
         <div className="flex items-center gap-2.5 mr-8 font-display font-extrabold text-[17px] tracking-wide uppercase text-text flex-shrink-0">
           <FileText size={14} />
@@ -351,7 +336,6 @@ function Reports() {
         </div>
       </div>
 
-      {/* ── Toolbar (filters) ── */}
       <ReportFilters
         searchTerm={searchTerm}
         onSearchChange={(event) => setSearchTerm(event.target.value)}
@@ -368,7 +352,6 @@ function Reports() {
         onBulkReject={() => setBulkConfirmAction("reject")}
       />
 
-      {/* ── Body: mobile single-column / desktop three-panel ── */}
       {isMobile ? (
         <div className="flex flex-1 flex-col overflow-hidden">
           {mobileView === "list" || !selectedReport ? (
@@ -377,7 +360,6 @@ function Reports() {
             </div>
           ) : (
             <div className="flex flex-1 flex-col overflow-hidden">
-              {/* Back + Details/Messages tab switcher */}
               <div className="flex-shrink-0 flex items-center gap-2 h-12 px-3 bg-surface border-b border-border">
                 <button
                   type="button"
@@ -423,7 +405,6 @@ function Reports() {
       ) : (
         <div className="flex flex-1 overflow-x-auto overflow-y-hidden">
           <div ref={panelsContainerRef} className="flex flex-1 min-w-[936px]">
-            {/* Panel 1: report list */}
             <div
               style={{ width: `${panelWidths.left}px` }}
               className="flex-shrink-0 border-r border-border overflow-hidden flex flex-col"
@@ -439,7 +420,6 @@ function Reports() {
               className={`flex-shrink-0 w-px cursor-col-resize touch-none ${activeSplitter === "left" ? "bg-primary" : "bg-border hover:bg-border/70"}`}
             />
 
-            {/* Panel 2: report detail */}
             <div className="flex-1 overflow-hidden min-w-0">{reportDetailEl}</div>
 
             {!isTimelineCollapsed ? (
@@ -452,7 +432,6 @@ function Reports() {
               />
             ) : null}
 
-            {/* Panel 3: timeline */}
             <TimelineCommsPanel
               incidentId={selectedReport?.id || null}
               collapsed={isTimelineCollapsed}
@@ -464,7 +443,6 @@ function Reports() {
         </div>
       )}
 
-      {/* Single-report action confirmation */}
       <ConfirmDialog
         visible={Boolean(singleConfirmAction)}
         title={
@@ -490,7 +468,6 @@ function Reports() {
         onConfirm={executeSingleAction}
       />
 
-      {/* Bulk action confirmation */}
       <ConfirmDialog
         visible={Boolean(bulkConfirmAction)}
         title={`Bulk ${bulkConfirmAction === "verify" ? "Escalate" : "Reject"} ${selectedReportIds.length} report${selectedReportIds.length !== 1 ? "s" : ""}?`}

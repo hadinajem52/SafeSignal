@@ -1,6 +1,5 @@
 import { SEVERITY_VARIANTS } from "../utils/incidentUtils";
 
-// Matches the LEI page SEVERITY_COLOR palette exactly
 const SEVERITY_COLOR = {
   low: "#3B9EFF",
   medium: "#F5A623",
@@ -41,7 +40,6 @@ function SeverityBadge({
   const styles = SEVERITY_STYLES[safeSeverity] || DEFAULT_STYLE;
 
   if (display === "initial") {
-    // Match LEI SeverityDots exactly: letter + 3 dots with cascading opacity
     const color = SEVERITY_COLOR[safeSeverity] || "#5C7390";
     return (
       <div

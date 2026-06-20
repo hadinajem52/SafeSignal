@@ -1,8 +1,5 @@
 export function heatColor(val, max) {
   if (val === 0) return "var(--dac-surface2)";
-  // Log scale (vs. the true peak) so a single outlier slot doesn't flatten
-  // every other cell into the faintest bucket on long periods, while genuine
-  // mid-range slots stay distinguishable and only real peaks read as "high".
   const t = Math.log1p(val) / Math.log1p(max || 1);
   if (t < 0.25) return "rgba(59,158,255,0.15)";
   if (t < 0.5) return "rgba(59,158,255,0.4)";

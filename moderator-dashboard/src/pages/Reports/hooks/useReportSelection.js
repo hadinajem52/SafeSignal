@@ -4,7 +4,6 @@ export function useReportSelection(filteredReports) {
   const [selectedReport, setSelectedReport] = useState(null);
   const [selectedReportIds, setSelectedReportIds] = useState([]);
 
-  // Keep selection valid if filters remove the currently selected report
   useEffect(() => {
     setSelectedReport((current) => {
       if (!current) return filteredReports[0] ?? null;

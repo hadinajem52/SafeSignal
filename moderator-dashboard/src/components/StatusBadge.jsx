@@ -10,10 +10,6 @@ const SIZE_CLASSES = {
   sm: "px-3 py-1.5 text-xs",
 };
 
-/**
- * StatusBadge — renders with CSS-variable badge tokens so it works in both
- * light and dark mode without jarring bright blobs.
- */
 function StatusBadge({
   status,
   label,
@@ -36,12 +32,10 @@ function StatusBadge({
     );
   }
 
-  // Token-based approach: STATUS_COLORS now returns a badge token name like "badge-yellow"
   const tokenName = getStatusColor(status);
   const light =
     BADGE_LIGHT_STYLES[tokenName] || BADGE_LIGHT_STYLES["badge-gray"];
 
-  // Use CSS variables with light-mode fallback
   const badgeStyle = {
     backgroundColor: `var(--color-${tokenName}-bg, ${light.bg})`,
     color: `var(--color-${tokenName}-text, ${light.text})`,

@@ -2,12 +2,6 @@ import { useState } from 'react'
 import { AlertTriangle, ShieldAlert } from 'lucide-react'
 import ConfirmDialog from '../../components/ConfirmDialog'
 
-/**
- * DangerActionPanel
- *
- * Two-gate destruction: type the exact phrase to unlock the button,
- * then confirm a final AlertDialog before the action fires.
- */
 function DangerActionPanel({
   title,
   description,
@@ -32,7 +26,6 @@ function DangerActionPanel({
             : 'border-border bg-surface'
         }`}
       >
-        {/* Icon */}
         <div
           className={`w-8 h-8 flex-shrink-0 border flex items-center justify-center transition-colors ${
             isUnlocked ? 'border-danger/60 text-danger' : 'border-border text-muted'
@@ -41,7 +34,6 @@ function DangerActionPanel({
           {isUnlocked ? <ShieldAlert size={15} /> : <AlertTriangle size={15} />}
         </div>
 
-        {/* Text */}
         <div className="flex-1 min-w-0">
           <p
             className={`text-xs font-bold mb-1 transition-colors ${
@@ -58,7 +50,6 @@ function DangerActionPanel({
           </p>
         </div>
 
-        {/* Controls */}
         <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto sm:self-center">
           <input
             type="text"
@@ -85,7 +76,6 @@ function DangerActionPanel({
         </div>
       </div>
 
-      {/* Final confirmation gate */}
       <ConfirmDialog
         visible={finalDialog}
         title="Final Confirmation Required"

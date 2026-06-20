@@ -79,7 +79,6 @@ const prefersNoWebglHeatmap = () => {
     return false;
   }
 
-  // Modern Chromium exposes a reliable mobile boolean via Client Hints.
   if (navigator.userAgentData?.mobile === true) {
     return true;
   }
@@ -93,7 +92,6 @@ const prefersNoWebglHeatmap = () => {
     return true;
   }
 
-  // iPadOS reports a desktop UA but is touch-only — catch it via touch + coarse pointer.
   const coarsePointer =
     typeof window !== "undefined" &&
     typeof window.matchMedia === "function" &&
@@ -108,7 +106,6 @@ const prefersNoWebglHeatmap = () => {
  * Uses the SVG path symbol interface so no `new google.maps.Size/Point()` needed.
  */
 const makePinIcon = (color) => ({
-  // Material "place" icon path, viewBox 0 0 24 24
   path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z",
   fillColor: color,
   fillOpacity: 1,
@@ -455,7 +452,6 @@ function GoogleMapPanelContent({
 
       </GoogleMap>
 
-      {/* Custom incident popup — overlaid on map, avoids Maps API InfoWindow library */}
       {activeMarker && (
         <div
           style={{
@@ -474,7 +470,6 @@ function GoogleMapPanelContent({
             border: "1px solid rgba(255,255,255,0.1)",
           }}
         >
-          {/* Header row: severity badge + ID + close */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
             {activeMarker.meta?.severityColor && (
               <span style={{
@@ -512,15 +507,12 @@ function GoogleMapPanelContent({
             </button>
           </div>
 
-          {/* Title */}
           <div style={{ fontSize: 13, fontWeight: 700, color: "#d9e4f0", lineHeight: 1.35, marginBottom: 8, wordBreak: "break-word" }}>
             {activeMarker.meta?.title ?? activeMarker.title}
           </div>
 
-          {/* Divider */}
           <div style={{ height: 1, background: "rgba(255,255,255,0.07)", marginBottom: 7 }} />
 
-          {/* Meta rows */}
           <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11 }}>
               <span style={{ color: "#5c7390", minWidth: 52 }}>Type</span>

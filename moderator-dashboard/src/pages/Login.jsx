@@ -15,7 +15,6 @@ const loginAnimations = `
     0%, 100% { opacity: 1;   }
     50%      { opacity: 0.3; }
   }
-  /* raindrop core: bright flash then shrinks away */
   @keyframes blip-core {
     0%   { transform: scale(0);   opacity: 0; }
     2%   { transform: scale(1.4); opacity: 1; }
@@ -23,7 +22,6 @@ const loginAnimations = `
     35%  { transform: scale(0.6); opacity: 0; }
     100% { transform: scale(0);   opacity: 0; }
   }
-  /* raindrop ring: expands outward like a ripple and fades */
   @keyframes blip-ring {
     0%   { transform: scale(0);   opacity: 0; }
     3%   { transform: scale(0.6); opacity: 0.7; }
@@ -119,7 +117,6 @@ function Login() {
     }
   }
 
-  // Pre-seeded radar blips: angle (deg clockwise from 12-o'clock), radius fraction 0–1, color
   const radarBlips = useMemo(() => [
     { angle: 38,  r: 0.55, color: '#00f0ff' },
     { angle: 95,  r: 0.80, color: '#ff3333' },
@@ -179,10 +176,8 @@ function Login() {
 
       <div className="flex h-dvh w-full overflow-hidden bg-[#07090B] font-display text-[#D9E4F0]">
 
-        {/* ══════════ LEFT PANEL ══════════ */}
         <div className="hidden lg:flex w-[60%] relative flex-col justify-between p-12 border-r border-[#1C2430] overflow-hidden">
 
-          {/* Grid texture */}
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
@@ -190,15 +185,12 @@ function Login() {
               backgroundSize: '32px 32px',
             }}
           />
-          {/* Radial fade */}
           <div
             className="absolute inset-0 pointer-events-none"
             style={{ background: 'radial-gradient(ellipse 70% 60% at 40% 50%, transparent 0%, #07090B 100%)' }}
           />
 
-          {/* Radar rings + sweep + blips */}
           <div className="absolute right-[-80px] top-1/2 -translate-y-1/2 w-[560px] h-[560px] pointer-events-none">
-            {/* rings */}
             {[560, 420, 280, 140].map(s => (
               <div
                 key={s}
@@ -206,17 +198,14 @@ function Login() {
                 style={{ width: s, height: s, top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }}
               />
             ))}
-            {/* sweep */}
             <div
               className="absolute inset-0 rounded-full anim-radar opacity-[0.08]"
               style={{ background: 'conic-gradient(from 0deg, transparent 340deg, rgba(0,240,255,0.7) 360deg)' }}
             />
-            {/* radar blips — fire just AFTER sweep line crosses their angle */}
             {radarBlips.map((b, i) => {
-              const rad = (b.angle - 90) * (Math.PI / 180) // 0° = 12-o'clock
-              const cx = 50 + b.r * 50 * Math.cos(rad)    // % of container
+              const rad = (b.angle - 90) * (Math.PI / 180)
+              const cx = 50 + b.r * 50 * Math.cos(rad)
               const cy = 50 + b.r * 50 * Math.sin(rad)
-              // positive delay: blip starts exactly when sweep reaches this angle
               const delay = (b.angle / 360) * RADAR_DURATION
               return (
                 <div
@@ -224,10 +213,9 @@ function Login() {
                   className="absolute"
                   style={{
                     left: `${cx}%`, top: `${cy}%`,
-                    width: 0, height: 0,  // zero-size anchor — children offset from center
+                    width: 0, height: 0,
                   }}
                 >
-                  {/* expanding ripple ring — starts at blip center, scales outward */}
                   <div style={{
                     position: 'absolute',
                     width: 6, height: 6,
@@ -237,7 +225,6 @@ function Login() {
                     animation: `blip-ring ${RADAR_DURATION}s linear infinite ${delay}s`,
                     transformOrigin: 'center center',
                   }} />
-                  {/* bright core dot */}
                   <div style={{
                     position: 'absolute',
                     width: 4, height: 4,
@@ -253,7 +240,6 @@ function Login() {
             })}
           </div>
 
-          {/* Brand */}
           <div className="relative z-10 flex items-center gap-3">
             <div className="flex items-center justify-center w-9 h-9 border border-[#00f0ff] shrink-0">
               <Shield className="w-[18px] h-[18px] text-[#D9E4F0]" />
@@ -261,7 +247,6 @@ function Login() {
             <span className="font-display font-extrabold text-lg tracking-[0.03em] uppercase">SafeSignal</span>
           </div>
 
-          {/* Hero */}
           <div className="relative z-10">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-5 h-px bg-[#00f0ff]" />
@@ -291,7 +276,6 @@ function Login() {
             </div>
           </div>
 
-          {/* Bottom status */}
           <div className="relative z-10">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-1.5 h-1.5 rounded-full bg-[#30A46C] anim-blink" />
@@ -303,16 +287,13 @@ function Login() {
           </div>
         </div>
 
-        {/* ══════════ RIGHT PANEL ══════════ */}
         <div className="w-full lg:w-[40%] bg-[#0D1117] border-l border-[#1C2430] relative flex flex-col justify-center px-6 sm:px-11 py-10 sm:py-12 overflow-y-auto">
 
-          {/* Corner accent */}
           <div className="absolute top-0 left-0 w-px h-20 bg-[#00f0ff]" />
           <div className="absolute top-0 left-0 w-20 h-px bg-[#00f0ff]" />
 
           <div className="max-w-[360px] w-full mx-auto">
 
-            {/* Header */}
             <div className="mb-10">
               <div className="flex items-center gap-2 mb-[10px]">
                 <span className="text-[9px] font-bold tracking-[0.12em] uppercase text-[#00f0ff]">Moderator Portal</span>
@@ -326,7 +307,6 @@ function Login() {
               </p>
             </div>
 
-            {/* Tabs */}
             <div className="flex border border-[#243040] mb-8">
               {[
                 { key: 'login', label: 'Login' },
@@ -349,7 +329,6 @@ function Login() {
               ))}
             </div>
 
-            {/* ── LOGIN ── */}
             {mode === 'login' && (
               successMessage ? (
                 <div className="flex flex-col items-center gap-4 py-8 text-center">
@@ -434,7 +413,6 @@ function Login() {
               )
             )}
 
-            {/* ── APPLY ACCESS ── */}
             {mode === 'apply' && (
               applySubmitted ? (
                 <div className="p-5 bg-[rgba(48,164,108,0.05)] border border-[#1C2430] border-l-2 border-l-[#30A46C]">
@@ -521,7 +499,6 @@ function Login() {
               )
             )}
 
-            {/* Security footer */}
             <div className="flex items-center gap-1.5 mt-5 text-[10px] font-semibold tracking-[0.02em] text-[#3D4F65]">
               <IconShieldCheck />
               256-bit encrypted · Session logged · Lebanon data residency

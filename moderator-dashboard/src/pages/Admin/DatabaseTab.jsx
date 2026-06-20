@@ -3,12 +3,9 @@ import { AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, RefreshCw, Trash
 import ConfirmDialog from '../../components/ConfirmDialog'
 import DangerActionPanel from './DangerActionPanel'
 
-// ── JSON syntax highlighting ─────────────────────────────────────────────────
-
 function JsonHighlight({ data }) {
   const json = JSON.stringify(data, null, 2)
 
-  // Tokenise using a single-pass regex
   const tokens = []
   const re = /("(?:\\.|[^"\\])*"(?:\s*:)?)|(\b\d+\.?\d*(?:[eE][+-]?\d+)?\b)|(null)|(true|false)/g
   let lastIndex = 0
@@ -54,8 +51,6 @@ function JsonHighlight({ data }) {
   )
 }
 
-// ── Row item with collapse ───────────────────────────────────────────────────
-
 function DbRowItem({ row, primaryKey, onDelete, deletePending }) {
   const [expanded, setExpanded] = useState(false)
   const rowId = row[primaryKey]
@@ -97,8 +92,6 @@ function DbRowItem({ row, primaryKey, onDelete, deletePending }) {
   )
 }
 
-// ── Main component ───────────────────────────────────────────────────────────
-
 function DatabaseTab({
   tables,
   tablesLoading,
@@ -137,7 +130,6 @@ function DatabaseTab({
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-auto gap-4">
-      {/* Warning bar */}
       <div className="flex items-center gap-2.5 px-4 py-2 bg-warning/5 border border-warning/20 rounded-sm flex-shrink-0">
         <AlertTriangle size={14} className="text-warning flex-shrink-0" />
         <span className="text-[11px] font-semibold text-warning">
@@ -145,12 +137,10 @@ function DatabaseTab({
         </span>
       </div>
 
-      {/* Split panel */}
       <div
         className="flex flex-col lg:flex-row border border-border overflow-hidden flex-shrink-0"
         style={{ minHeight: 360, height: '55vh' }}
       >
-        {/* Table list */}
         <div className="w-full lg:w-60 flex-shrink-0 flex flex-col border-b lg:border-b-0 lg:border-r border-border overflow-hidden max-h-44 lg:max-h-none">
           <div className="flex items-center justify-between px-3.5 py-2 border-b border-border flex-shrink-0">
             <span className="text-[10px] font-bold tracking-widest uppercase text-muted">
@@ -195,7 +185,6 @@ function DatabaseTab({
           </div>
         </div>
 
-        {/* Row viewer */}
         <div className="flex flex-col flex-1 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-surface flex-shrink-0">
             <div>
@@ -289,7 +278,6 @@ function DatabaseTab({
         </div>
       </div>
 
-      {/* Danger zones */}
       <div className="space-y-4 flex-shrink-0 pb-4">
         <DangerActionPanel
           title="Danger Zone: Reset All Reports to 0"
@@ -317,7 +305,6 @@ function DatabaseTab({
         />
       </div>
 
-      {/* Dialogs */}
       <ConfirmDialog
         visible={Boolean(confirmState)}
         title={confirmState?.type === 'clear-table' ? 'Clear Table?' : 'Delete Row?'}

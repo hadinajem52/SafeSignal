@@ -10,7 +10,7 @@ export function useReportPanelResize() {
     left: LEFT_PANEL_WIDTH.default,
     right: RIGHT_PANEL_WIDTH.default,
   });
-  const [activeSplitter, setActiveSplitter] = useState(null); // 'left' | 'right' | null
+  const [activeSplitter, setActiveSplitter] = useState(null)
   const panelsContainerRef = useRef(null);
   const dragStateRef = useRef(null);
 

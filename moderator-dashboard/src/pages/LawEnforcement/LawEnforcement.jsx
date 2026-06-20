@@ -47,9 +47,8 @@ function LawEnforcement() {
   const [isTimelineCollapsed, setIsTimelineCollapsed] = useState(false);
   const [leiAlerts, setLeiAlerts] = useState([]);
   const [lastRealtimeAlertAt, setLastRealtimeAlertAt] = useState(null);
-  // Mobile single-column navigation for the queue view.
-  const [mobileView, setMobileView] = useState("list"); // 'list' | 'detail'
-  const [mobileTab, setMobileTab] = useState("detail"); // 'detail' | 'messages'
+  const [mobileView, setMobileView] = useState("list");
+  const [mobileTab, setMobileTab] = useState("detail");
   const isMobile = useIsMobile();
 
   const handleSelectIncident = useCallback((id) => {
@@ -132,8 +131,6 @@ function LawEnforcement() {
         const s = statusById.get(String(a.incidentId));
         return !s || s === "verified";
       });
-      // Preserve the previous reference when nothing was removed so this effect
-      // (keyed on a possibly fresh `allLeiIncidents` array) can't loop on itself.
       return next.length === prev.length ? prev : next;
     });
   }, [allLeiIncidents]);
@@ -442,7 +439,6 @@ function LawEnforcement() {
                     {incidentDetailEl}
                   </div>
 
-                  {/* Splitter to resize the messages panel (hidden when collapsed) */}
                   {!isTimelineCollapsed ? (
                     <div
                       role="separator"
@@ -458,7 +454,6 @@ function LawEnforcement() {
                     />
                   ) : null}
 
-                  {/* Panel 3: reporter messages (right-docked, collapsible) */}
                   <TimelineCommsPanel
                     incidentId={selectedIncident?.id || null}
                     collapsed={isTimelineCollapsed}

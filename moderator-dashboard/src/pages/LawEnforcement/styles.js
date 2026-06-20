@@ -18,12 +18,8 @@ const leStyles = `
     color: var(--le-text);
     background: var(--le-bg);
   }
-  /* Reset LE's own markup at zero specificity (:where) so the shared,
-     Tailwind-styled Timeline & Comms panel keeps its utility spacing, while
-     every LE element below still normalizes exactly as before. */
   :where(.lei-root) * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  /* TOPBAR */
   .lei-topbar {
     border-bottom: 1px solid var(--le-border);
     padding: 0 24px;
@@ -84,7 +80,6 @@ const leStyles = `
   }
   @keyframes lei-pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
 
-  /* ALERT BANNER */
   .lei-alert-banner-toggle {
     width: 100%;
     display: flex;
@@ -130,7 +125,6 @@ const leStyles = `
   .lei-alert-row-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
   .lei-alert-row-actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
 
-  /* CONTENT SPLIT */
   .lei-content {
     display: flex;
     flex: 1;
@@ -166,7 +160,6 @@ const leStyles = `
     background: var(--le-blue);
   }
 
-  /* QUEUE PANEL */
   .lei-queue-panel {
     display: flex;
     flex-direction: column;
@@ -231,7 +224,6 @@ const leStyles = `
   }
   .lei-sort-btn.active { background: rgba(59,158,255,0.08); border-color: var(--le-blue); color: var(--le-blue); }
 
-  /* COLUMN HEADERS */
   .lei-queue-cols {
     display: grid;
     grid-template-columns: 1fr 72px 80px 90px;
@@ -249,7 +241,6 @@ const leStyles = `
     color: var(--le-muted);
   }
 
-  /* INCIDENT ROWS */
   .lei-incident-list { flex: 1; overflow-y: auto; }
   .lei-incident-list::-webkit-scrollbar { width: 3px; }
   .lei-incident-list::-webkit-scrollbar-thumb { background: var(--le-border2); }
@@ -296,7 +287,6 @@ const leStyles = `
   .lei-action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
   .lei-empty { display: flex; align-items: center; justify-content: center; height: 120px; color: var(--le-muted); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; }
 
-  /* DETAIL PANEL */
   .lei-detail-panel { display: flex; flex-direction: column; overflow: hidden; height: 100%; background: var(--le-bg); }
   .lei-detail-scroll { flex: 1; overflow-y: auto; padding: 24px; }
   .lei-detail-scroll::-webkit-scrollbar { width: 3px; }
@@ -318,7 +308,6 @@ const leStyles = `
   .lei-section-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--le-muted); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
   .lei-section-label::after { content:''; flex:1; height:1px; background: var(--le-border); }
 
-  /* WORKFLOW */
   .lei-workflow-steps { display: flex; align-items: flex-start; }
   .lei-workflow-step { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative; }
   .lei-workflow-step:not(:last-child)::after { content:''; position:absolute; top:11px; left:50%; width:100%; height:1px; background: var(--le-border2); z-index:0; }
@@ -330,7 +319,6 @@ const leStyles = `
   .lei-step-name.done { color:var(--le-blue); }
   .lei-step-name.current { color:var(--le-amber); }
 
-  /* ACTION ROW */
   .lei-action-row { display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; align-items:center; }
   .lei-btn-primary { font-size:11px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; padding:10px 20px; border:1.5px solid var(--le-blue); color:var(--le-blue); background:rgba(59,158,255,0.08); cursor:pointer; transition:all 0.15s; font-family:'Plus Jakarta Sans',sans-serif; display:flex; align-items:center; gap:6px; }
   .lei-btn-primary:hover:not(:disabled) { background:var(--le-blue); color:#000; }
@@ -353,7 +341,6 @@ const leStyles = `
   .lei-close-checkbox { width:14px; height:14px; flex-shrink:0; accent-color:var(--le-blue); border-radius:0; }
   .lei-close-help { margin-top:2px; color:var(--le-muted); font-size:10px; line-height:1.5; }
 
-  /* COMMUNITY SIGNAL */
   .lei-signal-card { border:1px solid var(--le-border); background:var(--le-surface); padding:12px 14px; }
   .lei-signal-card-head { display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; }
   .lei-signal-card-head span:last-child { color:var(--le-text); font-variant-numeric:tabular-nums; }
@@ -361,24 +348,20 @@ const leStyles = `
   .lei-signal-metrics { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; padding-top:10px; border-top:1px solid var(--le-border); }
   .lei-signal-metrics span { font-size:10px; color:var(--le-text-dim); text-transform:uppercase; letter-spacing:0.04em; font-variant-numeric:tabular-nums; }
 
-  /* MAP */
   .lei-map-container { background:#090D12; border:1px solid var(--le-border); position:relative; overflow:hidden; margin-top:8px; }
   .lei-map-open-link { position:absolute; top:8px; left:10px; font-size:9px; color:var(--le-blue); letter-spacing:0.08em; text-transform:uppercase; cursor:pointer; text-decoration:none; z-index:10; background:rgba(13,17,23,0.7); padding:2px 6px; }
   .lei-map-open-link:hover { text-decoration:underline; }
 
-  /* CUSTODY */
   .lei-custody-entry { border:1px solid var(--le-border); padding:10px 12px; margin-bottom:8px; background:var(--le-surface); }
   .lei-custody-action { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--le-text); }
   .lei-custody-meta { font-size:10px; color:var(--le-text-dim); margin-top:3px; font-variant-numeric:tabular-nums; }
 
-  /* TOAST */
   .lei-toast-stack { position:fixed; bottom:24px; right:24px; z-index:9999; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
   .lei-toast { min-width:260px; max-width:400px; padding:10px 14px; font-size:11px; font-family:'Plus Jakarta Sans',sans-serif; font-weight:600; letter-spacing:0.04em; border:1px solid; pointer-events:auto; }
   .lei-toast.success { border-color:rgba(48,164,108,0.4); background:rgba(48,164,108,0.08); color:var(--le-green); }
   .lei-toast.error { border-color:rgba(229,72,77,0.4); background:rgba(229,72,77,0.08); color:var(--le-red); }
   .lei-toast.warning { border-color:rgba(245,166,35,0.4); background:rgba(245,166,35,0.08); color:var(--le-amber); }
 
-  /* CLOSED */
   .lei-closed-wrap { padding:24px; overflow-y:auto; flex:1; }
   .lei-closed-table { width:100%; border-collapse:collapse; }
   .lei-closed-table th { text-align:left; font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--le-muted); padding:10px 14px; border-bottom:1px solid var(--le-border); background:var(--le-surface); }
@@ -386,10 +369,8 @@ const leStyles = `
   .lei-closed-table tr:hover td { background:rgba(255,255,255,0.02); }
   .lei-closed-title { font-size:13px; font-weight:600; color:var(--le-text); margin-bottom:2px; }
 
-  /* SELECT PROMPT */
   .lei-select-prompt { display:flex; align-items:center; justify-content:center; height:100%; font-size:11px; color:var(--le-muted); letter-spacing:0.06em; text-transform:uppercase; }
 
-  /* OPS MAP */
   .lei-ops-map-header { padding:14px 20px; border-bottom:1px solid var(--le-border); background:var(--le-surface); flex-shrink:0; }
   .lei-ops-map-title { font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--le-text); }
   .lei-ops-map-sub { font-size:11px; color:var(--le-text-dim); margin-top:3px; }
@@ -410,7 +391,6 @@ const leStyles = `
   .lei-evidence-video-action { width:100%; padding:8px 10px; border:0; border-top:1px solid var(--le-border); background:transparent; color:var(--le-blue); font-family:'Plus Jakarta Sans',sans-serif; font-size:10px; font-weight:800; text-align:left; text-transform:uppercase; cursor:pointer; }
   .lei-evidence-video-action:hover { background:rgba(59,158,255,0.06); }
 
-  /* MOBILE SUB-BAR (back + detail/messages tabs) */
   .lei-mobile-subbar { display:flex; align-items:center; gap:8px; height:48px; padding:0 12px; background:var(--le-surface); border-bottom:1px solid var(--le-border); flex-shrink:0; }
   .lei-mobile-back { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; font-size:11px; font-weight:700; letter-spacing:0.03em; text-transform:uppercase; color:var(--le-text-dim); background:none; border:1px solid var(--le-border2); cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; }
   .lei-mobile-back:hover { color:var(--le-text); }
@@ -419,12 +399,10 @@ const leStyles = `
   .lei-mobile-tabs button:first-child { border-right:0; }
   .lei-mobile-tabs button.active { color:var(--le-blue); background:rgba(59,158,255,0.08); border-color:var(--le-blue); }
 
-  /* RESPONSIVE: tablet */
   @media (max-width: 1023px) {
     .lei-meta-grid { grid-template-columns: 1fr 1fr; }
   }
 
-  /* RESPONSIVE: mobile */
   @media (max-width: 767px) {
     .lei-topbar { padding: 0 6px; height: 52px; }
     .lei-topbar-title { display: none; }

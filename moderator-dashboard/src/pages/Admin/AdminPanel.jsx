@@ -194,7 +194,6 @@ function AdminPanel() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Topbar */}
       <div className="flex-shrink-0 border-b border-border bg-card px-4 sm:px-6 min-h-[61px] py-2 sm:py-0 flex flex-col justify-center">
         <div className="flex items-center gap-2 sm:gap-3 mb-0.5 flex-wrap">
           <ShieldCheck size={20} className="text-primary flex-shrink-0" />
@@ -210,7 +209,6 @@ function AdminPanel() {
         </p>
       </div>
 
-      {/* Toast */}
       {actionError || actionMessage ? (
         <div
           className={`flex-shrink-0 mx-6 mt-3 px-4 py-2.5 text-xs font-semibold border ${
@@ -223,7 +221,6 @@ function AdminPanel() {
         </div>
       ) : null}
 
-      {/* Tab bar */}
       <div className="flex-shrink-0 flex border-b border-border bg-card px-4 sm:px-6">
         <button onClick={() => setActiveTab('applications')} className={tabClassName('applications')}>
           <UserCheck size={13} />
@@ -240,7 +237,6 @@ function AdminPanel() {
         </button>
       </div>
 
-      {/* Content */}
       <div className="flex-1 overflow-hidden flex flex-col min-h-0 px-4 sm:px-6 pt-4 sm:pt-5 pb-5">
       {activeTab === 'applications' ? (
         <ApplicationsTab

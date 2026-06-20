@@ -28,7 +28,6 @@ function ReportList({
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Sticky header */}
       <div className="flex items-center gap-3 px-4 py-3 bg-surface/60 backdrop-blur-sm border-b border-border sticky top-0 z-10">
         <input
           type="checkbox"
@@ -43,7 +42,6 @@ function ReportList({
         <span className="text-[11px] font-semibold text-muted uppercase tracking-wider w-16 text-right">Age</span>
       </div>
 
-      {/* Scrollable body */}
       <div className="overflow-y-auto flex-1">
         {reports.map((report) => {
           const isSelected = report.id === selectedReportId
@@ -70,12 +68,10 @@ function ReportList({
                 />
               </div>
 
-              {/* ID */}
               <div className="w-12 flex-shrink-0">
                 <span className="text-xs text-muted tabular-nums">#{report.id}</span>
               </div>
 
-              {/* Report info */}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-text leading-snug truncate">
                   {unreadReportIds?.has(String(report.id)) ? (
@@ -103,12 +99,10 @@ function ReportList({
                 </div>
               </div>
 
-              {/* Severity */}
               <div className="w-12 flex justify-center flex-shrink-0">
                 <SeverityBadge severity={report.severity} display="initial" />
               </div>
 
-              {/* Age */}
               <div className="w-16 text-right flex-shrink-0">
                 <span className="text-xs text-muted tabular-nums">{getTimeAgo(report.createdAt)}</span>
               </div>

@@ -53,7 +53,6 @@ export const SETTINGS_CSS = `
   .st-desc { font-size:11px; font-weight:500; color:var(--color-text-muted); line-height:1.5; }
   .st-ctrl { flex-shrink:0; display:flex; align-items:center; gap:10px; }
 
-  /* Square Toggle */
   .sq-wrap { position:relative; width:38px; height:20px; cursor:pointer; flex-shrink:0; }
   .sq-wrap input { opacity:0; width:0; height:0; position:absolute; }
   .sq-track {
@@ -174,7 +173,6 @@ export const SETTINGS_CSS = `
   .st-col-row { display:flex; flex-direction:column; gap:8px; padding:14px 18px; }
   .st-col-row+.st-col-row { border-top:1px solid var(--color-border); }
 
-  /* RESPONSIVE: mobile */
   @media (max-width: 767px) {
     .st-topbar { padding:0 16px; height:52px; }
     .st-body { flex-direction:column; }

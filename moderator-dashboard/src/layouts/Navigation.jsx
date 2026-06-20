@@ -63,8 +63,6 @@ function NavItem({ path, label, icon: Icon, active, collapsed, mobile, onNavigat
   )
 }
 
-// Expanded-sidebar parent with an accordion of sub-sections. The label area
-// navigates to the base route; the chevron toggles the submenu independently.
 function ExpandableNavItem({
   path,
   label,
@@ -183,20 +181,15 @@ function Navigation({ collapsed, onToggle, mobile = false, onNavigate }) {
   const { logout, user } = useAuth()
   const location = useLocation()
 
-  // The mobile drawer always shows the expanded layout regardless of the
-  // desktop collapse preference.
   const isCollapsed = mobile ? false : collapsed
   const isActive = (path) => location.pathname === path
 
-  // Per-parent expand overrides; when unset, a parent is open iff it's the
-  // active route (so the current section's sub-items are visible by default).
   const [openOverrides, setOpenOverrides] = useState({})
   const isOpen = (path) => openOverrides[path] ?? isActive(path)
   const toggleOpen = (path) =>
     setOpenOverrides((prev) => ({ ...prev, [path]: !isOpen(path) }))
 
-  // Collapsed-rail flyout state.
-  const [flyout, setFlyout] = useState(null) // { path, top, left }
+  const [flyout, setFlyout] = useState(null)
   const closeTimer = useRef(null)
 
   const cancelClose = () => {
@@ -216,7 +209,6 @@ function Navigation({ collapsed, onToggle, mobile = false, onNavigate }) {
     setFlyout(null)
   }
 
-  // Drop any open flyout when collapsing/expanding, and clear the timer on unmount.
   useEffect(() => {
     setFlyout(null)
   }, [isCollapsed])
@@ -305,7 +297,6 @@ function Navigation({ collapsed, onToggle, mobile = false, onNavigate }) {
           : `hidden lg:flex flex-shrink-0 ${isCollapsed ? 'w-[60px]' : 'w-56'}`
       }`}
     >
-      {/* Logo + collapse/close button */}
       <div className={`flex items-center border-b border-border flex-shrink-0 h-[61px] ${isCollapsed ? 'justify-center px-0' : 'px-4 gap-2.5 justify-between'}`}>
         {!isCollapsed && (
           <div className="flex items-center gap-2.5 min-w-0">
@@ -328,7 +319,6 @@ function Navigation({ collapsed, onToggle, mobile = false, onNavigate }) {
         </button>
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-1">
         <NavSection label="Navigation" collapsed={isCollapsed} />
         {navGroup.map(renderNavItem)}
@@ -337,7 +327,6 @@ function Navigation({ collapsed, onToggle, mobile = false, onNavigate }) {
         {opsGroup.map(renderNavItem)}
       </nav>
 
-      {/* Logout */}
       <div className={`border-t border-border flex-shrink-0 ${isCollapsed ? 'py-1' : 'p-3'}`}>
         <button
           onClick={() => { onNavigate?.(); logout() }}

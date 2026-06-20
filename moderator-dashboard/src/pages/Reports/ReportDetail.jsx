@@ -22,7 +22,6 @@ import {
   isReportWithinActivationWindow,
 } from "./reportStatusRules";
 
-// Bordered kbd chip — used in header action buttons and empty state
 function KbdChip({ label, style }) {
   return (
     <kbd
@@ -101,8 +100,6 @@ function CommunitySignalCard({ constellation }) {
   );
 }
 
-// Renders the witness-constellation results once one is active, otherwise a
-// moderator CTA to open one for this report.
 function WitnessConstellationSection({
   constellation,
   hasCoordinates,
@@ -541,7 +538,6 @@ function ReportDetail({
 
   return (
     <div className="flex flex-col h-full bg-card overflow-hidden">
-      {/* ── Header: title + action buttons (Escalate / Reject / Next) ── */}
       <div className="flex-shrink-0 min-h-[52px] px-5 py-2 flex flex-wrap items-center gap-2 bg-surface border-b border-border">
         <h2 className="flex-1 min-w-[180px] text-sm font-extrabold text-text uppercase tracking-wide leading-snug line-clamp-2 text-balance">
           {report.title}
@@ -561,7 +557,6 @@ function ReportDetail({
             </button>
           ) : null}
 
-          {/* Escalate — hover → success */}
           <button
             onClick={onVerify}
             disabled={verifyPending || !canVerify}
@@ -573,7 +568,6 @@ function ReportDetail({
             <KbdChip label="E" /> {verifyPending ? "Escalating…" : "Escalate"}
           </button>
 
-          {/* Reject — hover → danger */}
           <button
             onClick={onReject}
             disabled={rejectPending || !canReject}
@@ -585,7 +579,6 @@ function ReportDetail({
             <KbdChip label="R" /> {rejectPending ? "Rejecting…" : "Reject"}
           </button>
 
-          {/* Merge — fold this report into another as a duplicate */}
           <button
             onClick={() => setMergeOpen(true)}
             disabled={report.status === "merged"}
@@ -595,7 +588,6 @@ function ReportDetail({
               border border-border text-muted bg-transparent transition-colors
               hover:border-primary hover:text-primary disabled:opacity-40"
           >
-            {/* h-5 matches the KbdChip height on Escalate/Reject so all three align */}
             <span className="inline-flex h-5 items-center">
               <GitMerge size={13} />
             </span>
@@ -604,9 +596,7 @@ function ReportDetail({
         </div>
       </div>
 
-      {/* ── Scrollable content column ── */}
       <div className="flex-1 overflow-y-auto p-5 space-y-5">
-        {/* Badges row — plain bordered chips */}
         <div className="flex items-center gap-2 flex-wrap">
           <StatusBadge
             status={report.status}
@@ -619,7 +609,6 @@ function ReportDetail({
           <SeverityBadge severity={report.severity} display="initial" />
         </div>
 
-        {/* Description */}
         {report.description && (
           <p className="text-sm text-muted leading-relaxed border-l-2 border-border pl-3.5">
             {report.description}
@@ -632,7 +621,6 @@ function ReportDetail({
           onOpenMedia={setFullscreenPhoto}
         />
 
-        {/* Meta grid — condensed border-box style matching LE Interface */}
         <div className="grid grid-cols-2 border border-border">
           <div className="p-3 border-r border-b border-border">
             <p className="text-[9px] font-bold uppercase tracking-[0.05em] text-muted mb-1">
@@ -669,7 +657,6 @@ function ReportDetail({
           </div>
         </div>
 
-        {/* Map */}
         <DetailSection
           title="Location"
           headerRight={
@@ -709,7 +696,6 @@ function ReportDetail({
           onActivate={onActivateConstellation}
         />
 
-        {/* ML Insights */}
         <DetailSection
           title="ML Insights"
           headerRight={
@@ -778,7 +764,6 @@ function ReportDetail({
           onRetry={onRetryMediaJudgment}
         />
 
-        {/* Dedup candidates */}
         <DedupCandidatesPanel
           dedup={dedupData}
           isLoading={isDedupLoading}

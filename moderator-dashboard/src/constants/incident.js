@@ -1,8 +1,3 @@
-// ES Module wrapper for shared incident constants
-// This avoids CommonJS/ESM interop issues in the Vite build
-
-// Badge token name → CSS variable prefix (--color-badge-{name}-bg / text / border)
-// Light-mode fallback colors inline; dark-mode picks up the CSS variables automatically.
 export const STATUS_COLORS = {
   submitted: 'badge-yellow',
   in_review: 'badge-blue',
@@ -23,7 +18,6 @@ export const STATUS_COLORS = {
   default: 'badge-gray',
 };
 
-// Light-mode fallback inline styles for each badge token
 export const BADGE_LIGHT_STYLES = {
   'badge-yellow': { bg: '#fef9c3', text: '#854d0e', border: '#fde68a' },
   'badge-green': { bg: '#dcfce7', text: '#166534', border: '#bbf7d0' },

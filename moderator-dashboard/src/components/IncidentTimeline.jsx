@@ -132,9 +132,7 @@ const IncidentTimeline = ({ incidentId, allowInternal = true }) => {
     if (isSystemMessage) {
       return (
         <div key={index} className="relative flex gap-3 pb-5">
-          {/* Vertical connector */}
           {!isLast && <div className="absolute left-[8px] top-[18px] bottom-0 w-px bg-border" />}
-          {/* Muted system dot */}
           <div className="size-[18px] rounded-full border border-border bg-surface flex-shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0 pt-0.5">
             <p className="text-[11px] text-muted italic leading-snug">{getSystemMessage(item)}</p>
@@ -144,7 +142,6 @@ const IncidentTimeline = ({ incidentId, allowInternal = true }) => {
       )
     }
 
-    // Internal notes → amber; public replies → primary blue
     const dotClass = isItemInternal
       ? 'bg-warning/20 border-warning/40'
       : 'bg-primary/20 border-primary/40'
@@ -207,7 +204,6 @@ const IncidentTimeline = ({ incidentId, allowInternal = true }) => {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Thread area */}
       <div className="flex-1 overflow-y-auto px-4 py-4">
         {timeline.length === 0 ? (
           <div className="flex items-center justify-center h-full">
@@ -221,9 +217,7 @@ const IncidentTimeline = ({ incidentId, allowInternal = true }) => {
         )}
       </div>
 
-      {/* Composer — bordered tab toggle matching Reports Queue design */}
       <div className="border-t border-border bg-card flex-shrink-0 p-3">
-        {/* Tab switcher */}
         {allowInternal && (
         <div className="flex mb-2">
           <button

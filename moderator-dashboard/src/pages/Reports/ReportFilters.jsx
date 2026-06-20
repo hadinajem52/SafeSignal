@@ -2,8 +2,6 @@ import { Clock, Search, Zap } from 'lucide-react'
 import { SUBNAV } from '../../constants/subnav'
 import { ROUTES } from '../../constants/routes'
 
-// Shared with the sidebar sub-navigation so the in-page tabs and the sidebar
-// can't drift apart.
 const STATUS_TABS = SUBNAV[ROUTES.REPORTS].items
 
 function ReportFilters({
@@ -23,10 +21,7 @@ function ReportFilters({
 }) {
   return (
     <div className="bg-surface border-b border-border flex-shrink-0">
-      {/* Single-row toolbar — search · filter tabs · sort btns · [bulk actions] · count */}
       <div className="px-4 h-[46px] flex items-center gap-0 overflow-x-auto">
-
-        {/* Search */}
         <div className="relative flex-shrink-0 mr-4">
           <Search
             className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none"
@@ -42,7 +37,6 @@ function ReportFilters({
           />
         </div>
 
-        {/* Status filter tabs — flat bordered chips, no bg fill on active */}
         <div className="flex flex-shrink-0">
           {STATUS_TABS.map((tab, idx) => (
             <button
@@ -61,7 +55,6 @@ function ReportFilters({
           ))}
         </div>
 
-        {/* Sort buttons — bordered pair, no primary-color glow */}
         <div className="flex flex-shrink-0 ml-2">
           <button
             onClick={() => onSortModeChange('urgency')}
@@ -85,7 +78,6 @@ function ReportFilters({
           </button>
         </div>
 
-        {/* Bulk actions — only visible when rows are checked */}
         {selectedCount > 0 && (
           <div className="flex items-center gap-2 ml-3 flex-shrink-0">
             <div className="h-4 w-px bg-border" />
@@ -111,7 +103,6 @@ function ReportFilters({
           </div>
         )}
 
-        {/* Report count — pushed right */}
         <span className="ml-auto pl-4 text-[11px] font-semibold text-muted tabular-nums whitespace-nowrap flex-shrink-0">
           {totalResults} report{totalResults !== 1 ? 's' : ''}
         </span>

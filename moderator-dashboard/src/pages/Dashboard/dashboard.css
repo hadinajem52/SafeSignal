@@ -116,7 +116,6 @@ border-bottom: 1px solid var(--border, #1C2430); align-items: flex-start;
 
 .dash-bottom-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 20px; }
 
-/* Cards fill the row height and distribute their rows evenly */
 .dash-bottom-row .dash-card { display: flex; flex-direction: column; }
 .dash-bottom-row .dash-mini-table { flex: 1; height: 100%; }
 .dash-bottom-row .dash-bar-chart,

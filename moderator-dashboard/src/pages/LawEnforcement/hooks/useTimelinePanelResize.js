@@ -20,7 +20,6 @@ export default function useTimelinePanelResize({
 
   const clampWidth = useCallback(
     (nextWidth, containerWidth) => {
-      // Two splitters are in play (queue + this one).
       const available = containerWidth - queueWidth - splitterWidth * 2;
       if (available <= 0) return nextWidth;
       const maxFromLayout = Math.max(minWidth, available - minDetailWidth);
@@ -48,8 +47,8 @@ export default function useTimelinePanelResize({
       if (!containerRef.current) return;
       const step = event.shiftKey ? 40 : 16;
       let direction = 0;
-      if (event.key === "ArrowLeft") direction = 1; // grow the panel
-      if (event.key === "ArrowRight") direction = -1; // shrink the panel
+      if (event.key === "ArrowLeft") direction = 1;
+      if (event.key === "ArrowRight") direction = -1;
       if (!direction) return;
       event.preventDefault();
       const containerWidth = containerRef.current.getBoundingClientRect().width;
@@ -71,7 +70,6 @@ export default function useTimelinePanelResize({
       }
       const containerWidth = containerRef.current.getBoundingClientRect().width;
       const deltaX = event.clientX - drag.startX;
-      // Splitter is on the left edge → dragging left (negative delta) grows it.
       setPanelWidth(clampWidth(drag.startWidth - deltaX, containerWidth));
     };
 

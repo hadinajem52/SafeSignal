@@ -31,12 +31,10 @@ function Layout({ children }) {
     });
   };
 
-  // Close the mobile drawer whenever the route changes.
   useEffect(() => {
     setMobileNavOpen(false);
   }, [location.pathname]);
 
-  // Prevent body scroll behind the open mobile drawer.
   useEffect(() => {
     if (!mobileNavOpen) return;
     const previous = document.body.style.overflow;
@@ -66,10 +64,8 @@ function Layout({ children }) {
 
   return (
     <div className="flex h-dvh bg-bg">
-      {/* Desktop sidebar (hidden below lg) */}
       <Navigation collapsed={sidebarCollapsed} onToggle={handleSidebarToggle} />
 
-      {/* Mobile drawer + backdrop (hidden at lg and up) */}
       <div
         className={`lg:hidden fixed inset-0 z-40 bg-black/50 transition-opacity duration-200 ${
           mobileNavOpen ? "opacity-100" : "pointer-events-none opacity-0"
@@ -90,7 +86,6 @@ function Layout({ children }) {
       </div>
 
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Mobile top bar with hamburger (hidden at lg and up) */}
         <header
           className="lg:hidden flex-shrink-0 flex items-center gap-3 h-14 px-3 bg-card border-b border-border"
           style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}

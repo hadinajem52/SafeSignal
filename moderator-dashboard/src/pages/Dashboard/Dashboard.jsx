@@ -9,7 +9,6 @@ import { CAT_COLORS } from "../../constants/categoryConfig";
 import { getConstellationMarkerStyle } from "../../utils/constellationUtils";
 import "./dashboard.css";
 
-/* ─── SVG icons ──────────────────────────────────────────────────────────── */
 const IC = {
   report: (
     <svg
@@ -133,7 +132,6 @@ const IC = {
     </svg>
   ),
 };
-/* ─── Feed classifier ────────────────────────────────────────────────────── */
 function incidentToFeedItem(incident) {
   const st = incident.status;
   const cfg = getStatusCfg(st);
@@ -156,7 +154,6 @@ function incidentToFeedItem(incident) {
   };
 }
 
-/* ─── Dashboard ──────────────────────────────────────────────────────────── */
 function Dashboard() {
   const {
     data: stats,
@@ -185,7 +182,6 @@ function Dashboard() {
     },
   });
 
-  /* ── Derived data ──────────────────────────────────────────────────── */
   const mapMarkers = useMemo(() => {
     const active = new Set([
       "submitted",
@@ -277,7 +273,6 @@ function Dashboard() {
     [stats],
   );
 
-  /* ── States ────────────────────────────────────────────────────────── */
   if (isLoading) return <LoadingState />;
 
   if (isError) {
@@ -316,7 +311,6 @@ function Dashboard() {
 
   return (
     <>
-      {/* ── Reports Overview ─────────────────────────────────────────── */}
       <div className="dash-section-row">
         <div className="dash-section-title">Reports Overview</div>
         <div className="dash-section-line" />
@@ -376,7 +370,6 @@ function Dashboard() {
         ))}
       </div>
 
-      {/* ── User Overview ────────────────────────────────────────────── */}
       <div className="dash-section-row">
         <div className="dash-section-title">User Overview</div>
         <div className="dash-section-line" />
@@ -436,7 +429,6 @@ function Dashboard() {
         ))}
       </div>
 
-      {/* ── Operational Map ──────────────────────────────────────────── */}
       <div className="dash-section-row">
         <div className="dash-section-title">Operational Map</div>
         <div className="dash-section-line" />
@@ -446,7 +438,6 @@ function Dashboard() {
       </div>
 
       <div className="dash-two-col">
-        {/* Map */}
         <div className="dash-card">
           <div className="dash-card-header">
             <div className="dash-card-title">Live Incident Map</div>
@@ -461,7 +452,6 @@ function Dashboard() {
           />
         </div>
 
-        {/* Activity Feed */}
         <div
           className="dash-card"
           style={{ display: "flex", flexDirection: "column" }}
@@ -502,14 +492,12 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* ── Breakdown ────────────────────────────────────────────────── */}
       <div className="dash-section-row">
         <div className="dash-section-title">Breakdown</div>
         <div className="dash-section-line" />
       </div>
 
       <div className="dash-bottom-row">
-        {/* Recent Reports */}
         <div className="dash-card">
           <div className="dash-card-header">
             <div className="dash-card-title">Recent Reports</div>
@@ -577,7 +565,6 @@ function Dashboard() {
           </table>
         </div>
 
-        {/* Category Breakdown */}
         <div className="dash-card">
           <div className="dash-card-header">
             <div className="dash-card-title">By Category</div>
@@ -605,7 +592,6 @@ function Dashboard() {
           </div>
         </div>
 
-        {/* Top Reporters */}
         <div className="dash-card">
           <div className="dash-card-header">
             <div className="dash-card-title">Top Reporters</div>

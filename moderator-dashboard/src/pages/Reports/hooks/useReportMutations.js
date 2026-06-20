@@ -126,9 +126,6 @@ export function useReportMutations({
     [linkDuplicateMutation, normalizeReport, pushToast, queryClient, reportsAPI, selectedReport?.id, selectedReport?.status, setSelectedReport],
   );
 
-  // Manual merge: fold the report currently being reviewed INTO a target report.
-  // The viewed report becomes the duplicate (status 'merged'); the target stays
-  // canonical. Returns true on success so the caller can close its dialog.
   const onMergeInto = useCallback(
     async (targetIncidentId) => {
       if (!selectedReport?.id) return false;
@@ -143,8 +140,8 @@ export function useReportMutations({
       }
       const mergedId = selectedReport.id;
       const result = await linkDuplicateMutation.mutateAsync({
-        reportId: target, // canonical / parent
-        duplicateIncidentId: mergedId, // becomes 'merged'
+        reportId: target,
+        duplicateIncidentId: mergedId,
       });
       if (!result.success) {
         pushToast(result.error || "Failed to merge report.", "error");
@@ -203,17 +200,12 @@ export function useReportMutations({
 
   const onActivateConstellation = useCallback(async () => {
     if (!selectedReport?.id) return;
-    // The backend is the source of truth for whether activation is allowed
-    // (status, duplicate-active, etc.); surface its rejection rather than guessing
-    // from possibly-stale selected-report state.
     const reportId = selectedReport.id;
     const result = await activateConstellationMutation.mutateAsync(reportId);
     if (!result.success) {
       pushToast(result.error || "Failed to activate witness prompts.", "error");
       return;
     }
-    // Surface the freshly created constellation immediately; the detail poll then
-    // keeps the corroboration tally live while it stays active.
     setSelectedReport((prev) =>
       prev && prev.id === reportId ? { ...prev, constellation: result.data } : prev,
     );

@@ -128,14 +128,9 @@ function IncidentDetailPane({
   const photoUrls = getReportPhotoUrls(incident);
   const videoUrl = getReportVideoUrl(incident);
   const hasMedia = photoUrls.length > 0 || Boolean(videoUrl);
-  // Surface closure/feed controls only at the final active stage (the step just
-  // before the terminal "closed" step) or once closed (for feed settings) —
-  // keeps earlier workflow stages uncluttered.
   const finalActiveStatus = WORKFLOW_STEPS[WORKFLOW_STEPS.length - 2]?.id;
   const isClosingStage = incident.status === finalActiveStatus;
   const showCloseCaseOptions = isClosingStage || isComplete;
-  // At the closing stage the closure is driven by the Close Case button below,
-  // so don't also show the generic "advance to next status" button.
   const showAdvanceAction = !isComplete && nextAction && nextStatus !== "police_closed";
   const mediaDisclosureLabel = [
     photoUrls.length ? `${photoUrls.length} photo${photoUrls.length === 1 ? "" : "s"}` : null,
