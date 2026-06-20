@@ -11,7 +11,7 @@ import useUserPreferences from "../../hooks/useUserPreferences";
 import incidentConstants from "../../../../constants/incident";
 import useIncidentFilters from "../../hooks/useIncidentFilters";
 import useMapRegion from "../../hooks/useMapRegion";
-import { AppText, MapLegend, EmptyState, EMPTY_ART } from "../../components";
+import { AppText, EmptyState, EMPTY_ART } from "../../components";
 import CategoryFilterBar from "./CategoryFilterBar";
 import IncidentMapDetail from "./IncidentMapDetail";
 import MapControls from "./MapControls";
@@ -50,7 +50,6 @@ const MapScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
-  const [showLegend, setShowLegend] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState(null);
   const [mapMode, setMapMode] = useState(MAP_MODES.ACTIVE);
   const [showMapHint, setShowMapHint] = useState(true);
@@ -447,7 +446,6 @@ const MapScreen = () => {
 
       {!showList ?
       <MapControls
-        onShowLegend={() => setShowLegend(true)}
         onMyLocation={goToMyLocation}
         onResetRegion={resetToDefaultRegion}
         onRefresh={() => fetchIncidents(true)}
@@ -480,12 +478,6 @@ const MapScreen = () => {
           </View>
         </View> :
       null}
-
-      <MapLegend
-        visible={showLegend}
-        onClose={() => setShowLegend(false)}
-        categoryDisplay={CATEGORY_DISPLAY} />
-
 
       <IncidentMapDetail
         selectedIncident={selectedIncident}

@@ -6,7 +6,6 @@ import { useTheme } from '../../context/ThemeContext';
 import styles from './mapStyles';
 
 const MapControls = ({
-  onShowLegend,
   onMyLocation,
   onResetRegion,
   onRefresh,
@@ -19,10 +18,6 @@ const MapControls = ({
   return (
     <>
       <View style={styles.fabContainer}>
-        <TouchableOpacity style={[styles.fab, { backgroundColor: `${theme.card}dd`, borderColor: theme.border }]} onPress={onShowLegend}>
-          <Ionicons name="information-circle" size={24} color={theme.mapMarkerDefault} />
-        </TouchableOpacity>
-
         <TouchableOpacity
           style={[styles.fab, { backgroundColor: `${theme.card}dd`, borderColor: theme.border }]}
           onPress={onMyLocation}
