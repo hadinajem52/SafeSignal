@@ -44,10 +44,6 @@ const MapScreen = () => {
   const { preferences } = useUserPreferences();
   const mapRef = useRef(null);
   const activeRequestId = useRef(0);
-
-
-
-
   const lastRegionRef = useRef(DEFAULT_REGION);
 
   const [incidents, setIncidents] = useState([]);
@@ -102,7 +98,6 @@ const MapScreen = () => {
 
         let result;
         if (mapMode === MAP_MODES.ACTIVE) {
-
           const params = {
             timeframe: selectedTimeframe === 'all' ? '30d' : selectedTimeframe,
             includeConstellation: true
@@ -117,7 +112,6 @@ const MapScreen = () => {
           do {
             const page = await feedAPI.getPublicFeed({
               category: selectedCategory || undefined,
-
               timeframe: selectedTimeframe === 'all' ? undefined : selectedTimeframe,
               limit: RESOLVED_PAGE_SIZE,
               offset
@@ -151,8 +145,6 @@ const MapScreen = () => {
           setError(result.error || "Failed to load incidents");
           return;
         }
-
-
         const filteredIncidents = result.incidents.filter((incident) => {
           const latitude = Number(incident?.location?.latitude);
           const longitude = Number(incident?.location?.longitude);
@@ -249,8 +241,6 @@ const MapScreen = () => {
   const clearSelectedIncident = () => {
     setSelectedIncident(null);
   };
-
-
   const selectIncident = useCallback((incident) => {
     setSelectedIncident(incident);
   }, []);
@@ -282,9 +272,6 @@ const MapScreen = () => {
     clearSelectedIncident();
   };
 
-  // List mode is only meaningful for resolved incidents. Active map incidents are
-  // intentionally privacy-stripped by the backend (no title/severity/locationName),
-  // so there is nothing useful to list — active mode always shows the map.
   const listAvailable = mapMode === MAP_MODES.RESOLVED;
   const showList = listAvailable && viewMode === "list";
 

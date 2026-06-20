@@ -3,12 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect } from '@react-navigation/native';
 import { statsAPI } from '../services/api';
 import { useLocation, LOCATION_STATUS } from '../context/LocationContext';
-
-
 const roundCoord = (n) => Math.round(n * 1000) / 1000;
-
-// Matches the 1 km area-insights window so Active Nearby and the safety score
-// reflect the same neighborhood scope (wider than the 0.5 km service default).
 const DASHBOARD_NEARBY_RADIUS_KM = 1;
 
 const useDashboardData = () => {
@@ -21,14 +16,10 @@ const useDashboardData = () => {
     preferencesLoading,
     refresh,
   } = useLocation();
-
-
   const roundedLat = coords ? roundCoord(coords.latitude) : undefined;
   const roundedLng = coords ? roundCoord(coords.longitude) : undefined;
   const hasCoords = locationStatus === LOCATION_STATUS.AVAILABLE && Boolean(coords);
   const queryKey = ['dashboard', locationStatus, roundedLat, roundedLng];
-
-
 
   useFocusEffect(
     useCallback(() => {
@@ -45,7 +36,6 @@ const useDashboardData = () => {
     }
     throw new Error(result.error || 'Failed to load dashboard data');
   }, [hasCoords, roundedLat, roundedLng]);
-
   const {
     data: dashboardData,
     isLoading,
@@ -56,8 +46,6 @@ const useDashboardData = () => {
     queryFn,
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
-
-
     enabled: !preferencesLoading,
   });
 

@@ -33,7 +33,7 @@ const AuthHeader = ({
   useEffect(() => {
     if (reduceMotion) {
       halo.stopAnimation();
-      halo.setValue(0); // keep the halo invisible/static when reduced motion is on
+      halo.setValue(0);
       return undefined;
     }
     const haloLoop = Animated.loop(

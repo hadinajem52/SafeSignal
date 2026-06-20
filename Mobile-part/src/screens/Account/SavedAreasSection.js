@@ -105,9 +105,7 @@ const SavedAreasSection = () => {
           selection = { latitude, longitude };
         }
       }
-    } catch {
-      // fall back to the default region
-    }
+    } catch {}
     setMapRegion(region);
     setMapSelection(selection);
     setMapVisible(true);

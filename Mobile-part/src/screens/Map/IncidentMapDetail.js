@@ -21,10 +21,6 @@ const IncidentMapDetail = ({
   const tabBarHeight = useBottomTabBarHeight();
   const translateY = useRef(new Animated.Value(280)).current;
   const opacity = useRef(new Animated.Value(0)).current;
-  // Keep the last incident on screen while the sheet animates out, so the close
-  // (slide-down + fade) actually plays before the component unmounts. Without this
-  // the parent clears selectedIncident, we return null immediately, and the exit
-  // animation never runs (the sheet just vanishes).
   const [renderedIncident, setRenderedIncident] = useState(selectedIncident);
 
   useEffect(() => {
@@ -74,7 +70,6 @@ const IncidentMapDetail = ({
             backgroundColor: theme.card,
             borderColor: theme.border,
             shadowColor: theme.shadow,
-            // Extra clearance so the centered "+" tab FAB (it overhangs the bar) never covers the button
             paddingBottom: tabBarHeight + 44,
             transform: [{ translateY }],
           },
@@ -100,7 +95,6 @@ const IncidentMapDetail = ({
           ) : null}
         </View>
 
-        {/* Resolved mode: full details including optional closure fields */}
         {showResolvedDetails ? (
           <>
             <AppText variant="h4" style={[mapStyles.detailTitle, { color: theme.text }]}>

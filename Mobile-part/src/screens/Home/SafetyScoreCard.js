@@ -7,8 +7,6 @@ import { useTheme } from '../../context/ThemeContext';
 import { fontFamilies } from '../../../../constants/typography';
 import styles from './homeStyles';
 
-// Non-editable animated TextInput: the supported way to animate displayed text on
-// the UI thread (Reanimated drives the `text` prop) without re-rendering per frame.
 const AnimatedTextInput = Reanimated.createAnimatedComponent(TextInput);
 
 const getSafetyScoreColor = (theme, score) => {
@@ -61,7 +59,6 @@ const SafetyScoreCard = ({ safetyScore, location, unavailableReason, ctaLabel, o
     ]).start();
   }, [enterAnim, opacityAnim]);
 
-  // Score count-up, driven on the UI thread (no per-tick React re-render).
   const targetScore = normalizeScore(safetyScore?.score);
   const animatedScore = useSharedValue(0);
   useEffect(() => {
