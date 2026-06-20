@@ -123,23 +123,8 @@ const homeStyles = StyleSheet.create({
   safetyInfo: {
     flex: 1,
   },
-  scoreLabelPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 999,
+  scoreLabelBadge: {
     marginBottom: 8,
-  },
-  scoreLabelDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 999,
-    marginRight: 6,
-  },
-  scoreLabelText: {
-    letterSpacing: 0.2,
   },
   safetyDescription: {
     lineHeight: 21,

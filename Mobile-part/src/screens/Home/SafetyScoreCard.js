@@ -2,17 +2,17 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, TextInput, View } from 'react-native';
 import Reanimated, { Easing, useAnimatedProps, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { AppText, Button, Card } from '../../components';
+import { AppText, Badge, Button, Card } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import { fontFamilies } from '../../../../constants/typography';
 import styles from './homeStyles';
 
 const AnimatedTextInput = Reanimated.createAnimatedComponent(TextInput);
 
-const getSafetyScoreColor = (theme, score) => {
-  if (score >= 80) return theme.safetyGood;
-  if (score >= 60) return theme.safetyModerate;
-  return theme.safetyPoor;
+const getSafetyScorePresentation = (theme, score) => {
+  if (score >= 80) return { color: theme.safetyGood, icon: 'shield-checkmark-outline' };
+  if (score >= 60) return { color: theme.safetyModerate, icon: 'alert-circle-outline' };
+  return { color: theme.safetyPoor, icon: 'warning-outline' };
 };
 
 const normalizeScore = (score) => {
@@ -95,7 +95,7 @@ const SafetyScoreCard = ({ safetyScore, location, unavailableReason, ctaLabel, o
   }
 
   const score = normalizeScore(safetyScore.score);
-  const scoreColor = getSafetyScoreColor(theme, score);
+  const { color: scoreColor, icon: scoreIcon } = getSafetyScorePresentation(theme, score);
   const safetyNote = buildSafetyNote(safetyScore);
 
   return (
@@ -135,12 +135,12 @@ const SafetyScoreCard = ({ safetyScore, location, unavailableReason, ctaLabel, o
           </View>
 
           <View style={styles.safetyInfo}>
-            <View style={[styles.scoreLabelPill, { backgroundColor: `${scoreColor}1f` }]}>
-              <View style={[styles.scoreLabelDot, { backgroundColor: scoreColor }]} />
-              <AppText variant="caption" style={[styles.scoreLabelText, { color: scoreColor }]}>
-                {safetyScore.label}
-              </AppText>
-            </View>
+            <Badge
+              label={safetyScore.label}
+              color={scoreColor}
+              icon={scoreIcon}
+              style={styles.scoreLabelBadge}
+            />
             <AppText variant="body" style={[styles.safetyDescription, { color: theme.text }]}>
               {safetyScore.description}
             </AppText>

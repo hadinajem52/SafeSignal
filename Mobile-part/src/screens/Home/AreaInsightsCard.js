@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { AppText, Card } from '../../components';
+import { AppText, Badge, Card } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 
 const LEVEL_CONFIG = {
@@ -97,12 +97,7 @@ const AreaInsightsCard = ({ insight, loading }) => {
       <Card style={[styles.card, { borderColor: `${theme.primary}55` }]}>
         <CardHeader
           theme={theme}
-          right={
-            <View style={[styles.levelChip, { backgroundColor: `${accent}1f` }]}>
-              <View style={[styles.levelDot, { backgroundColor: accent }]} />
-              <AppText variant="caption" style={[styles.levelText, { color: accent }]}>{level.label}</AppText>
-            </View>
-          }
+          right={<Badge label={level.label} color={accent} icon={level.icon} />}
         />
 
         <AppText variant="h5" style={[styles.headline, { color: theme.text }]}>
@@ -179,22 +174,6 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     flex: 1,
-  },
-  levelChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 999,
-  },
-  levelDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 999,
-    marginRight: 6,
-  },
-  levelText: {
-    letterSpacing: 0.2,
   },
   headline: {
     marginBottom: 6,

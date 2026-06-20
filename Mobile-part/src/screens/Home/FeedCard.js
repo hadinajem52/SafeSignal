@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 20,
     paddingHorizontal: 8,
-    paddingVertical: 3
+    paddingVertical: 5
   },
   title: {
     marginBottom: 10,
@@ -211,12 +211,12 @@ const styles = StyleSheet.create({
   outcomePill: {
     borderRadius: 20,
     paddingHorizontal: 8,
-    paddingVertical: 3
+    paddingVertical: 5
   },
   videoPill: {
     borderRadius: 20,
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 5,
     flexDirection: 'row',
     alignItems: 'center',
     marginLeft: 6
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
   seenPill: {
     borderRadius: 20,
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 5,
     flexDirection: 'row',
     alignItems: 'center',
     marginLeft: 6
