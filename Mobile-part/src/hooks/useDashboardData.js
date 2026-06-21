@@ -1,10 +1,11 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect } from '@react-navigation/native';
 import { statsAPI } from '../services/api';
 import { useLocation, LOCATION_STATUS } from '../context/LocationContext';
 const roundCoord = (n) => Math.round(n * 1000) / 1000;
 const DASHBOARD_NEARBY_RADIUS_KM = 1;
+const DASHBOARD_STALE_TIME_MS = 30 * 1000;
 
 const useDashboardData = () => {
   const queryClient = useQueryClient();
@@ -19,12 +20,22 @@ const useDashboardData = () => {
   const roundedLat = coords ? roundCoord(coords.latitude) : undefined;
   const roundedLng = coords ? roundCoord(coords.longitude) : undefined;
   const hasCoords = locationStatus === LOCATION_STATUS.AVAILABLE && Boolean(coords);
-  const queryKey = ['dashboard', locationStatus, roundedLat, roundedLng];
+  const queryKey = useMemo(
+    () => ['dashboard', locationStatus, roundedLat, roundedLng],
+    [locationStatus, roundedLat, roundedLng]
+  );
 
   useFocusEffect(
     useCallback(() => {
-      queryClient.invalidateQueries({ queryKey: ['dashboard'], refetchType: 'active' });
-    }, [queryClient])
+      const queryState = queryClient.getQueryState(queryKey);
+      const dataUpdatedAt = queryState?.dataUpdatedAt;
+
+      if (dataUpdatedAt && Date.now() - dataUpdatedAt < DASHBOARD_STALE_TIME_MS) {
+        return;
+      }
+
+      queryClient.invalidateQueries({ queryKey, refetchType: 'active' });
+    }, [queryClient, queryKey])
   );
 
   const queryFn = useCallback(async () => {
@@ -44,7 +55,7 @@ const useDashboardData = () => {
   } = useQuery({
     queryKey,
     queryFn,
-    staleTime: 30 * 1000,
+    staleTime: DASHBOARD_STALE_TIME_MS,
     gcTime: 5 * 60 * 1000,
     enabled: !preferencesLoading,
   });
