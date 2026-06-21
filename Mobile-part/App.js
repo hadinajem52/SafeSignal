@@ -4,6 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
+import { enableFreeze } from 'react-native-screens';
 import { AuthProvider } from './src/context/AuthContext';
 import { ThemeProvider } from './src/context/ThemeContext';
 import { ToastProvider } from './src/context/ToastContext';
@@ -11,6 +12,7 @@ import { PreferencesProvider } from './src/context/PreferencesContext';
 import { LocationProvider } from './src/context/LocationContext';
 import AppNavigator from './src/navigation/AppNavigator';
 
+enableFreeze(true);
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const queryClient = new QueryClient({

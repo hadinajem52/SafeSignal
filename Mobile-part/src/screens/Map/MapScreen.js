@@ -27,7 +27,11 @@ const MAP_HINT_STORAGE_KEY = "map_first_visit_hint_seen";
 const MAP_MODES = { ACTIVE: 'active', RESOLVED: 'resolved' };
 const RESOLVED_PAGE_SIZE = 100;
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+if (
+  Platform.OS === 'android' &&
+  !global.nativeFabricUIManager &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
@@ -192,10 +196,6 @@ const MapScreen = () => {
     return () => task.cancel();
   }, []);
 
-  useEffect(() => {
-    fetchIncidents();
-  }, [fetchIncidents]);
-
   const loadSavedAreas = useCallback(async () => {
     const res = await savedAreaAPI.list();
     if (res.success) {
@@ -207,7 +207,15 @@ const MapScreen = () => {
 
   useFocusEffect(
     useCallback(() => {
-      loadSavedAreas();
+      const task = InteractionManager.runAfterInteractions(() => fetchIncidents());
+      return () => task.cancel();
+    }, [fetchIncidents])
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      const task = InteractionManager.runAfterInteractions(loadSavedAreas);
+      return () => task.cancel();
     }, [loadSavedAreas])
   );
 

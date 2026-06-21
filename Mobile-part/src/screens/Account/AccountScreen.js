@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Linking, ScrollView, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, InteractionManager, Linking, ScrollView, TouchableOpacity } from 'react-native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -306,7 +306,8 @@ const AccountScreen = () => {
 
   useFocusEffect(
     useCallback(() => {
-      refreshAccessStatus();
+      const task = InteractionManager.runAfterInteractions(refreshAccessStatus);
+      return () => task.cancel();
     }, [refreshAccessStatus])
   );
 

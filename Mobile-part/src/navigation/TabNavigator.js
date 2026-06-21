@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { View, TouchableOpacity, StyleSheet, Platform, Dimensions, Easing } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Platform, Easing } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { CommonActions } from '@react-navigation/native';
@@ -19,29 +19,12 @@ import NotificationsScreen from '../screens/Notifications/NotificationsScreen';
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-
-
-
-
-
-const slideTabTransition = {
+const tabTransition = {
+  animation: 'shift',
   transitionSpec: {
     animation: 'timing',
-    config: { duration: 260, easing: Easing.out(Easing.cubic) }
-  },
-  sceneStyleInterpolator: ({ current }) => ({
-    sceneStyle: {
-      transform: [
-      {
-        translateX: current.progress.interpolate({
-          inputRange: [-1, 0, 1],
-          outputRange: [-SCREEN_WIDTH, 0, SCREEN_WIDTH]
-        })
-      }]
-
-    }
-  })
+    config: { duration: 190, easing: Easing.out(Easing.cubic) }
+  }
 };
 
 const CustomTabBarButton = ({ children, onPress, theme }) =>
@@ -58,6 +41,8 @@ const CustomTabBarButton = ({ children, onPress, theme }) =>
     </View>
   </TouchableOpacity>;
 
+
+const EmptyTabScreen = () => null;
 
 const stackScreenOptions = {
   headerShown: false,
@@ -97,7 +82,8 @@ const TabNavigator = () => {
     <Tab.Navigator
       screenListeners={{ tabPress: () => haptics.selection() }}
       screenOptions={({ route }) => ({
-        ...slideTabTransition,
+        ...tabTransition,
+        freezeOnBlur: route.name === 'Map',
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
 
@@ -153,7 +139,21 @@ const TabNavigator = () => {
 
       <Tab.Screen
         name="SubmitReport"
-        component={ReportIncidentScreen}
+        component={EmptyTabScreen}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            navigation.dispatch((state) => {
+              const routes = state.routes.map((route) =>
+              route.name === 'Reports' ?
+              { ...route, state: { index: 1, routes: [{ name: 'MyReports' }, { name: 'ReportIncident' }] } } :
+              route
+              );
+              const index = routes.findIndex((route) => route.name === 'Reports');
+              return CommonActions.reset({ ...state, routes, index });
+            });
+          }
+        })}
         options={{
           tabBarIcon: () =>
           <Ionicons name="add" size={28} color="white" style={styles.fabIcon} />,
@@ -164,7 +164,7 @@ const TabNavigator = () => {
           tabBarLabel: () => null,
           headerShown: false
         }} />
-      <Tab.Screen name="Map" component={MapScreen} options={{ freezeOnBlur: true }} />
+      <Tab.Screen name="Map" component={MapScreen} />
       <Tab.Screen name="Account" component={AccountScreen} />
     </Tab.Navigator>);
 
