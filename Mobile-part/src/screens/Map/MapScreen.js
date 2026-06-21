@@ -196,18 +196,19 @@ const MapScreen = () => {
     fetchIncidents();
   }, [fetchIncidents]);
 
+  const loadSavedAreas = useCallback(async () => {
+    const res = await savedAreaAPI.list();
+    if (res.success) {
+      setSavedAreas(res.areas);
+    } else {
+      console.warn("Failed to load saved areas:", res.error);
+    }
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
-      let active = true;
-      savedAreaAPI.list().then((res) => {
-        if (active) {
-          setSavedAreas(res.success ? res.areas : []);
-        }
-      });
-      return () => {
-        active = false;
-      };
-    }, [])
+      loadSavedAreas();
+    }, [loadSavedAreas])
   );
 
   useEffect(() => {
@@ -287,6 +288,11 @@ const MapScreen = () => {
     clearSelectedIncident();
   };
 
+  const handleRefresh = useCallback(() => {
+    fetchIncidents(true);
+    loadSavedAreas();
+  }, [fetchIncidents, loadSavedAreas]);
+
   const listAvailable = mapMode === MAP_MODES.RESOLVED;
   const showList = listAvailable && viewMode === "list";
 
@@ -312,7 +318,7 @@ const MapScreen = () => {
         categoryDisplay={CATEGORY_DISPLAY}
         onSelectIncident={selectIncident}
         refreshing={refreshing}
-        onRefresh={() => fetchIncidents(true)}
+        onRefresh={handleRefresh}
         contentPaddingTop={headerHeight + 8}
         contentPaddingBottom={tabBarHeight + 16} /> :
       canRenderMap ?
@@ -465,7 +471,7 @@ const MapScreen = () => {
       <MapControls
         onMyLocation={goToMyLocation}
         onResetRegion={resetToDefaultRegion}
-        onRefresh={() => fetchIncidents(true)}
+        onRefresh={handleRefresh}
         locationLoading={locationLoading}
         refreshing={refreshing}
         incidentsCount={incidents.length} /> :

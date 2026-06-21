@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Platform, View } from 'react-native';
 import MapView, { Callout, Circle, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import { useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
@@ -38,16 +39,17 @@ const MapCanvas = ({
 
 
   const [mapReady, setMapReady] = useState(Platform.OS !== 'android');
+  const isFocused = useIsFocused();
 
   const [tracksViewChanges, setTracksViewChanges] = useState(true);
   useEffect(() => {
     setTracksViewChanges(true);
-    if (!mapReady) {
+    if (!mapReady || !isFocused) {
       return undefined;
     }
     const timer = setTimeout(() => setTracksViewChanges(false), 900);
     return () => clearTimeout(timer);
-  }, [incidents, savedAreas, mapReady]);
+  }, [incidents, savedAreas, mapReady, isFocused]);
 
 
 
