@@ -1,18 +1,11 @@
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useReducedMotion,
-  useSharedValue,
-  withTiming } from
-'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText, SeverityBadge, IncidentIllustration } from '../../components';
 import { useTheme } from '../../context/ThemeContext';
 import useUserPreferences from '../../hooks/useUserPreferences';
 import incidentConstants from '../../../../constants/incident';
 import { formatTimeAgo } from '../../utils/dateUtils';
-import { DURATION, DISTANCE } from '../../theme/motion';
 import FeedCardMedia from './FeedCardMedia';
 
 const { CATEGORY_DISPLAY } = incidentConstants;
@@ -45,35 +38,15 @@ const FeedCard = ({ incident, onPress }) => {
   ...photoUrls.filter(Boolean).map((url) => ({ type: 'image', url })),
   ...(videoUrl ? [{ type: 'video', url: videoUrl }] : [])];
 
-
-
-
-
-
-
-  const pressed = useSharedValue(0);
-  const reduceMotion = useReducedMotion();
-  const cardStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: reduceMotion ? 1 : 1 - pressed.value * (1 - DISTANCE.press) }],
-    opacity: 1 - pressed.value * 0.05
-  }));
-  const onPressIn = () => {
-    pressed.value = withTiming(1, { duration: DURATION.micro });
-  };
-  const onPressOut = () => {
-    pressed.value = withTiming(0, { duration: DURATION.micro });
-  };
   const openDetail = () => onPress?.(incident);
 
   return (
-    <Animated.View
-      style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }, cardStyle]}
+    <View
+      style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}
     >
       <Pressable
         accessibilityRole="button"
         onPress={openDetail}
-        onPressIn={onPressIn}
-        onPressOut={onPressOut}
       >
           <View style={styles.topRow}>
             <View style={[styles.categoryChip, { backgroundColor: `${cat.mapColor}22` }]}>
@@ -104,8 +77,6 @@ const FeedCard = ({ incident, onPress }) => {
         accessibilityRole="button"
         style={styles.illustrationWrap}
         onPress={openDetail}
-        onPressIn={onPressIn}
-        onPressOut={onPressOut}
       >
           <IncidentIllustration category={incident.category} size={150} />
         </Pressable>
@@ -114,8 +85,6 @@ const FeedCard = ({ incident, onPress }) => {
       <Pressable
         accessibilityRole="button"
         onPress={openDetail}
-        onPressIn={onPressIn}
-        onPressOut={onPressOut}
       >
         <View style={styles.metaRow}>
           <View style={styles.mediaStatusRow}>
@@ -163,7 +132,7 @@ const FeedCard = ({ incident, onPress }) => {
           </AppText>
         </View>
       </Pressable>
-    </Animated.View>
+    </View>
   );
 
 };

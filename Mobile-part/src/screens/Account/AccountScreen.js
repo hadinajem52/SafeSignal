@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, InteractionManager, Linking, ScrollView, TouchableOpacity } from 'react-native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,6 +26,15 @@ import SavedAreasSection from './SavedAreasSection';
 import SupportSection from './SupportSection';
 import styles from './accountStyles';
 import ThemeSection from './ThemeSection';
+
+const ACCESS_STATUS_REFRESH_INTERVAL_MS = 30 * 1000;
+const ACCESS_STATUS_KEYS = ['location', 'notifications', 'camera', 'photos'];
+const INITIAL_ACCESS_STATUS = {
+  location: { status: 'unknown', detail: '' },
+  notifications: { status: 'unknown', detail: '' },
+  camera: { status: 'unknown', detail: '' },
+  photos: { status: 'unknown', detail: '' }
+};
 
 const getNotificationAccessStatus = (notificationPermission, pushNotificationsEnabled) => {
   if (notificationPermission.granted) {
@@ -55,6 +64,13 @@ const getNotificationAccessStatus = (notificationPermission, pushNotificationsEn
   return { status, detail: 'Could not read notification permission status' };
 };
 
+const isSameAccessStatus = (current, next) =>
+ACCESS_STATUS_KEYS.every(
+  (key) =>
+  current[key]?.status === next[key]?.status &&
+  current[key]?.detail === next[key]?.detail
+);
+
 const AccountScreen = () => {
   const navigation = useNavigation();
   const { logout, user } = useAuth();
@@ -64,6 +80,9 @@ const AccountScreen = () => {
   const { enableLocationSharing, disableLocationSharing } = useLocationConsent();
   const { userStats, loading: userStatsLoading, error: userStatsError } = useUserStats();
   const tabBarHeight = useBottomTabBarHeight();
+  const accessStatusRef = useRef(INITIAL_ACCESS_STATUS);
+  const lastAccessStatusRefreshRef = useRef(0);
+  const lastPushPreferenceRef = useRef(preferences.pushNotifications);
   const [isEditingName, setIsEditingName] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const [inlinePreferenceFeedback, setInlinePreferenceFeedback] = useState('');
@@ -71,12 +90,7 @@ const AccountScreen = () => {
   const [pendingName, setPendingName] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
-  const [accessStatus, setAccessStatus] = useState({
-    location: { status: 'unknown', detail: '' },
-    notifications: { status: 'unknown', detail: '' },
-    camera: { status: 'unknown', detail: '' },
-    photos: { status: 'unknown', detail: '' }
-  });
+  const [accessStatus, setAccessStatus] = useState(INITIAL_ACCESS_STATUS);
 
   const displayName = useMemo(() => {
     const savedName = preferences.displayName?.trim();
@@ -253,6 +267,15 @@ const AccountScreen = () => {
     navigation.navigate('WitnessPrompt', { simulation: true });
   };
 
+  const updateAccessStatus = useCallback((nextAccessStatus) => {
+    if (isSameAccessStatus(accessStatusRef.current, nextAccessStatus)) {
+      return;
+    }
+
+    accessStatusRef.current = nextAccessStatus;
+    setAccessStatus(nextAccessStatus);
+  }, []);
+
   const refreshAccessStatus = useCallback(async () => {
     try {
       const [locationPermission, cameraPermission, mediaPermission] = await Promise.all([
@@ -267,7 +290,7 @@ const AccountScreen = () => {
         preferences.pushNotifications
       );
 
-      setAccessStatus({
+      updateAccessStatus({
         location: {
           status: locationPermission.status || 'unknown',
           detail:
@@ -295,20 +318,34 @@ const AccountScreen = () => {
         }
       });
     } catch {
-      setAccessStatus({
+      updateAccessStatus({
         location: { status: 'unknown', detail: 'Could not read location permission status' },
         notifications: { status: 'unknown', detail: 'Could not read notification permission status' },
         camera: { status: 'unknown', detail: 'Could not read camera permission status' },
         photos: { status: 'unknown', detail: 'Could not read media permission status' }
       });
     }
-  }, [preferences.pushNotifications]);
+  }, [preferences.pushNotifications, updateAccessStatus]);
+
+  const handleOpenSettings = useCallback(() => {
+    lastAccessStatusRefreshRef.current = 0;
+    Linking.openSettings?.();
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
+      const now = Date.now();
+      const pushPreferenceChanged = lastPushPreferenceRef.current !== preferences.pushNotifications;
+
+      if (!pushPreferenceChanged && now - lastAccessStatusRefreshRef.current < ACCESS_STATUS_REFRESH_INTERVAL_MS) {
+        return undefined;
+      }
+
+      lastPushPreferenceRef.current = preferences.pushNotifications;
+      lastAccessStatusRefreshRef.current = now;
       const task = InteractionManager.runAfterInteractions(refreshAccessStatus);
       return () => task.cancel();
-    }, [refreshAccessStatus])
+    }, [preferences.pushNotifications, refreshAccessStatus])
   );
 
   return (
@@ -360,7 +397,7 @@ const AccountScreen = () => {
 
       <SavedAreasSection />
 
-      <AccessStatusSection accessStatus={accessStatus} onOpenSettings={() => Linking.openSettings?.()} />
+      <AccessStatusSection accessStatus={accessStatus} onOpenSettings={handleOpenSettings} />
 
       <TouchableOpacity
         style={[styles.moreToggle, { borderColor: theme.border, backgroundColor: theme.card }]}
