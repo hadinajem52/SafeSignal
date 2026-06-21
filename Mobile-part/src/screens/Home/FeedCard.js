@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText, SeverityBadge, IncidentIllustration } from '../../components';
@@ -20,6 +20,7 @@ const OUTCOME_STYLES = {
 const FeedCard = ({ incident, onPress }) => {
   const { theme } = useTheme();
   const { preferences } = useUserPreferences();
+  const [showCorroborationHint, setShowCorroborationHint] = useState(false);
   const cat = CATEGORY_DISPLAY[incident.category] || CATEGORY_DISPLAY.other;
   const outcome = OUTCOME_STYLES[incident.closureOutcome] || {
     label: incident.closureOutcome || 'Closed',
@@ -39,6 +40,19 @@ const FeedCard = ({ incident, onPress }) => {
   ...(videoUrl ? [{ type: 'video', url: videoUrl }] : [])];
 
   const openDetail = () => onPress?.(incident);
+  const showSeenHint = (event) => {
+    event.stopPropagation?.();
+    setShowCorroborationHint(true);
+  };
+
+  useEffect(() => {
+    if (!showCorroborationHint) {
+      return undefined;
+    }
+
+    const timer = setTimeout(() => setShowCorroborationHint(false), 2600);
+    return () => clearTimeout(timer);
+  }, [showCorroborationHint]);
 
   return (
     <View
@@ -102,11 +116,33 @@ const FeedCard = ({ incident, onPress }) => {
               </View>
             ) : null}
             {corroborationCount > 0 ? (
-              <View style={[styles.seenPill, { backgroundColor: `${theme.textSecondary}18` }]}>
+              <View style={styles.seenPillWrap}>
+                {showCorroborationHint ? (
+                  <View
+                    pointerEvents="none"
+                    style={[
+                      styles.seenHint,
+                      { backgroundColor: theme.card, borderColor: theme.border, shadowColor: theme.shadow }
+                    ]}>
+
+                    <AppText variant="caption" style={[styles.seenHintText, { color: theme.text }]}>
+                      People who said they saw this too.
+                    </AppText>
+                    <View style={[styles.seenHintArrow, { backgroundColor: theme.card, borderColor: theme.border }]} />
+                  </View>
+                ) : null}
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`${corroborationCount} people said they saw this too`}
+                  hitSlop={8}
+                  onPress={showSeenHint}
+                  style={[styles.seenPill, { backgroundColor: `${theme.textSecondary}18` }]}>
+
                   <Ionicons name="eye-outline" size={11} color={theme.textSecondary} />
                   <AppText variant="caption" style={{ color: theme.textSecondary, marginLeft: 3 }}>
                     {corroborationCount}
                   </AppText>
+                </Pressable>
               </View>
             ) : null}
           </View>
@@ -195,8 +231,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 5,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'center'
+  },
+  seenPillWrap: {
+    position: 'relative',
     marginLeft: 6
+  },
+  seenHint: {
+    position: 'absolute',
+    left: -8,
+    bottom: 30,
+    width: 184,
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    zIndex: 20,
+    elevation: 5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8
+  },
+  seenHintText: {
+    lineHeight: 16
+  },
+  seenHintArrow: {
+    position: 'absolute',
+    left: 18,
+    bottom: -5,
+    width: 10,
+    height: 10,
+    borderRightWidth: 1,
+    borderBottomWidth: 1,
+    transform: [{ rotate: '45deg' }]
   },
   locationRow: {
     flexDirection: 'row',
