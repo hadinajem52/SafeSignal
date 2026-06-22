@@ -3,6 +3,7 @@ import notifee, { AndroidImportance, AuthorizationStatus } from '@notifee/react-
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import preferenceConstants from '../../../constants/preferences';
 import { tokenStorage } from './tokenStorage';
+import logger from '../utils/logger';
 
 const DEFAULT_CHANNEL_ID = 'safesignal-default';
 let notificationsInitialized = false;
@@ -40,7 +41,7 @@ const getPushNotificationPreference = async () => {
 
     return true;
   } catch (error) {
-    console.error('Failed to read notification preference:', error);
+    logger.error('Failed to read notification preference:', error);
     return true;
   }
 };
@@ -94,7 +95,7 @@ export const getMobileNotificationStatus = async () => {
       status: statusFromAuthorization(settings.authorizationStatus),
     };
   } catch (error) {
-    console.error('Failed to read notification permission:', error);
+    logger.error('Failed to read notification permission:', error);
     notificationsInitialized = false;
     return { granted: false, status: 'unknown' };
   }
@@ -125,7 +126,7 @@ export const initializeMobileNotifications = async ({ requireStoredPreference = 
     notificationsInitialized = true;
     return true;
   } catch (error) {
-    console.error('Failed to initialize notifications:', error);
+    logger.error('Failed to initialize notifications:', error);
     return false;
   }
 };
@@ -163,7 +164,7 @@ export const displayMobileNotification = async ({
     });
     return true;
   } catch (error) {
-    console.error('Failed to display notification:', error);
+    logger.error('Failed to display notification:', error);
     return false;
   }
 };

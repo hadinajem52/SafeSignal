@@ -23,6 +23,8 @@ import styles from './homeStyles';
 
 const LOCATION_ENABLE_STATUSES = ['disabled', 'permission_denied'];
 
+const EMPTY_WITNESS = {};
+
 const normalizeSafetyScore = (safetyScore) => {
   const score = Number(safetyScore?.score);
 
@@ -56,9 +58,9 @@ const HomeScreen = ({ navigation }) => {
     onRefresh
   } = useDashboardData();
   const { insight: areaInsight, loading: areaInsightLoading } = useAreaInsights();
-  const safetyScore = normalizeSafetyScore(dashboardData?.safetyScore);
+  const safetyScore = useMemo(() => normalizeSafetyScore(dashboardData?.safetyScore), [dashboardData?.safetyScore]);
   const activeNearbyCount = dashboardData?.quickStats?.activeNearby || 0;
-  const witnessPrompts = dashboardData?.witnessPrompts || {};
+  const witnessPrompts = useMemo(() => dashboardData?.witnessPrompts || EMPTY_WITNESS, [dashboardData?.witnessPrompts]);
   const witnessPromptCount = witnessPrompts.count || 0;
   const firstNearbyConstellationId = witnessPrompts.firstNearbyConstellationId;
   const showEnableLocationCta =

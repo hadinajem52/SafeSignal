@@ -15,4 +15,4 @@ const CategoryFilterBar = ({ categoryDisplay, selectedCategory, onSelectCategory
   );
 };
 
-export default CategoryFilterBar;
+export default React.memo(CategoryFilterBar);

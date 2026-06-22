@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { Linking } from 'react-native';
 import * as Location from 'expo-location';
 import { useToast } from '../context/ToastContext';
+import logger from '../utils/logger';
 
 const DEFAULT_REGION = {
   latitude: 33.8938,
@@ -125,7 +126,7 @@ const useLocationPicker = ({
           setLocationName(addressParts.join(', '));
         }
       } catch (geocodeError) {
-        console.log('Reverse geocoding failed:', geocodeError);
+        logger.log('Reverse geocoding failed:', geocodeError);
       }
 
       setMapRegion({
@@ -138,7 +139,7 @@ const useLocationPicker = ({
       setIsLoadingLocation(false);
     } catch (error) {
       setIsLoadingLocation(false);
-      console.error('Location error:', error);
+      logger.error('Location error:', error);
 
       let errorMessage = 'Unable to get your current location.';
       if (error?.code === 'E_LOCATION_TIMEOUT') {
@@ -234,7 +235,7 @@ const useLocationPicker = ({
       });
       setSelectedMapLocation({ latitude, longitude });
     } catch (error) {
-      console.log('Could not center map on user location:', error);
+      logger.log('Could not center map on user location:', error);
     }
   }, [location, locationServicesEnabled]);
 
@@ -249,7 +250,7 @@ const useLocationPicker = ({
         setLocationName(addressParts.join(', '));
       }
     } catch (error) {
-      console.log('Reverse geocoding failed:', error);
+      logger.log('Reverse geocoding failed:', error);
     }
   }, []);
 

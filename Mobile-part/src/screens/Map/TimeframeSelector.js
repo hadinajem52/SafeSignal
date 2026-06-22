@@ -45,4 +45,4 @@ const TimeframeSelector = ({ selectedTimeframe, onSelectTimeframe, includeAll = 
   );
 };
 
-export default TimeframeSelector;
+export default React.memo(TimeframeSelector);

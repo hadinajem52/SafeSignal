@@ -12,6 +12,7 @@ import useIncidentForm from "../hooks/useIncidentForm";
 import useLocationPicker from "../hooks/useLocationPicker";
 import useUserPreferences from "../hooks/useUserPreferences";
 import incidentConstants from "../../../constants/incident";
+import logger from "../utils/logger";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { AppText, Button, ConfirmModal, IncidentIllustration } from "../components";
 import haptics from "../utils/haptics";
@@ -432,7 +433,7 @@ const ReportIncidentScreen = ({ navigation, route }) => {
       } catch (error) {
         haptics.error();
         showToast('An unexpected error occurred. Please try again.', 'error');
-        console.error("Submit incident error:", error);
+        logger.error("Submit incident error:", error);
       } finally {
         setIsSubmitting(false);
         isSubmittingRef.current = false;

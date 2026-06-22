@@ -5,6 +5,7 @@ import * as SecureStore from 'expo-secure-store';
 import * as Location from 'expo-location';
 import preferenceConstants from '../../../constants/preferences';
 import { authAPI, tokenStorage, userAPI } from '../services/api';
+import logger from '../utils/logger';
 
 
 const AuthContext = createContext(null);
@@ -59,7 +60,7 @@ export const AuthProvider = ({ children }) => {
         }
       }
     } catch (error) {
-      console.error('Auth status check error:', error);
+      logger.error('Auth status check error:', error);
       setUser(null);
       setIsAuthenticated(false);
     } finally {
@@ -102,7 +103,7 @@ export const AuthProvider = ({ children }) => {
         longitude: position.coords.longitude,
       });
     } catch (error) {
-      console.log('Location sync skipped:', error?.message || error);
+      logger.log('Location sync skipped:', error?.message || error);
     }
   }, [isAuthenticated, user]);
 
@@ -173,7 +174,7 @@ export const AuthProvider = ({ children }) => {
         ]);
       }
     } catch (error) {
-      console.error('Error clearing draft on logout:', error);
+      logger.error('Error clearing draft on logout:', error);
     }
 
     await authAPI.logout();

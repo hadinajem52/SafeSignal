@@ -4,6 +4,7 @@ import { ThemeProvider as RestyleThemeProvider } from '@shopify/restyle';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { lightTheme, darkTheme } from '../../../constants/theme';
 import { buildRestyleTheme } from '../theme/restyleTheme';
+import logger from '../utils/logger';
 
 const ThemeContext = createContext(null);
 
@@ -30,7 +31,7 @@ export const ThemeProvider = ({ children }) => {
           setMode(saved);
         }
       } catch (error) {
-        console.error('Error loading theme preference:', error);
+        logger.error('Error loading theme preference:', error);
       } finally {
         setIsLoadingTheme(false);
       }
@@ -47,7 +48,7 @@ export const ThemeProvider = ({ children }) => {
       setMode(newMode);
       await AsyncStorage.setItem('theme_mode', newMode);
     } catch (error) {
-      console.error('Error saving theme preference:', error);
+      logger.error('Error saving theme preference:', error);
     }
   }, []);
 

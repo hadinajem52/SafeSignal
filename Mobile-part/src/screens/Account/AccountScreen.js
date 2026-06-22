@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
+import logger from '../../utils/logger';
 import { ActivityIndicator, InteractionManager, Linking, ScrollView, TouchableOpacity } from 'react-native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -161,7 +162,7 @@ const AccountScreen = () => {
       updatePreference('avatarUri', toFileUri(image.path));
     } catch (error) {
       if (isCropperCancelled(error)) return;
-      console.error('Error picking avatar:', error);
+      logger.error('Error picking avatar:', error);
       showToast('Failed to update profile photo.', 'error');
     }
   };

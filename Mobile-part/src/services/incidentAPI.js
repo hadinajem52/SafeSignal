@@ -1,6 +1,7 @@
 import api from './apiClient';
 import { createUploadFile } from '../utils/mediaUtils';
 import limits from '../../../constants/limits';
+import logger from '../utils/logger';
 
 const { LIMITS } = limits;
 
@@ -86,7 +87,7 @@ export const incidentAPI = {
       const mediaSummary = getIncidentMediaSummary(payload);
       const mediaSizeError = validateKnownUploadSize(mediaSummary);
 
-      console.log('Submitting incident media:', mediaSummary);
+      logger.log('Submitting incident media:', mediaSummary);
 
       if (mediaSizeError) {
         return { success: false, error: mediaSizeError };
@@ -109,7 +110,7 @@ export const incidentAPI = {
 
       return { success: false, error: response.data.message };
     } catch (error) {
-      console.log('Submit incident failed:', {
+      logger.log('Submit incident failed:', {
         message: error.message,
         status: error.response?.status,
         responseMessage: error.response?.data?.message,
@@ -134,7 +135,7 @@ export const incidentAPI = {
       const mediaSummary = getIncidentMediaSummary(incidentData);
       const mediaSizeError = validateKnownUploadSize(mediaSummary);
 
-      console.log('Updating incident media:', {
+      logger.log('Updating incident media:', {
         incidentId,
         ...mediaSummary,
       });
@@ -159,7 +160,7 @@ export const incidentAPI = {
 
       return { success: false, error: response.data.message };
     } catch (error) {
-      console.log('Update incident failed:', {
+      logger.log('Update incident failed:', {
         incidentId,
         message: error.message,
         status: error.response?.status,

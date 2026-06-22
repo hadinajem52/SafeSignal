@@ -9,6 +9,7 @@ import {
   displayMobileNotification,
 } from '../services/mobileNotifications';
 import notificationStore from '../services/notificationStore';
+import logger from '../utils/logger';
 
 const MAX_DISPLAYED_EVENT_IDS = 100;
 
@@ -168,7 +169,7 @@ const useRealtimeNotifications = () => {
 
         socketRef.current = socket;
       } catch (error) {
-        console.error('Failed to setup realtime notifications:', error);
+        logger.error('Failed to setup realtime notifications:', error);
       }
     };
 

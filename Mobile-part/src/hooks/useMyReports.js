@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { incidentAPI } from '../services/api';
 import { useToast } from '../context/ToastContext';
+import logger from '../utils/logger';
 
 const getDraftStorageKey = (userId) => `safesignal_incident_draft_${userId}`;
 
@@ -63,7 +64,7 @@ const useMyReports = ({ user }) => {
                   SecureStore.deleteItemAsync(draftKey),
                   AsyncStorage.removeItem(draftKey),
                 ]);
-                console.error('Invalid draft data cleared:', parseError);
+                logger.error('Invalid draft data cleared:', parseError);
                 draft = null;
               }
 
@@ -84,7 +85,7 @@ const useMyReports = ({ user }) => {
             }
           }
         } catch (draftError) {
-          console.error('Error loading draft:', draftError);
+          logger.error('Error loading draft:', draftError);
         }
       }
 
@@ -102,7 +103,7 @@ const useMyReports = ({ user }) => {
       setIncidents(mergedIncidents);
       setPagination(paginationData);
     } catch (error) {
-      console.error('Error fetching incidents:', error);
+      logger.error('Error fetching incidents:', error);
       showToast('An unexpected error occurred', 'error');
     } finally {
       setIsLoading(false);
@@ -157,7 +158,7 @@ const useMyReports = ({ user }) => {
       showToast('Draft deleted', 'success');
       fetchIncidents(false);
     } catch (error) {
-      console.error('Error deleting draft:', error);
+      logger.error('Error deleting draft:', error);
       showToast('Failed to delete draft', 'error');
     }
   }, [fetchIncidents, showToast, user]);

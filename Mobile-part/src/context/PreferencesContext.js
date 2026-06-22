@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import preferenceConstants from '../../../constants/preferences';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
+import logger from '../utils/logger';
 
 const { DEFAULT_PREFERENCES, PREFERENCE_KEYS } = preferenceConstants;
 const DEFAULT_STORAGE_KEY = PREFERENCE_KEYS.STORAGE_KEY;
@@ -39,7 +40,7 @@ export const PreferencesProvider = ({ children }) => {
       try {
         await AsyncStorage.setItem(key, JSON.stringify(nextPreferences));
       } catch (error) {
-        console.error('Error saving preferences:', error);
+        logger.error('Error saving preferences:', error);
         showToast('Failed to save preferences. Please try again.', 'error');
       }
     },
@@ -56,7 +57,7 @@ export const PreferencesProvider = ({ children }) => {
         stored ? { ...DEFAULT_PREFERENCES, ...JSON.parse(stored) } : DEFAULT_PREFERENCES
       );
     } catch (error) {
-      console.error('Error loading preferences:', error);
+      logger.error('Error loading preferences:', error);
       setPreferences(DEFAULT_PREFERENCES);
     } finally {
       setIsLoading(false);

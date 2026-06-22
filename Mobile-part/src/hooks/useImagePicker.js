@@ -8,6 +8,7 @@ import limits from '../../../constants/limits';
 import { useToast } from '../context/ToastContext';
 import { useTheme } from '../context/ThemeContext';
 import { buildCropperOptions, isCropperCancelled, toFileUri } from '../utils/imageCropper';
+import logger from '../utils/logger';
 
 const { LIMITS } = limits;
 const { MAX_PHOTOS, MAX_PHOTO_BYTES, MAX_VIDEO_BYTES, MAX_VIDEO_MINUTES } = LIMITS;
@@ -73,7 +74,7 @@ const useImagePicker = () => {
           });
         }
       } catch (err) {
-        console.error('getPendingResultAsync error:', err);
+        logger.error('getPendingResultAsync error:', err);
       }
     });
     return () => subscription.remove();
@@ -126,7 +127,7 @@ const useImagePicker = () => {
       }
     } catch (error) {
       if (isCropperCancelled(error)) return;
-      console.error('Error picking image:', error);
+      logger.error('Error picking image:', error);
       showToast('Failed to pick image. Please try again.', 'error');
     }
   }, [photos.length, showToast, validatePhoto, theme]);
@@ -168,7 +169,7 @@ const useImagePicker = () => {
       }
     } catch (error) {
       cameraActiveRef.current = false;
-      console.error('Error taking photo:', error);
+      logger.error('Error taking photo:', error);
       showToast('Failed to take photo. Please try again.', 'error');
     }
   }, [photos.length, showToast, validatePhoto]);
@@ -237,7 +238,7 @@ const useImagePicker = () => {
 
       if (!validatePreparedVideo(preparedVideo)) return null;
 
-      console.log('Video prepared for upload:', {
+      logger.log('Video prepared for upload:', {
         originalBytes: originalSize,
         compressedBytes: preparedVideo.fileSize,
         durationMs: preparedVideo.duration,
@@ -245,7 +246,7 @@ const useImagePicker = () => {
 
       return preparedVideo;
     } catch (error) {
-      console.error('Video compression error:', error);
+      logger.error('Video compression error:', error);
       showToast('Could not prepare video for upload. Please try a shorter clip.', 'error');
       return null;
     } finally {
@@ -275,7 +276,7 @@ const useImagePicker = () => {
         if (preparedVideo) setVideo(preparedVideo);
       }
     } catch (error) {
-      console.error('Error picking video:', error);
+      logger.error('Error picking video:', error);
       showToast('Failed to pick video. Please try again.', 'error');
     }
   }, [showToast, prepareVideo]);
@@ -301,7 +302,7 @@ const useImagePicker = () => {
         if (preparedVideo) setVideo(preparedVideo);
       }
     } catch (error) {
-      console.error('Error recording video:', error);
+      logger.error('Error recording video:', error);
       showToast('Failed to record video. Please try again.', 'error');
     }
   }, [showToast, prepareVideo]);

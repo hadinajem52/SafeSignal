@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
@@ -77,7 +77,7 @@ const AppNavigator = () => {
   useFirstLaunchLocationPrompt();
   useOfflineReportSync();
 
-  const navigationTheme = {
+  const navigationTheme = useMemo(() => ({
     ...(isDark ? DarkTheme : DefaultTheme),
     colors: {
       ...(isDark ? DarkTheme.colors : DefaultTheme.colors),
@@ -87,7 +87,7 @@ const AppNavigator = () => {
       border: theme.border,
       primary: theme.primary
     }
-  };
+  }), [isDark, theme]);
 
   if (isLoading) {
     return <LoadingScreen theme={theme} />;

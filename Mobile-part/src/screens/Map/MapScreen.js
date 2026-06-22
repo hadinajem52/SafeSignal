@@ -20,6 +20,7 @@ import MapCanvas from "./MapView";
 import MapList from "./MapList";
 import mapStyles from "./mapStyles";
 import TimeframeSelector from "./TimeframeSelector";
+import logger from "../../utils/logger";
 
 const { CATEGORY_DISPLAY } = incidentConstants;
 const MAP_HINT_STORAGE_KEY = "map_first_visit_hint_seen";
@@ -179,7 +180,7 @@ const MapScreen = () => {
         if (activeRequestId.current !== requestId) {
           return;
         }
-        console.error("Error fetching incidents:", fetchError);
+        logger.error("Error fetching incidents:", fetchError);
         setError("Failed to load incidents. Please try again.");
       } finally {
         if (activeRequestId.current === requestId) {
@@ -201,7 +202,7 @@ const MapScreen = () => {
     if (res.success) {
       setSavedAreas(res.areas);
     } else {
-      console.warn("Failed to load saved areas:", res.error);
+      logger.warn("Failed to load saved areas:", res.error);
     }
   }, []);
 

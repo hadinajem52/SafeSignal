@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import logger from '../utils/logger';
 import {
   View,
   Text,
@@ -126,12 +127,12 @@ const IncidentTimeline = ({ incidentId, onNewActivity }) => {
       });
 
       socket.on('error', (err) => {
-        console.error('Socket error:', err);
+        logger.error('Socket error:', err);
       });
 
       socketRef.current = socket;
     } catch (err) {
-      console.error('Failed to setup socket:', err);
+      logger.error('Failed to setup socket:', err);
     }
   };
 
