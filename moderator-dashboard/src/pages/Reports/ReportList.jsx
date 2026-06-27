@@ -82,11 +82,11 @@ function ReportList({
                   ) : null}
                   {report.title}
                 </p>
-                <div className="mt-1.5">
+                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                   <StatusBadge status={report.status} size="xs" className="!rounded-none" />
                   {constellationMeta ? (
                     <span
-                      className="ml-1.5 inline-flex items-center border px-1.5 py-0.5 text-[9px] font-bold uppercase text-pretty"
+                      className="inline-flex items-center border px-1.5 py-0.5 text-[9px] font-bold uppercase whitespace-nowrap leading-none"
                       style={{
                         borderColor: constellationMeta.color,
                         color: constellationMeta.color,

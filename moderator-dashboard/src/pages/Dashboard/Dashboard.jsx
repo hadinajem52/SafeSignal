@@ -171,7 +171,7 @@ function Dashboard() {
     retry: 1,
   });
 
-  const { data: allIncidents = [] } = useQuery({
+  const { data: allIncidents = [], isLoading: incidentsLoading } = useQuery({
     queryKey: ["dashboard-all-incidents"],
     queryFn: async () => {
       const result = await reportsAPI.getAll({
@@ -448,6 +448,7 @@ function Dashboard() {
             height={300}
             showClusters
             showHeatmap
+            loading={incidentsLoading}
             emptyMessage="No active incidents with coordinates."
           />
         </div>

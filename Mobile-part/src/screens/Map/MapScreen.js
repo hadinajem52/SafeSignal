@@ -53,6 +53,7 @@ const MapScreen = () => {
   const lastRegionRef = useRef(DEFAULT_REGION);
 
   const [incidents, setIncidents] = useState([]);
+  const [incidentsMode, setIncidentsMode] = useState(MAP_MODES.ACTIVE);
   const [savedAreas, setSavedAreas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -157,6 +158,7 @@ const MapScreen = () => {
           return Number.isFinite(latitude) && Number.isFinite(longitude);
         });
         setIncidents(filteredIncidents);
+        setIncidentsMode(mapMode);
 
         if (
         filteredIncidents.length > 0 &&
@@ -339,7 +341,7 @@ const MapScreen = () => {
         incidents={incidents}
         savedAreas={savedAreas}
         categoryDisplay={CATEGORY_DISPLAY}
-        showActiveOverlays={mapMode === MAP_MODES.ACTIVE}
+        showActiveOverlays={incidentsMode === MAP_MODES.ACTIVE}
         onMarkerPress={handleMarkerPress} /> :
       null
       }

@@ -152,6 +152,7 @@ function GoogleMapPanelContent({
   showClusters = false,
   showHeatmap = false,
   autoFit = true,
+  loading = false,
   emptyMessage = "No location data available.",
 }) {
   const [activeMarkerId, setActiveMarkerId] = useState(null);
@@ -336,7 +337,7 @@ function GoogleMapPanelContent({
         className="border border-border bg-surface p-3 text-sm text-muted"
         style={panelStyle}
       >
-        {emptyMessage}
+        {loading ? "Loading incidents…" : emptyMessage}
       </div>
     );
   }

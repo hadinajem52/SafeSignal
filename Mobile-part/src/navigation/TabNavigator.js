@@ -63,7 +63,7 @@ const ReportsStack = () =>
     <Stack.Screen
     name="ReportIncident"
     component={ReportIncidentScreen}
-    options={{ animation: 'slide_from_bottom' }} />
+    options={{ animation: 'none' }} />
 
     <Stack.Screen name="IncidentDetail" component={IncidentDetailScreen} />
   </Stack.Navigator>;
@@ -143,15 +143,7 @@ const TabNavigator = () => {
         listeners={({ navigation }) => ({
           tabPress: (e) => {
             e.preventDefault();
-            navigation.dispatch((state) => {
-              const routes = state.routes.map((route) =>
-              route.name === 'Reports' ?
-              { ...route, state: { index: 1, routes: [{ name: 'MyReports' }, { name: 'ReportIncident' }] } } :
-              route
-              );
-              const index = routes.findIndex((route) => route.name === 'Reports');
-              return CommonActions.reset({ ...state, routes, index });
-            });
+            navigation.navigate('Reports', { screen: 'ReportIncident' });
           }
         })}
         options={{
