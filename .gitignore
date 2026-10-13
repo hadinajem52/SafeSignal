@@ -11,6 +11,8 @@ dist/
 build/
 web-build/
 AGENTS.md
+claude.md
+agents.md
 # Expo
 .expo/
 expo-env.d.ts
